@@ -187,6 +187,7 @@ dependencies = [
  "dhruv_core",
  "dhruv_frames",
  "dhruv_time",
+ "dhruv_vedic_base",
 ]
 
 [[package]]
@@ -209,6 +210,11 @@ version = "0.1.0"
 [[package]]
 name = "dhruv_vedic_base"
 version = "0.1.0"
+dependencies = [
+ "dhruv_core",
+ "dhruv_frames",
+ "dhruv_time",
+]
 
 [[package]]
 name = "either"

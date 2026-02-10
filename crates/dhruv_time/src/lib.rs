@@ -6,6 +6,7 @@
 //! - UTC → TAI → TT → TDB conversion chain (and inverse)
 //! - An `Epoch` type for type-safe TDB epoch handling
 
+pub mod eop;
 pub mod error;
 pub mod julian;
 pub mod lsk;
@@ -14,12 +15,14 @@ pub mod sidereal;
 
 use std::path::Path;
 
+pub use eop::{EopData, EopKernel};
 pub use error::TimeError;
 pub use julian::{
     calendar_to_jd, jd_to_calendar, jd_to_tdb_seconds, tdb_seconds_to_jd, J2000_JD,
     SECONDS_PER_DAY,
 };
 pub use lsk::LskData;
+pub use sidereal::{earth_rotation_angle_rad, gmst_rad, local_sidereal_time_rad};
 
 /// A loaded leap-second kernel, ready for time conversions.
 #[derive(Debug, Clone)]

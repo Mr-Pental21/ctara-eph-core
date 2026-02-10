@@ -4,6 +4,11 @@ use std::path::PathBuf;
 use std::ptr;
 
 use dhruv_core::{Body, Engine, EngineConfig, EngineError, Frame, Observer, Query, StateVector};
+use dhruv_vedic_base::{
+    AyanamshaSystem, GeoLocation, RiseSetConfig, RiseSetEvent, RiseSetResult, VedicError,
+    ayanamsha_mean_deg, ayanamsha_true_deg, approximate_local_noon_jd, compute_all_events,
+    compute_rise_set, jd_tdb_to_centuries,
+};
 
 /// ABI version for downstream bindings.
 pub const DHRUV_API_VERSION: u32 = 4;
@@ -26,6 +31,10 @@ pub enum DhruvStatus {
     UnsupportedQuery = 5,
     EpochOutOfRange = 6,
     NullPointer = 7,
+    EopLoad = 8,
+    EopOutOfRange = 9,
+    InvalidLocation = 10,
+    NoConvergence = 11,
     Internal = 255,
 }
 
@@ -39,6 +48,21 @@ impl From<&EngineError> for DhruvStatus {
             EngineError::UnsupportedQuery(_) => Self::UnsupportedQuery,
             EngineError::EpochOutOfRange { .. } => Self::EpochOutOfRange,
             EngineError::Internal(_) => Self::Internal,
+            _ => Self::Internal,
+        }
+    }
+}
+
+impl From<&VedicError> for DhruvStatus {
+    fn from(value: &VedicError) -> Self {
+        match value {
+            VedicError::Engine(e) => Self::from(e),
+            VedicError::Time(dhruv_time::TimeError::EopParse(_))
+            | VedicError::Time(dhruv_time::TimeError::Io(_)) => Self::EopLoad,
+            VedicError::Time(dhruv_time::TimeError::EopOutOfRange) => Self::EopOutOfRange,
+            VedicError::Time(_) => Self::TimeConversion,
+            VedicError::InvalidLocation(_) => Self::InvalidLocation,
+            VedicError::NoConvergence(_) => Self::NoConvergence,
             _ => Self::Internal,
         }
     }
@@ -566,6 +590,484 @@ pub unsafe extern "C" fn dhruv_query_utc_spherical(
     })
 }
 
+// ---------------------------------------------------------------------------
+// EOP opaque handle
+// ---------------------------------------------------------------------------
+
+/// Opaque EOP handle type for ABI consumers.
+pub type DhruvEopHandle = dhruv_time::EopKernel;
+
+/// Load an IERS EOP (finals2000A.all) file from a NUL-terminated file path.
+///
+/// # Safety
+/// `eop_path_utf8` must be a valid, non-null, NUL-terminated C string.
+/// `out_eop` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_eop_load(
+    eop_path_utf8: *const u8,
+    out_eop: *mut *mut DhruvEopHandle,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if eop_path_utf8.is_null() || out_eop.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        // SAFETY: Pointer is checked for null; read until NUL byte.
+        let c_str = unsafe { std::ffi::CStr::from_ptr(eop_path_utf8 as *const i8) };
+        let path_str = match c_str.to_str() {
+            Ok(s) => s,
+            Err(_) => return DhruvStatus::InvalidConfig,
+        };
+
+        match dhruv_time::EopKernel::load(std::path::Path::new(path_str)) {
+            Ok(eop) => {
+                // SAFETY: Pointer is checked for null; write one pointer value.
+                unsafe { *out_eop = Box::into_raw(Box::new(eop)) };
+                DhruvStatus::Ok
+            }
+            Err(_) => {
+                // SAFETY: Pointer is checked for null; write null on failure.
+                unsafe { *out_eop = ptr::null_mut() };
+                DhruvStatus::EopLoad
+            }
+        }
+    })
+}
+
+/// Destroy an EOP handle allocated by [`dhruv_eop_load`].
+///
+/// # Safety
+/// `eop` must be either null or a pointer returned by `dhruv_eop_load`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_eop_free(eop: *mut DhruvEopHandle) -> DhruvStatus {
+    ffi_boundary(|| {
+        if eop.is_null() {
+            return DhruvStatus::Ok;
+        }
+
+        // SAFETY: Ownership is transferred back from a pointer created by Box::into_raw.
+        unsafe { drop(Box::from_raw(eop)) };
+        DhruvStatus::Ok
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Ayanamsha
+// ---------------------------------------------------------------------------
+
+/// Map integer code 0..19 to AyanamshaSystem enum variant.
+fn ayanamsha_system_from_code(code: i32) -> Option<AyanamshaSystem> {
+    let systems = AyanamshaSystem::all();
+    let idx = usize::try_from(code).ok()?;
+    systems.get(idx).copied()
+}
+
+/// Mean ayanamsha at a JD TDB. Pure math, no engine needed.
+///
+/// # Safety
+/// `out_deg` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_ayanamsha_mean_deg(
+    system_code: i32,
+    jd_tdb: f64,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if out_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        let system = match ayanamsha_system_from_code(system_code) {
+            Some(s) => s,
+            None => return DhruvStatus::InvalidQuery,
+        };
+
+        let t = jd_tdb_to_centuries(jd_tdb);
+        let deg = ayanamsha_mean_deg(system, t);
+
+        // SAFETY: Pointer is checked for null; write one value.
+        unsafe { *out_deg = deg };
+        DhruvStatus::Ok
+    })
+}
+
+/// True (nutation-corrected) ayanamsha at a JD TDB.
+///
+/// For TrueLahiri, adds delta_psi to mean value. For all others, returns mean.
+///
+/// # Safety
+/// `out_deg` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_ayanamsha_true_deg(
+    system_code: i32,
+    jd_tdb: f64,
+    delta_psi_arcsec: f64,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if out_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        let system = match ayanamsha_system_from_code(system_code) {
+            Some(s) => s,
+            None => return DhruvStatus::InvalidQuery,
+        };
+
+        let t = jd_tdb_to_centuries(jd_tdb);
+        let deg = ayanamsha_true_deg(system, t, delta_psi_arcsec);
+
+        // SAFETY: Pointer is checked for null; write one value.
+        unsafe { *out_deg = deg };
+        DhruvStatus::Ok
+    })
+}
+
+/// Number of supported ayanamsha systems.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_ayanamsha_system_count() -> u32 {
+    AyanamshaSystem::all().len() as u32
+}
+
+// ---------------------------------------------------------------------------
+// Rise/Set types
+// ---------------------------------------------------------------------------
+
+/// C-compatible geographic location.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvGeoLocation {
+    /// Latitude in degrees, north positive. Range: [-90, 90].
+    pub latitude_deg: f64,
+    /// Longitude in degrees, east positive. Range: [-180, 180].
+    pub longitude_deg: f64,
+    /// Altitude above sea level in meters.
+    pub altitude_m: f64,
+}
+
+/// C-compatible rise/set configuration.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvRiseSetConfig {
+    /// Atmospheric refraction at horizon in arcminutes. Default: 34.0.
+    pub refraction_arcmin: f64,
+    /// Solar semi-diameter in arcminutes. Default: 16.0.
+    pub semidiameter_arcmin: f64,
+    /// Apply altitude dip correction: 1 = true, 0 = false.
+    pub altitude_correction: u8,
+}
+
+/// C-compatible rise/set result.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvRiseSetResult {
+    /// 0 = Event occurred, 1 = NeverRises, 2 = NeverSets.
+    pub result_type: i32,
+    /// Event code (valid when result_type == 0).
+    pub event_code: i32,
+    /// Event time in JD TDB (valid when result_type == 0).
+    pub jd_tdb: f64,
+}
+
+// Result type constants
+pub const DHRUV_RISESET_EVENT: i32 = 0;
+pub const DHRUV_RISESET_NEVER_RISES: i32 = 1;
+pub const DHRUV_RISESET_NEVER_SETS: i32 = 2;
+
+// Event code constants
+pub const DHRUV_EVENT_SUNRISE: i32 = 0;
+pub const DHRUV_EVENT_SUNSET: i32 = 1;
+pub const DHRUV_EVENT_CIVIL_DAWN: i32 = 2;
+pub const DHRUV_EVENT_CIVIL_DUSK: i32 = 3;
+pub const DHRUV_EVENT_NAUTICAL_DAWN: i32 = 4;
+pub const DHRUV_EVENT_NAUTICAL_DUSK: i32 = 5;
+pub const DHRUV_EVENT_ASTRONOMICAL_DAWN: i32 = 6;
+pub const DHRUV_EVENT_ASTRONOMICAL_DUSK: i32 = 7;
+
+/// Map integer event code to RiseSetEvent.
+fn riseset_event_from_code(code: i32) -> Option<RiseSetEvent> {
+    match code {
+        DHRUV_EVENT_SUNRISE => Some(RiseSetEvent::Sunrise),
+        DHRUV_EVENT_SUNSET => Some(RiseSetEvent::Sunset),
+        DHRUV_EVENT_CIVIL_DAWN => Some(RiseSetEvent::CivilDawn),
+        DHRUV_EVENT_CIVIL_DUSK => Some(RiseSetEvent::CivilDusk),
+        DHRUV_EVENT_NAUTICAL_DAWN => Some(RiseSetEvent::NauticalDawn),
+        DHRUV_EVENT_NAUTICAL_DUSK => Some(RiseSetEvent::NauticalDusk),
+        DHRUV_EVENT_ASTRONOMICAL_DAWN => Some(RiseSetEvent::AstronomicalDawn),
+        DHRUV_EVENT_ASTRONOMICAL_DUSK => Some(RiseSetEvent::AstronomicalDusk),
+        _ => None,
+    }
+}
+
+/// Map RiseSetEvent back to integer code.
+fn riseset_event_to_code(event: RiseSetEvent) -> i32 {
+    match event {
+        RiseSetEvent::Sunrise => DHRUV_EVENT_SUNRISE,
+        RiseSetEvent::Sunset => DHRUV_EVENT_SUNSET,
+        RiseSetEvent::CivilDawn => DHRUV_EVENT_CIVIL_DAWN,
+        RiseSetEvent::CivilDusk => DHRUV_EVENT_CIVIL_DUSK,
+        RiseSetEvent::NauticalDawn => DHRUV_EVENT_NAUTICAL_DAWN,
+        RiseSetEvent::NauticalDusk => DHRUV_EVENT_NAUTICAL_DUSK,
+        RiseSetEvent::AstronomicalDawn => DHRUV_EVENT_ASTRONOMICAL_DAWN,
+        RiseSetEvent::AstronomicalDusk => DHRUV_EVENT_ASTRONOMICAL_DUSK,
+    }
+}
+
+/// Convert Rust RiseSetResult to C-compatible DhruvRiseSetResult.
+fn to_ffi_result(result: &RiseSetResult) -> DhruvRiseSetResult {
+    match *result {
+        RiseSetResult::Event { jd_tdb, event } => DhruvRiseSetResult {
+            result_type: DHRUV_RISESET_EVENT,
+            event_code: riseset_event_to_code(event),
+            jd_tdb,
+        },
+        RiseSetResult::NeverRises => DhruvRiseSetResult {
+            result_type: DHRUV_RISESET_NEVER_RISES,
+            event_code: 0,
+            jd_tdb: 0.0,
+        },
+        RiseSetResult::NeverSets => DhruvRiseSetResult {
+            result_type: DHRUV_RISESET_NEVER_SETS,
+            event_code: 0,
+            jd_tdb: 0.0,
+        },
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Rise/Set functions
+// ---------------------------------------------------------------------------
+
+/// Returns default rise/set configuration.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_riseset_config_default() -> DhruvRiseSetConfig {
+    DhruvRiseSetConfig {
+        refraction_arcmin: 34.0,
+        semidiameter_arcmin: 16.0,
+        altitude_correction: 1,
+    }
+}
+
+/// Compute a single rise/set event.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_compute_rise_set(
+    engine: *const DhruvEngineHandle,
+    lsk: *const DhruvLskHandle,
+    eop: *const DhruvEopHandle,
+    location: *const DhruvGeoLocation,
+    event_code: i32,
+    jd_utc_noon: f64,
+    config: *const DhruvRiseSetConfig,
+    out_result: *mut DhruvRiseSetResult,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null()
+            || lsk.is_null()
+            || eop.is_null()
+            || location.is_null()
+            || config.is_null()
+            || out_result.is_null()
+        {
+            return DhruvStatus::NullPointer;
+        }
+
+        let event = match riseset_event_from_code(event_code) {
+            Some(e) => e,
+            None => return DhruvStatus::InvalidQuery,
+        };
+
+        // SAFETY: All pointers checked for null above.
+        let engine_ref = unsafe { &*engine };
+        let lsk_ref = unsafe { &*lsk };
+        let eop_ref = unsafe { &*eop };
+        let loc_ref = unsafe { &*location };
+        let cfg_ref = unsafe { &*config };
+
+        let geo = GeoLocation::new(loc_ref.latitude_deg, loc_ref.longitude_deg, loc_ref.altitude_m);
+        let rs_config = RiseSetConfig {
+            refraction_arcmin: cfg_ref.refraction_arcmin,
+            semidiameter_arcmin: cfg_ref.semidiameter_arcmin,
+            altitude_correction: cfg_ref.altitude_correction != 0,
+        };
+
+        match compute_rise_set(engine_ref, lsk_ref, eop_ref, &geo, event, jd_utc_noon, &rs_config) {
+            Ok(result) => {
+                // SAFETY: Pointer checked for null.
+                unsafe { *out_result = to_ffi_result(&result) };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Compute all 8 rise/set events for a day.
+///
+/// Caller must provide `out_results` pointing to an array of at least 8
+/// `DhruvRiseSetResult`. Order: AstroDawn, NautDawn, CivilDawn, Sunrise,
+/// Sunset, CivilDusk, NautDusk, AstroDusk.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+/// `out_results` must point to at least 8 contiguous `DhruvRiseSetResult`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_compute_all_events(
+    engine: *const DhruvEngineHandle,
+    lsk: *const DhruvLskHandle,
+    eop: *const DhruvEopHandle,
+    location: *const DhruvGeoLocation,
+    jd_utc_noon: f64,
+    config: *const DhruvRiseSetConfig,
+    out_results: *mut DhruvRiseSetResult,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null()
+            || lsk.is_null()
+            || eop.is_null()
+            || location.is_null()
+            || config.is_null()
+            || out_results.is_null()
+        {
+            return DhruvStatus::NullPointer;
+        }
+
+        // SAFETY: All pointers checked for null above.
+        let engine_ref = unsafe { &*engine };
+        let lsk_ref = unsafe { &*lsk };
+        let eop_ref = unsafe { &*eop };
+        let loc_ref = unsafe { &*location };
+        let cfg_ref = unsafe { &*config };
+
+        let geo = GeoLocation::new(loc_ref.latitude_deg, loc_ref.longitude_deg, loc_ref.altitude_m);
+        let rs_config = RiseSetConfig {
+            refraction_arcmin: cfg_ref.refraction_arcmin,
+            semidiameter_arcmin: cfg_ref.semidiameter_arcmin,
+            altitude_correction: cfg_ref.altitude_correction != 0,
+        };
+
+        match compute_all_events(engine_ref, lsk_ref, eop_ref, &geo, jd_utc_noon, &rs_config) {
+            Ok(results) => {
+                // SAFETY: Pointer checked; write 8 contiguous values.
+                let out_slice = unsafe { std::slice::from_raw_parts_mut(out_results, 8) };
+                for (i, r) in results.iter().enumerate() {
+                    out_slice[i] = to_ffi_result(r);
+                }
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Approximate local noon JD from 0h UT JD and longitude. Pure math.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_approximate_local_noon_jd(
+    jd_ut_midnight: f64,
+    longitude_deg: f64,
+) -> f64 {
+    approximate_local_noon_jd(jd_ut_midnight, longitude_deg)
+}
+
+// ---------------------------------------------------------------------------
+// UTC time output
+// ---------------------------------------------------------------------------
+
+/// Broken-down UTC calendar time.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvUtcTime {
+    pub year: i32,
+    pub month: u32,
+    pub day: u32,
+    pub hour: u32,
+    pub minute: u32,
+    pub second: f64,
+}
+
+/// Extract hour, minute, second from a fractional day.
+fn fractional_day_to_hms(day_frac: f64) -> (u32, u32, f64) {
+    let frac = day_frac.fract();
+    let total_seconds = frac * 86_400.0;
+    let hour = (total_seconds / 3600.0).floor() as u32;
+    let minute = ((total_seconds % 3600.0) / 60.0).floor() as u32;
+    let second = total_seconds % 60.0;
+    (hour, minute, second)
+}
+
+/// Convert a JD TDB to UTC calendar components.
+///
+/// # Safety
+/// `lsk` and `out_utc` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_jd_tdb_to_utc(
+    lsk: *const DhruvLskHandle,
+    jd_tdb: f64,
+    out_utc: *mut DhruvUtcTime,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || out_utc.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        // SAFETY: Pointers checked for null.
+        let lsk_ref = unsafe { &*lsk };
+
+        let tdb_s = dhruv_time::jd_to_tdb_seconds(jd_tdb);
+        let utc_s = lsk_ref.tdb_to_utc(tdb_s);
+        let jd_utc = dhruv_time::tdb_seconds_to_jd(utc_s);
+        let (year, month, day_frac) = dhruv_time::jd_to_calendar(jd_utc);
+        let day = day_frac.floor() as u32;
+        let (hour, minute, second) = fractional_day_to_hms(day_frac);
+
+        // SAFETY: Pointer checked for null; write one struct.
+        unsafe {
+            *out_utc = DhruvUtcTime {
+                year,
+                month,
+                day,
+                hour,
+                minute,
+                second,
+            };
+        }
+        DhruvStatus::Ok
+    })
+}
+
+/// Convert a rise/set result to UTC calendar components.
+///
+/// Only valid when `result->result_type == DHRUV_RISESET_EVENT`.
+/// Returns `InvalidQuery` for NeverRises / NeverSets.
+///
+/// # Safety
+/// `lsk`, `result`, and `out_utc` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_riseset_result_to_utc(
+    lsk: *const DhruvLskHandle,
+    result: *const DhruvRiseSetResult,
+    out_utc: *mut DhruvUtcTime,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || result.is_null() || out_utc.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        // SAFETY: Pointer checked for null.
+        let result_ref = unsafe { &*result };
+
+        if result_ref.result_type != DHRUV_RISESET_EVENT {
+            return DhruvStatus::InvalidQuery;
+        }
+
+        // Delegate to the general-purpose converter.
+        // SAFETY: lsk and out_utc already validated, forwarding directly.
+        unsafe { dhruv_jd_tdb_to_utc(lsk, result_ref.jd_tdb, out_utc) }
+    })
+}
+
 fn ffi_boundary(f: impl FnOnce() -> DhruvStatus) -> DhruvStatus {
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
         Ok(status) => status,
@@ -662,6 +1164,153 @@ mod tests {
         // SAFETY: Null position pointer is intentional for validation.
         let status = unsafe { dhruv_cartesian_to_spherical(ptr::null(), &mut out) };
         assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    // --- EOP handle tests ---
+
+    #[test]
+    fn ffi_eop_load_rejects_null() {
+        let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
+        // SAFETY: Null path pointer is intentional for validation.
+        let status = unsafe { dhruv_eop_load(ptr::null(), &mut eop_ptr) };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    // --- Ayanamsha tests ---
+
+    #[test]
+    fn ffi_ayanamsha_rejects_invalid_code() {
+        let mut out: f64 = 0.0;
+        // SAFETY: Valid output pointer, invalid system code.
+        let status = unsafe { dhruv_ayanamsha_mean_deg(99, 2_451_545.0, &mut out) };
+        assert_eq!(status, DhruvStatus::InvalidQuery);
+    }
+
+    #[test]
+    fn ffi_ayanamsha_rejects_null_output() {
+        // SAFETY: Null output pointer is intentional for validation.
+        let status = unsafe { dhruv_ayanamsha_mean_deg(0, 2_451_545.0, ptr::null_mut()) };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_ayanamsha_lahiri_at_j2000() {
+        let mut out: f64 = 0.0;
+        // SAFETY: Valid pointers.
+        let status = unsafe { dhruv_ayanamsha_mean_deg(0, 2_451_545.0, &mut out) };
+        assert_eq!(status, DhruvStatus::Ok);
+        assert!(
+            (out - 23.853).abs() < 0.01,
+            "Lahiri at J2000 = {out}, expected ~23.853"
+        );
+    }
+
+    #[test]
+    fn ffi_ayanamsha_system_count_is_20() {
+        assert_eq!(dhruv_ayanamsha_system_count(), 20);
+    }
+
+    // --- Rise/Set config test ---
+
+    #[test]
+    fn ffi_riseset_config_default_values() {
+        let cfg = dhruv_riseset_config_default();
+        assert_eq!(cfg.refraction_arcmin, 34.0);
+        assert_eq!(cfg.semidiameter_arcmin, 16.0);
+        assert_eq!(cfg.altitude_correction, 1);
+    }
+
+    // --- Rise/Set null rejection ---
+
+    #[test]
+    fn ffi_compute_rise_set_rejects_null() {
+        let mut out = DhruvRiseSetResult {
+            result_type: 0,
+            event_code: 0,
+            jd_tdb: 0.0,
+        };
+        // SAFETY: Null engine pointer is intentional for validation.
+        let status = unsafe {
+            dhruv_compute_rise_set(
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+                0,
+                0.0,
+                ptr::null(),
+                &mut out,
+            )
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    // --- Local noon ---
+
+    #[test]
+    fn ffi_local_noon() {
+        let jd_0h = 2_460_000.5;
+        let noon = dhruv_approximate_local_noon_jd(jd_0h, 0.0);
+        assert!((noon - (jd_0h + 0.5)).abs() < 1e-10);
+    }
+
+    // --- UTC time tests ---
+
+    #[test]
+    fn ffi_jd_tdb_to_utc_rejects_null() {
+        let mut out = DhruvUtcTime {
+            year: 0,
+            month: 0,
+            day: 0,
+            hour: 0,
+            minute: 0,
+            second: 0.0,
+        };
+        // SAFETY: Null LSK pointer is intentional for validation.
+        let status = unsafe { dhruv_jd_tdb_to_utc(ptr::null(), 2_451_545.0, &mut out) };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_riseset_result_to_utc_never_rises() {
+        let result = DhruvRiseSetResult {
+            result_type: DHRUV_RISESET_NEVER_RISES,
+            event_code: 0,
+            jd_tdb: 0.0,
+        };
+        let mut out = DhruvUtcTime {
+            year: 0,
+            month: 0,
+            day: 0,
+            hour: 0,
+            minute: 0,
+            second: 0.0,
+        };
+        // Need a non-null LSK pointer for the null check to pass, but the
+        // function should return InvalidQuery before dereferencing it.
+        // Use a dangling-but-aligned pointer — the function checks result_type first.
+        let fake_lsk = std::ptr::NonNull::<DhruvLskHandle>::dangling().as_ptr();
+        // SAFETY: fake_lsk is non-null; function returns InvalidQuery before deref.
+        let status = unsafe {
+            dhruv_riseset_result_to_utc(fake_lsk as *const _, &result, &mut out)
+        };
+        assert_eq!(status, DhruvStatus::InvalidQuery);
+    }
+
+    #[test]
+    fn ffi_fractional_day_to_hms_noon() {
+        let (h, m, s) = fractional_day_to_hms(15.5); // .5 = noon
+        assert_eq!(h, 12);
+        assert_eq!(m, 0);
+        assert!(s.abs() < 0.01);
+    }
+
+    #[test]
+    fn ffi_fractional_day_to_hms_quarter() {
+        let (h, m, s) = fractional_day_to_hms(1.25); // .25 = 06:00
+        assert_eq!(h, 6);
+        assert_eq!(m, 0);
+        assert!(s.abs() < 0.01);
     }
 
     #[test]
