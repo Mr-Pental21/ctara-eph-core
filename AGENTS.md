@@ -49,3 +49,7 @@ Scope: this file governs AI agent behavior in `ctara-eph-core`.
   - source/license status is ambiguous,
   - requested approach requires denylisted/source-available reference code,
   - a change risks violating core/pro separation.
+
+## Git
+- Short commit messages, imperative mood
+- No boilerplate, signatures, or Co-Authored-By lines

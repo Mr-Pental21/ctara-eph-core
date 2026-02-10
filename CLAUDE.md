@@ -36,3 +36,7 @@ This repository is clean-room and permissive-license only.
 
 - Produce policy-compliant patches only.
 - If requested work conflicts with policy, refuse that path and propose a compliant alternative.
+
+## Git
+- Short commit messages, imperative mood
+- No boilerplate, signatures, or Co-Authored-By lines
