@@ -11,7 +11,7 @@
 //! Clean-room implementation: all reference values derived independently from
 //! published system definitions. See `docs/clean_room_ayanamsha.md`.
 
-use dhruv_frames::general_precession_longitude_deg;
+use dhruv_frames::{general_precession_longitude_deg, nutation_iau2000b};
 use dhruv_time::J2000_JD;
 
 /// Sidereal reference systems for ayanamsha computation.
@@ -212,6 +212,29 @@ pub fn ayanamsha_true_deg(
     }
 }
 
+/// Compute ayanamsha, optionally with nutation correction.
+///
+/// When `use_nutation` is true and the system uses the true equinox
+/// (currently only `TrueLahiri`), nutation in longitude is computed
+/// internally via IAU 2000B and added to the mean value.
+///
+/// When `use_nutation` is false, or for systems that don't use the true
+/// equinox, this returns the same value as [`ayanamsha_mean_deg`].
+///
+/// # Arguments
+/// * `system` — the sidereal reference system
+/// * `t_centuries` — Julian centuries of TDB since J2000.0
+/// * `use_nutation` — whether to apply nutation correction for true-equinox systems
+pub fn ayanamsha_deg(system: AyanamshaSystem, t_centuries: f64, use_nutation: bool) -> f64 {
+    let mean = ayanamsha_mean_deg(system, t_centuries);
+    if use_nutation && system.uses_true_equinox() {
+        let (delta_psi_arcsec, _) = nutation_iau2000b(t_centuries);
+        mean + delta_psi_arcsec / 3600.0
+    } else {
+        mean
+    }
+}
+
 /// Convert a Julian Date in TDB to Julian centuries since J2000.0.
 pub fn jd_tdb_to_centuries(jd_tdb: f64) -> f64 {
     (jd_tdb - J2000_JD) / 36525.0
@@ -307,6 +330,43 @@ mod tests {
         let t2 = tdb_seconds_to_centuries(s);
         let s_back = t2 * 36525.0 * 86_400.0;
         assert!((s_back - s).abs() < 1e-6);
+    }
+
+    #[test]
+    fn ayanamsha_deg_without_nutation_matches_mean() {
+        let t = 0.24;
+        for &sys in AyanamshaSystem::all() {
+            let unified = ayanamsha_deg(sys, t, false);
+            let mean = ayanamsha_mean_deg(sys, t);
+            assert!(
+                (unified - mean).abs() < 1e-15,
+                "{sys:?}: unified={unified}, mean={mean}"
+            );
+        }
+    }
+
+    #[test]
+    fn ayanamsha_deg_with_nutation_true_lahiri() {
+        let t = 0.24;
+        let unified = ayanamsha_deg(AyanamshaSystem::TrueLahiri, t, true);
+        let mean = ayanamsha_mean_deg(AyanamshaSystem::TrueLahiri, t);
+        // Should differ by nutation in longitude / 3600
+        let diff = (unified - mean).abs();
+        assert!(
+            diff > 1e-6 && diff < 0.01,
+            "TrueLahiri with nutation: diff={diff} deg, expected ~0.001-0.005"
+        );
+    }
+
+    #[test]
+    fn ayanamsha_deg_non_true_ignores_nutation_flag() {
+        let t = 0.24;
+        let with = ayanamsha_deg(AyanamshaSystem::Lahiri, t, true);
+        let without = ayanamsha_deg(AyanamshaSystem::Lahiri, t, false);
+        assert!(
+            (with - without).abs() < 1e-15,
+            "Lahiri should ignore nutation flag"
+        );
     }
 
     #[test]

@@ -27,6 +27,9 @@ const MAX_ITERATIONS: usize = 5;
 /// Convergence threshold in days (~0.086 seconds).
 const CONVERGENCE_DAYS: f64 = 1.0e-6;
 
+/// IAU 2015 nominal solar radius in km (Resolution B3).
+const SUN_RADIUS_KM: f64 = 696_000.0;
+
 /// Approximate local solar noon JD from 0h UT JD and longitude.
 ///
 /// `JD_noon = JD_0h + 0.5 - longitude_deg / 360`
@@ -36,13 +39,17 @@ pub fn approximate_local_noon_jd(jd_ut_midnight: f64, longitude_deg: f64) -> f64
     jd_ut_midnight + 0.5 - longitude_deg / 360.0
 }
 
-/// Compute the Sun's geocentric equatorial RA and Dec at a given JD TDB.
+/// Compute the Sun's geocentric equatorial RA, Dec, and distance at a given JD TDB.
 ///
 /// Queries the ephemeris engine for the Sun's position relative to Earth
 /// in ICRF/J2000, then converts to spherical coordinates.
 ///
-/// Returns `(ra_rad, dec_rad)` where RA is in [0, 2pi) and Dec in [-pi/2, pi/2].
-fn sun_equatorial_ra_dec(engine: &Engine, jd_tdb: f64) -> Result<(f64, f64), VedicError> {
+/// Returns `(ra_rad, dec_rad, distance_km)` where RA is in [0, 2pi),
+/// Dec in [-pi/2, pi/2], and distance in km.
+fn sun_equatorial_ra_dec_dist(
+    engine: &Engine,
+    jd_tdb: f64,
+) -> Result<(f64, f64, f64), VedicError> {
     let query = Query {
         target: Body::Sun,
         observer: Observer::Body(Body::Earth),
@@ -51,7 +58,15 @@ fn sun_equatorial_ra_dec(engine: &Engine, jd_tdb: f64) -> Result<(f64, f64), Ved
     };
     let state = engine.query(query)?;
     let sph = cartesian_to_spherical(&state.position_km);
-    Ok((sph.lon_rad, sph.lat_rad))
+    Ok((sph.lon_rad, sph.lat_rad, sph.distance_km))
+}
+
+/// Compute solar angular semidiameter from Earth-Sun distance.
+///
+/// Returns semidiameter in arcminutes.
+/// Varies ~15.7' (aphelion) to ~16.3' (perihelion).
+fn solar_semidiameter_arcmin(distance_km: f64) -> f64 {
+    (SUN_RADIUS_KM / distance_km).asin().to_degrees() * 60.0
 }
 
 /// Compute a single rise/set event for the Sun.
@@ -64,7 +79,7 @@ fn sun_equatorial_ra_dec(engine: &Engine, jd_tdb: f64) -> Result<(f64, f64), Ved
 /// * `event` — the event type (sunrise, sunset, twilight variant)
 /// * `jd_utc_noon` — approximate local noon on the desired date (UTC JD).
 ///   Use [`approximate_local_noon_jd`] to compute from calendar date + longitude.
-/// * `config` — atmospheric refraction and altitude parameters
+/// * `config` — refraction, limb, and altitude parameters
 ///
 /// # Returns
 /// * `RiseSetResult::Event` with the event time in JD TDB
@@ -81,22 +96,18 @@ pub fn compute_rise_set(
 ) -> Result<RiseSetResult, VedicError> {
     let phi = location.latitude_rad();
 
-    // Target altitude (negative = below horizon)
-    let h0_deg = match event {
-        RiseSetEvent::Sunrise | RiseSetEvent::Sunset => {
-            -(config.horizon_depression_deg(location.altitude_m))
-        }
-        _ => -(event.depression_deg()),
-    };
-    let h0_rad = h0_deg.to_radians();
-
     // Convert noon UTC to TDB for initial Sun query
     let noon_utc_s = jd_to_tdb_seconds(jd_utc_noon); // UTC seconds past J2000
     let noon_tdb_s = lsk.utc_to_tdb(noon_utc_s);
     let jd_tdb_noon = tdb_seconds_to_jd(noon_tdb_s);
 
-    // Initial Sun RA/Dec at noon
-    let (ra, dec) = sun_equatorial_ra_dec(engine, jd_tdb_noon)?;
+    // Initial Sun RA/Dec/distance at noon
+    let (ra, dec, dist) = sun_equatorial_ra_dec_dist(engine, jd_tdb_noon)?;
+    let semidiameter = solar_semidiameter_arcmin(dist);
+
+    // Target altitude (negative = below horizon)
+    let h0_deg = config.target_altitude_deg(event, semidiameter, location.altitude_m);
+    let h0_rad = h0_deg.to_radians();
 
     // Hour angle at target altitude
     let cos_h0 = (h0_rad.sin() - phi.sin() * dec.sin()) / (phi.cos() * dec.cos());
@@ -146,11 +157,16 @@ pub fn compute_rise_set(
         let event_tdb_s = lsk.utc_to_tdb(event_utc_s);
         let jd_tdb_event = tdb_seconds_to_jd(event_tdb_s);
 
-        // Recompute Sun RA/Dec at event time
-        let (ra_i, dec_i) = sun_equatorial_ra_dec(engine, jd_tdb_event)?;
+        // Recompute Sun RA/Dec/distance at event time
+        let (ra_i, dec_i, dist_i) = sun_equatorial_ra_dec_dist(engine, jd_tdb_event)?;
+        let sd_i = solar_semidiameter_arcmin(dist_i);
+
+        // Recompute target altitude with updated semidiameter
+        let h0_deg_i = config.target_altitude_deg(event, sd_i, location.altitude_m);
+        let h0_rad_i = h0_deg_i.to_radians();
 
         // Recompute hour angle at event time
-        let cos_h_i = (h0_rad.sin() - phi.sin() * dec_i.sin()) / (phi.cos() * dec_i.cos());
+        let cos_h_i = (h0_rad_i.sin() - phi.sin() * dec_i.sin()) / (phi.cos() * dec_i.cos());
         if cos_h_i > 1.0 {
             return Ok(RiseSetResult::NeverRises);
         }
@@ -262,5 +278,25 @@ mod tests {
         let noon = approximate_local_noon_jd(jd_0h, -90.0);
         // 90 deg west → noon is 6 hours later in UT
         assert!((noon - (jd_0h + 0.75)).abs() < 1e-10);
+    }
+
+    #[test]
+    fn solar_semidiameter_typical() {
+        // 1 AU ≈ 149_597_870.7 km → semidiameter ≈ 16 arcmin
+        let sd = solar_semidiameter_arcmin(149_597_870.7);
+        assert!(
+            (sd - 16.0).abs() < 0.5,
+            "semidiameter at 1 AU = {sd}, expected ~16'"
+        );
+    }
+
+    #[test]
+    fn solar_semidiameter_varies() {
+        // Perihelion (~147.1e6 km) vs aphelion (~152.1e6 km)
+        let sd_peri = solar_semidiameter_arcmin(147_100_000.0);
+        let sd_aph = solar_semidiameter_arcmin(152_100_000.0);
+        assert!(sd_peri > sd_aph, "perihelion SD should be larger");
+        assert!(sd_peri > 16.0, "perihelion SD ~ 16.3', got {sd_peri}");
+        assert!(sd_aph < 16.0, "aphelion SD ~ 15.7', got {sd_aph}");
     }
 }

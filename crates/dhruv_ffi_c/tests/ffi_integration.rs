@@ -637,3 +637,185 @@ fn ffi_jd_tdb_to_utc_j2000() {
     // SAFETY: Pointer was returned by dhruv_lsk_load.
     unsafe { dhruv_lsk_free(lsk_ptr) };
 }
+
+// ---------------------------------------------------------------------------
+// Nutation integration tests
+// ---------------------------------------------------------------------------
+
+#[test]
+fn ffi_nutation_at_2024() {
+    let mut dpsi: f64 = 0.0;
+    let mut deps: f64 = 0.0;
+    let jd = 2_460_310.5; // ~2024-01-01
+    // SAFETY: Valid pointers.
+    let status = unsafe {
+        dhruv_nutation_iau2000b(jd, &mut dpsi, &mut deps)
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert!(dpsi.abs() < 18.0, "Δψ = {dpsi}");
+    assert!(deps.abs() < 10.0, "Δε = {deps}");
+}
+
+#[test]
+fn ffi_ayanamsha_deg_unified_matches_mean() {
+    let mut unified: f64 = 0.0;
+    let mut mean: f64 = 0.0;
+    let jd = 2_460_310.5;
+    // SAFETY: Valid pointers.
+    let s1 = unsafe { dhruv_ayanamsha_deg(0, jd, 0, &mut unified) };
+    let s2 = unsafe { dhruv_ayanamsha_mean_deg(0, jd, &mut mean) };
+    assert_eq!(s1, DhruvStatus::Ok);
+    assert_eq!(s2, DhruvStatus::Ok);
+    assert!(
+        (unified - mean).abs() < 1e-12,
+        "unified={unified}, mean={mean}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Sun limb comparison tests (require kernels)
+// ---------------------------------------------------------------------------
+
+#[test]
+fn ffi_sunrise_lower_limb_later_than_upper() {
+    if !all_kernels_available() {
+        eprintln!("Skipping: not all kernel files available");
+        return;
+    }
+
+    let engine_ptr = make_engine().unwrap();
+    let lsk_path = lsk_path_cstr().unwrap();
+    let eop_path = eop_path_cstr().unwrap();
+
+    let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
+    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
+    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let loc = DhruvGeoLocation {
+        latitude_deg: 28.6139,
+        longitude_deg: 77.209,
+        altitude_m: 0.0,
+    };
+    let jd_0h = calendar_to_jd(2024, 3, 20.0);
+    let noon = dhruv_approximate_local_noon_jd(jd_0h, loc.longitude_deg);
+
+    // UpperLimb sunrise
+    let cfg_upper = DhruvRiseSetConfig {
+        use_refraction: 1,
+        sun_limb: DHRUV_SUN_LIMB_UPPER,
+        altitude_correction: 1,
+    };
+    let mut result_upper = DhruvRiseSetResult {
+        result_type: -1, event_code: -1, jd_tdb: 0.0,
+    };
+    // SAFETY: All pointers are valid.
+    let status = unsafe {
+        dhruv_compute_rise_set(
+            engine_ptr, lsk_ptr, eop_ptr, &loc,
+            DHRUV_EVENT_SUNRISE, noon, &cfg_upper, &mut result_upper,
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(result_upper.result_type, DHRUV_RISESET_EVENT);
+
+    // LowerLimb sunrise
+    let cfg_lower = DhruvRiseSetConfig {
+        use_refraction: 1,
+        sun_limb: DHRUV_SUN_LIMB_LOWER,
+        altitude_correction: 1,
+    };
+    let mut result_lower = DhruvRiseSetResult {
+        result_type: -1, event_code: -1, jd_tdb: 0.0,
+    };
+    // SAFETY: All pointers are valid.
+    let status = unsafe {
+        dhruv_compute_rise_set(
+            engine_ptr, lsk_ptr, eop_ptr, &loc,
+            DHRUV_EVENT_SUNRISE, noon, &cfg_lower, &mut result_lower,
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(result_lower.result_type, DHRUV_RISESET_EVENT);
+
+    // Lower limb sunrise should be LATER than upper limb sunrise
+    // (lower limb needs to rise higher → takes more time)
+    assert!(
+        result_lower.jd_tdb > result_upper.jd_tdb,
+        "LowerLimb sunrise (jd={}) should be after UpperLimb (jd={})",
+        result_lower.jd_tdb, result_upper.jd_tdb
+    );
+
+    // SAFETY: cleanup
+    unsafe { dhruv_eop_free(eop_ptr) };
+    unsafe { dhruv_lsk_free(lsk_ptr) };
+    unsafe { dhruv_engine_free(engine_ptr) };
+}
+
+#[test]
+fn ffi_center_mode_between_limbs() {
+    if !all_kernels_available() {
+        eprintln!("Skipping: not all kernel files available");
+        return;
+    }
+
+    let engine_ptr = make_engine().unwrap();
+    let lsk_path = lsk_path_cstr().unwrap();
+    let eop_path = eop_path_cstr().unwrap();
+
+    let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
+    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
+    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let loc = DhruvGeoLocation {
+        latitude_deg: 28.6139,
+        longitude_deg: 77.209,
+        altitude_m: 0.0,
+    };
+    let jd_0h = calendar_to_jd(2024, 3, 20.0);
+    let noon = dhruv_approximate_local_noon_jd(jd_0h, loc.longitude_deg);
+
+    let mut results = [0.0_f64; 3]; // upper, center, lower
+    for (i, limb_code) in [DHRUV_SUN_LIMB_UPPER, DHRUV_SUN_LIMB_CENTER, DHRUV_SUN_LIMB_LOWER].iter().enumerate() {
+        let cfg = DhruvRiseSetConfig {
+            use_refraction: 1,
+            sun_limb: *limb_code,
+            altitude_correction: 1,
+        };
+        let mut result = DhruvRiseSetResult {
+            result_type: -1, event_code: -1, jd_tdb: 0.0,
+        };
+        // SAFETY: All pointers are valid.
+        let status = unsafe {
+            dhruv_compute_rise_set(
+                engine_ptr, lsk_ptr, eop_ptr, &loc,
+                DHRUV_EVENT_SUNRISE, noon, &cfg, &mut result,
+            )
+        };
+        assert_eq!(status, DhruvStatus::Ok);
+        assert_eq!(result.result_type, DHRUV_RISESET_EVENT);
+        results[i] = result.jd_tdb;
+    }
+
+    // Order should be: UpperLimb < Center < LowerLimb
+    assert!(
+        results[0] < results[1],
+        "UpperLimb ({}) should be before Center ({})", results[0], results[1]
+    );
+    assert!(
+        results[1] < results[2],
+        "Center ({}) should be before LowerLimb ({})", results[1], results[2]
+    );
+
+    // SAFETY: cleanup
+    unsafe { dhruv_eop_free(eop_ptr) };
+    unsafe { dhruv_lsk_free(lsk_ptr) };
+    unsafe { dhruv_engine_free(engine_ptr) };
+}

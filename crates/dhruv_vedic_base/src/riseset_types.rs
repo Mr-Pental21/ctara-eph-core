@@ -45,7 +45,6 @@ impl GeoLocation {
 pub enum RiseSetEvent {
     /// Sunrise: upper limb of the Sun at the geometric horizon,
     /// accounting for atmospheric refraction and solar semidiameter.
-    /// Depression angle: ~0.8333 deg (50 arcmin).
     Sunrise,
     /// Sunset: upper limb disappears below the horizon.
     Sunset,
@@ -64,13 +63,14 @@ pub enum RiseSetEvent {
 }
 
 impl RiseSetEvent {
-    /// Depression angle in degrees below the geometric horizon.
+    /// Depression angle in degrees below the geometric horizon for twilight events.
     ///
-    /// For sunrise/sunset this is 0.8333 deg (34' refraction + 16' semidiameter).
-    /// For twilight events the standard IAU depression angles apply.
+    /// For sunrise/sunset this returns 0.0 — the actual target altitude is
+    /// computed by [`RiseSetConfig::target_altitude_deg`] which accounts for
+    /// refraction, semidiameter, and sun limb choice.
     pub fn depression_deg(self) -> f64 {
         match self {
-            Self::Sunrise | Self::Sunset => 50.0 / 60.0, // 0.8333 deg
+            Self::Sunrise | Self::Sunset => 0.0,
             Self::CivilDawn | Self::CivilDusk => 6.0,
             Self::NauticalDawn | Self::NauticalDusk => 12.0,
             Self::AstronomicalDawn | Self::AstronomicalDusk => 18.0,
@@ -87,44 +87,100 @@ impl RiseSetEvent {
                 | Self::AstronomicalDawn
         )
     }
+
+    /// Whether this is a sunrise or sunset event (not twilight).
+    pub fn is_sun_event(self) -> bool {
+        matches!(self, Self::Sunrise | Self::Sunset)
+    }
+}
+
+/// Which part of the solar disk defines the sunrise/sunset event.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum SunLimb {
+    /// Sunrise = upper limb appears; Sunset = upper limb disappears.
+    /// This is the conventional astronomical definition.
+    #[default]
+    UpperLimb,
+    /// Sunrise/sunset defined by center of disk.
+    Center,
+    /// Sunrise = lower limb appears; Sunset = lower limb disappears.
+    LowerLimb,
 }
 
 /// Configurable parameters for rise/set computation.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RiseSetConfig {
-    /// Atmospheric refraction at the horizon in arcminutes. Default: 34.0.
-    pub refraction_arcmin: f64,
-    /// Solar angular semi-diameter in arcminutes. Default: 16.0.
-    pub semidiameter_arcmin: f64,
+    /// Apply standard atmospheric refraction (34 arcmin). Default: true.
+    pub use_refraction: bool,
+    /// Which solar limb defines sunrise/sunset. Default: UpperLimb.
+    pub sun_limb: SunLimb,
     /// Whether to apply geometric dip correction for observer altitude.
     /// Dip angle = arccos(R / (R + h)) where R = Earth radius, h = altitude.
-    /// Approximation: dip = sqrt(2h/R) radians. Default: true.
+    /// Default: true.
     pub altitude_correction: bool,
 }
 
 impl Default for RiseSetConfig {
     fn default() -> Self {
         Self {
-            refraction_arcmin: 34.0,
-            semidiameter_arcmin: 16.0,
+            use_refraction: true,
+            sun_limb: SunLimb::UpperLimb,
             altitude_correction: true,
         }
     }
 }
 
+/// Standard atmospheric refraction at the horizon in arcminutes.
+const STANDARD_REFRACTION_ARCMIN: f64 = 34.0;
+
 impl RiseSetConfig {
-    /// Total horizon depression for sunrise/sunset in degrees.
+    /// Target altitude of the Sun's center at the event, in degrees.
     ///
-    /// Combines refraction, solar semidiameter, and (optionally) geometric
-    /// dip from observer altitude.
+    /// For sunrise/sunset events, combines refraction, solar semidiameter
+    /// (passed in from the ephemeris), and geometric dip from altitude.
     ///
-    /// `h0 = (refraction + semidiameter) / 60 + dip_deg`
-    pub fn horizon_depression_deg(&self, altitude_m: f64) -> f64 {
-        let base = (self.refraction_arcmin + self.semidiameter_arcmin) / 60.0;
+    /// For twilight events, returns the standard IAU depression angle
+    /// (negative altitude), ignoring refraction/semidiameter/limb.
+    ///
+    /// # Arguments
+    /// * `event` — the rise/set event type
+    /// * `semidiameter_arcmin` — solar angular semidiameter in arcminutes
+    ///   (computed dynamically from Earth-Sun distance)
+    /// * `altitude_m` — observer altitude in meters
+    pub fn target_altitude_deg(
+        &self,
+        event: RiseSetEvent,
+        semidiameter_arcmin: f64,
+        altitude_m: f64,
+    ) -> f64 {
+        if !event.is_sun_event() {
+            // Twilight: fixed depression angle, negative
+            return -(event.depression_deg());
+        }
+
+        let refraction = if self.use_refraction {
+            STANDARD_REFRACTION_ARCMIN
+        } else {
+            0.0
+        };
+
+        // Semidiameter contribution depends on which limb defines the event.
+        // UpperLimb: sun center is one semidiameter below the limb at horizon.
+        // LowerLimb: sun center is one semidiameter above the limb at horizon.
+        // Center: sun center is at the horizon, no semidiameter offset.
+        let sd_contrib = match self.sun_limb {
+            SunLimb::UpperLimb => semidiameter_arcmin,
+            SunLimb::Center => 0.0,
+            SunLimb::LowerLimb => -semidiameter_arcmin,
+        };
+
+        // Base depression in degrees (negative altitude)
+        let base = -(refraction + sd_contrib) / 60.0;
+
+        // Geometric dip correction
         if self.altitude_correction && altitude_m > 0.0 {
-            // Geometric dip: sqrt(2h/R) radians, converted to degrees
             let dip_rad = (2.0 * altitude_m / EARTH_RADIUS_M).sqrt();
-            base + dip_rad * (180.0 / PI)
+            base - dip_rad * (180.0 / PI)
         } else {
             base
         }
@@ -150,15 +206,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn depression_sunrise() {
-        let d = RiseSetEvent::Sunrise.depression_deg();
-        assert!(
-            (d - 0.8333).abs() < 0.001,
-            "sunrise depression = {d}"
-        );
-    }
-
-    #[test]
     fn depression_civil() {
         assert_eq!(RiseSetEvent::CivilDawn.depression_deg(), 6.0);
     }
@@ -174,6 +221,12 @@ mod tests {
     }
 
     #[test]
+    fn depression_sunrise_is_zero() {
+        // Sunrise depression is now 0 — actual altitude comes from config
+        assert_eq!(RiseSetEvent::Sunrise.depression_deg(), 0.0);
+    }
+
+    #[test]
     fn is_rising_correct() {
         assert!(RiseSetEvent::Sunrise.is_rising());
         assert!(RiseSetEvent::CivilDawn.is_rising());
@@ -186,51 +239,132 @@ mod tests {
     }
 
     #[test]
+    fn is_sun_event() {
+        assert!(RiseSetEvent::Sunrise.is_sun_event());
+        assert!(RiseSetEvent::Sunset.is_sun_event());
+        assert!(!RiseSetEvent::CivilDawn.is_sun_event());
+        assert!(!RiseSetEvent::AstronomicalDusk.is_sun_event());
+    }
+
+    #[test]
     fn default_config() {
         let c = RiseSetConfig::default();
-        assert_eq!(c.refraction_arcmin, 34.0);
-        assert_eq!(c.semidiameter_arcmin, 16.0);
+        assert!(c.use_refraction);
+        assert_eq!(c.sun_limb, SunLimb::UpperLimb);
         assert!(c.altitude_correction);
     }
 
     #[test]
-    fn depression_sea_level() {
+    fn target_altitude_upper_limb_rising() {
         let c = RiseSetConfig::default();
-        let d = c.horizon_depression_deg(0.0);
-        let expected = (34.0 + 16.0) / 60.0;
+        // Typical semidiameter ~16 arcmin
+        let h = c.target_altitude_deg(RiseSetEvent::Sunrise, 16.0, 0.0);
+        // -(34 + 16) / 60 = -0.8333 deg
+        let expected = -(34.0 + 16.0) / 60.0;
         assert!(
-            (d - expected).abs() < 1e-10,
-            "sea level: {d}, expected {expected}"
+            (h - expected).abs() < 1e-10,
+            "upper limb rising: {h}, expected {expected}"
         );
     }
 
     #[test]
-    fn depression_1000m() {
+    fn target_altitude_upper_limb_setting() {
         let c = RiseSetConfig::default();
-        let d = c.horizon_depression_deg(1000.0);
-        let base = (34.0 + 16.0) / 60.0;
-        // Dip at 1000m: sqrt(2*1000/6371000) = sqrt(3.14e-4) ≈ 0.01772 rad ≈ 1.015 deg
+        let h = c.target_altitude_deg(RiseSetEvent::Sunset, 16.0, 0.0);
+        // Same as rising for UpperLimb: -(34 + 16) / 60
+        let expected = -(34.0 + 16.0) / 60.0;
         assert!(
-            d > base + 0.9,
-            "1000m depression {d} should exceed base {base} by ~1 deg"
-        );
-        assert!(
-            d < base + 1.2,
-            "1000m depression {d} too large"
+            (h - expected).abs() < 1e-10,
+            "upper limb setting: {h}, expected {expected}"
         );
     }
 
     #[test]
-    fn depression_no_altitude_correction() {
+    fn target_altitude_center() {
+        let c = RiseSetConfig {
+            sun_limb: SunLimb::Center,
+            ..Default::default()
+        };
+        let h = c.target_altitude_deg(RiseSetEvent::Sunrise, 16.0, 0.0);
+        // Center: -(34 + 0) / 60 = -0.5667 deg
+        let expected = -34.0 / 60.0;
+        assert!(
+            (h - expected).abs() < 1e-10,
+            "center: {h}, expected {expected}"
+        );
+    }
+
+    #[test]
+    fn target_altitude_lower_limb() {
+        let c = RiseSetConfig {
+            sun_limb: SunLimb::LowerLimb,
+            ..Default::default()
+        };
+        let h = c.target_altitude_deg(RiseSetEvent::Sunrise, 16.0, 0.0);
+        // LowerLimb rising: -(34 + (-16)) / 60 = -(18)/60 = -0.3 deg
+        let expected = -(34.0 - 16.0) / 60.0;
+        assert!(
+            (h - expected).abs() < 1e-10,
+            "lower limb: {h}, expected {expected}"
+        );
+    }
+
+    #[test]
+    fn target_altitude_no_refraction() {
+        let c = RiseSetConfig {
+            use_refraction: false,
+            ..Default::default()
+        };
+        let h = c.target_altitude_deg(RiseSetEvent::Sunrise, 16.0, 0.0);
+        // No refraction, UpperLimb: -(0 + 16) / 60 = -0.2667 deg
+        let expected = -16.0 / 60.0;
+        assert!(
+            (h - expected).abs() < 1e-10,
+            "no refraction: {h}, expected {expected}"
+        );
+    }
+
+    #[test]
+    fn target_altitude_twilight_ignores_config() {
+        let c = RiseSetConfig {
+            use_refraction: false,
+            sun_limb: SunLimb::LowerLimb,
+            ..Default::default()
+        };
+        let h = c.target_altitude_deg(RiseSetEvent::CivilDawn, 16.0, 0.0);
+        assert!(
+            (h - (-6.0)).abs() < 1e-10,
+            "civil dawn: {h}, expected -6.0"
+        );
+    }
+
+    #[test]
+    fn target_altitude_with_dip_1000m() {
+        let c = RiseSetConfig::default();
+        let h = c.target_altitude_deg(RiseSetEvent::Sunrise, 16.0, 1000.0);
+        let base = -(34.0 + 16.0) / 60.0;
+        // Dip at 1000m ≈ 1.015 deg
+        assert!(
+            h < base - 0.9,
+            "1000m altitude: {h} should be < {}", base - 0.9
+        );
+        assert!(
+            h > base - 1.2,
+            "1000m altitude: {h} too negative"
+        );
+    }
+
+    #[test]
+    fn target_altitude_no_altitude_correction() {
         let c = RiseSetConfig {
             altitude_correction: false,
             ..Default::default()
         };
-        let d = c.horizon_depression_deg(10000.0);
-        let expected = (34.0 + 16.0) / 60.0;
+        let h = c.target_altitude_deg(RiseSetEvent::Sunrise, 16.0, 10000.0);
+        let expected = -(34.0 + 16.0) / 60.0;
         assert!(
-            (d - expected).abs() < 1e-10,
-            "no altitude correction: {d}, expected {expected}"
+            (h - expected).abs() < 1e-10,
+            "no altitude correction: {h}, expected {expected}"
         );
     }
 
@@ -257,8 +391,6 @@ mod tests {
     #[test]
     fn cos_h_polar_never_rises() {
         // Tromso (lat=70N), winter solstice (dec=-23.44):
-        // cos(H) = [sin(-0.8333 deg) - sin(70 deg)*sin(-23.44 deg)]
-        //        / [cos(70 deg)*cos(-23.44 deg)]
         let h0 = (-0.8333_f64).to_radians();
         let phi = 70.0_f64.to_radians();
         let dec = (-23.44_f64).to_radians();
@@ -280,5 +412,10 @@ mod tests {
             cos_h < -1.0,
             "cos_h = {cos_h}, should be < -1 (never sets)"
         );
+    }
+
+    #[test]
+    fn sun_limb_default() {
+        assert_eq!(SunLimb::default(), SunLimb::UpperLimb);
     }
 }

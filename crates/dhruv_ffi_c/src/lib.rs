@@ -5,9 +5,9 @@ use std::ptr;
 
 use dhruv_core::{Body, Engine, EngineConfig, EngineError, Frame, Observer, Query, StateVector};
 use dhruv_vedic_base::{
-    AyanamshaSystem, GeoLocation, RiseSetConfig, RiseSetEvent, RiseSetResult, VedicError,
-    ayanamsha_mean_deg, ayanamsha_true_deg, approximate_local_noon_jd, compute_all_events,
-    compute_rise_set, jd_tdb_to_centuries,
+    AyanamshaSystem, GeoLocation, RiseSetConfig, RiseSetEvent, RiseSetResult, SunLimb,
+    VedicError, ayanamsha_deg, ayanamsha_mean_deg, ayanamsha_true_deg,
+    approximate_local_noon_jd, compute_all_events, compute_rise_set, jd_tdb_to_centuries,
 };
 
 /// ABI version for downstream bindings.
@@ -749,13 +749,21 @@ pub struct DhruvGeoLocation {
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DhruvRiseSetConfig {
-    /// Atmospheric refraction at horizon in arcminutes. Default: 34.0.
-    pub refraction_arcmin: f64,
-    /// Solar semi-diameter in arcminutes. Default: 16.0.
-    pub semidiameter_arcmin: f64,
+    /// Apply standard atmospheric refraction (34 arcmin): 1 = yes, 0 = no.
+    pub use_refraction: u8,
+    /// Which solar limb defines sunrise/sunset.
+    /// 0 = UpperLimb, 1 = Center, 2 = LowerLimb.
+    pub sun_limb: i32,
     /// Apply altitude dip correction: 1 = true, 0 = false.
     pub altitude_correction: u8,
 }
+
+/// Sun limb: upper limb defines sunrise/sunset (conventional).
+pub const DHRUV_SUN_LIMB_UPPER: i32 = 0;
+/// Sun limb: center of disk defines sunrise/sunset.
+pub const DHRUV_SUN_LIMB_CENTER: i32 = 1;
+/// Sun limb: lower limb defines sunrise/sunset.
+pub const DHRUV_SUN_LIMB_LOWER: i32 = 2;
 
 /// C-compatible rise/set result.
 #[repr(C)]
@@ -842,9 +850,19 @@ fn to_ffi_result(result: &RiseSetResult) -> DhruvRiseSetResult {
 #[unsafe(no_mangle)]
 pub extern "C" fn dhruv_riseset_config_default() -> DhruvRiseSetConfig {
     DhruvRiseSetConfig {
-        refraction_arcmin: 34.0,
-        semidiameter_arcmin: 16.0,
+        use_refraction: 1,
+        sun_limb: DHRUV_SUN_LIMB_UPPER,
         altitude_correction: 1,
+    }
+}
+
+/// Convert C sun_limb code to Rust SunLimb enum.
+fn sun_limb_from_code(code: i32) -> Option<SunLimb> {
+    match code {
+        DHRUV_SUN_LIMB_UPPER => Some(SunLimb::UpperLimb),
+        DHRUV_SUN_LIMB_CENTER => Some(SunLimb::Center),
+        DHRUV_SUN_LIMB_LOWER => Some(SunLimb::LowerLimb),
+        _ => None,
     }
 }
 
@@ -887,9 +905,13 @@ pub unsafe extern "C" fn dhruv_compute_rise_set(
         let cfg_ref = unsafe { &*config };
 
         let geo = GeoLocation::new(loc_ref.latitude_deg, loc_ref.longitude_deg, loc_ref.altitude_m);
+        let sun_limb = match sun_limb_from_code(cfg_ref.sun_limb) {
+            Some(l) => l,
+            None => return DhruvStatus::InvalidQuery,
+        };
         let rs_config = RiseSetConfig {
-            refraction_arcmin: cfg_ref.refraction_arcmin,
-            semidiameter_arcmin: cfg_ref.semidiameter_arcmin,
+            use_refraction: cfg_ref.use_refraction != 0,
+            sun_limb,
             altitude_correction: cfg_ref.altitude_correction != 0,
         };
 
@@ -942,9 +964,13 @@ pub unsafe extern "C" fn dhruv_compute_all_events(
         let cfg_ref = unsafe { &*config };
 
         let geo = GeoLocation::new(loc_ref.latitude_deg, loc_ref.longitude_deg, loc_ref.altitude_m);
+        let sun_limb = match sun_limb_from_code(cfg_ref.sun_limb) {
+            Some(l) => l,
+            None => return DhruvStatus::InvalidQuery,
+        };
         let rs_config = RiseSetConfig {
-            refraction_arcmin: cfg_ref.refraction_arcmin,
-            semidiameter_arcmin: cfg_ref.semidiameter_arcmin,
+            use_refraction: cfg_ref.use_refraction != 0,
+            sun_limb,
             altitude_correction: cfg_ref.altitude_correction != 0,
         };
 
@@ -969,6 +995,72 @@ pub extern "C" fn dhruv_approximate_local_noon_jd(
     longitude_deg: f64,
 ) -> f64 {
     approximate_local_noon_jd(jd_ut_midnight, longitude_deg)
+}
+
+// ---------------------------------------------------------------------------
+// Unified ayanamsha + standalone nutation
+// ---------------------------------------------------------------------------
+
+/// Unified ayanamsha computation. Computes nutation internally when needed.
+///
+/// When `use_nutation` is non-zero and the system uses the true equinox
+/// (TrueLahiri), nutation in longitude is computed via IAU 2000B and applied.
+///
+/// # Safety
+/// `out_deg` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_ayanamsha_deg(
+    system_code: i32,
+    jd_tdb: f64,
+    use_nutation: u8,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if out_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        let system = match ayanamsha_system_from_code(system_code) {
+            Some(s) => s,
+            None => return DhruvStatus::InvalidQuery,
+        };
+
+        let t = jd_tdb_to_centuries(jd_tdb);
+        let deg = ayanamsha_deg(system, t, use_nutation != 0);
+
+        // SAFETY: Pointer is checked for null; write one value.
+        unsafe { *out_deg = deg };
+        DhruvStatus::Ok
+    })
+}
+
+/// Compute IAU 2000B nutation (standalone).
+///
+/// Returns nutation in longitude (Δψ) and obliquity (Δε) in arcseconds.
+///
+/// # Safety
+/// `out_dpsi_arcsec` and `out_deps_arcsec` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_nutation_iau2000b(
+    jd_tdb: f64,
+    out_dpsi_arcsec: *mut f64,
+    out_deps_arcsec: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if out_dpsi_arcsec.is_null() || out_deps_arcsec.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        let t = jd_tdb_to_centuries(jd_tdb);
+        let (dpsi, deps) = dhruv_frames::nutation_iau2000b(t);
+
+        // SAFETY: Pointers checked for null; write one value each.
+        unsafe {
+            *out_dpsi_arcsec = dpsi;
+            *out_deps_arcsec = deps;
+        }
+        DhruvStatus::Ok
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -1215,9 +1307,65 @@ mod tests {
     #[test]
     fn ffi_riseset_config_default_values() {
         let cfg = dhruv_riseset_config_default();
-        assert_eq!(cfg.refraction_arcmin, 34.0);
-        assert_eq!(cfg.semidiameter_arcmin, 16.0);
+        assert_eq!(cfg.use_refraction, 1);
+        assert_eq!(cfg.sun_limb, DHRUV_SUN_LIMB_UPPER);
         assert_eq!(cfg.altitude_correction, 1);
+    }
+
+    #[test]
+    fn ffi_ayanamsha_deg_mean_matches_old() {
+        let mut unified: f64 = 0.0;
+        let mut old: f64 = 0.0;
+        // Lahiri at J2000, use_nutation=0 → should match mean
+        // SAFETY: Valid pointers.
+        let s1 = unsafe { dhruv_ayanamsha_deg(0, 2_451_545.0, 0, &mut unified) };
+        let s2 = unsafe { dhruv_ayanamsha_mean_deg(0, 2_451_545.0, &mut old) };
+        assert_eq!(s1, DhruvStatus::Ok);
+        assert_eq!(s2, DhruvStatus::Ok);
+        assert!((unified - old).abs() < 1e-15);
+    }
+
+    #[test]
+    fn ffi_ayanamsha_deg_true_lahiri_with_nutation() {
+        let mut with_nut: f64 = 0.0;
+        let mut without: f64 = 0.0;
+        let jd = 2_460_310.5; // ~2024-01-01
+        // TrueLahiri = system code 1
+        // SAFETY: Valid pointers.
+        let s1 = unsafe { dhruv_ayanamsha_deg(1, jd, 1, &mut with_nut) };
+        let s2 = unsafe { dhruv_ayanamsha_deg(1, jd, 0, &mut without) };
+        assert_eq!(s1, DhruvStatus::Ok);
+        assert_eq!(s2, DhruvStatus::Ok);
+        let diff = (with_nut - without).abs();
+        assert!(
+            diff > 1e-6 && diff < 0.01,
+            "nutation diff = {diff} deg"
+        );
+    }
+
+    #[test]
+    fn ffi_nutation_iau2000b_at_j2000() {
+        let mut dpsi: f64 = 0.0;
+        let mut deps: f64 = 0.0;
+        // SAFETY: Valid pointers.
+        let status = unsafe {
+            dhruv_nutation_iau2000b(2_451_545.0, &mut dpsi, &mut deps)
+        };
+        assert_eq!(status, DhruvStatus::Ok);
+        assert!(dpsi.is_finite());
+        assert!(deps.is_finite());
+        assert!(dpsi.abs() < 20.0, "Δψ = {dpsi}");
+        assert!(deps.abs() < 10.0, "Δε = {deps}");
+    }
+
+    #[test]
+    fn ffi_nutation_rejects_null() {
+        let mut dpsi: f64 = 0.0;
+        // SAFETY: Null pointer intentional for validation.
+        let status = unsafe {
+            dhruv_nutation_iau2000b(2_451_545.0, &mut dpsi, ptr::null_mut())
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
     }
 
     // --- Rise/Set null rejection ---
