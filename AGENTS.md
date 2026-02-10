@@ -50,6 +50,13 @@ Scope: this file governs AI agent behavior in `ctara-dhruv-core`.
   - requested approach requires denylisted/source-available reference code,
   - a change risks violating core/pro separation.
 
+## Testing
+
+- **Unit tests** (`src/`): pure logic, no external files. Examples: math, config validation, null-pointer rejection.
+- **Integration tests** (`tests/`): anything that loads kernel files (`.bsp`, `.tls`) or other external data from disk.
+- Never put kernel-dependent tests in `src/`. Always place them in the crate's `tests/` directory.
+- Integration tests that need kernels should skip gracefully (early return) when files are absent.
+
 ## Naming Convention
 
 - Crate names: `dhruv_*` prefix (e.g., `dhruv_core`, `dhruv_time`). Exception: `jpl_kernel` (domain-specific, not project-branded).
