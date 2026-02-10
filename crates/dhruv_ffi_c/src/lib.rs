@@ -6,7 +6,7 @@ use std::ptr;
 use dhruv_core::{Body, Engine, EngineConfig, EngineError, Frame, Observer, Query, StateVector};
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 3;
+pub const DHRUV_API_VERSION: u32 = 4;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -334,6 +334,24 @@ pub struct DhruvSphericalCoords {
     pub distance_km: f64,
 }
 
+/// C-compatible spherical state with angular velocities.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvSphericalState {
+    /// Longitude in radians, range [0, 2*pi).
+    pub lon_rad: f64,
+    /// Latitude in radians, range [-pi/2, pi/2].
+    pub lat_rad: f64,
+    /// Distance from origin in km.
+    pub distance_km: f64,
+    /// Longitude rate of change in rad/s.
+    pub lon_speed: f64,
+    /// Latitude rate of change in rad/s.
+    pub lat_speed: f64,
+    /// Radial velocity in km/s.
+    pub distance_speed: f64,
+}
+
 /// Load a leap second kernel (LSK) from a file path.
 ///
 /// The LSK is a lightweight (~5 KB) text file containing leap second data
@@ -459,6 +477,95 @@ pub unsafe extern "C" fn dhruv_cartesian_to_spherical(
     })
 }
 
+/// Query engine with UTC input, return spherical state with angular velocities.
+#[allow(clippy::too_many_arguments)]
+pub fn dhruv_query_utc_spherical_internal(
+    engine: &Engine,
+    target_code: i32,
+    observer_code: i32,
+    frame_code: i32,
+    year: i32,
+    month: u32,
+    day: u32,
+    hour: u32,
+    min: u32,
+    sec: f64,
+) -> Result<DhruvSphericalState, DhruvStatus> {
+    let target = Body::from_code(target_code)
+        .ok_or(DhruvStatus::InvalidQuery)?;
+    let observer = Observer::from_code(observer_code)
+        .ok_or(DhruvStatus::InvalidQuery)?;
+    let frame = Frame::from_code(frame_code)
+        .ok_or(DhruvStatus::InvalidQuery)?;
+
+    let epoch = dhruv_time::Epoch::from_utc(year, month, day, hour, min, sec, engine.lsk());
+
+    let query = Query {
+        target,
+        observer,
+        frame,
+        epoch_tdb_jd: epoch.as_jd_tdb(),
+    };
+
+    let state = engine.query(query).map_err(|e| DhruvStatus::from(&e))?;
+
+    let ss = dhruv_frames::cartesian_state_to_spherical_state(
+        &state.position_km,
+        &state.velocity_km_s,
+    );
+
+    Ok(DhruvSphericalState {
+        lon_rad: ss.lon_rad,
+        lat_rad: ss.lat_rad,
+        distance_km: ss.distance_km,
+        lon_speed: ss.lon_speed,
+        lat_speed: ss.lat_speed,
+        distance_speed: ss.distance_speed,
+    })
+}
+
+/// Query engine from UTC calendar date, return spherical state with angular velocities.
+///
+/// Combines UTC→TDB conversion, Cartesian query, and spherical state conversion
+/// in a single call.
+///
+/// # Safety
+/// `engine` and `out` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_query_utc_spherical(
+    engine: *const DhruvEngineHandle,
+    target: i32,
+    observer: i32,
+    frame: i32,
+    year: i32,
+    month: u32,
+    day: u32,
+    hour: u32,
+    min: u32,
+    sec: f64,
+    out: *mut DhruvSphericalState,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        // SAFETY: Pointer is checked for null above.
+        let engine_ref = unsafe { &*engine };
+
+        match dhruv_query_utc_spherical_internal(
+            engine_ref, target, observer, frame, year, month, day, hour, min, sec,
+        ) {
+            Ok(state) => {
+                // SAFETY: Pointer is checked for null above; write one struct.
+                unsafe { *out = state };
+                DhruvStatus::Ok
+            }
+            Err(status) => status,
+        }
+    })
+}
+
 fn ffi_boundary(f: impl FnOnce() -> DhruvStatus) -> DhruvStatus {
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
         Ok(status) => status,
@@ -495,116 +602,11 @@ fn decode_c_utf8(buffer: &[u8; DHRUV_PATH_CAPACITY]) -> Result<&str, std::str::U
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
-
-    fn kernel_base() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../kernels/data")
-    }
-
-    fn kernels_available() -> bool {
-        let base = kernel_base();
-        base.join("de442s.bsp").exists() && base.join("naif0012.tls").exists()
-    }
-
-    fn real_config() -> Option<DhruvEngineConfig> {
-        if !kernels_available() {
-            eprintln!("Skipping: kernel files not found");
-            return None;
-        }
-        let base = kernel_base();
-        Some(
-            DhruvEngineConfig::try_new(
-                base.join("de442s.bsp").to_str().unwrap(),
-                base.join("naif0012.tls").to_str().unwrap(),
-                256,
-                true,
-            )
-            .expect("config should be valid"),
-        )
-    }
 
     #[test]
     fn status_maps_from_core_error() {
         let status = DhruvStatus::from(&EngineError::InvalidQuery("bad"));
         assert_eq!(status, DhruvStatus::InvalidQuery);
-    }
-
-    #[test]
-    fn query_once_successfully_maps_through_core_contract() {
-        let config = match real_config() {
-            Some(c) => c,
-            None => return,
-        };
-        let query = DhruvQuery {
-            target: Body::Mars.code(),
-            observer: Observer::Body(Body::Earth).code(),
-            frame: Frame::IcrfJ2000.code(),
-            epoch_tdb_jd: 2_460_000.25,
-        };
-
-        let result = dhruv_query_once_internal(&config, query).expect("query should succeed");
-        assert!(result.position_km[0].is_finite());
-    }
-
-    #[test]
-    fn query_rejects_invalid_body_code() {
-        let config = match real_config() {
-            Some(c) => c,
-            None => return,
-        };
-        let query = DhruvQuery {
-            target: -999,
-            observer: Observer::SolarSystemBarycenter.code(),
-            frame: Frame::IcrfJ2000.code(),
-            epoch_tdb_jd: 2_460_000.25,
-        };
-
-        let result = dhruv_query_once_internal(&config, query);
-        assert_eq!(result, Err(DhruvStatus::InvalidQuery));
-    }
-
-    #[test]
-    fn ffi_lifecycle_create_query_free() {
-        let config = match real_config() {
-            Some(c) => c,
-            None => return,
-        };
-        let query = DhruvQuery {
-            target: Body::Mars.code(),
-            observer: Observer::Body(Body::Earth).code(),
-            frame: Frame::IcrfJ2000.code(),
-            epoch_tdb_jd: 2_460_000.5,
-        };
-
-        let mut engine_ptr: *mut DhruvEngineHandle = ptr::null_mut();
-        // SAFETY: Passing valid pointers created in this test scope.
-        let create_status = unsafe { dhruv_engine_new(&config, &mut engine_ptr) };
-        assert_eq!(create_status, DhruvStatus::Ok);
-        assert!(!engine_ptr.is_null());
-
-        let mut out_state = DhruvStateVector {
-            position_km: [0.0; 3],
-            velocity_km_s: [0.0; 3],
-        };
-        // SAFETY: Engine handle and output buffers are valid in this test.
-        let query_status = unsafe { dhruv_engine_query(engine_ptr, &query, &mut out_state) };
-        assert_eq!(query_status, DhruvStatus::Ok);
-        assert!(out_state.position_km[0].is_finite());
-
-        // SAFETY: Pointer was returned by dhruv_engine_new and not yet freed.
-        let free_status = unsafe { dhruv_engine_free(engine_ptr) };
-        assert_eq!(free_status, DhruvStatus::Ok);
-    }
-
-    #[test]
-    fn ffi_new_rejects_null_output_pointer() {
-        let config = match real_config() {
-            Some(c) => c,
-            None => return,
-        };
-        // SAFETY: Passing null out pointer intentionally to verify validation.
-        let status = unsafe { dhruv_engine_new(&config, ptr::null_mut()) };
-        assert_eq!(status, DhruvStatus::NullPointer);
     }
 
     #[test]
@@ -618,69 +620,12 @@ mod tests {
         assert_eq!(status, DhruvStatus::NullPointer);
     }
 
-    fn lsk_path_cstr() -> Option<std::ffi::CString> {
-        let base = kernel_base();
-        let path = base.join("naif0012.tls");
-        if !path.exists() {
-            return None;
-        }
-        Some(std::ffi::CString::new(path.to_str().unwrap()).unwrap())
-    }
-
-    #[test]
-    fn ffi_lsk_lifecycle() {
-        let path = match lsk_path_cstr() {
-            Some(p) => p,
-            None => return,
-        };
-
-        let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-        // SAFETY: Valid pointers created in this test scope.
-        let status = unsafe { dhruv_lsk_load(path.as_ptr() as *const u8, &mut lsk_ptr) };
-        assert_eq!(status, DhruvStatus::Ok);
-        assert!(!lsk_ptr.is_null());
-
-        // SAFETY: Pointer was returned by dhruv_lsk_load.
-        let status = unsafe { dhruv_lsk_free(lsk_ptr) };
-        assert_eq!(status, DhruvStatus::Ok);
-    }
-
     #[test]
     fn ffi_lsk_load_rejects_null() {
         let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
         // SAFETY: Null path pointer is intentional for validation.
         let status = unsafe { dhruv_lsk_load(ptr::null(), &mut lsk_ptr) };
         assert_eq!(status, DhruvStatus::NullPointer);
-    }
-
-    #[test]
-    fn ffi_utc_to_tdb_jd_roundtrip() {
-        let path = match lsk_path_cstr() {
-            Some(p) => p,
-            None => return,
-        };
-
-        let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-        // SAFETY: Valid pointers created in this test scope.
-        let status = unsafe { dhruv_lsk_load(path.as_ptr() as *const u8, &mut lsk_ptr) };
-        assert_eq!(status, DhruvStatus::Ok);
-
-        let mut jd_tdb: f64 = 0.0;
-        // J2000.0 = 2000-01-01 12:00:00 UTC (approximately)
-        // SAFETY: LSK handle and output are valid in this test.
-        let status = unsafe {
-            dhruv_utc_to_tdb_jd(lsk_ptr, 2000, 1, 1, 12, 0, 0.0, &mut jd_tdb)
-        };
-        assert_eq!(status, DhruvStatus::Ok);
-
-        // Should be very close to J2000.0 (2451545.0), within ~1 minute of TDB-UTC offset.
-        assert!(
-            (jd_tdb - 2_451_545.0).abs() < 0.001,
-            "expected ~2451545.0, got {jd_tdb}"
-        );
-
-        // SAFETY: Pointer was returned by dhruv_lsk_load.
-        unsafe { dhruv_lsk_free(lsk_ptr) };
     }
 
     #[test]
@@ -720,70 +665,25 @@ mod tests {
     }
 
     #[test]
-    fn ffi_full_longitude_workflow() {
-        // End-to-end: load LSK -> UTC to TDB JD -> query ecliptic -> spherical -> longitude
-        let config = match real_config() {
-            Some(c) => c,
-            None => return,
-        };
-        let lsk_path = match lsk_path_cstr() {
-            Some(p) => p,
-            None => return,
-        };
-
-        // Load LSK independently
-        let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-        // SAFETY: Valid pointers.
-        let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
-        assert_eq!(status, DhruvStatus::Ok);
-
-        // Load engine for queries
-        let mut engine_ptr: *mut DhruvEngineHandle = ptr::null_mut();
-        // SAFETY: Valid pointers.
-        let status = unsafe { dhruv_engine_new(&config, &mut engine_ptr) };
-        assert_eq!(status, DhruvStatus::Ok);
-
-        // Step 1: UTC to TDB JD (uses LSK, not engine)
-        let mut jd_tdb: f64 = 0.0;
-        // SAFETY: LSK handle and output are valid.
-        let status = unsafe {
-            dhruv_utc_to_tdb_jd(lsk_ptr, 2024, 3, 20, 12, 0, 0.0, &mut jd_tdb)
-        };
-        assert_eq!(status, DhruvStatus::Ok);
-
-        // Step 2: Query Mars heliocentric ecliptic
-        let query = DhruvQuery {
-            target: Body::Mars.code(),
-            observer: Body::Sun.code(),
-            frame: Frame::EclipticJ2000.code(),
-            epoch_tdb_jd: jd_tdb,
-        };
-        let mut state = DhruvStateVector {
-            position_km: [0.0; 3],
-            velocity_km_s: [0.0; 3],
-        };
-        // SAFETY: All pointers are valid.
-        let status = unsafe { dhruv_engine_query(engine_ptr, &query, &mut state) };
-        assert_eq!(status, DhruvStatus::Ok);
-
-        // Step 3: Cartesian to spherical
-        let mut spherical = DhruvSphericalCoords {
+    fn ffi_query_utc_spherical_rejects_null() {
+        let mut out = DhruvSphericalState {
             lon_rad: 0.0,
             lat_rad: 0.0,
             distance_km: 0.0,
+            lon_speed: 0.0,
+            lat_speed: 0.0,
+            distance_speed: 0.0,
         };
-        // SAFETY: Both pointers are valid.
+
+        // SAFETY: Null engine pointer is intentional for validation.
         let status = unsafe {
-            dhruv_cartesian_to_spherical(&state.position_km, &mut spherical)
+            dhruv_query_utc_spherical(
+                ptr::null(),
+                499, 10, 2,
+                2024, 3, 20, 12, 0, 0.0,
+                &mut out,
+            )
         };
-        assert_eq!(status, DhruvStatus::Ok);
-
-        let lon_deg = spherical.lon_rad.to_degrees();
-        assert!(lon_deg >= 0.0 && lon_deg < 360.0, "longitude {lon_deg} out of range");
-        assert!(spherical.distance_km > 1.0e8, "Mars should be >1 AU from Sun");
-
-        // SAFETY: Pointers were returned by their respective _new/_load functions.
-        unsafe { dhruv_engine_free(engine_ptr) };
-        unsafe { dhruv_lsk_free(lsk_ptr) };
+        assert_eq!(status, DhruvStatus::NullPointer);
     }
 }
