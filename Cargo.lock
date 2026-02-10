@@ -191,6 +191,8 @@ name = "eph_ffi_c"
 version = "0.1.0"
 dependencies = [
  "eph_core",
+ "eph_frames",
+ "eph_time",
 ]
 
 [[package]]

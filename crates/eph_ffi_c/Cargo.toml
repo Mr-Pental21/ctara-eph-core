@@ -6,3 +6,5 @@ edition = "2024"
 
 [dependencies]
 eph_core = { path = "../eph_core" }
+eph_time = { path = "../eph_time" }
+eph_frames = { path = "../eph_frames" }

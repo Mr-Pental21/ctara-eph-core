@@ -6,7 +6,7 @@ use std::ptr;
 use eph_core::{Body, Engine, EngineConfig, EngineError, Frame, Observer, Query, StateVector};
 
 /// ABI version for downstream bindings.
-pub const EPH_API_VERSION: u32 = 2;
+pub const EPH_API_VERSION: u32 = 3;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const EPH_PATH_CAPACITY: usize = 512;
@@ -175,6 +175,9 @@ impl From<StateVector> for EphStateVector {
 /// Opaque engine handle type for ABI consumers.
 pub type EphEngineHandle = Engine;
 
+/// Opaque LSK handle type for ABI consumers.
+pub type EphLskHandle = eph_time::LeapSecondKernel;
+
 /// Build a core engine from C-compatible config.
 pub fn eph_engine_new_internal(config: &EphEngineConfig) -> Result<Engine, EphStatus> {
     let core_config = EngineConfig::try_from(config).map_err(|err| EphStatus::from(&err))?;
@@ -316,6 +319,143 @@ pub unsafe extern "C" fn eph_query_once(
             }
             Err(status) => status,
         }
+    })
+}
+
+/// C-compatible spherical coordinates output.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EphSphericalCoords {
+    /// Longitude in radians, range [0, 2*pi).
+    pub lon_rad: f64,
+    /// Latitude in radians, range [-pi/2, pi/2].
+    pub lat_rad: f64,
+    /// Distance from origin in km.
+    pub distance_km: f64,
+}
+
+/// Load a leap second kernel (LSK) from a file path.
+///
+/// The LSK is a lightweight (~5 KB) text file containing leap second data
+/// needed for UTC to TDB time conversion. It can be loaded and used
+/// independently of the engine.
+///
+/// # Safety
+/// `lsk_path_utf8` must be a valid, non-null, NUL-terminated C string.
+/// `out_lsk` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn eph_lsk_load(
+    lsk_path_utf8: *const u8,
+    out_lsk: *mut *mut EphLskHandle,
+) -> EphStatus {
+    ffi_boundary(|| {
+        if lsk_path_utf8.is_null() || out_lsk.is_null() {
+            return EphStatus::NullPointer;
+        }
+
+        // SAFETY: Pointer is checked for null; read until NUL byte.
+        let c_str = unsafe { std::ffi::CStr::from_ptr(lsk_path_utf8 as *const i8) };
+        let path_str = match c_str.to_str() {
+            Ok(s) => s,
+            Err(_) => return EphStatus::InvalidConfig,
+        };
+
+        match eph_time::LeapSecondKernel::load(std::path::Path::new(path_str)) {
+            Ok(lsk) => {
+                // SAFETY: Pointer is checked for null; write one pointer value.
+                unsafe { *out_lsk = Box::into_raw(Box::new(lsk)) };
+                EphStatus::Ok
+            }
+            Err(_) => {
+                // SAFETY: Pointer is checked for null; write null on failure.
+                unsafe { *out_lsk = ptr::null_mut() };
+                EphStatus::KernelLoad
+            }
+        }
+    })
+}
+
+/// Destroy an LSK handle allocated by [`eph_lsk_load`].
+///
+/// # Safety
+/// `lsk` must be either null or a pointer returned by `eph_lsk_load`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn eph_lsk_free(lsk: *mut EphLskHandle) -> EphStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() {
+            return EphStatus::Ok;
+        }
+
+        // SAFETY: Ownership is transferred back from a pointer created by Box::into_raw.
+        unsafe { drop(Box::from_raw(lsk)) };
+        EphStatus::Ok
+    })
+}
+
+/// Convert UTC calendar date to TDB Julian Date using a standalone LSK handle.
+///
+/// Writes the resulting JD TDB into `out_jd_tdb`.
+///
+/// # Safety
+/// `lsk` and `out_jd_tdb` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn eph_utc_to_tdb_jd(
+    lsk: *const EphLskHandle,
+    year: i32,
+    month: u32,
+    day: u32,
+    hour: u32,
+    min: u32,
+    sec: f64,
+    out_jd_tdb: *mut f64,
+) -> EphStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || out_jd_tdb.is_null() {
+            return EphStatus::NullPointer;
+        }
+
+        // SAFETY: Pointer is checked for null above.
+        let lsk_ref = unsafe { &*lsk };
+
+        let epoch = eph_time::Epoch::from_utc(year, month, day, hour, min, sec, lsk_ref);
+
+        // SAFETY: Pointer is checked for null above; write one value.
+        unsafe { *out_jd_tdb = epoch.as_jd_tdb() };
+        EphStatus::Ok
+    })
+}
+
+/// Convert Cartesian position [x, y, z] (km) to spherical coordinates.
+///
+/// Pure math, no engine needed. Writes longitude (radians, 0..2pi),
+/// latitude (radians, -pi/2..pi/2), and distance (km) into `out_spherical`.
+///
+/// # Safety
+/// `position_km` and `out_spherical` must be valid, non-null pointers.
+/// `position_km` must point to at least 3 contiguous f64 values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn eph_cartesian_to_spherical(
+    position_km: *const [f64; 3],
+    out_spherical: *mut EphSphericalCoords,
+) -> EphStatus {
+    ffi_boundary(|| {
+        if position_km.is_null() || out_spherical.is_null() {
+            return EphStatus::NullPointer;
+        }
+
+        // SAFETY: Pointer is checked for null; read 3 contiguous f64.
+        let xyz = unsafe { &*position_km };
+        let s = eph_frames::cartesian_to_spherical(xyz);
+
+        // SAFETY: Pointer is checked for null; write one struct.
+        unsafe {
+            *out_spherical = EphSphericalCoords {
+                lon_rad: s.lon_rad,
+                lat_rad: s.lat_rad,
+                distance_km: s.distance_km,
+            };
+        }
+        EphStatus::Ok
     })
 }
 
@@ -476,5 +616,174 @@ mod tests {
         // SAFETY: Null engine pointer is intentional for this validation test.
         let status = unsafe { eph_engine_query(ptr::null(), ptr::null(), &mut out_state) };
         assert_eq!(status, EphStatus::NullPointer);
+    }
+
+    fn lsk_path_cstr() -> Option<std::ffi::CString> {
+        let base = kernel_base();
+        let path = base.join("naif0012.tls");
+        if !path.exists() {
+            return None;
+        }
+        Some(std::ffi::CString::new(path.to_str().unwrap()).unwrap())
+    }
+
+    #[test]
+    fn ffi_lsk_lifecycle() {
+        let path = match lsk_path_cstr() {
+            Some(p) => p,
+            None => return,
+        };
+
+        let mut lsk_ptr: *mut EphLskHandle = ptr::null_mut();
+        // SAFETY: Valid pointers created in this test scope.
+        let status = unsafe { eph_lsk_load(path.as_ptr() as *const u8, &mut lsk_ptr) };
+        assert_eq!(status, EphStatus::Ok);
+        assert!(!lsk_ptr.is_null());
+
+        // SAFETY: Pointer was returned by eph_lsk_load.
+        let status = unsafe { eph_lsk_free(lsk_ptr) };
+        assert_eq!(status, EphStatus::Ok);
+    }
+
+    #[test]
+    fn ffi_lsk_load_rejects_null() {
+        let mut lsk_ptr: *mut EphLskHandle = ptr::null_mut();
+        // SAFETY: Null path pointer is intentional for validation.
+        let status = unsafe { eph_lsk_load(ptr::null(), &mut lsk_ptr) };
+        assert_eq!(status, EphStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_utc_to_tdb_jd_roundtrip() {
+        let path = match lsk_path_cstr() {
+            Some(p) => p,
+            None => return,
+        };
+
+        let mut lsk_ptr: *mut EphLskHandle = ptr::null_mut();
+        // SAFETY: Valid pointers created in this test scope.
+        let status = unsafe { eph_lsk_load(path.as_ptr() as *const u8, &mut lsk_ptr) };
+        assert_eq!(status, EphStatus::Ok);
+
+        let mut jd_tdb: f64 = 0.0;
+        // J2000.0 = 2000-01-01 12:00:00 UTC (approximately)
+        // SAFETY: LSK handle and output are valid in this test.
+        let status = unsafe {
+            eph_utc_to_tdb_jd(lsk_ptr, 2000, 1, 1, 12, 0, 0.0, &mut jd_tdb)
+        };
+        assert_eq!(status, EphStatus::Ok);
+
+        // Should be very close to J2000.0 (2451545.0), within ~1 minute of TDB-UTC offset.
+        assert!(
+            (jd_tdb - 2_451_545.0).abs() < 0.001,
+            "expected ~2451545.0, got {jd_tdb}"
+        );
+
+        // SAFETY: Pointer was returned by eph_lsk_load.
+        unsafe { eph_lsk_free(lsk_ptr) };
+    }
+
+    #[test]
+    fn ffi_utc_to_tdb_jd_rejects_null() {
+        let mut jd: f64 = 0.0;
+        // SAFETY: Null LSK pointer is intentional for validation.
+        let status = unsafe { eph_utc_to_tdb_jd(ptr::null(), 2000, 1, 1, 12, 0, 0.0, &mut jd) };
+        assert_eq!(status, EphStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_cartesian_to_spherical_along_x() {
+        let pos = [1.0e8_f64, 0.0, 0.0];
+        let mut out = EphSphericalCoords {
+            lon_rad: 0.0,
+            lat_rad: 0.0,
+            distance_km: 0.0,
+        };
+        // SAFETY: Both pointers are valid stack references.
+        let status = unsafe { eph_cartesian_to_spherical(&pos, &mut out) };
+        assert_eq!(status, EphStatus::Ok);
+        assert!((out.lon_rad - 0.0).abs() < 1e-10);
+        assert!((out.lat_rad - 0.0).abs() < 1e-10);
+        assert!((out.distance_km - 1.0e8).abs() < 1e-3);
+    }
+
+    #[test]
+    fn ffi_cartesian_to_spherical_rejects_null() {
+        let mut out = EphSphericalCoords {
+            lon_rad: 0.0,
+            lat_rad: 0.0,
+            distance_km: 0.0,
+        };
+        // SAFETY: Null position pointer is intentional for validation.
+        let status = unsafe { eph_cartesian_to_spherical(ptr::null(), &mut out) };
+        assert_eq!(status, EphStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_full_longitude_workflow() {
+        // End-to-end: load LSK -> UTC to TDB JD -> query ecliptic -> spherical -> longitude
+        let config = match real_config() {
+            Some(c) => c,
+            None => return,
+        };
+        let lsk_path = match lsk_path_cstr() {
+            Some(p) => p,
+            None => return,
+        };
+
+        // Load LSK independently
+        let mut lsk_ptr: *mut EphLskHandle = ptr::null_mut();
+        // SAFETY: Valid pointers.
+        let status = unsafe { eph_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+        assert_eq!(status, EphStatus::Ok);
+
+        // Load engine for queries
+        let mut engine_ptr: *mut EphEngineHandle = ptr::null_mut();
+        // SAFETY: Valid pointers.
+        let status = unsafe { eph_engine_new(&config, &mut engine_ptr) };
+        assert_eq!(status, EphStatus::Ok);
+
+        // Step 1: UTC to TDB JD (uses LSK, not engine)
+        let mut jd_tdb: f64 = 0.0;
+        // SAFETY: LSK handle and output are valid.
+        let status = unsafe {
+            eph_utc_to_tdb_jd(lsk_ptr, 2024, 3, 20, 12, 0, 0.0, &mut jd_tdb)
+        };
+        assert_eq!(status, EphStatus::Ok);
+
+        // Step 2: Query Mars heliocentric ecliptic
+        let query = EphQuery {
+            target: Body::Mars.code(),
+            observer: Body::Sun.code(),
+            frame: Frame::EclipticJ2000.code(),
+            epoch_tdb_jd: jd_tdb,
+        };
+        let mut state = EphStateVector {
+            position_km: [0.0; 3],
+            velocity_km_s: [0.0; 3],
+        };
+        // SAFETY: All pointers are valid.
+        let status = unsafe { eph_engine_query(engine_ptr, &query, &mut state) };
+        assert_eq!(status, EphStatus::Ok);
+
+        // Step 3: Cartesian to spherical
+        let mut spherical = EphSphericalCoords {
+            lon_rad: 0.0,
+            lat_rad: 0.0,
+            distance_km: 0.0,
+        };
+        // SAFETY: Both pointers are valid.
+        let status = unsafe {
+            eph_cartesian_to_spherical(&state.position_km, &mut spherical)
+        };
+        assert_eq!(status, EphStatus::Ok);
+
+        let lon_deg = spherical.lon_rad.to_degrees();
+        assert!(lon_deg >= 0.0 && lon_deg < 360.0, "longitude {lon_deg} out of range");
+        assert!(spherical.distance_km > 1.0e8, "Mars should be >1 AU from Sun");
+
+        // SAFETY: Pointers were returned by their respective _new/_load functions.
+        unsafe { eph_engine_free(engine_ptr) };
+        unsafe { eph_lsk_free(lsk_ptr) };
     }
 }
