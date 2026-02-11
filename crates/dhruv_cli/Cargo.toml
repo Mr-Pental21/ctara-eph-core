@@ -5,3 +5,5 @@ license = "Apache-2.0"
 edition = "2024"
 
 [dependencies]
+dhruv_vedic_base = { path = "../dhruv_vedic_base" }
+clap = { version = "4", features = ["derive"] }

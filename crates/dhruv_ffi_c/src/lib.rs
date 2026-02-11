@@ -14,14 +14,16 @@ use dhruv_search::{
 };
 use dhruv_vedic_base::{
     AyanamshaSystem, BhavaConfig, BhavaReferenceMode, BhavaStartingPoint, BhavaSystem,
-    GeoLocation, LunarNode, NodeMode, RiseSetConfig, RiseSetEvent, RiseSetResult, SunLimb,
-    VedicError, ayanamsha_deg, ayanamsha_mean_deg, ayanamsha_true_deg,
+    GeoLocation, LunarNode, NodeMode, RiseSetConfig, RiseSetEvent,
+    RiseSetResult, SunLimb, VedicError, ayanamsha_deg, ayanamsha_mean_deg, ayanamsha_true_deg,
     approximate_local_noon_jd, compute_all_events, compute_bhavas, compute_rise_set,
-    jd_tdb_to_centuries, lunar_node_deg,
+    deg_to_dms, jd_tdb_to_centuries, lunar_node_deg, nakshatra28_from_longitude,
+    nakshatra28_from_tropical, nakshatra_from_longitude, nakshatra_from_tropical,
+    rashi_from_longitude, rashi_from_tropical,
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 8;
+pub const DHRUV_API_VERSION: u32 = 9;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -2574,6 +2576,387 @@ pub unsafe extern "C" fn dhruv_search_max_speed(
     })
 }
 
+// ---------------------------------------------------------------------------
+// Rashi / Nakshatra
+// ---------------------------------------------------------------------------
+
+/// C-compatible DMS (degrees-minutes-seconds).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvDms {
+    pub degrees: u16,
+    pub minutes: u8,
+    pub seconds: f64,
+}
+
+/// C-compatible rashi result.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvRashiInfo {
+    /// 0-based rashi index (0 = Mesha, 11 = Meena).
+    pub rashi_index: u8,
+    /// Position within rashi as DMS.
+    pub dms: DhruvDms,
+    /// Decimal degrees within the rashi [0.0, 30.0).
+    pub degrees_in_rashi: f64,
+}
+
+/// C-compatible nakshatra result (27-scheme).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvNakshatraInfo {
+    /// 0-based nakshatra index (0 = Ashwini, 26 = Revati).
+    pub nakshatra_index: u8,
+    /// Pada (1-4).
+    pub pada: u8,
+    /// Decimal degrees within the nakshatra.
+    pub degrees_in_nakshatra: f64,
+    /// Decimal degrees within the pada.
+    pub degrees_in_pada: f64,
+}
+
+/// C-compatible nakshatra result (28-scheme, with Abhijit).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvNakshatra28Info {
+    /// 0-based nakshatra index (0 = Ashwini, 21 = Abhijit, 27 = Revati).
+    pub nakshatra_index: u8,
+    /// Pada (1-4, or 0 for Abhijit).
+    pub pada: u8,
+    /// Decimal degrees within the nakshatra.
+    pub degrees_in_nakshatra: f64,
+}
+
+/// Convert decimal degrees to DMS.
+///
+/// # Safety
+/// `out` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_deg_to_dms(
+    degrees: f64,
+    out: *mut DhruvDms,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let d = deg_to_dms(degrees);
+        unsafe {
+            *out = DhruvDms {
+                degrees: d.degrees,
+                minutes: d.minutes,
+                seconds: d.seconds,
+            };
+        }
+        DhruvStatus::Ok
+    })
+}
+
+/// Determine rashi from sidereal ecliptic longitude.
+///
+/// # Safety
+/// `out` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_rashi_from_longitude(
+    sidereal_lon_deg: f64,
+    out: *mut DhruvRashiInfo,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let info = rashi_from_longitude(sidereal_lon_deg);
+        unsafe {
+            *out = DhruvRashiInfo {
+                rashi_index: info.rashi_index,
+                dms: DhruvDms {
+                    degrees: info.dms.degrees,
+                    minutes: info.dms.minutes,
+                    seconds: info.dms.seconds,
+                },
+                degrees_in_rashi: info.degrees_in_rashi,
+            };
+        }
+        DhruvStatus::Ok
+    })
+}
+
+/// Determine nakshatra from sidereal ecliptic longitude (27-scheme).
+///
+/// # Safety
+/// `out` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_nakshatra_from_longitude(
+    sidereal_lon_deg: f64,
+    out: *mut DhruvNakshatraInfo,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let info = nakshatra_from_longitude(sidereal_lon_deg);
+        unsafe {
+            *out = DhruvNakshatraInfo {
+                nakshatra_index: info.nakshatra_index,
+                pada: info.pada,
+                degrees_in_nakshatra: info.degrees_in_nakshatra,
+                degrees_in_pada: info.degrees_in_pada,
+            };
+        }
+        DhruvStatus::Ok
+    })
+}
+
+/// Determine nakshatra from sidereal ecliptic longitude (28-scheme with Abhijit).
+///
+/// # Safety
+/// `out` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_nakshatra28_from_longitude(
+    sidereal_lon_deg: f64,
+    out: *mut DhruvNakshatra28Info,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let info = nakshatra28_from_longitude(sidereal_lon_deg);
+        unsafe {
+            *out = DhruvNakshatra28Info {
+                nakshatra_index: info.nakshatra_index,
+                pada: info.pada,
+                degrees_in_nakshatra: info.degrees_in_nakshatra,
+            };
+        }
+        DhruvStatus::Ok
+    })
+}
+
+/// Determine rashi from tropical longitude with ayanamsha subtraction.
+///
+/// # Safety
+/// `out` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_rashi_from_tropical(
+    tropical_lon_deg: f64,
+    aya_system: i32,
+    jd_tdb: f64,
+    use_nutation: u8,
+    out: *mut DhruvRashiInfo,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let system = match ayanamsha_system_from_code(aya_system) {
+            Some(s) => s,
+            None => return DhruvStatus::InvalidQuery,
+        };
+        let info = rashi_from_tropical(tropical_lon_deg, system, jd_tdb, use_nutation != 0);
+        unsafe {
+            *out = DhruvRashiInfo {
+                rashi_index: info.rashi_index,
+                dms: DhruvDms {
+                    degrees: info.dms.degrees,
+                    minutes: info.dms.minutes,
+                    seconds: info.dms.seconds,
+                },
+                degrees_in_rashi: info.degrees_in_rashi,
+            };
+        }
+        DhruvStatus::Ok
+    })
+}
+
+/// Determine nakshatra from tropical longitude with ayanamsha subtraction (27-scheme).
+///
+/// # Safety
+/// `out` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_nakshatra_from_tropical(
+    tropical_lon_deg: f64,
+    aya_system: i32,
+    jd_tdb: f64,
+    use_nutation: u8,
+    out: *mut DhruvNakshatraInfo,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let system = match ayanamsha_system_from_code(aya_system) {
+            Some(s) => s,
+            None => return DhruvStatus::InvalidQuery,
+        };
+        let info = nakshatra_from_tropical(tropical_lon_deg, system, jd_tdb, use_nutation != 0);
+        unsafe {
+            *out = DhruvNakshatraInfo {
+                nakshatra_index: info.nakshatra_index,
+                pada: info.pada,
+                degrees_in_nakshatra: info.degrees_in_nakshatra,
+                degrees_in_pada: info.degrees_in_pada,
+            };
+        }
+        DhruvStatus::Ok
+    })
+}
+
+/// Determine nakshatra from tropical longitude with ayanamsha subtraction (28-scheme).
+///
+/// # Safety
+/// `out` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_nakshatra28_from_tropical(
+    tropical_lon_deg: f64,
+    aya_system: i32,
+    jd_tdb: f64,
+    use_nutation: u8,
+    out: *mut DhruvNakshatra28Info,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let system = match ayanamsha_system_from_code(aya_system) {
+            Some(s) => s,
+            None => return DhruvStatus::InvalidQuery,
+        };
+        let info = nakshatra28_from_tropical(tropical_lon_deg, system, jd_tdb, use_nutation != 0);
+        unsafe {
+            *out = DhruvNakshatra28Info {
+                nakshatra_index: info.nakshatra_index,
+                pada: info.pada,
+                degrees_in_nakshatra: info.degrees_in_nakshatra,
+            };
+        }
+        DhruvStatus::Ok
+    })
+}
+
+/// Number of rashis (always 12).
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_rashi_count() -> u32 {
+    12
+}
+
+/// Number of nakshatras for the given scheme.
+///
+/// `scheme_code`: 27 returns 27, 28 returns 28. Any other value returns 0.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_nakshatra_count(scheme_code: u32) -> u32 {
+    match scheme_code {
+        27 => 27,
+        28 => 28,
+        _ => 0,
+    }
+}
+
+/// Rashi name as a NUL-terminated UTF-8 string.
+///
+/// Returns null pointer for invalid index.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_rashi_name(index: u32) -> *const std::ffi::c_char {
+    static NAMES: [&str; 12] = [
+        "Mesha\0",
+        "Vrishabha\0",
+        "Mithuna\0",
+        "Karka\0",
+        "Simha\0",
+        "Kanya\0",
+        "Tula\0",
+        "Vrischika\0",
+        "Dhanu\0",
+        "Makara\0",
+        "Kumbha\0",
+        "Meena\0",
+    ];
+    match NAMES.get(index as usize) {
+        Some(s) => s.as_ptr().cast(),
+        None => ptr::null(),
+    }
+}
+
+/// Nakshatra name (27-scheme) as a NUL-terminated UTF-8 string.
+///
+/// Returns null pointer for invalid index.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_nakshatra_name(index: u32) -> *const std::ffi::c_char {
+    static NAMES: [&str; 27] = [
+        "Ashwini\0",
+        "Bharani\0",
+        "Krittika\0",
+        "Rohini\0",
+        "Mrigashira\0",
+        "Ardra\0",
+        "Punarvasu\0",
+        "Pushya\0",
+        "Ashlesha\0",
+        "Magha\0",
+        "Purva Phalguni\0",
+        "Uttara Phalguni\0",
+        "Hasta\0",
+        "Chitra\0",
+        "Swati\0",
+        "Vishakha\0",
+        "Anuradha\0",
+        "Jyeshtha\0",
+        "Mula\0",
+        "Purva Ashadha\0",
+        "Uttara Ashadha\0",
+        "Shravana\0",
+        "Dhanishtha\0",
+        "Shatabhisha\0",
+        "Purva Bhadrapada\0",
+        "Uttara Bhadrapada\0",
+        "Revati\0",
+    ];
+    match NAMES.get(index as usize) {
+        Some(s) => s.as_ptr().cast(),
+        None => ptr::null(),
+    }
+}
+
+/// Nakshatra name (28-scheme, with Abhijit) as a NUL-terminated UTF-8 string.
+///
+/// Returns null pointer for invalid index.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_nakshatra28_name(index: u32) -> *const std::ffi::c_char {
+    static NAMES: [&str; 28] = [
+        "Ashwini\0",
+        "Bharani\0",
+        "Krittika\0",
+        "Rohini\0",
+        "Mrigashira\0",
+        "Ardra\0",
+        "Punarvasu\0",
+        "Pushya\0",
+        "Ashlesha\0",
+        "Magha\0",
+        "Purva Phalguni\0",
+        "Uttara Phalguni\0",
+        "Hasta\0",
+        "Chitra\0",
+        "Swati\0",
+        "Vishakha\0",
+        "Anuradha\0",
+        "Jyeshtha\0",
+        "Mula\0",
+        "Purva Ashadha\0",
+        "Uttara Ashadha\0",
+        "Abhijit\0",
+        "Shravana\0",
+        "Dhanishtha\0",
+        "Shatabhisha\0",
+        "Purva Bhadrapada\0",
+        "Uttara Bhadrapada\0",
+        "Revati\0",
+    ];
+    match NAMES.get(index as usize) {
+        Some(s) => s.as_ptr().cast(),
+        None => ptr::null(),
+    }
+}
+
 fn ffi_boundary(f: impl FnOnce() -> DhruvStatus) -> DhruvStatus {
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
         Ok(status) => status,
@@ -3044,8 +3427,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_8() {
-        assert_eq!(dhruv_api_version(), 8);
+    fn ffi_api_version_is_9() {
+        assert_eq!(dhruv_api_version(), 9);
     }
 
     // --- Search error mapping ---
@@ -3492,5 +3875,183 @@ mod tests {
             )
         };
         assert_eq!(status, DhruvStatus::InvalidSearchConfig);
+    }
+
+    // --- Rashi/Nakshatra FFI tests ---
+
+    #[test]
+    fn ffi_deg_to_dms_basic() {
+        let mut out = DhruvDms {
+            degrees: 0,
+            minutes: 0,
+            seconds: 0.0,
+        };
+        let status = unsafe { dhruv_deg_to_dms(23.853, &mut out) };
+        assert_eq!(status, DhruvStatus::Ok);
+        assert_eq!(out.degrees, 23);
+        assert_eq!(out.minutes, 51);
+        assert!((out.seconds - 10.8).abs() < 0.01);
+    }
+
+    #[test]
+    fn ffi_deg_to_dms_rejects_null() {
+        let status = unsafe { dhruv_deg_to_dms(10.0, ptr::null_mut()) };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_rashi_from_longitude_mesha() {
+        let mut out = std::mem::MaybeUninit::<DhruvRashiInfo>::uninit();
+        let status = unsafe { dhruv_rashi_from_longitude(15.0, out.as_mut_ptr()) };
+        assert_eq!(status, DhruvStatus::Ok);
+        let info = unsafe { out.assume_init() };
+        assert_eq!(info.rashi_index, 0); // Mesha
+        assert!((info.degrees_in_rashi - 15.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn ffi_rashi_from_longitude_rejects_null() {
+        let status = unsafe { dhruv_rashi_from_longitude(0.0, ptr::null_mut()) };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_nakshatra_from_longitude_ashwini() {
+        let mut out = std::mem::MaybeUninit::<DhruvNakshatraInfo>::uninit();
+        let status = unsafe { dhruv_nakshatra_from_longitude(5.0, out.as_mut_ptr()) };
+        assert_eq!(status, DhruvStatus::Ok);
+        let info = unsafe { out.assume_init() };
+        assert_eq!(info.nakshatra_index, 0); // Ashwini
+        assert_eq!(info.pada, 2); // 5.0 / 3.333 = 1.5 → pada 2
+    }
+
+    #[test]
+    fn ffi_nakshatra_from_longitude_rejects_null() {
+        let status = unsafe { dhruv_nakshatra_from_longitude(0.0, ptr::null_mut()) };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_nakshatra28_abhijit() {
+        let mut out = std::mem::MaybeUninit::<DhruvNakshatra28Info>::uninit();
+        let status = unsafe { dhruv_nakshatra28_from_longitude(278.0, out.as_mut_ptr()) };
+        assert_eq!(status, DhruvStatus::Ok);
+        let info = unsafe { out.assume_init() };
+        assert_eq!(info.nakshatra_index, 21); // Abhijit
+        assert_eq!(info.pada, 0); // Abhijit has no pada
+    }
+
+    #[test]
+    fn ffi_nakshatra28_from_longitude_rejects_null() {
+        let status = unsafe { dhruv_nakshatra28_from_longitude(0.0, ptr::null_mut()) };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_rashi_from_tropical_lahiri() {
+        let mut out = std::mem::MaybeUninit::<DhruvRashiInfo>::uninit();
+        // Lahiri = code 0, J2000, tropical 280.5 → sidereal ~256.6 → Dhanu (8)
+        let status = unsafe {
+            dhruv_rashi_from_tropical(280.5, 0, 2_451_545.0, 0, out.as_mut_ptr())
+        };
+        assert_eq!(status, DhruvStatus::Ok);
+        let info = unsafe { out.assume_init() };
+        assert_eq!(info.rashi_index, 8); // Dhanu
+    }
+
+    #[test]
+    fn ffi_rashi_from_tropical_invalid_system() {
+        let mut out = std::mem::MaybeUninit::<DhruvRashiInfo>::uninit();
+        let status = unsafe {
+            dhruv_rashi_from_tropical(280.5, 99, 2_451_545.0, 0, out.as_mut_ptr())
+        };
+        assert_eq!(status, DhruvStatus::InvalidQuery);
+    }
+
+    #[test]
+    fn ffi_nakshatra_from_tropical_rejects_null() {
+        let status = unsafe {
+            dhruv_nakshatra_from_tropical(280.5, 0, 2_451_545.0, 0, ptr::null_mut())
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_nakshatra28_from_tropical_rejects_null() {
+        let status = unsafe {
+            dhruv_nakshatra28_from_tropical(280.5, 0, 2_451_545.0, 0, ptr::null_mut())
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_rashi_count_is_12() {
+        assert_eq!(dhruv_rashi_count(), 12);
+    }
+
+    #[test]
+    fn ffi_nakshatra_count_27() {
+        assert_eq!(dhruv_nakshatra_count(27), 27);
+    }
+
+    #[test]
+    fn ffi_nakshatra_count_28() {
+        assert_eq!(dhruv_nakshatra_count(28), 28);
+    }
+
+    #[test]
+    fn ffi_nakshatra_count_invalid() {
+        assert_eq!(dhruv_nakshatra_count(0), 0);
+        assert_eq!(dhruv_nakshatra_count(29), 0);
+    }
+
+    #[test]
+    fn ffi_rashi_name_valid() {
+        let name_ptr = dhruv_rashi_name(0);
+        assert!(!name_ptr.is_null());
+        let name = unsafe { std::ffi::CStr::from_ptr(name_ptr) };
+        assert_eq!(name.to_str().unwrap(), "Mesha");
+
+        let name_ptr = dhruv_rashi_name(11);
+        assert!(!name_ptr.is_null());
+        let name = unsafe { std::ffi::CStr::from_ptr(name_ptr) };
+        assert_eq!(name.to_str().unwrap(), "Meena");
+    }
+
+    #[test]
+    fn ffi_rashi_name_invalid() {
+        assert!(dhruv_rashi_name(12).is_null());
+        assert!(dhruv_rashi_name(99).is_null());
+    }
+
+    #[test]
+    fn ffi_nakshatra_name_valid() {
+        let name_ptr = dhruv_nakshatra_name(0);
+        assert!(!name_ptr.is_null());
+        let name = unsafe { std::ffi::CStr::from_ptr(name_ptr) };
+        assert_eq!(name.to_str().unwrap(), "Ashwini");
+
+        let name_ptr = dhruv_nakshatra_name(26);
+        assert!(!name_ptr.is_null());
+        let name = unsafe { std::ffi::CStr::from_ptr(name_ptr) };
+        assert_eq!(name.to_str().unwrap(), "Revati");
+    }
+
+    #[test]
+    fn ffi_nakshatra_name_invalid() {
+        assert!(dhruv_nakshatra_name(27).is_null());
+    }
+
+    #[test]
+    fn ffi_nakshatra28_name_abhijit() {
+        let name_ptr = dhruv_nakshatra28_name(21);
+        assert!(!name_ptr.is_null());
+        let name = unsafe { std::ffi::CStr::from_ptr(name_ptr) };
+        assert_eq!(name.to_str().unwrap(), "Abhijit");
+    }
+
+    #[test]
+    fn ffi_nakshatra28_name_invalid() {
+        assert!(dhruv_nakshatra28_name(28).is_null());
     }
 }

@@ -29,7 +29,10 @@ pub mod error;
 pub mod global;
 
 // Primary re-exports — users should only need `use dhruv_rs::*`
-pub use convenience::{longitude, position, position_full, query, query_batch};
+pub use convenience::{
+    longitude, nakshatra, nakshatra28, position, position_full, query, query_batch, rashi,
+    sidereal_longitude,
+};
 pub use date::UtcDate;
 pub use error::DhruvError;
 pub use global::{init, is_initialized};
@@ -37,3 +40,9 @@ pub use global::{init, is_initialized};
 // Re-export core types so callers don't need to depend on dhruv_core directly.
 pub use dhruv_core::{Body, EngineConfig, Frame, Observer, StateVector};
 pub use dhruv_frames::{SphericalCoords, SphericalState};
+
+// Re-export vedic types used by the convenience functions.
+pub use dhruv_vedic_base::{
+    AyanamshaSystem, Dms, Nakshatra as NakshatraName, Nakshatra28 as Nakshatra28Name,
+    Nakshatra28Info, NakshatraInfo, Rashi as RashiName, RashiInfo, deg_to_dms,
+};
