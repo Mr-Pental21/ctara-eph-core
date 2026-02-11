@@ -279,6 +279,36 @@ enum Commands {
         #[arg(long)]
         eop: PathBuf,
     },
+    /// Combined panchang: tithi, karana, yoga, vaar, hora, ghatika
+    Panchang {
+        /// UTC datetime (YYYY-MM-DDThh:mm:ssZ)
+        #[arg(long)]
+        date: String,
+        /// Latitude in degrees (north positive)
+        #[arg(long)]
+        lat: f64,
+        /// Longitude in degrees (east positive)
+        #[arg(long)]
+        lon: f64,
+        /// Altitude in meters (default 0)
+        #[arg(long, default_value = "0")]
+        alt: f64,
+        /// Ayanamsha system code (0-19, default 0=Lahiri)
+        #[arg(long, default_value = "0")]
+        ayanamsha: i32,
+        /// Apply nutation correction
+        #[arg(long)]
+        nutation: bool,
+        /// Path to SPK kernel
+        #[arg(long)]
+        bsp: PathBuf,
+        /// Path to leap second kernel
+        #[arg(long)]
+        lsk: PathBuf,
+        /// Path to IERS EOP file (finals2000A.all)
+        #[arg(long)]
+        eop: PathBuf,
+    },
 }
 
 fn aya_system_from_code(code: i32) -> Option<AyanamshaSystem> {
@@ -742,6 +772,51 @@ fn main() {
                     println!("Ghatika: {}/60", info.value);
                     println!("  Start: {}", info.start);
                     println!("  End:   {}", info.end);
+                }
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+
+        Commands::Panchang {
+            date,
+            lat,
+            lon,
+            alt,
+            ayanamsha,
+            nutation,
+            bsp,
+            lsk,
+            eop,
+        } => {
+            let utc = parse_utc(&date).unwrap_or_else(|e| {
+                eprintln!("{e}");
+                std::process::exit(1);
+            });
+            let system = require_aya_system(ayanamsha);
+            let engine = load_engine(&bsp, &lsk);
+            let eop_kernel = load_eop(&eop);
+            let location = GeoLocation::new(lat, lon, alt);
+            let rs_config = RiseSetConfig::default();
+            let config = SankrantiConfig::new(system, nutation);
+            match dhruv_search::panchang_for_date(&engine, &eop_kernel, &utc, &location, &rs_config, &config) {
+                Ok(info) => {
+                    println!("Panchang for {} at {:.4}°N, {:.4}°E\n", date, lat, lon);
+                    println!("Tithi:    {} (index {})", info.tithi.tithi.name(), info.tithi.tithi_index);
+                    println!("  Paksha: {}  Tithi in paksha: {}", info.tithi.paksha.name(), info.tithi.tithi_in_paksha);
+                    println!("  Start:  {}  End: {}", info.tithi.start, info.tithi.end);
+                    println!("Karana:   {} (sequence {})", info.karana.karana.name(), info.karana.karana_index);
+                    println!("  Start:  {}  End: {}", info.karana.start, info.karana.end);
+                    println!("Yoga:     {} (index {})", info.yoga.yoga.name(), info.yoga.yoga_index);
+                    println!("  Start:  {}  End: {}", info.yoga.start, info.yoga.end);
+                    println!("Vaar:     {}", info.vaar.vaar.name());
+                    println!("  Start:  {}  End: {}", info.vaar.start, info.vaar.end);
+                    println!("Hora:     {} (position {} of 24)", info.hora.hora.name(), info.hora.hora_index);
+                    println!("  Start:  {}  End: {}", info.hora.start, info.hora.end);
+                    println!("Ghatika:  {}/60", info.ghatika.value);
+                    println!("  Start:  {}  End: {}", info.ghatika.start, info.ghatika.end);
                 }
                 Err(e) => {
                     eprintln!("Error: {e}");

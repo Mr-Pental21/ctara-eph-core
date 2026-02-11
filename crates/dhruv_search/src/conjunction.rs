@@ -18,7 +18,7 @@ use crate::search_util::{is_genuine_crossing, normalize_to_pm180};
 const MAX_SCAN_DAYS: f64 = 800.0;
 
 /// Query a body's ecliptic longitude and latitude in degrees.
-pub(crate) fn body_ecliptic_lon_lat(
+pub fn body_ecliptic_lon_lat(
     engine: &Engine,
     body: Body,
     jd_tdb: f64,

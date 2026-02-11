@@ -7,7 +7,7 @@
 //! Clean-room implementation from standard Vedic panchang conventions.
 
 use dhruv_core::{Body, Engine};
-use dhruv_time::{EopKernel, UtcTime, calendar_to_jd};
+use dhruv_time::{EopKernel, LeapSecondKernel, UtcTime, calendar_to_jd};
 use dhruv_vedic_base::{
     Ayana, GeoLocation, Rashi, RiseSetConfig, RiseSetEvent, RiseSetResult,
     approximate_local_noon_jd, ayana_from_sidereal_longitude, ayanamsha_deg,
@@ -21,8 +21,8 @@ use crate::conjunction::body_ecliptic_lon_lat;
 use crate::error::SearchError;
 use crate::lunar_phase::{next_amavasya, prev_amavasya};
 use crate::panchang_types::{
-    AyanaInfo, GhatikaInfo, HoraInfo, KaranaInfo, MasaInfo, TithiInfo, VaarInfo, VarshaInfo,
-    YogaInfo,
+    AyanaInfo, GhatikaInfo, HoraInfo, KaranaInfo, MasaInfo, PanchangInfo, TithiInfo, VaarInfo,
+    VarshaInfo, YogaInfo,
 };
 use crate::sankranti::{next_specific_sankranti, prev_specific_sankranti};
 use crate::sankranti_types::SankrantiConfig;
@@ -210,7 +210,7 @@ fn find_chaitra_pratipada_for(
 ///
 /// Returns (Moon_lon - Sun_lon) mod 360 in degrees [0, 360).
 /// Ayanamsha cancels in the difference, so tropical coords suffice.
-fn elongation_at(engine: &Engine, jd_tdb: f64) -> Result<f64, SearchError> {
+pub fn elongation_at(engine: &Engine, jd_tdb: f64) -> Result<f64, SearchError> {
     let (moon_lon, _) = body_ecliptic_lon_lat(engine, Body::Moon, jd_tdb)?;
     let (sun_lon, _) = body_ecliptic_lon_lat(engine, Body::Sun, jd_tdb)?;
     Ok((moon_lon - sun_lon).rem_euclid(360.0))
@@ -220,7 +220,7 @@ fn elongation_at(engine: &Engine, jd_tdb: f64) -> Result<f64, SearchError> {
 ///
 /// Returns (Moon_sid + Sun_sid) mod 360 in degrees [0, 360).
 /// Ayanamsha does NOT cancel in the sum, so sidereal coords are needed.
-fn sidereal_sum_at(
+pub fn sidereal_sum_at(
     engine: &Engine,
     jd_tdb: f64,
     config: &SankrantiConfig,
@@ -271,7 +271,19 @@ pub fn tithi_for_date(
 ) -> Result<TithiInfo, SearchError> {
     let jd = utc.to_jd_tdb(engine.lsk());
     let elong = elongation_at(engine, jd)?;
-    let pos = tithi_from_elongation(elong);
+    tithi_at(engine, jd, elong)
+}
+
+/// Determine the Tithi from a pre-computed elongation.
+///
+/// Accepts the Moon-Sun elongation in degrees [0, 360) at `jd_tdb`.
+/// The engine is still needed for boundary bisection (finding start/end times).
+pub fn tithi_at(
+    engine: &Engine,
+    jd_tdb: f64,
+    elongation_deg: f64,
+) -> Result<TithiInfo, SearchError> {
+    let pos = tithi_from_elongation(elongation_deg);
 
     let start_target = (pos.tithi_index as f64) * TITHI_SEGMENT_DEG;
     let end_target = ((pos.tithi_index as f64) + 1.0) * TITHI_SEGMENT_DEG;
@@ -280,9 +292,9 @@ pub fn tithi_for_date(
     // Step 0.25 days (~12 deg/day relative motion, tithi ~1 day)
     let elong_fn = |t: f64| -> Result<f64, SearchError> { elongation_at(engine, t) };
 
-    let start_jd = find_angle_boundary(&elong_fn, jd, start_target, -0.25, 20)?
+    let start_jd = find_angle_boundary(&elong_fn, jd_tdb, start_target, -0.25, 20)?
         .ok_or(SearchError::NoConvergence("could not find tithi start"))?;
-    let end_jd = find_angle_boundary(&elong_fn, jd, end_target, 0.25, 20)?
+    let end_jd = find_angle_boundary(&elong_fn, jd_tdb, end_target, 0.25, 20)?
         .ok_or(SearchError::NoConvergence("could not find tithi end"))?;
 
     Ok(TithiInfo {
@@ -305,16 +317,28 @@ pub fn karana_for_date(
 ) -> Result<KaranaInfo, SearchError> {
     let jd = utc.to_jd_tdb(engine.lsk());
     let elong = elongation_at(engine, jd)?;
-    let pos = karana_from_elongation(elong);
+    karana_at(engine, jd, elong)
+}
+
+/// Determine the Karana from a pre-computed elongation.
+///
+/// Accepts the Moon-Sun elongation in degrees [0, 360) at `jd_tdb`.
+/// The engine is still needed for boundary bisection (finding start/end times).
+pub fn karana_at(
+    engine: &Engine,
+    jd_tdb: f64,
+    elongation_deg: f64,
+) -> Result<KaranaInfo, SearchError> {
+    let pos = karana_from_elongation(elongation_deg);
 
     let start_target = (pos.karana_index as f64) * KARANA_SEGMENT_DEG;
     let end_target = ((pos.karana_index as f64) + 1.0) * KARANA_SEGMENT_DEG;
 
     let elong_fn = |t: f64| -> Result<f64, SearchError> { elongation_at(engine, t) };
 
-    let start_jd = find_angle_boundary(&elong_fn, jd, start_target, -0.25, 20)?
+    let start_jd = find_angle_boundary(&elong_fn, jd_tdb, start_target, -0.25, 20)?
         .ok_or(SearchError::NoConvergence("could not find karana start"))?;
-    let end_jd = find_angle_boundary(&elong_fn, jd, end_target, 0.25, 20)?
+    let end_jd = find_angle_boundary(&elong_fn, jd_tdb, end_target, 0.25, 20)?
         .ok_or(SearchError::NoConvergence("could not find karana end"))?;
 
     Ok(KaranaInfo {
@@ -337,7 +361,20 @@ pub fn yoga_for_date(
 ) -> Result<YogaInfo, SearchError> {
     let jd = utc.to_jd_tdb(engine.lsk());
     let sum = sidereal_sum_at(engine, jd, config)?;
-    let pos = yoga_from_sum(sum);
+    yoga_at(engine, jd, sum, config)
+}
+
+/// Determine the Yoga from a pre-computed sidereal sum.
+///
+/// Accepts (Moon_sid + Sun_sid) mod 360 in degrees [0, 360) at `jd_tdb`.
+/// The engine is still needed for boundary bisection (finding start/end times).
+pub fn yoga_at(
+    engine: &Engine,
+    jd_tdb: f64,
+    sidereal_sum_deg: f64,
+    config: &SankrantiConfig,
+) -> Result<YogaInfo, SearchError> {
+    let pos = yoga_from_sum(sidereal_sum_deg);
 
     let start_target = (pos.yoga_index as f64) * YOGA_SEGMENT_DEG;
     let end_target = ((pos.yoga_index as f64) + 1.0) * YOGA_SEGMENT_DEG;
@@ -345,9 +382,9 @@ pub fn yoga_for_date(
     let sum_fn =
         |t: f64| -> Result<f64, SearchError> { sidereal_sum_at(engine, t, config) };
 
-    let start_jd = find_angle_boundary(&sum_fn, jd, start_target, -0.25, 20)?
+    let start_jd = find_angle_boundary(&sum_fn, jd_tdb, start_target, -0.25, 20)?
         .ok_or(SearchError::NoConvergence("could not find yoga start"))?;
-    let end_jd = find_angle_boundary(&sum_fn, jd, end_target, 0.25, 20)?
+    let end_jd = find_angle_boundary(&sum_fn, jd_tdb, end_target, 0.25, 20)?
         .ok_or(SearchError::NoConvergence("could not find yoga end"))?;
 
     Ok(YogaInfo {
@@ -367,7 +404,7 @@ pub fn yoga_for_date(
 /// Returns (sunrise_jd_tdb, next_sunrise_jd_tdb) defining the Vedic day
 /// that contains the given moment. If the moment is before today's sunrise,
 /// uses yesterday's sunrise as the start.
-fn vedic_day_sunrises(
+pub fn vedic_day_sunrises(
     engine: &Engine,
     eop: &EopKernel,
     utc: &UtcTime,
@@ -450,15 +487,24 @@ pub fn vaar_for_date(
 ) -> Result<VaarInfo, SearchError> {
     let (sunrise_jd, next_sunrise_jd) =
         vedic_day_sunrises(engine, eop, utc, location, riseset_config)?;
+    Ok(vaar_from_sunrises(sunrise_jd, next_sunrise_jd, engine.lsk()))
+}
 
-    // Weekday of the sunrise JD
+/// Determine the Vaar from pre-computed sunrise boundaries.
+///
+/// Pure arithmetic — no engine queries needed. The `lsk` is used only
+/// for converting JD TDB to UTC in the start/end fields.
+pub fn vaar_from_sunrises(
+    sunrise_jd: f64,
+    next_sunrise_jd: f64,
+    lsk: &LeapSecondKernel,
+) -> VaarInfo {
     let vaar = vaar_from_jd(sunrise_jd);
-
-    Ok(VaarInfo {
+    VaarInfo {
         vaar,
-        start: UtcTime::from_jd_tdb(sunrise_jd, engine.lsk()),
-        end: UtcTime::from_jd_tdb(next_sunrise_jd, engine.lsk()),
-    })
+        start: UtcTime::from_jd_tdb(sunrise_jd, lsk),
+        end: UtcTime::from_jd_tdb(next_sunrise_jd, lsk),
+    }
 }
 
 /// Determine the Hora (planetary hour) for a given date and location.
@@ -474,8 +520,20 @@ pub fn hora_for_date(
 ) -> Result<HoraInfo, SearchError> {
     let (sunrise_jd, next_sunrise_jd) =
         vedic_day_sunrises(engine, eop, utc, location, riseset_config)?;
-
     let jd_tdb = utc.to_jd_tdb(engine.lsk());
+    Ok(hora_from_sunrises(jd_tdb, sunrise_jd, next_sunrise_jd, engine.lsk()))
+}
+
+/// Determine the Hora from pre-computed sunrise boundaries.
+///
+/// Pure arithmetic — no engine queries needed. The `lsk` is used only
+/// for converting JD TDB to UTC in the start/end fields.
+pub fn hora_from_sunrises(
+    jd_tdb: f64,
+    sunrise_jd: f64,
+    next_sunrise_jd: f64,
+    lsk: &LeapSecondKernel,
+) -> HoraInfo {
     let vedic_day_seconds = (next_sunrise_jd - sunrise_jd) * 86400.0;
     let seconds_since_sunrise = (jd_tdb - sunrise_jd) * 86400.0;
     let hora_duration_seconds = vedic_day_seconds / HORA_COUNT as f64;
@@ -491,12 +549,12 @@ pub fn hora_for_date(
     let hora_start_jd = sunrise_jd + (hora_index as f64 * hora_duration_seconds) / 86400.0;
     let hora_end_jd = hora_start_jd + hora_duration_seconds / 86400.0;
 
-    Ok(HoraInfo {
+    HoraInfo {
         hora,
         hora_index,
-        start: UtcTime::from_jd_tdb(hora_start_jd, engine.lsk()),
-        end: UtcTime::from_jd_tdb(hora_end_jd, engine.lsk()),
-    })
+        start: UtcTime::from_jd_tdb(hora_start_jd, lsk),
+        end: UtcTime::from_jd_tdb(hora_end_jd, lsk),
+    }
 }
 
 /// Determine the Ghatika for a given date and location.
@@ -512,8 +570,20 @@ pub fn ghatika_for_date(
 ) -> Result<GhatikaInfo, SearchError> {
     let (sunrise_jd, next_sunrise_jd) =
         vedic_day_sunrises(engine, eop, utc, location, riseset_config)?;
-
     let jd_tdb = utc.to_jd_tdb(engine.lsk());
+    Ok(ghatika_from_sunrises(jd_tdb, sunrise_jd, next_sunrise_jd, engine.lsk()))
+}
+
+/// Determine the Ghatika from pre-computed sunrise boundaries.
+///
+/// Pure arithmetic — no engine queries needed. The `lsk` is used only
+/// for converting JD TDB to UTC in the start/end fields.
+pub fn ghatika_from_sunrises(
+    jd_tdb: f64,
+    sunrise_jd: f64,
+    next_sunrise_jd: f64,
+    lsk: &LeapSecondKernel,
+) -> GhatikaInfo {
     let vedic_day_seconds = (next_sunrise_jd - sunrise_jd) * 86400.0;
     let seconds_since_sunrise = (jd_tdb - sunrise_jd) * 86400.0;
 
@@ -522,9 +592,55 @@ pub fn ghatika_for_date(
     let ghatika_start_jd = sunrise_jd + (pos.index as f64 * ghatika_duration) / 86400.0;
     let ghatika_end_jd = ghatika_start_jd + ghatika_duration / 86400.0;
 
-    Ok(GhatikaInfo {
+    GhatikaInfo {
         value: pos.value,
-        start: UtcTime::from_jd_tdb(ghatika_start_jd, engine.lsk()),
-        end: UtcTime::from_jd_tdb(ghatika_end_jd, engine.lsk()),
+        start: UtcTime::from_jd_tdb(ghatika_start_jd, lsk),
+        end: UtcTime::from_jd_tdb(ghatika_end_jd, lsk),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Combined panchang
+// ---------------------------------------------------------------------------
+
+/// Compute all six daily panchang elements (tithi, karana, yoga, vaar, hora,
+/// ghatika) for a single moment, sharing intermediate computations.
+///
+/// This is more efficient than calling the six `_for_date` functions
+/// individually because Sun/Moon longitudes are queried once (instead of 3x)
+/// and sunrise is computed once (instead of 3x).
+pub fn panchang_for_date(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    riseset_config: &RiseSetConfig,
+    config: &SankrantiConfig,
+) -> Result<PanchangInfo, SearchError> {
+    let jd = utc.to_jd_tdb(engine.lsk());
+
+    // Category A intermediates: compute body longitudes once
+    let elong = elongation_at(engine, jd)?;
+    let sum = sidereal_sum_at(engine, jd, config)?;
+
+    let tithi = tithi_at(engine, jd, elong)?;
+    let karana = karana_at(engine, jd, elong)?;
+    let yoga = yoga_at(engine, jd, sum, config)?;
+
+    // Category B intermediates: compute sunrises once
+    let (sunrise_jd, next_sunrise_jd) =
+        vedic_day_sunrises(engine, eop, utc, location, riseset_config)?;
+
+    let vaar = vaar_from_sunrises(sunrise_jd, next_sunrise_jd, engine.lsk());
+    let hora = hora_from_sunrises(jd, sunrise_jd, next_sunrise_jd, engine.lsk());
+    let ghatika = ghatika_from_sunrises(jd, sunrise_jd, next_sunrise_jd, engine.lsk());
+
+    Ok(PanchangInfo {
+        tithi,
+        karana,
+        yoga,
+        vaar,
+        hora,
+        ghatika,
     })
 }

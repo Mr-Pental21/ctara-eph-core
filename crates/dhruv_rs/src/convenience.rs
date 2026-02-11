@@ -3,8 +3,8 @@ use dhruv_frames::{
     SphericalCoords, SphericalState, cartesian_state_to_spherical_state, cartesian_to_spherical,
 };
 use dhruv_search::panchang_types::{
-    AyanaInfo, GhatikaInfo, HoraInfo, KaranaInfo, MasaInfo, TithiInfo, VaarInfo, VarshaInfo,
-    YogaInfo,
+    AyanaInfo, GhatikaInfo, HoraInfo, KaranaInfo, MasaInfo, PanchangInfo, TithiInfo, VaarInfo,
+    VarshaInfo, YogaInfo,
 };
 use dhruv_search::sankranti_types::{SankrantiConfig, SankrantiEvent};
 use dhruv_search::{LunarPhaseEvent, SearchError};
@@ -393,4 +393,22 @@ pub fn ghatika(
     let utc: UtcTime = date.into();
     let rs_config = RiseSetConfig::default();
     Ok(dhruv_search::ghatika_for_date(eng, eop, &utc, location, &rs_config)?)
+}
+
+/// Compute all six daily panchang elements for a single moment.
+///
+/// Returns tithi, karana, yoga, vaar, hora, and ghatika efficiently
+/// by sharing intermediate computations (body longitudes, sunrises).
+pub fn panchang(
+    date: UtcDate,
+    eop: &EopKernel,
+    location: &GeoLocation,
+    system: AyanamshaSystem,
+    use_nutation: bool,
+) -> Result<PanchangInfo, DhruvError> {
+    let eng = engine()?;
+    let utc: UtcTime = date.into();
+    let rs_config = RiseSetConfig::default();
+    let config = SankrantiConfig::new(system, use_nutation);
+    Ok(dhruv_search::panchang_for_date(eng, eop, &utc, location, &rs_config, &config)?)
 }

@@ -1,6 +1,7 @@
 //! Golden-value integration tests for Panchang classification.
 //!
-//! Validates Masa, Ayana, and Varsha against known Vedic calendar dates.
+//! Validates Masa, Ayana, and Varsha against known Vedic calendar dates,
+//! and verifies equivalence between `_for_date` and `_at`/`_from_sunrises` variants.
 //! Requires kernel files. Skips gracefully if absent.
 
 use std::path::Path;
@@ -8,12 +9,19 @@ use std::path::Path;
 use dhruv_core::{Engine, EngineConfig};
 use dhruv_search::panchang_types::{AyanaInfo, MasaInfo, VarshaInfo};
 use dhruv_search::sankranti_types::SankrantiConfig;
-use dhruv_search::{ayana_for_date, masa_for_date, varsha_for_date};
-use dhruv_time::UtcTime;
+use dhruv_search::{
+    ayana_for_date, elongation_at, ghatika_for_date, ghatika_from_sunrises, hora_for_date,
+    hora_from_sunrises, karana_at, karana_for_date, masa_for_date, panchang_for_date,
+    sidereal_sum_at, tithi_at, tithi_for_date, vaar_for_date, vaar_from_sunrises, varsha_for_date,
+    vedic_day_sunrises, yoga_at, yoga_for_date,
+};
+use dhruv_time::{EopKernel, UtcTime};
+use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
 use dhruv_vedic_base::{Ayana, Masa};
 
 const SPK_PATH: &str = "../../kernels/data/de442s.bsp";
 const LSK_PATH: &str = "../../kernels/data/naif0012.tls";
+const EOP_PATH: &str = "../../kernels/data/finals2000A.all";
 
 fn load_engine() -> Option<Engine> {
     if !Path::new(SPK_PATH).exists() || !Path::new(LSK_PATH).exists() {
@@ -150,4 +158,123 @@ fn varsha_consecutive_years() {
     // Orders should differ by 1
     let expected_order = if v2023.order == 60 { 1 } else { v2023.order + 1 };
     assert_eq!(v2024.order, expected_order, "orders should be consecutive");
+}
+
+// ---------------------------------------------------------------------------
+// Equivalence tests: _at / _from_sunrises == _for_date
+// ---------------------------------------------------------------------------
+
+fn load_eop() -> Option<EopKernel> {
+    if !Path::new(EOP_PATH).exists() {
+        return None;
+    }
+    EopKernel::load(Path::new(EOP_PATH)).ok()
+}
+
+/// tithi_at(engine, jd, elongation_at(engine, jd)) == tithi_for_date(engine, utc)
+#[test]
+fn tithi_at_matches_for_date() {
+    let Some(engine) = load_engine() else { return };
+    let utc = UtcTime::new(2024, 1, 15, 12, 0, 0.0);
+    let direct = tithi_for_date(&engine, &utc).unwrap();
+    let jd = utc.to_jd_tdb(engine.lsk());
+    let elong = elongation_at(&engine, jd).unwrap();
+    let via_at = tithi_at(&engine, jd, elong).unwrap();
+    assert_eq!(direct, via_at);
+}
+
+/// karana_at(engine, jd, elongation_at(engine, jd)) == karana_for_date(engine, utc)
+#[test]
+fn karana_at_matches_for_date() {
+    let Some(engine) = load_engine() else { return };
+    let utc = UtcTime::new(2024, 1, 15, 12, 0, 0.0);
+    let direct = karana_for_date(&engine, &utc).unwrap();
+    let jd = utc.to_jd_tdb(engine.lsk());
+    let elong = elongation_at(&engine, jd).unwrap();
+    let via_at = karana_at(&engine, jd, elong).unwrap();
+    assert_eq!(direct, via_at);
+}
+
+/// yoga_at(engine, jd, sidereal_sum) == yoga_for_date(engine, utc, config)
+#[test]
+fn yoga_at_matches_for_date() {
+    let Some(engine) = load_engine() else { return };
+    let utc = UtcTime::new(2024, 1, 15, 12, 0, 0.0);
+    let config = default_config();
+    let direct = yoga_for_date(&engine, &utc, &config).unwrap();
+    let jd = utc.to_jd_tdb(engine.lsk());
+    let sum = sidereal_sum_at(&engine, jd, &config).unwrap();
+    let via_at = yoga_at(&engine, jd, sum, &config).unwrap();
+    assert_eq!(direct, via_at);
+}
+
+/// vaar_from_sunrises(sr, nsr, lsk) == vaar_for_date(engine, eop, utc, loc, cfg)
+#[test]
+fn vaar_from_sunrises_matches_for_date() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = UtcTime::new(2024, 1, 15, 12, 0, 0.0);
+    let loc = GeoLocation::new(28.6139, 77.2090, 0.0);
+    let rs = RiseSetConfig::default();
+    let direct = vaar_for_date(&engine, &eop, &utc, &loc, &rs).unwrap();
+    let (sr, nsr) = vedic_day_sunrises(&engine, &eop, &utc, &loc, &rs).unwrap();
+    let via_sr = vaar_from_sunrises(sr, nsr, engine.lsk());
+    assert_eq!(direct, via_sr);
+}
+
+/// hora_from_sunrises matches hora_for_date
+#[test]
+fn hora_from_sunrises_matches_for_date() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = UtcTime::new(2024, 1, 15, 12, 0, 0.0);
+    let loc = GeoLocation::new(28.6139, 77.2090, 0.0);
+    let rs = RiseSetConfig::default();
+    let direct = hora_for_date(&engine, &eop, &utc, &loc, &rs).unwrap();
+    let (sr, nsr) = vedic_day_sunrises(&engine, &eop, &utc, &loc, &rs).unwrap();
+    let jd = utc.to_jd_tdb(engine.lsk());
+    let via_sr = hora_from_sunrises(jd, sr, nsr, engine.lsk());
+    assert_eq!(direct, via_sr);
+}
+
+/// ghatika_from_sunrises matches ghatika_for_date
+#[test]
+fn ghatika_from_sunrises_matches_for_date() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = UtcTime::new(2024, 1, 15, 12, 0, 0.0);
+    let loc = GeoLocation::new(28.6139, 77.2090, 0.0);
+    let rs = RiseSetConfig::default();
+    let direct = ghatika_for_date(&engine, &eop, &utc, &loc, &rs).unwrap();
+    let (sr, nsr) = vedic_day_sunrises(&engine, &eop, &utc, &loc, &rs).unwrap();
+    let jd = utc.to_jd_tdb(engine.lsk());
+    let via_sr = ghatika_from_sunrises(jd, sr, nsr, engine.lsk());
+    assert_eq!(direct, via_sr);
+}
+
+/// panchang_for_date gives consistent results with individual _for_date calls
+#[test]
+fn panchang_combined_matches_individual() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = UtcTime::new(2024, 1, 15, 12, 0, 0.0);
+    let loc = GeoLocation::new(28.6139, 77.2090, 0.0);
+    let rs = RiseSetConfig::default();
+    let config = default_config();
+
+    let combined = panchang_for_date(&engine, &eop, &utc, &loc, &rs, &config).unwrap();
+
+    let tithi = tithi_for_date(&engine, &utc).unwrap();
+    let karana = karana_for_date(&engine, &utc).unwrap();
+    let yoga = yoga_for_date(&engine, &utc, &config).unwrap();
+    let vaar = vaar_for_date(&engine, &eop, &utc, &loc, &rs).unwrap();
+    let hora = hora_for_date(&engine, &eop, &utc, &loc, &rs).unwrap();
+    let ghatika = ghatika_for_date(&engine, &eop, &utc, &loc, &rs).unwrap();
+
+    assert_eq!(combined.tithi, tithi, "tithi mismatch");
+    assert_eq!(combined.karana, karana, "karana mismatch");
+    assert_eq!(combined.yoga, yoga, "yoga mismatch");
+    assert_eq!(combined.vaar, vaar, "vaar mismatch");
+    assert_eq!(combined.hora, hora, "hora mismatch");
+    assert_eq!(combined.ghatika, ghatika, "ghatika mismatch");
 }

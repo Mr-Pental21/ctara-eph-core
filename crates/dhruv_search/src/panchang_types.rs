@@ -119,3 +119,20 @@ pub struct GhatikaInfo {
     /// End of this ghatika (UTC).
     pub end: UtcTime,
 }
+
+/// Combined daily panchang: all six elements for a single moment.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PanchangInfo {
+    /// Tithi (lunar day).
+    pub tithi: TithiInfo,
+    /// Karana (half-tithi).
+    pub karana: KaranaInfo,
+    /// Yoga (luni-solar yoga).
+    pub yoga: YogaInfo,
+    /// Vaar (Vedic weekday).
+    pub vaar: VaarInfo,
+    /// Hora (planetary hour).
+    pub hora: HoraInfo,
+    /// Ghatika (1-60 division of Vedic day).
+    pub ghatika: GhatikaInfo,
+}

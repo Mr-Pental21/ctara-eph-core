@@ -8,14 +8,16 @@ use dhruv_search::{
     ConjunctionConfig, ConjunctionEvent, EclipseConfig, LunarEclipse, LunarEclipseType,
     LunarPhase, MaxSpeedEvent, MaxSpeedType, SankrantiConfig, SearchError, SolarEclipse,
     SolarEclipseType, StationaryConfig, StationaryEvent, StationType, ayana_for_date,
-    ghatika_for_date, hora_for_date, karana_for_date, masa_for_date, next_amavasya,
-    next_conjunction, next_lunar_eclipse, next_max_speed, next_purnima, next_sankranti,
-    next_solar_eclipse, next_specific_sankranti, next_stationary, prev_amavasya,
-    prev_conjunction, prev_lunar_eclipse, prev_max_speed, prev_purnima, prev_sankranti,
-    prev_solar_eclipse, prev_specific_sankranti, prev_stationary, search_amavasyas,
-    search_conjunctions, search_lunar_eclipses, search_max_speed, search_purnimas,
-    search_sankrantis, search_solar_eclipses, search_stationary, tithi_for_date,
-    vaar_for_date, varsha_for_date, yoga_for_date,
+    body_ecliptic_lon_lat, elongation_at, ghatika_for_date, ghatika_from_sunrises,
+    hora_for_date, hora_from_sunrises, karana_at, karana_for_date, masa_for_date,
+    next_amavasya, next_conjunction, next_lunar_eclipse, next_max_speed, next_purnima,
+    next_sankranti, next_solar_eclipse, next_specific_sankranti, next_stationary,
+    prev_amavasya, prev_conjunction, prev_lunar_eclipse, prev_max_speed, prev_purnima,
+    prev_sankranti, prev_solar_eclipse, prev_specific_sankranti, prev_stationary,
+    search_amavasyas, search_conjunctions, search_lunar_eclipses, search_max_speed,
+    search_purnimas, search_sankrantis, search_solar_eclipses, search_stationary,
+    sidereal_sum_at, tithi_at, tithi_for_date, vaar_for_date, vaar_from_sunrises,
+    varsha_for_date, vedic_day_sunrises, yoga_at, yoga_for_date,
 };
 use dhruv_time::UtcTime;
 use dhruv_vedic_base::{
@@ -29,7 +31,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 12;
+pub const DHRUV_API_VERSION: u32 = 13;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -5366,6 +5368,346 @@ pub extern "C" fn dhruv_hora_name(index: u32) -> *const std::ffi::c_char {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Panchang composable intermediates + pre-computed input variants
+// ---------------------------------------------------------------------------
+
+/// Compute Moon-Sun elongation at a given JD TDB.
+///
+/// Returns (Moon_lon - Sun_lon) mod 360 in degrees via `out_deg`.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_elongation_at(
+    engine: *const DhruvEngineHandle,
+    jd_tdb: f64,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || out_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        match elongation_at(engine_ref, jd_tdb) {
+            Ok(deg) => {
+                unsafe { *out_deg = deg; }
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Compute sidereal sum (Moon_sid + Sun_sid) mod 360 at a given JD TDB.
+///
+/// Requires SankrantiConfig for ayanamsha (sum does not cancel).
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_sidereal_sum_at(
+    engine: *const DhruvEngineHandle,
+    jd_tdb: f64,
+    config: *const DhruvSankrantiConfig,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || config.is_null() || out_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        let cfg = match sankranti_config_from_ffi(unsafe { &*config }) {
+            Some(c) => c,
+            None => return DhruvStatus::InvalidQuery,
+        };
+        match sidereal_sum_at(engine_ref, jd_tdb, &cfg) {
+            Ok(deg) => {
+                unsafe { *out_deg = deg; }
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Compute Vedic day sunrise bracket for a given UTC moment.
+///
+/// Writes the two JD TDB values of the bracketing sunrises to
+/// `out_sunrise_jd` and `out_next_sunrise_jd`.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_vedic_day_sunrises(
+    engine: *const DhruvEngineHandle,
+    eop: *const DhruvEopHandle,
+    utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    riseset_config: *const DhruvRiseSetConfig,
+    out_sunrise_jd: *mut f64,
+    out_next_sunrise_jd: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || eop.is_null() || utc.is_null()
+            || location.is_null() || riseset_config.is_null()
+            || out_sunrise_jd.is_null() || out_next_sunrise_jd.is_null()
+        {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        let eop_ref = unsafe { &*eop };
+        let t = ffi_to_utc_time(unsafe { &*utc });
+        let loc_ref = unsafe { &*location };
+        let cfg_ref = unsafe { &*riseset_config };
+        let geo = GeoLocation::new(loc_ref.latitude_deg, loc_ref.longitude_deg, loc_ref.altitude_m);
+        let sun_limb = match sun_limb_from_code(cfg_ref.sun_limb) {
+            Some(l) => l,
+            None => return DhruvStatus::InvalidQuery,
+        };
+        let rs_config = RiseSetConfig {
+            use_refraction: cfg_ref.use_refraction != 0,
+            sun_limb,
+            altitude_correction: cfg_ref.altitude_correction != 0,
+        };
+        match vedic_day_sunrises(engine_ref, eop_ref, &t, &geo, &rs_config) {
+            Ok((sr, nsr)) => {
+                unsafe {
+                    *out_sunrise_jd = sr;
+                    *out_next_sunrise_jd = nsr;
+                }
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Query a body's ecliptic longitude and latitude in degrees.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_body_ecliptic_lon_lat(
+    engine: *const DhruvEngineHandle,
+    body_code: i32,
+    jd_tdb: f64,
+    out_lon_deg: *mut f64,
+    out_lat_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || out_lon_deg.is_null() || out_lat_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        let body = match Body::from_code(body_code) {
+            Some(b) => b,
+            None => return DhruvStatus::InvalidQuery,
+        };
+        match body_ecliptic_lon_lat(engine_ref, body, jd_tdb) {
+            Ok((lon, lat)) => {
+                unsafe {
+                    *out_lon_deg = lon;
+                    *out_lat_deg = lat;
+                }
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Determine the Tithi from a pre-computed elongation.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_tithi_at(
+    engine: *const DhruvEngineHandle,
+    jd_tdb: f64,
+    elongation_deg: f64,
+    out: *mut DhruvTithiInfo,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        match tithi_at(engine_ref, jd_tdb, elongation_deg) {
+            Ok(info) => {
+                unsafe {
+                    *out = DhruvTithiInfo {
+                        tithi_index: info.tithi_index as i32,
+                        paksha: info.paksha as i32,
+                        tithi_in_paksha: info.tithi_in_paksha as i32,
+                        start: utc_time_to_ffi(&info.start),
+                        end: utc_time_to_ffi(&info.end),
+                    };
+                }
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Determine the Karana from a pre-computed elongation.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_karana_at(
+    engine: *const DhruvEngineHandle,
+    jd_tdb: f64,
+    elongation_deg: f64,
+    out: *mut DhruvKaranaInfo,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        match karana_at(engine_ref, jd_tdb, elongation_deg) {
+            Ok(info) => {
+                unsafe {
+                    *out = DhruvKaranaInfo {
+                        karana_index: info.karana_index as i32,
+                        karana_name_index: info.karana.index() as i32,
+                        start: utc_time_to_ffi(&info.start),
+                        end: utc_time_to_ffi(&info.end),
+                    };
+                }
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Determine the Yoga from a pre-computed sidereal sum.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_yoga_at(
+    engine: *const DhruvEngineHandle,
+    jd_tdb: f64,
+    sidereal_sum_deg: f64,
+    config: *const DhruvSankrantiConfig,
+    out: *mut DhruvYogaInfo,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || config.is_null() || out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        let cfg = match sankranti_config_from_ffi(unsafe { &*config }) {
+            Some(c) => c,
+            None => return DhruvStatus::InvalidQuery,
+        };
+        match yoga_at(engine_ref, jd_tdb, sidereal_sum_deg, &cfg) {
+            Ok(info) => {
+                unsafe {
+                    *out = DhruvYogaInfo {
+                        yoga_index: info.yoga_index as i32,
+                        start: utc_time_to_ffi(&info.start),
+                        end: utc_time_to_ffi(&info.end),
+                    };
+                }
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Determine the Vaar from pre-computed sunrise boundaries.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_vaar_from_sunrises(
+    lsk: *const DhruvLskHandle,
+    sunrise_jd: f64,
+    next_sunrise_jd: f64,
+    out: *mut DhruvVaarInfo,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let lsk_ref = unsafe { &*lsk };
+        let info = vaar_from_sunrises(sunrise_jd, next_sunrise_jd, lsk_ref);
+        unsafe {
+            *out = DhruvVaarInfo {
+                vaar_index: info.vaar.index() as i32,
+                start: utc_time_to_ffi(&info.start),
+                end: utc_time_to_ffi(&info.end),
+            };
+        }
+        DhruvStatus::Ok
+    })
+}
+
+/// Determine the Hora from pre-computed sunrise boundaries.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_hora_from_sunrises(
+    lsk: *const DhruvLskHandle,
+    jd_tdb: f64,
+    sunrise_jd: f64,
+    next_sunrise_jd: f64,
+    out: *mut DhruvHoraInfo,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let lsk_ref = unsafe { &*lsk };
+        let info = hora_from_sunrises(jd_tdb, sunrise_jd, next_sunrise_jd, lsk_ref);
+        unsafe {
+            *out = DhruvHoraInfo {
+                hora_index: info.hora.index() as i32,
+                hora_position: info.hora_index as i32,
+                start: utc_time_to_ffi(&info.start),
+                end: utc_time_to_ffi(&info.end),
+            };
+        }
+        DhruvStatus::Ok
+    })
+}
+
+/// Determine the Ghatika from pre-computed sunrise boundaries.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_ghatika_from_sunrises(
+    lsk: *const DhruvLskHandle,
+    jd_tdb: f64,
+    sunrise_jd: f64,
+    next_sunrise_jd: f64,
+    out: *mut DhruvGhatikaInfo,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let lsk_ref = unsafe { &*lsk };
+        let info = ghatika_from_sunrises(jd_tdb, sunrise_jd, next_sunrise_jd, lsk_ref);
+        unsafe {
+            *out = DhruvGhatikaInfo {
+                value: info.value as i32,
+                start: utc_time_to_ffi(&info.start),
+                end: utc_time_to_ffi(&info.end),
+            };
+        }
+        DhruvStatus::Ok
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -5803,8 +6145,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_12() {
-        assert_eq!(dhruv_api_version(), 12);
+    fn ffi_api_version_is_13() {
+        assert_eq!(dhruv_api_version(), 13);
     }
 
     // --- Search error mapping ---
@@ -6931,5 +7273,78 @@ mod tests {
         assert_eq!(ZEROED_UTC.year, 0);
         assert_eq!(ZEROED_UTC.month, 0);
         assert!((ZEROED_UTC.second - 0.0).abs() < 1e-15);
+    }
+
+    // --- Panchang composable intermediates null-pointer tests ---
+
+    #[test]
+    fn ffi_elongation_at_null() {
+        let mut out = 0.0f64;
+        let s = unsafe { dhruv_elongation_at(ptr::null(), 2451545.0, &mut out) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_sidereal_sum_at_null() {
+        let mut out = 0.0f64;
+        let s = unsafe { dhruv_sidereal_sum_at(ptr::null(), 2451545.0, ptr::null(), &mut out) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_vedic_day_sunrises_null() {
+        let mut sr = 0.0f64;
+        let mut nsr = 0.0f64;
+        let s = unsafe {
+            dhruv_vedic_day_sunrises(
+                ptr::null(), ptr::null(), ptr::null(),
+                ptr::null(), ptr::null(), &mut sr, &mut nsr,
+            )
+        };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_body_ecliptic_lon_lat_null() {
+        let mut lon = 0.0f64;
+        let mut lat = 0.0f64;
+        let s = unsafe { dhruv_body_ecliptic_lon_lat(ptr::null(), 301, 2451545.0, &mut lon, &mut lat) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_tithi_at_null() {
+        let s = unsafe { dhruv_tithi_at(ptr::null(), 2451545.0, 90.0, ptr::null_mut()) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_karana_at_null() {
+        let s = unsafe { dhruv_karana_at(ptr::null(), 2451545.0, 90.0, ptr::null_mut()) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_yoga_at_null() {
+        let s = unsafe { dhruv_yoga_at(ptr::null(), 2451545.0, 90.0, ptr::null(), ptr::null_mut()) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_vaar_from_sunrises_null() {
+        let s = unsafe { dhruv_vaar_from_sunrises(ptr::null(), 2451545.0, 2451546.0, ptr::null_mut()) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_hora_from_sunrises_null() {
+        let s = unsafe { dhruv_hora_from_sunrises(ptr::null(), 2451545.5, 2451545.0, 2451546.0, ptr::null_mut()) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_ghatika_from_sunrises_null() {
+        let s = unsafe { dhruv_ghatika_from_sunrises(ptr::null(), 2451545.5, 2451545.0, 2451546.0, ptr::null_mut()) };
+        assert_eq!(s, DhruvStatus::NullPointer);
     }
 }

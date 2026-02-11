@@ -31,7 +31,7 @@ pub mod global;
 // Primary re-exports — users should only need `use dhruv_rs::*`
 pub use convenience::{
     ayana, ghatika, hora, karana, longitude, masa, nakshatra, nakshatra28, next_amavasya,
-    next_purnima, next_sankranti, position, position_full, prev_amavasya, prev_purnima,
+    next_purnima, next_sankranti, panchang, position, position_full, prev_amavasya, prev_purnima,
     prev_sankranti, query, query_batch, rashi, sidereal_longitude, tithi, vaar, varsha, yoga,
 };
 pub use date::UtcDate;
@@ -58,7 +58,7 @@ pub use dhruv_time::EopKernel;
 // Re-export search result types used by convenience functions.
 pub use dhruv_search::lunar_phase_types::LunarPhaseEvent;
 pub use dhruv_search::panchang_types::{
-    AyanaInfo, GhatikaInfo, HoraInfo, KaranaInfo, MasaInfo, TithiInfo, VaarInfo, VarshaInfo,
-    YogaInfo,
+    AyanaInfo, GhatikaInfo, HoraInfo, KaranaInfo, MasaInfo, PanchangInfo, TithiInfo, VaarInfo,
+    VarshaInfo, YogaInfo,
 };
 pub use dhruv_search::sankranti_types::{SankrantiConfig, SankrantiEvent};
