@@ -1009,3 +1009,498 @@ fn ffi_bhava_body_starting_point() {
     unsafe { dhruv_lsk_free(lsk_ptr) };
     unsafe { dhruv_engine_free(engine_ptr) };
 }
+
+// ---------------------------------------------------------------------------
+// UTC roundtrip integration tests
+// ---------------------------------------------------------------------------
+
+/// Helper: compare a DhruvUtcTime with an expected JD TDB by converting the UTC
+/// time back to JD TDB via dhruv_utc_to_tdb_jd and checking they agree within
+/// a tolerance (1 second ≈ 1.16e-5 days).
+fn assert_utc_matches_jd(
+    lsk_ptr: *mut DhruvLskHandle,
+    utc: &DhruvUtcTime,
+    expected_jd_tdb: f64,
+    label: &str,
+) {
+    let mut jd_roundtrip: f64 = 0.0;
+    let status = unsafe {
+        dhruv_utc_to_tdb_jd(
+            lsk_ptr,
+            utc.year, utc.month, utc.day,
+            utc.hour, utc.minute, utc.second,
+            &mut jd_roundtrip,
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok, "{label}: utc_to_tdb_jd failed");
+    let diff_days = (jd_roundtrip - expected_jd_tdb).abs();
+    assert!(
+        diff_days < 2e-5, // ~1.7 seconds tolerance (roundtrip precision)
+        "{label}: roundtrip diff = {diff_days} days (jd_rt={jd_roundtrip}, expected={expected_jd_tdb})"
+    );
+}
+
+#[test]
+fn ffi_utc_conjunction_roundtrip() {
+    let engine_ptr = match make_engine() {
+        Some(e) => e,
+        None => return,
+    };
+    let lsk_path = lsk_path_cstr().unwrap();
+    let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
+    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    // Find next Sun-Moon conjunction after 2024-03-20 using JD version
+    let jd_start = calendar_to_jd(2024, 3, 20.5);
+    let cfg = dhruv_conjunction_config_default();
+
+    let mut jd_event = DhruvConjunctionEvent {
+        jd_tdb: 0.0,
+        actual_separation_deg: 0.0,
+        body1_longitude_deg: 0.0,
+        body2_longitude_deg: 0.0,
+        body1_latitude_deg: 0.0,
+        body2_latitude_deg: 0.0,
+        body1_code: 0,
+        body2_code: 0,
+    };
+    let mut found: u8 = 0;
+    let status = unsafe {
+        dhruv_next_conjunction(
+            engine_ptr, Body::Sun.code(), Body::Moon.code(),
+            jd_start, &cfg, &mut jd_event, &mut found,
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(found, 1, "should find a conjunction");
+
+    // Now call the UTC version with the same start time
+    let utc_start = DhruvUtcTime { year: 2024, month: 3, day: 20, hour: 12, minute: 0, second: 0.0 };
+    let mut utc_event = DhruvConjunctionEventUtc {
+        utc: DhruvUtcTime { year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0 },
+        actual_separation_deg: 0.0,
+        body1_longitude_deg: 0.0,
+        body2_longitude_deg: 0.0,
+        body1_latitude_deg: 0.0,
+        body2_latitude_deg: 0.0,
+        body1_code: 0,
+        body2_code: 0,
+    };
+    let mut found_utc: u8 = 0;
+    let status = unsafe {
+        dhruv_next_conjunction_utc(
+            engine_ptr, Body::Sun.code(), Body::Moon.code(),
+            &utc_start, &cfg, &mut utc_event, &mut found_utc,
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(found_utc, 1, "UTC version should also find conjunction");
+
+    // Verify the UTC result matches the JD result
+    assert_utc_matches_jd(lsk_ptr, &utc_event.utc, jd_event.jd_tdb, "conjunction time");
+
+    // Non-time fields should be identical
+    assert!(
+        (utc_event.actual_separation_deg - jd_event.actual_separation_deg).abs() < 1e-6,
+        "separation mismatch"
+    );
+    assert!(
+        (utc_event.body1_longitude_deg - jd_event.body1_longitude_deg).abs() < 1e-6,
+        "body1 lon mismatch"
+    );
+
+    unsafe { dhruv_lsk_free(lsk_ptr) };
+    unsafe { dhruv_engine_free(engine_ptr) };
+}
+
+#[test]
+fn ffi_utc_lunar_eclipse_roundtrip() {
+    let engine_ptr = match make_engine() {
+        Some(e) => e,
+        None => return,
+    };
+    let lsk_path = lsk_path_cstr().unwrap();
+    let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
+    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let jd_start = calendar_to_jd(2024, 3, 1.0);
+    let cfg = dhruv_eclipse_config_default();
+
+    // JD version
+    let mut jd_result = DhruvLunarEclipseResult {
+        eclipse_type: 0, magnitude: 0.0, penumbral_magnitude: 0.0,
+        greatest_eclipse_jd: 0.0, p1_jd: 0.0, u1_jd: 0.0, u2_jd: 0.0,
+        u3_jd: 0.0, u4_jd: 0.0, p4_jd: 0.0,
+        moon_ecliptic_lat_deg: 0.0, angular_separation_deg: 0.0,
+    };
+    let mut found: u8 = 0;
+    let status = unsafe {
+        dhruv_next_lunar_eclipse(engine_ptr, jd_start, &cfg, &mut jd_result, &mut found)
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(found, 1, "should find a lunar eclipse");
+
+    // UTC version
+    let utc_start = DhruvUtcTime { year: 2024, month: 3, day: 1, hour: 0, minute: 0, second: 0.0 };
+    let mut utc_result = DhruvLunarEclipseResultUtc {
+        eclipse_type: 0, magnitude: 0.0, penumbral_magnitude: 0.0,
+        greatest_eclipse: DhruvUtcTime { year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0 },
+        p1: DhruvUtcTime { year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0 },
+        u1: DhruvUtcTime { year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0 },
+        u2: DhruvUtcTime { year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0 },
+        u3: DhruvUtcTime { year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0 },
+        u4: DhruvUtcTime { year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0 },
+        p4: DhruvUtcTime { year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0 },
+        moon_ecliptic_lat_deg: 0.0, angular_separation_deg: 0.0,
+        u1_valid: 0, u2_valid: 0, u3_valid: 0, u4_valid: 0,
+    };
+    let mut found_utc: u8 = 0;
+    let status = unsafe {
+        dhruv_next_lunar_eclipse_utc(engine_ptr, &utc_start, &cfg, &mut utc_result, &mut found_utc)
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(found_utc, 1, "UTC version should also find eclipse");
+
+    // Eclipse type and magnitudes should match exactly
+    assert_eq!(utc_result.eclipse_type, jd_result.eclipse_type, "eclipse type mismatch");
+    assert!(
+        (utc_result.magnitude - jd_result.magnitude).abs() < 1e-6,
+        "magnitude mismatch"
+    );
+
+    // Greatest eclipse time roundtrip
+    assert_utc_matches_jd(lsk_ptr, &utc_result.greatest_eclipse, jd_result.greatest_eclipse_jd, "greatest eclipse");
+
+    // P1 always present
+    assert_utc_matches_jd(lsk_ptr, &utc_result.p1, jd_result.p1_jd, "P1");
+
+    // Verify valid flags match JD sentinel pattern (DHRUV_JD_ABSENT = -1.0)
+    if jd_result.u1_jd < 0.0 {
+        assert_eq!(utc_result.u1_valid, 0, "u1 should be absent");
+    } else {
+        assert_eq!(utc_result.u1_valid, 1, "u1 should be present");
+        assert_utc_matches_jd(lsk_ptr, &utc_result.u1, jd_result.u1_jd, "U1");
+    }
+    if jd_result.u2_jd < 0.0 {
+        assert_eq!(utc_result.u2_valid, 0, "u2 should be absent");
+    } else {
+        assert_eq!(utc_result.u2_valid, 1, "u2 should be present");
+        assert_utc_matches_jd(lsk_ptr, &utc_result.u2, jd_result.u2_jd, "U2");
+    }
+    if jd_result.u3_jd < 0.0 {
+        assert_eq!(utc_result.u3_valid, 0, "u3 should be absent");
+    } else {
+        assert_eq!(utc_result.u3_valid, 1, "u3 should be present");
+        assert_utc_matches_jd(lsk_ptr, &utc_result.u3, jd_result.u3_jd, "U3");
+    }
+    if jd_result.u4_jd < 0.0 {
+        assert_eq!(utc_result.u4_valid, 0, "u4 should be absent");
+    } else {
+        assert_eq!(utc_result.u4_valid, 1, "u4 should be present");
+        assert_utc_matches_jd(lsk_ptr, &utc_result.u4, jd_result.u4_jd, "U4");
+    }
+
+    unsafe { dhruv_lsk_free(lsk_ptr) };
+    unsafe { dhruv_engine_free(engine_ptr) };
+}
+
+#[test]
+fn ffi_utc_solar_eclipse_roundtrip() {
+    let engine_ptr = match make_engine() {
+        Some(e) => e,
+        None => return,
+    };
+    let lsk_path = lsk_path_cstr().unwrap();
+    let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
+    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let jd_start = calendar_to_jd(2024, 3, 1.0);
+    let cfg = dhruv_eclipse_config_default();
+
+    // JD version
+    let mut jd_result = DhruvSolarEclipseResult {
+        eclipse_type: 0, magnitude: 0.0,
+        greatest_eclipse_jd: 0.0, c1_jd: 0.0, c2_jd: 0.0, c3_jd: 0.0, c4_jd: 0.0,
+        moon_ecliptic_lat_deg: 0.0, angular_separation_deg: 0.0,
+    };
+    let mut found: u8 = 0;
+    let status = unsafe {
+        dhruv_next_solar_eclipse(engine_ptr, jd_start, &cfg, &mut jd_result, &mut found)
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(found, 1, "should find a solar eclipse");
+
+    // UTC version
+    let utc_start = DhruvUtcTime { year: 2024, month: 3, day: 1, hour: 0, minute: 0, second: 0.0 };
+    let mut utc_result = DhruvSolarEclipseResultUtc {
+        eclipse_type: 0, magnitude: 0.0,
+        greatest_eclipse: DhruvUtcTime { year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0 },
+        c1: DhruvUtcTime { year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0 },
+        c2: DhruvUtcTime { year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0 },
+        c3: DhruvUtcTime { year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0 },
+        c4: DhruvUtcTime { year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0 },
+        moon_ecliptic_lat_deg: 0.0, angular_separation_deg: 0.0,
+        c1_valid: 0, c2_valid: 0, c3_valid: 0, c4_valid: 0,
+    };
+    let mut found_utc: u8 = 0;
+    let status = unsafe {
+        dhruv_next_solar_eclipse_utc(engine_ptr, &utc_start, &cfg, &mut utc_result, &mut found_utc)
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(found_utc, 1, "UTC version should also find eclipse");
+
+    // Type and magnitude match
+    assert_eq!(utc_result.eclipse_type, jd_result.eclipse_type, "eclipse type mismatch");
+    assert!((utc_result.magnitude - jd_result.magnitude).abs() < 1e-6, "magnitude mismatch");
+
+    // Greatest eclipse roundtrip
+    assert_utc_matches_jd(lsk_ptr, &utc_result.greatest_eclipse, jd_result.greatest_eclipse_jd, "greatest solar eclipse");
+
+    // Contact valid flags vs JD sentinels
+    if jd_result.c1_jd < 0.0 {
+        assert_eq!(utc_result.c1_valid, 0, "c1 should be absent");
+    } else {
+        assert_eq!(utc_result.c1_valid, 1, "c1 should be present");
+        assert_utc_matches_jd(lsk_ptr, &utc_result.c1, jd_result.c1_jd, "C1");
+    }
+    if jd_result.c2_jd < 0.0 {
+        assert_eq!(utc_result.c2_valid, 0, "c2 should be absent");
+    } else {
+        assert_eq!(utc_result.c2_valid, 1, "c2 should be present");
+        assert_utc_matches_jd(lsk_ptr, &utc_result.c2, jd_result.c2_jd, "C2");
+    }
+    if jd_result.c3_jd < 0.0 {
+        assert_eq!(utc_result.c3_valid, 0, "c3 should be absent");
+    } else {
+        assert_eq!(utc_result.c3_valid, 1, "c3 should be present");
+        assert_utc_matches_jd(lsk_ptr, &utc_result.c3, jd_result.c3_jd, "C3");
+    }
+    if jd_result.c4_jd < 0.0 {
+        assert_eq!(utc_result.c4_valid, 0, "c4 should be absent");
+    } else {
+        assert_eq!(utc_result.c4_valid, 1, "c4 should be present");
+        assert_utc_matches_jd(lsk_ptr, &utc_result.c4, jd_result.c4_jd, "C4");
+    }
+
+    unsafe { dhruv_lsk_free(lsk_ptr) };
+    unsafe { dhruv_engine_free(engine_ptr) };
+}
+
+#[test]
+fn ffi_utc_stationary_roundtrip() {
+    let engine_ptr = match make_engine() {
+        Some(e) => e,
+        None => return,
+    };
+    let lsk_path = lsk_path_cstr().unwrap();
+    let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
+    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let jd_start = calendar_to_jd(2024, 1, 1.0);
+    let cfg = dhruv_stationary_config_default();
+
+    // JD version: Mercury next station
+    let mut jd_event = DhruvStationaryEvent {
+        jd_tdb: 0.0, body_code: 0, longitude_deg: 0.0, latitude_deg: 0.0, station_type: 0,
+    };
+    let mut found: u8 = 0;
+    let status = unsafe {
+        dhruv_next_stationary(engine_ptr, Body::Mercury.code(), jd_start, &cfg, &mut jd_event, &mut found)
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(found, 1);
+
+    // UTC version
+    let utc_start = DhruvUtcTime { year: 2024, month: 1, day: 1, hour: 0, minute: 0, second: 0.0 };
+    let mut utc_event = DhruvStationaryEventUtc {
+        utc: DhruvUtcTime { year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0 },
+        body_code: 0, longitude_deg: 0.0, latitude_deg: 0.0, station_type: 0,
+    };
+    let mut found_utc: u8 = 0;
+    let status = unsafe {
+        dhruv_next_stationary_utc(engine_ptr, Body::Mercury.code(), &utc_start, &cfg, &mut utc_event, &mut found_utc)
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(found_utc, 1);
+
+    // Verify match
+    assert_utc_matches_jd(lsk_ptr, &utc_event.utc, jd_event.jd_tdb, "stationary time");
+    assert_eq!(utc_event.station_type, jd_event.station_type, "station type mismatch");
+    assert!((utc_event.longitude_deg - jd_event.longitude_deg).abs() < 1e-6, "longitude mismatch");
+
+    unsafe { dhruv_lsk_free(lsk_ptr) };
+    unsafe { dhruv_engine_free(engine_ptr) };
+}
+
+#[test]
+fn ffi_utc_query_roundtrip() {
+    let engine_ptr = match make_engine() {
+        Some(e) => e,
+        None => return,
+    };
+
+    // JD version: Mars heliocentric ecliptic
+    let mut out_jd = DhruvSphericalState {
+        lon_deg: 0.0, lat_deg: 0.0, distance_km: 0.0,
+        lon_speed: 0.0, lat_speed: 0.0, distance_speed: 0.0,
+    };
+    let status = unsafe {
+        dhruv_query_utc_spherical(
+            engine_ptr, Body::Mars.code(), Body::Sun.code(),
+            Frame::EclipticJ2000.code(), 2024, 6, 15, 0, 0, 0.0, &mut out_jd,
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    // DhruvUtcTime struct version
+    let utc = DhruvUtcTime { year: 2024, month: 6, day: 15, hour: 0, minute: 0, second: 0.0 };
+    let mut out_utc = DhruvSphericalState {
+        lon_deg: 0.0, lat_deg: 0.0, distance_km: 0.0,
+        lon_speed: 0.0, lat_speed: 0.0, distance_speed: 0.0,
+    };
+    let status = unsafe {
+        dhruv_query_utc(
+            engine_ptr, Body::Mars.code(), Body::Sun.code(),
+            Frame::EclipticJ2000.code(), &utc, &mut out_utc,
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    // Both should produce identical results (same internal path)
+    assert!((out_utc.lon_deg - out_jd.lon_deg).abs() < 1e-12, "lon_deg mismatch");
+    assert!((out_utc.lat_deg - out_jd.lat_deg).abs() < 1e-12, "lat_deg mismatch");
+    assert!((out_utc.distance_km - out_jd.distance_km).abs() < 1e-6, "distance_km mismatch");
+    assert!((out_utc.lon_speed - out_jd.lon_speed).abs() < 1e-12, "lon_speed mismatch");
+
+    unsafe { dhruv_engine_free(engine_ptr) };
+}
+
+#[test]
+fn ffi_utc_ayanamsha_roundtrip() {
+    let lsk_path = match lsk_path_cstr() {
+        Some(p) => p,
+        None => return,
+    };
+    let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
+    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    // JD version: Lahiri ayanamsha at 2024-01-01 TDB
+    let jd = 2_460_310.5;
+    let mut deg_jd: f64 = 0.0;
+    let status = unsafe { dhruv_ayanamsha_deg(0, jd, 0, &mut deg_jd) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    // UTC version: approximate 2024-01-01 00:00 UTC
+    let utc = DhruvUtcTime { year: 2024, month: 1, day: 1, hour: 0, minute: 0, second: 0.0 };
+    let mut deg_utc: f64 = 0.0;
+    let status = unsafe { dhruv_ayanamsha_deg_utc(lsk_ptr, 0, &utc, 0, &mut deg_utc) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    // Should be very close (TDB-UTC offset is ~69 seconds, tiny ayanamsha difference)
+    assert!(
+        (deg_utc - deg_jd).abs() < 0.001,
+        "ayanamsha mismatch: utc={deg_utc}, jd={deg_jd}"
+    );
+
+    unsafe { dhruv_lsk_free(lsk_ptr) };
+}
+
+#[test]
+fn ffi_utc_sunrise_roundtrip() {
+    if !all_kernels_available() {
+        eprintln!("Skipping: not all kernel files available");
+        return;
+    }
+
+    let engine_ptr = make_engine().unwrap();
+    let lsk_path = lsk_path_cstr().unwrap();
+    let eop_path = eop_path_cstr().unwrap();
+
+    let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
+    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
+    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let loc = DhruvGeoLocation {
+        latitude_deg: 28.6139,
+        longitude_deg: 77.209,
+        altitude_m: 0.0,
+    };
+    let jd_0h = calendar_to_jd(2024, 3, 20.0);
+    let noon_jd = dhruv_approximate_local_noon_jd(jd_0h, loc.longitude_deg);
+    let cfg = dhruv_riseset_config_default();
+
+    // JD version
+    let mut jd_result = DhruvRiseSetResult {
+        result_type: -1, event_code: -1, jd_tdb: 0.0,
+    };
+    let status = unsafe {
+        dhruv_compute_rise_set(
+            engine_ptr, lsk_ptr, eop_ptr, &loc,
+            DHRUV_EVENT_SUNRISE, noon_jd, &cfg, &mut jd_result,
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(jd_result.result_type, DHRUV_RISESET_EVENT);
+
+    // UTC version: noon on 2024-03-20 in New Delhi ≈ ~06:30 UTC
+    let utc_noon = DhruvUtcTime { year: 2024, month: 3, day: 20, hour: 7, minute: 21, second: 0.0 };
+    let mut utc_result = DhruvRiseSetResultUtc {
+        result_type: -1, event_code: -1,
+        utc: DhruvUtcTime { year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0 },
+    };
+    let status = unsafe {
+        dhruv_compute_rise_set_utc(
+            engine_ptr, lsk_ptr, eop_ptr, &loc,
+            DHRUV_EVENT_SUNRISE, &utc_noon, &cfg, &mut utc_result,
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(utc_result.result_type, DHRUV_RISESET_EVENT);
+
+    // Compare: the result JD TDB from JD version should match UTC result converted back
+    assert_utc_matches_jd(lsk_ptr, &utc_result.utc, jd_result.jd_tdb, "sunrise time");
+
+    unsafe { dhruv_eop_free(eop_ptr) };
+    unsafe { dhruv_lsk_free(lsk_ptr) };
+    unsafe { dhruv_engine_free(engine_ptr) };
+}
+
+#[test]
+fn ffi_utc_nutation_roundtrip() {
+    let lsk_path = match lsk_path_cstr() {
+        Some(p) => p,
+        None => return,
+    };
+    let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
+    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    // JD version
+    let jd = 2_460_310.5;
+    let mut dpsi_jd: f64 = 0.0;
+    let mut deps_jd: f64 = 0.0;
+    let status = unsafe { dhruv_nutation_iau2000b(jd, &mut dpsi_jd, &mut deps_jd) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    // UTC version
+    let utc = DhruvUtcTime { year: 2024, month: 1, day: 1, hour: 0, minute: 0, second: 0.0 };
+    let mut dpsi_utc: f64 = 0.0;
+    let mut deps_utc: f64 = 0.0;
+    let status = unsafe { dhruv_nutation_iau2000b_utc(lsk_ptr, &utc, &mut dpsi_utc, &mut deps_utc) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    // Should be very close (nutation changes slowly)
+    assert!((dpsi_utc - dpsi_jd).abs() < 0.01, "dpsi: utc={dpsi_utc}, jd={dpsi_jd}");
+    assert!((deps_utc - deps_jd).abs() < 0.01, "deps: utc={deps_utc}, jd={deps_jd}");
+
+    unsafe { dhruv_lsk_free(lsk_ptr) };
+}

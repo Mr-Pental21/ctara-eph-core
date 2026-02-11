@@ -27,7 +27,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 10;
+pub const DHRUV_API_VERSION: u32 = 11;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -3701,6 +3701,1218 @@ pub extern "C" fn dhruv_samvatsara_name(index: u32) -> *const std::ffi::c_char {
     }
 }
 
+// ---------------------------------------------------------------------------
+// UTC result structs
+// ---------------------------------------------------------------------------
+
+/// C-compatible conjunction event with UTC time.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvConjunctionEventUtc {
+    pub utc: DhruvUtcTime,
+    pub actual_separation_deg: f64,
+    pub body1_longitude_deg: f64,
+    pub body2_longitude_deg: f64,
+    pub body1_latitude_deg: f64,
+    pub body2_latitude_deg: f64,
+    pub body1_code: i32,
+    pub body2_code: i32,
+}
+
+/// C-compatible stationary event with UTC time.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvStationaryEventUtc {
+    pub utc: DhruvUtcTime,
+    pub body_code: i32,
+    pub longitude_deg: f64,
+    pub latitude_deg: f64,
+    pub station_type: i32,
+}
+
+/// C-compatible max-speed event with UTC time.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvMaxSpeedEventUtc {
+    pub utc: DhruvUtcTime,
+    pub body_code: i32,
+    pub longitude_deg: f64,
+    pub latitude_deg: f64,
+    pub speed_deg_per_day: f64,
+    pub speed_type: i32,
+}
+
+/// C-compatible rise/set result with UTC time.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvRiseSetResultUtc {
+    /// 0 = Event occurred, 1 = NeverRises, 2 = NeverSets.
+    pub result_type: i32,
+    /// Event code (valid when result_type == 0).
+    pub event_code: i32,
+    /// Event time in UTC (valid when result_type == 0).
+    pub utc: DhruvUtcTime,
+}
+
+/// C-compatible lunar eclipse result with UTC times.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvLunarEclipseResultUtc {
+    pub eclipse_type: i32,
+    pub magnitude: f64,
+    pub penumbral_magnitude: f64,
+    pub greatest_eclipse: DhruvUtcTime,
+    pub p1: DhruvUtcTime,
+    pub u1: DhruvUtcTime,
+    pub u2: DhruvUtcTime,
+    pub u3: DhruvUtcTime,
+    pub u4: DhruvUtcTime,
+    pub p4: DhruvUtcTime,
+    pub moon_ecliptic_lat_deg: f64,
+    pub angular_separation_deg: f64,
+    /// 1 = u1 present, 0 = absent.
+    pub u1_valid: u8,
+    /// 1 = u2 present, 0 = absent.
+    pub u2_valid: u8,
+    /// 1 = u3 present, 0 = absent.
+    pub u3_valid: u8,
+    /// 1 = u4 present, 0 = absent.
+    pub u4_valid: u8,
+}
+
+/// C-compatible solar eclipse result with UTC times.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvSolarEclipseResultUtc {
+    pub eclipse_type: i32,
+    pub magnitude: f64,
+    pub greatest_eclipse: DhruvUtcTime,
+    pub c1: DhruvUtcTime,
+    pub c2: DhruvUtcTime,
+    pub c3: DhruvUtcTime,
+    pub c4: DhruvUtcTime,
+    pub moon_ecliptic_lat_deg: f64,
+    pub angular_separation_deg: f64,
+    /// 1 = c1 present, 0 = absent.
+    pub c1_valid: u8,
+    /// 1 = c2 present, 0 = absent.
+    pub c2_valid: u8,
+    /// 1 = c3 present, 0 = absent.
+    pub c3_valid: u8,
+    /// 1 = c4 present, 0 = absent.
+    pub c4_valid: u8,
+}
+
+// ---------------------------------------------------------------------------
+// UTC conversion helpers
+// ---------------------------------------------------------------------------
+
+const ZEROED_UTC: DhruvUtcTime = DhruvUtcTime {
+    year: 0, month: 0, day: 0, hour: 0, minute: 0, second: 0.0,
+};
+
+fn jd_tdb_to_utc_time(jd_tdb: f64, lsk: &dhruv_time::LeapSecondKernel) -> DhruvUtcTime {
+    utc_time_to_ffi(&UtcTime::from_jd_tdb(jd_tdb, lsk))
+}
+
+fn option_jd_to_utc(opt: Option<f64>, lsk: &dhruv_time::LeapSecondKernel) -> (DhruvUtcTime, u8) {
+    match opt {
+        Some(jd) => (jd_tdb_to_utc_time(jd, lsk), 1),
+        None => (ZEROED_UTC, 0),
+    }
+}
+
+fn conjunction_event_to_utc(e: &ConjunctionEvent, lsk: &dhruv_time::LeapSecondKernel) -> DhruvConjunctionEventUtc {
+    DhruvConjunctionEventUtc {
+        utc: jd_tdb_to_utc_time(e.jd_tdb, lsk),
+        actual_separation_deg: e.actual_separation_deg,
+        body1_longitude_deg: e.body1_longitude_deg,
+        body2_longitude_deg: e.body2_longitude_deg,
+        body1_latitude_deg: e.body1_latitude_deg,
+        body2_latitude_deg: e.body2_latitude_deg,
+        body1_code: e.body1.code(),
+        body2_code: e.body2.code(),
+    }
+}
+
+fn stationary_event_to_utc(e: &StationaryEvent, lsk: &dhruv_time::LeapSecondKernel) -> DhruvStationaryEventUtc {
+    DhruvStationaryEventUtc {
+        utc: jd_tdb_to_utc_time(e.jd_tdb, lsk),
+        body_code: e.body.code(),
+        longitude_deg: e.longitude_deg,
+        latitude_deg: e.latitude_deg,
+        station_type: station_type_to_code(e.station_type),
+    }
+}
+
+fn max_speed_event_to_utc(e: &MaxSpeedEvent, lsk: &dhruv_time::LeapSecondKernel) -> DhruvMaxSpeedEventUtc {
+    DhruvMaxSpeedEventUtc {
+        utc: jd_tdb_to_utc_time(e.jd_tdb, lsk),
+        body_code: e.body.code(),
+        longitude_deg: e.longitude_deg,
+        latitude_deg: e.latitude_deg,
+        speed_deg_per_day: e.speed_deg_per_day,
+        speed_type: max_speed_type_to_code(e.speed_type),
+    }
+}
+
+fn riseset_result_to_utc(r: &RiseSetResult, lsk: &dhruv_time::LeapSecondKernel) -> DhruvRiseSetResultUtc {
+    match *r {
+        RiseSetResult::Event { jd_tdb, event } => DhruvRiseSetResultUtc {
+            result_type: DHRUV_RISESET_EVENT,
+            event_code: riseset_event_to_code(event),
+            utc: jd_tdb_to_utc_time(jd_tdb, lsk),
+        },
+        RiseSetResult::NeverRises => DhruvRiseSetResultUtc {
+            result_type: DHRUV_RISESET_NEVER_RISES,
+            event_code: 0,
+            utc: ZEROED_UTC,
+        },
+        RiseSetResult::NeverSets => DhruvRiseSetResultUtc {
+            result_type: DHRUV_RISESET_NEVER_SETS,
+            event_code: 0,
+            utc: ZEROED_UTC,
+        },
+    }
+}
+
+fn lunar_eclipse_to_utc(e: &LunarEclipse, lsk: &dhruv_time::LeapSecondKernel) -> DhruvLunarEclipseResultUtc {
+    let (u1, u1_valid) = option_jd_to_utc(e.u1_jd, lsk);
+    let (u2, u2_valid) = option_jd_to_utc(e.u2_jd, lsk);
+    let (u3, u3_valid) = option_jd_to_utc(e.u3_jd, lsk);
+    let (u4, u4_valid) = option_jd_to_utc(e.u4_jd, lsk);
+    DhruvLunarEclipseResultUtc {
+        eclipse_type: lunar_eclipse_type_to_code(e.eclipse_type),
+        magnitude: e.magnitude,
+        penumbral_magnitude: e.penumbral_magnitude,
+        greatest_eclipse: jd_tdb_to_utc_time(e.greatest_eclipse_jd, lsk),
+        p1: jd_tdb_to_utc_time(e.p1_jd, lsk),
+        u1, u2, u3, u4,
+        p4: jd_tdb_to_utc_time(e.p4_jd, lsk),
+        moon_ecliptic_lat_deg: e.moon_ecliptic_lat_deg,
+        angular_separation_deg: e.angular_separation_deg,
+        u1_valid, u2_valid, u3_valid, u4_valid,
+    }
+}
+
+fn solar_eclipse_to_utc(e: &SolarEclipse, lsk: &dhruv_time::LeapSecondKernel) -> DhruvSolarEclipseResultUtc {
+    let (c1, c1_valid) = option_jd_to_utc(e.c1_jd, lsk);
+    let (c2, c2_valid) = option_jd_to_utc(e.c2_jd, lsk);
+    let (c3, c3_valid) = option_jd_to_utc(e.c3_jd, lsk);
+    let (c4, c4_valid) = option_jd_to_utc(e.c4_jd, lsk);
+    DhruvSolarEclipseResultUtc {
+        eclipse_type: solar_eclipse_type_to_code(e.eclipse_type),
+        magnitude: e.magnitude,
+        greatest_eclipse: jd_tdb_to_utc_time(e.greatest_eclipse_jd, lsk),
+        c1, c2, c3, c4,
+        moon_ecliptic_lat_deg: e.moon_ecliptic_lat_deg,
+        angular_separation_deg: e.angular_separation_deg,
+        c1_valid, c2_valid, c3_valid, c4_valid,
+    }
+}
+
+/// Convert DhruvUtcTime to JD UTC (no TDB conversion, pure calendar arithmetic).
+fn ffi_utc_to_jd_utc(t: &DhruvUtcTime) -> f64 {
+    let day_frac = t.day as f64
+        + t.hour as f64 / 24.0
+        + t.minute as f64 / 1440.0
+        + t.second / 86_400.0;
+    dhruv_time::calendar_to_jd(t.year, t.month, day_frac)
+}
+
+// ---------------------------------------------------------------------------
+// Group A: Search _utc functions (15 functions)
+// ---------------------------------------------------------------------------
+
+/// Find the next conjunction/aspect event after the given UTC time.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_next_conjunction_utc(
+    engine: *const DhruvEngineHandle,
+    body1_code: i32,
+    body2_code: i32,
+    utc: *const DhruvUtcTime,
+    config: *const DhruvConjunctionConfig,
+    out_event: *mut DhruvConjunctionEventUtc,
+    out_found: *mut u8,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || utc.is_null() || config.is_null() || out_event.is_null() || out_found.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let body1 = match Body::from_code(body1_code) { Some(b) => b, None => return DhruvStatus::InvalidQuery };
+        let body2 = match Body::from_code(body2_code) { Some(b) => b, None => return DhruvStatus::InvalidQuery };
+        let engine_ref = unsafe { &*engine };
+        let t = ffi_to_utc_time(unsafe { &*utc });
+        let jd_tdb = t.to_jd_tdb(engine_ref.lsk());
+        let rust_config = conjunction_config_from_ffi(unsafe { &*config });
+        match next_conjunction(engine_ref, body1, body2, jd_tdb, &rust_config) {
+            Ok(Some(event)) => {
+                unsafe { *out_event = conjunction_event_to_utc(&event, engine_ref.lsk()); *out_found = 1; }
+                DhruvStatus::Ok
+            }
+            Ok(None) => { unsafe { *out_found = 0 }; DhruvStatus::Ok }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Find the previous conjunction/aspect event before the given UTC time.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_prev_conjunction_utc(
+    engine: *const DhruvEngineHandle,
+    body1_code: i32,
+    body2_code: i32,
+    utc: *const DhruvUtcTime,
+    config: *const DhruvConjunctionConfig,
+    out_event: *mut DhruvConjunctionEventUtc,
+    out_found: *mut u8,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || utc.is_null() || config.is_null() || out_event.is_null() || out_found.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let body1 = match Body::from_code(body1_code) { Some(b) => b, None => return DhruvStatus::InvalidQuery };
+        let body2 = match Body::from_code(body2_code) { Some(b) => b, None => return DhruvStatus::InvalidQuery };
+        let engine_ref = unsafe { &*engine };
+        let t = ffi_to_utc_time(unsafe { &*utc });
+        let jd_tdb = t.to_jd_tdb(engine_ref.lsk());
+        let rust_config = conjunction_config_from_ffi(unsafe { &*config });
+        match prev_conjunction(engine_ref, body1, body2, jd_tdb, &rust_config) {
+            Ok(Some(event)) => {
+                unsafe { *out_event = conjunction_event_to_utc(&event, engine_ref.lsk()); *out_found = 1; }
+                DhruvStatus::Ok
+            }
+            Ok(None) => { unsafe { *out_found = 0 }; DhruvStatus::Ok }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Search for all conjunction/aspect events in a UTC time range.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+/// `out_events` must point to at least `max_count` contiguous `DhruvConjunctionEventUtc`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_search_conjunctions_utc(
+    engine: *const DhruvEngineHandle,
+    body1_code: i32,
+    body2_code: i32,
+    start: *const DhruvUtcTime,
+    end: *const DhruvUtcTime,
+    config: *const DhruvConjunctionConfig,
+    out_events: *mut DhruvConjunctionEventUtc,
+    max_count: u32,
+    out_count: *mut u32,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || start.is_null() || end.is_null() || config.is_null() || out_events.is_null() || out_count.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let body1 = match Body::from_code(body1_code) { Some(b) => b, None => return DhruvStatus::InvalidQuery };
+        let body2 = match Body::from_code(body2_code) { Some(b) => b, None => return DhruvStatus::InvalidQuery };
+        let engine_ref = unsafe { &*engine };
+        let jd_start = ffi_to_utc_time(unsafe { &*start }).to_jd_tdb(engine_ref.lsk());
+        let jd_end = ffi_to_utc_time(unsafe { &*end }).to_jd_tdb(engine_ref.lsk());
+        let rust_config = conjunction_config_from_ffi(unsafe { &*config });
+        match search_conjunctions(engine_ref, body1, body2, jd_start, jd_end, &rust_config) {
+            Ok(events) => {
+                let count = events.len().min(max_count as usize);
+                let out_slice = unsafe { std::slice::from_raw_parts_mut(out_events, max_count as usize) };
+                for (i, e) in events.iter().take(count).enumerate() {
+                    out_slice[i] = conjunction_event_to_utc(e, engine_ref.lsk());
+                }
+                unsafe { *out_count = count as u32 };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Find the next lunar eclipse after the given UTC time.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_next_lunar_eclipse_utc(
+    engine: *const DhruvEngineHandle,
+    utc: *const DhruvUtcTime,
+    config: *const DhruvEclipseConfig,
+    out_result: *mut DhruvLunarEclipseResultUtc,
+    out_found: *mut u8,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || utc.is_null() || config.is_null() || out_result.is_null() || out_found.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(engine_ref.lsk());
+        let rust_config = eclipse_config_from_ffi(unsafe { &*config });
+        match next_lunar_eclipse(engine_ref, jd_tdb, &rust_config) {
+            Ok(Some(eclipse)) => {
+                unsafe { *out_result = lunar_eclipse_to_utc(&eclipse, engine_ref.lsk()); *out_found = 1; }
+                DhruvStatus::Ok
+            }
+            Ok(None) => { unsafe { *out_found = 0 }; DhruvStatus::Ok }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Find the previous lunar eclipse before the given UTC time.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_prev_lunar_eclipse_utc(
+    engine: *const DhruvEngineHandle,
+    utc: *const DhruvUtcTime,
+    config: *const DhruvEclipseConfig,
+    out_result: *mut DhruvLunarEclipseResultUtc,
+    out_found: *mut u8,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || utc.is_null() || config.is_null() || out_result.is_null() || out_found.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(engine_ref.lsk());
+        let rust_config = eclipse_config_from_ffi(unsafe { &*config });
+        match prev_lunar_eclipse(engine_ref, jd_tdb, &rust_config) {
+            Ok(Some(eclipse)) => {
+                unsafe { *out_result = lunar_eclipse_to_utc(&eclipse, engine_ref.lsk()); *out_found = 1; }
+                DhruvStatus::Ok
+            }
+            Ok(None) => { unsafe { *out_found = 0 }; DhruvStatus::Ok }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Search for all lunar eclipses in a UTC time range.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+/// `out_results` must point to at least `max_count` contiguous `DhruvLunarEclipseResultUtc`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_search_lunar_eclipses_utc(
+    engine: *const DhruvEngineHandle,
+    start: *const DhruvUtcTime,
+    end: *const DhruvUtcTime,
+    config: *const DhruvEclipseConfig,
+    out_results: *mut DhruvLunarEclipseResultUtc,
+    max_count: u32,
+    out_count: *mut u32,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || start.is_null() || end.is_null() || config.is_null() || out_results.is_null() || out_count.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        let jd_start = ffi_to_utc_time(unsafe { &*start }).to_jd_tdb(engine_ref.lsk());
+        let jd_end = ffi_to_utc_time(unsafe { &*end }).to_jd_tdb(engine_ref.lsk());
+        let rust_config = eclipse_config_from_ffi(unsafe { &*config });
+        match search_lunar_eclipses(engine_ref, jd_start, jd_end, &rust_config) {
+            Ok(eclipses) => {
+                let count = eclipses.len().min(max_count as usize);
+                let out_slice = unsafe { std::slice::from_raw_parts_mut(out_results, max_count as usize) };
+                for (i, e) in eclipses.iter().take(count).enumerate() {
+                    out_slice[i] = lunar_eclipse_to_utc(e, engine_ref.lsk());
+                }
+                unsafe { *out_count = count as u32 };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Find the next solar eclipse after the given UTC time.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_next_solar_eclipse_utc(
+    engine: *const DhruvEngineHandle,
+    utc: *const DhruvUtcTime,
+    config: *const DhruvEclipseConfig,
+    out_result: *mut DhruvSolarEclipseResultUtc,
+    out_found: *mut u8,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || utc.is_null() || config.is_null() || out_result.is_null() || out_found.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(engine_ref.lsk());
+        let rust_config = eclipse_config_from_ffi(unsafe { &*config });
+        match next_solar_eclipse(engine_ref, jd_tdb, &rust_config) {
+            Ok(Some(eclipse)) => {
+                unsafe { *out_result = solar_eclipse_to_utc(&eclipse, engine_ref.lsk()); *out_found = 1; }
+                DhruvStatus::Ok
+            }
+            Ok(None) => { unsafe { *out_found = 0 }; DhruvStatus::Ok }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Find the previous solar eclipse before the given UTC time.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_prev_solar_eclipse_utc(
+    engine: *const DhruvEngineHandle,
+    utc: *const DhruvUtcTime,
+    config: *const DhruvEclipseConfig,
+    out_result: *mut DhruvSolarEclipseResultUtc,
+    out_found: *mut u8,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || utc.is_null() || config.is_null() || out_result.is_null() || out_found.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(engine_ref.lsk());
+        let rust_config = eclipse_config_from_ffi(unsafe { &*config });
+        match prev_solar_eclipse(engine_ref, jd_tdb, &rust_config) {
+            Ok(Some(eclipse)) => {
+                unsafe { *out_result = solar_eclipse_to_utc(&eclipse, engine_ref.lsk()); *out_found = 1; }
+                DhruvStatus::Ok
+            }
+            Ok(None) => { unsafe { *out_found = 0 }; DhruvStatus::Ok }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Search for all solar eclipses in a UTC time range.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+/// `out_results` must point to at least `max_count` contiguous `DhruvSolarEclipseResultUtc`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_search_solar_eclipses_utc(
+    engine: *const DhruvEngineHandle,
+    start: *const DhruvUtcTime,
+    end: *const DhruvUtcTime,
+    config: *const DhruvEclipseConfig,
+    out_results: *mut DhruvSolarEclipseResultUtc,
+    max_count: u32,
+    out_count: *mut u32,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || start.is_null() || end.is_null() || config.is_null() || out_results.is_null() || out_count.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        let jd_start = ffi_to_utc_time(unsafe { &*start }).to_jd_tdb(engine_ref.lsk());
+        let jd_end = ffi_to_utc_time(unsafe { &*end }).to_jd_tdb(engine_ref.lsk());
+        let rust_config = eclipse_config_from_ffi(unsafe { &*config });
+        match search_solar_eclipses(engine_ref, jd_start, jd_end, &rust_config) {
+            Ok(eclipses) => {
+                let count = eclipses.len().min(max_count as usize);
+                let out_slice = unsafe { std::slice::from_raw_parts_mut(out_results, max_count as usize) };
+                for (i, e) in eclipses.iter().take(count).enumerate() {
+                    out_slice[i] = solar_eclipse_to_utc(e, engine_ref.lsk());
+                }
+                unsafe { *out_count = count as u32 };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Find the next stationary point after the given UTC time.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_next_stationary_utc(
+    engine: *const DhruvEngineHandle,
+    body_code: i32,
+    utc: *const DhruvUtcTime,
+    config: *const DhruvStationaryConfig,
+    out_event: *mut DhruvStationaryEventUtc,
+    out_found: *mut u8,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || utc.is_null() || config.is_null() || out_event.is_null() || out_found.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let body = match Body::from_code(body_code) { Some(b) => b, None => return DhruvStatus::InvalidQuery };
+        let engine_ref = unsafe { &*engine };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(engine_ref.lsk());
+        let rust_config = stationary_config_from_ffi(unsafe { &*config });
+        match next_stationary(engine_ref, body, jd_tdb, &rust_config) {
+            Ok(Some(event)) => {
+                unsafe { *out_event = stationary_event_to_utc(&event, engine_ref.lsk()); *out_found = 1; }
+                DhruvStatus::Ok
+            }
+            Ok(None) => { unsafe { *out_found = 0 }; DhruvStatus::Ok }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Find the previous stationary point before the given UTC time.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_prev_stationary_utc(
+    engine: *const DhruvEngineHandle,
+    body_code: i32,
+    utc: *const DhruvUtcTime,
+    config: *const DhruvStationaryConfig,
+    out_event: *mut DhruvStationaryEventUtc,
+    out_found: *mut u8,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || utc.is_null() || config.is_null() || out_event.is_null() || out_found.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let body = match Body::from_code(body_code) { Some(b) => b, None => return DhruvStatus::InvalidQuery };
+        let engine_ref = unsafe { &*engine };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(engine_ref.lsk());
+        let rust_config = stationary_config_from_ffi(unsafe { &*config });
+        match prev_stationary(engine_ref, body, jd_tdb, &rust_config) {
+            Ok(Some(event)) => {
+                unsafe { *out_event = stationary_event_to_utc(&event, engine_ref.lsk()); *out_found = 1; }
+                DhruvStatus::Ok
+            }
+            Ok(None) => { unsafe { *out_found = 0 }; DhruvStatus::Ok }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Search for all stationary points in a UTC time range.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+/// `out_events` must point to at least `max_count` contiguous `DhruvStationaryEventUtc`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_search_stationary_utc(
+    engine: *const DhruvEngineHandle,
+    body_code: i32,
+    start: *const DhruvUtcTime,
+    end: *const DhruvUtcTime,
+    config: *const DhruvStationaryConfig,
+    out_events: *mut DhruvStationaryEventUtc,
+    max_count: u32,
+    out_count: *mut u32,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || start.is_null() || end.is_null() || config.is_null() || out_events.is_null() || out_count.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let body = match Body::from_code(body_code) { Some(b) => b, None => return DhruvStatus::InvalidQuery };
+        let engine_ref = unsafe { &*engine };
+        let jd_start = ffi_to_utc_time(unsafe { &*start }).to_jd_tdb(engine_ref.lsk());
+        let jd_end = ffi_to_utc_time(unsafe { &*end }).to_jd_tdb(engine_ref.lsk());
+        let rust_config = stationary_config_from_ffi(unsafe { &*config });
+        match search_stationary(engine_ref, body, jd_start, jd_end, &rust_config) {
+            Ok(events) => {
+                let count = events.len().min(max_count as usize);
+                let out_slice = unsafe { std::slice::from_raw_parts_mut(out_events, max_count as usize) };
+                for (i, e) in events.iter().take(count).enumerate() {
+                    out_slice[i] = stationary_event_to_utc(e, engine_ref.lsk());
+                }
+                unsafe { *out_count = count as u32 };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Find the next max-speed event after the given UTC time.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_next_max_speed_utc(
+    engine: *const DhruvEngineHandle,
+    body_code: i32,
+    utc: *const DhruvUtcTime,
+    config: *const DhruvStationaryConfig,
+    out_event: *mut DhruvMaxSpeedEventUtc,
+    out_found: *mut u8,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || utc.is_null() || config.is_null() || out_event.is_null() || out_found.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let body = match Body::from_code(body_code) { Some(b) => b, None => return DhruvStatus::InvalidQuery };
+        let engine_ref = unsafe { &*engine };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(engine_ref.lsk());
+        let rust_config = stationary_config_from_ffi(unsafe { &*config });
+        match next_max_speed(engine_ref, body, jd_tdb, &rust_config) {
+            Ok(Some(event)) => {
+                unsafe { *out_event = max_speed_event_to_utc(&event, engine_ref.lsk()); *out_found = 1; }
+                DhruvStatus::Ok
+            }
+            Ok(None) => { unsafe { *out_found = 0 }; DhruvStatus::Ok }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Find the previous max-speed event before the given UTC time.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_prev_max_speed_utc(
+    engine: *const DhruvEngineHandle,
+    body_code: i32,
+    utc: *const DhruvUtcTime,
+    config: *const DhruvStationaryConfig,
+    out_event: *mut DhruvMaxSpeedEventUtc,
+    out_found: *mut u8,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || utc.is_null() || config.is_null() || out_event.is_null() || out_found.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let body = match Body::from_code(body_code) { Some(b) => b, None => return DhruvStatus::InvalidQuery };
+        let engine_ref = unsafe { &*engine };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(engine_ref.lsk());
+        let rust_config = stationary_config_from_ffi(unsafe { &*config });
+        match prev_max_speed(engine_ref, body, jd_tdb, &rust_config) {
+            Ok(Some(event)) => {
+                unsafe { *out_event = max_speed_event_to_utc(&event, engine_ref.lsk()); *out_found = 1; }
+                DhruvStatus::Ok
+            }
+            Ok(None) => { unsafe { *out_found = 0 }; DhruvStatus::Ok }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Search for all max-speed events in a UTC time range.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+/// `out_events` must point to at least `max_count` contiguous `DhruvMaxSpeedEventUtc`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_search_max_speed_utc(
+    engine: *const DhruvEngineHandle,
+    body_code: i32,
+    start: *const DhruvUtcTime,
+    end: *const DhruvUtcTime,
+    config: *const DhruvStationaryConfig,
+    out_events: *mut DhruvMaxSpeedEventUtc,
+    max_count: u32,
+    out_count: *mut u32,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || start.is_null() || end.is_null() || config.is_null() || out_events.is_null() || out_count.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let body = match Body::from_code(body_code) { Some(b) => b, None => return DhruvStatus::InvalidQuery };
+        let engine_ref = unsafe { &*engine };
+        let jd_start = ffi_to_utc_time(unsafe { &*start }).to_jd_tdb(engine_ref.lsk());
+        let jd_end = ffi_to_utc_time(unsafe { &*end }).to_jd_tdb(engine_ref.lsk());
+        let rust_config = stationary_config_from_ffi(unsafe { &*config });
+        match search_max_speed(engine_ref, body, jd_start, jd_end, &rust_config) {
+            Ok(events) => {
+                let count = events.len().min(max_count as usize);
+                let out_slice = unsafe { std::slice::from_raw_parts_mut(out_events, max_count as usize) };
+                for (i, e) in events.iter().take(count).enumerate() {
+                    out_slice[i] = max_speed_event_to_utc(e, engine_ref.lsk());
+                }
+                unsafe { *out_count = count as u32 };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Group B: Rise/set + bhava _utc functions (5 functions)
+// ---------------------------------------------------------------------------
+
+/// Compute a single rise/set event with UTC input/output.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_compute_rise_set_utc(
+    engine: *const DhruvEngineHandle,
+    lsk: *const DhruvLskHandle,
+    eop: *const DhruvEopHandle,
+    location: *const DhruvGeoLocation,
+    event_code: i32,
+    utc: *const DhruvUtcTime,
+    config: *const DhruvRiseSetConfig,
+    out_result: *mut DhruvRiseSetResultUtc,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || lsk.is_null() || eop.is_null() || location.is_null()
+            || utc.is_null() || config.is_null() || out_result.is_null()
+        {
+            return DhruvStatus::NullPointer;
+        }
+        let event = match riseset_event_from_code(event_code) { Some(e) => e, None => return DhruvStatus::InvalidQuery };
+        let engine_ref = unsafe { &*engine };
+        let lsk_ref = unsafe { &*lsk };
+        let eop_ref = unsafe { &*eop };
+        let loc_ref = unsafe { &*location };
+        let cfg_ref = unsafe { &*config };
+        let geo = GeoLocation::new(loc_ref.latitude_deg, loc_ref.longitude_deg, loc_ref.altitude_m);
+        let sun_limb = match sun_limb_from_code(cfg_ref.sun_limb) { Some(l) => l, None => return DhruvStatus::InvalidQuery };
+        let rs_config = RiseSetConfig {
+            use_refraction: cfg_ref.use_refraction != 0,
+            sun_limb,
+            altitude_correction: cfg_ref.altitude_correction != 0,
+        };
+        let jd_utc_noon = ffi_utc_to_jd_utc(unsafe { &*utc });
+        match compute_rise_set(engine_ref, lsk_ref, eop_ref, &geo, event, jd_utc_noon, &rs_config) {
+            Ok(result) => {
+                unsafe { *out_result = riseset_result_to_utc(&result, lsk_ref) };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Compute all 8 rise/set events for a day with UTC input/output.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+/// `out_results` must point to at least 8 contiguous `DhruvRiseSetResultUtc`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_compute_all_events_utc(
+    engine: *const DhruvEngineHandle,
+    lsk: *const DhruvLskHandle,
+    eop: *const DhruvEopHandle,
+    location: *const DhruvGeoLocation,
+    utc: *const DhruvUtcTime,
+    config: *const DhruvRiseSetConfig,
+    out_results: *mut DhruvRiseSetResultUtc,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || lsk.is_null() || eop.is_null() || location.is_null()
+            || utc.is_null() || config.is_null() || out_results.is_null()
+        {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        let lsk_ref = unsafe { &*lsk };
+        let eop_ref = unsafe { &*eop };
+        let loc_ref = unsafe { &*location };
+        let cfg_ref = unsafe { &*config };
+        let geo = GeoLocation::new(loc_ref.latitude_deg, loc_ref.longitude_deg, loc_ref.altitude_m);
+        let sun_limb = match sun_limb_from_code(cfg_ref.sun_limb) { Some(l) => l, None => return DhruvStatus::InvalidQuery };
+        let rs_config = RiseSetConfig {
+            use_refraction: cfg_ref.use_refraction != 0,
+            sun_limb,
+            altitude_correction: cfg_ref.altitude_correction != 0,
+        };
+        let jd_utc_noon = ffi_utc_to_jd_utc(unsafe { &*utc });
+        match compute_all_events(engine_ref, lsk_ref, eop_ref, &geo, jd_utc_noon, &rs_config) {
+            Ok(results) => {
+                let out_slice = unsafe { std::slice::from_raw_parts_mut(out_results, 8) };
+                for (i, r) in results.iter().enumerate() {
+                    out_slice[i] = riseset_result_to_utc(r, lsk_ref);
+                }
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Compute bhava (house) cusps with UTC input.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_compute_bhavas_utc(
+    engine: *const DhruvEngineHandle,
+    lsk: *const DhruvLskHandle,
+    eop: *const DhruvEopHandle,
+    location: *const DhruvGeoLocation,
+    utc: *const DhruvUtcTime,
+    config: *const DhruvBhavaConfig,
+    out_result: *mut DhruvBhavaResult,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || lsk.is_null() || eop.is_null() || location.is_null()
+            || utc.is_null() || config.is_null() || out_result.is_null()
+        {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        let lsk_ref = unsafe { &*lsk };
+        let eop_ref = unsafe { &*eop };
+        let loc_ref = unsafe { &*location };
+        let cfg_ref = unsafe { &*config };
+        let geo = GeoLocation::new(loc_ref.latitude_deg, loc_ref.longitude_deg, loc_ref.altitude_m);
+        let rust_config = match bhava_config_from_ffi(cfg_ref) { Ok(c) => c, Err(s) => return s };
+        let jd_utc = ffi_utc_to_jd_utc(unsafe { &*utc });
+        match compute_bhavas(engine_ref, lsk_ref, eop_ref, &geo, jd_utc, &rust_config) {
+            Ok(result) => {
+                let mut ffi_bhavas = [DhruvBhava { number: 0, cusp_deg: 0.0, start_deg: 0.0, end_deg: 0.0 }; 12];
+                for (i, b) in result.bhavas.iter().enumerate() {
+                    ffi_bhavas[i] = DhruvBhava {
+                        number: b.number,
+                        cusp_deg: b.cusp_deg,
+                        start_deg: b.start_deg,
+                        end_deg: b.end_deg,
+                    };
+                }
+                unsafe {
+                    *out_result = DhruvBhavaResult {
+                        bhavas: ffi_bhavas,
+                        ascendant_deg: result.ascendant_deg,
+                        mc_deg: result.mc_deg,
+                    };
+                }
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Compute the Ascendant with UTC input.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_ascendant_deg_utc(
+    lsk: *const DhruvLskHandle,
+    eop: *const DhruvEopHandle,
+    location: *const DhruvGeoLocation,
+    utc: *const DhruvUtcTime,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || eop.is_null() || location.is_null() || utc.is_null() || out_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let lsk_ref = unsafe { &*lsk };
+        let eop_ref = unsafe { &*eop };
+        let loc_ref = unsafe { &*location };
+        let geo = GeoLocation::new(loc_ref.latitude_deg, loc_ref.longitude_deg, loc_ref.altitude_m);
+        let jd_utc = ffi_utc_to_jd_utc(unsafe { &*utc });
+        match dhruv_vedic_base::ascendant_longitude_rad(lsk_ref, eop_ref, &geo, jd_utc) {
+            Ok(rad) => {
+                unsafe { *out_deg = rad.to_degrees() };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Compute the MC (Midheaven) with UTC input.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_mc_deg_utc(
+    lsk: *const DhruvLskHandle,
+    eop: *const DhruvEopHandle,
+    location: *const DhruvGeoLocation,
+    utc: *const DhruvUtcTime,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || eop.is_null() || location.is_null() || utc.is_null() || out_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let lsk_ref = unsafe { &*lsk };
+        let eop_ref = unsafe { &*eop };
+        let loc_ref = unsafe { &*location };
+        let geo = GeoLocation::new(loc_ref.latitude_deg, loc_ref.longitude_deg, loc_ref.altitude_m);
+        let jd_utc = ffi_utc_to_jd_utc(unsafe { &*utc });
+        match dhruv_vedic_base::mc_longitude_rad(lsk_ref, eop_ref, &geo, jd_utc) {
+            Ok(rad) => {
+                unsafe { *out_deg = rad.to_degrees() };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Group C: Pure math _utc functions (8 functions)
+// ---------------------------------------------------------------------------
+
+/// Mean ayanamsha with UTC input. Requires LSK for UTC→TDB.
+///
+/// # Safety
+/// `lsk` and `out_deg` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_ayanamsha_mean_deg_utc(
+    lsk: *const DhruvLskHandle,
+    system_code: i32,
+    utc: *const DhruvUtcTime,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || utc.is_null() || out_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let system = match ayanamsha_system_from_code(system_code) { Some(s) => s, None => return DhruvStatus::InvalidQuery };
+        let lsk_ref = unsafe { &*lsk };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(lsk_ref);
+        let t = jd_tdb_to_centuries(jd_tdb);
+        unsafe { *out_deg = ayanamsha_mean_deg(system, t) };
+        DhruvStatus::Ok
+    })
+}
+
+/// True ayanamsha with UTC input. Requires LSK for UTC→TDB.
+///
+/// # Safety
+/// `lsk` and `out_deg` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_ayanamsha_true_deg_utc(
+    lsk: *const DhruvLskHandle,
+    system_code: i32,
+    utc: *const DhruvUtcTime,
+    delta_psi_arcsec: f64,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || utc.is_null() || out_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let system = match ayanamsha_system_from_code(system_code) { Some(s) => s, None => return DhruvStatus::InvalidQuery };
+        let lsk_ref = unsafe { &*lsk };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(lsk_ref);
+        let t = jd_tdb_to_centuries(jd_tdb);
+        unsafe { *out_deg = ayanamsha_true_deg(system, t, delta_psi_arcsec) };
+        DhruvStatus::Ok
+    })
+}
+
+/// Unified ayanamsha with UTC input. Requires LSK for UTC→TDB.
+///
+/// # Safety
+/// `lsk` and `out_deg` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_ayanamsha_deg_utc(
+    lsk: *const DhruvLskHandle,
+    system_code: i32,
+    utc: *const DhruvUtcTime,
+    use_nutation: u8,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || utc.is_null() || out_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let system = match ayanamsha_system_from_code(system_code) { Some(s) => s, None => return DhruvStatus::InvalidQuery };
+        let lsk_ref = unsafe { &*lsk };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(lsk_ref);
+        let t = jd_tdb_to_centuries(jd_tdb);
+        unsafe { *out_deg = ayanamsha_deg(system, t, use_nutation != 0) };
+        DhruvStatus::Ok
+    })
+}
+
+/// IAU 2000B nutation with UTC input. Requires LSK for UTC→TDB.
+///
+/// # Safety
+/// `lsk`, `out_dpsi_arcsec`, and `out_deps_arcsec` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_nutation_iau2000b_utc(
+    lsk: *const DhruvLskHandle,
+    utc: *const DhruvUtcTime,
+    out_dpsi_arcsec: *mut f64,
+    out_deps_arcsec: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || utc.is_null() || out_dpsi_arcsec.is_null() || out_deps_arcsec.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let lsk_ref = unsafe { &*lsk };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(lsk_ref);
+        let t = jd_tdb_to_centuries(jd_tdb);
+        let (dpsi, deps) = dhruv_frames::nutation_iau2000b(t);
+        unsafe { *out_dpsi_arcsec = dpsi; *out_deps_arcsec = deps; }
+        DhruvStatus::Ok
+    })
+}
+
+/// Lunar node longitude with UTC input. Requires LSK for UTC→TDB.
+///
+/// # Safety
+/// `lsk` and `out_deg` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_lunar_node_deg_utc(
+    lsk: *const DhruvLskHandle,
+    node_code: i32,
+    mode_code: i32,
+    utc: *const DhruvUtcTime,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || utc.is_null() || out_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let node = match lunar_node_from_code(node_code) { Some(n) => n, None => return DhruvStatus::InvalidQuery };
+        let mode = match node_mode_from_code(mode_code) { Some(m) => m, None => return DhruvStatus::InvalidQuery };
+        let lsk_ref = unsafe { &*lsk };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(lsk_ref);
+        let t = jd_tdb_to_centuries(jd_tdb);
+        unsafe { *out_deg = lunar_node_deg(node, t, mode) };
+        DhruvStatus::Ok
+    })
+}
+
+/// Rashi from tropical longitude with UTC input. Requires LSK for UTC→TDB.
+///
+/// # Safety
+/// `lsk` and `out` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_rashi_from_tropical_utc(
+    lsk: *const DhruvLskHandle,
+    tropical_lon_deg: f64,
+    aya_system: i32,
+    utc: *const DhruvUtcTime,
+    use_nutation: u8,
+    out: *mut DhruvRashiInfo,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || utc.is_null() || out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let system = match ayanamsha_system_from_code(aya_system) { Some(s) => s, None => return DhruvStatus::InvalidQuery };
+        let lsk_ref = unsafe { &*lsk };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(lsk_ref);
+        let info = rashi_from_tropical(tropical_lon_deg, system, jd_tdb, use_nutation != 0);
+        unsafe {
+            *out = DhruvRashiInfo {
+                rashi_index: info.rashi_index,
+                dms: DhruvDms { degrees: info.dms.degrees, minutes: info.dms.minutes, seconds: info.dms.seconds },
+                degrees_in_rashi: info.degrees_in_rashi,
+            };
+        }
+        DhruvStatus::Ok
+    })
+}
+
+/// Nakshatra from tropical longitude with UTC input (27-scheme). Requires LSK for UTC→TDB.
+///
+/// # Safety
+/// `lsk` and `out` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_nakshatra_from_tropical_utc(
+    lsk: *const DhruvLskHandle,
+    tropical_lon_deg: f64,
+    aya_system: i32,
+    utc: *const DhruvUtcTime,
+    use_nutation: u8,
+    out: *mut DhruvNakshatraInfo,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || utc.is_null() || out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let system = match ayanamsha_system_from_code(aya_system) { Some(s) => s, None => return DhruvStatus::InvalidQuery };
+        let lsk_ref = unsafe { &*lsk };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(lsk_ref);
+        let info = nakshatra_from_tropical(tropical_lon_deg, system, jd_tdb, use_nutation != 0);
+        unsafe {
+            *out = DhruvNakshatraInfo {
+                nakshatra_index: info.nakshatra_index,
+                pada: info.pada,
+                degrees_in_nakshatra: info.degrees_in_nakshatra,
+                degrees_in_pada: info.degrees_in_pada,
+            };
+        }
+        DhruvStatus::Ok
+    })
+}
+
+/// Nakshatra from tropical longitude with UTC input (28-scheme). Requires LSK for UTC→TDB.
+///
+/// # Safety
+/// `lsk` and `out` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_nakshatra28_from_tropical_utc(
+    lsk: *const DhruvLskHandle,
+    tropical_lon_deg: f64,
+    aya_system: i32,
+    utc: *const DhruvUtcTime,
+    use_nutation: u8,
+    out: *mut DhruvNakshatra28Info,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || utc.is_null() || out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let system = match ayanamsha_system_from_code(aya_system) { Some(s) => s, None => return DhruvStatus::InvalidQuery };
+        let lsk_ref = unsafe { &*lsk };
+        let jd_tdb = ffi_to_utc_time(unsafe { &*utc }).to_jd_tdb(lsk_ref);
+        let info = nakshatra28_from_tropical(tropical_lon_deg, system, jd_tdb, use_nutation != 0);
+        unsafe {
+            *out = DhruvNakshatra28Info {
+                nakshatra_index: info.nakshatra_index,
+                pada: info.pada,
+                degrees_in_nakshatra: info.degrees_in_nakshatra,
+            };
+        }
+        DhruvStatus::Ok
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Group D: Core query with DhruvUtcTime (1 function)
+// ---------------------------------------------------------------------------
+
+/// Query engine with `DhruvUtcTime` input, return spherical state.
+///
+/// # Safety
+/// `engine`, `utc`, and `out` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_query_utc(
+    engine: *const DhruvEngineHandle,
+    target: i32,
+    observer: i32,
+    frame: i32,
+    utc: *const DhruvUtcTime,
+    out: *mut DhruvSphericalState,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || utc.is_null() || out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let engine_ref = unsafe { &*engine };
+        let utc_ref = unsafe { &*utc };
+        match dhruv_query_utc_spherical_internal(
+            engine_ref, target, observer, frame,
+            utc_ref.year, utc_ref.month, utc_ref.day,
+            utc_ref.hour, utc_ref.minute, utc_ref.second,
+        ) {
+            Ok(state) => {
+                unsafe { *out = state };
+                DhruvStatus::Ok
+            }
+            Err(status) => status,
+        }
+    })
+}
+
 fn ffi_boundary(f: impl FnOnce() -> DhruvStatus) -> DhruvStatus {
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
         Ok(status) => status,
@@ -4171,8 +5383,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_10() {
-        assert_eq!(dhruv_api_version(), 10);
+    fn ffi_api_version_is_11() {
+        assert_eq!(dhruv_api_version(), 11);
     }
 
     // --- Search error mapping ---
@@ -4947,5 +6159,357 @@ mod tests {
     #[test]
     fn ffi_samvatsara_name_invalid() {
         assert!(dhruv_samvatsara_name(60).is_null());
+    }
+
+    // --- UTC variant null rejection tests ---
+
+    fn test_utc() -> DhruvUtcTime {
+        DhruvUtcTime { year: 2024, month: 1, day: 1, hour: 0, minute: 0, second: 0.0 }
+    }
+
+    #[test]
+    fn ffi_next_conjunction_utc_rejects_null() {
+        let utc = test_utc();
+        let cfg = dhruv_conjunction_config_default();
+        let mut event = std::mem::MaybeUninit::<DhruvConjunctionEventUtc>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_next_conjunction_utc(ptr::null(), 10, 301, &utc, &cfg, event.as_mut_ptr(), &mut found)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_prev_conjunction_utc_rejects_null() {
+        let utc = test_utc();
+        let cfg = dhruv_conjunction_config_default();
+        let mut event = std::mem::MaybeUninit::<DhruvConjunctionEventUtc>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_prev_conjunction_utc(ptr::null(), 10, 301, &utc, &cfg, event.as_mut_ptr(), &mut found)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_search_conjunctions_utc_rejects_null() {
+        let cfg = dhruv_conjunction_config_default();
+        let mut count: u32 = 0;
+        let status = unsafe {
+            dhruv_search_conjunctions_utc(
+                ptr::null(), 10, 301, ptr::null(), ptr::null(), &cfg,
+                ptr::null_mut(), 10, &mut count,
+            )
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_next_lunar_eclipse_utc_rejects_null() {
+        let utc = test_utc();
+        let cfg = dhruv_eclipse_config_default();
+        let mut result = std::mem::MaybeUninit::<DhruvLunarEclipseResultUtc>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_next_lunar_eclipse_utc(ptr::null(), &utc, &cfg, result.as_mut_ptr(), &mut found)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_prev_lunar_eclipse_utc_rejects_null() {
+        let utc = test_utc();
+        let cfg = dhruv_eclipse_config_default();
+        let mut result = std::mem::MaybeUninit::<DhruvLunarEclipseResultUtc>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_prev_lunar_eclipse_utc(ptr::null(), &utc, &cfg, result.as_mut_ptr(), &mut found)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_search_lunar_eclipses_utc_rejects_null() {
+        let cfg = dhruv_eclipse_config_default();
+        let mut count: u32 = 0;
+        let status = unsafe {
+            dhruv_search_lunar_eclipses_utc(
+                ptr::null(), ptr::null(), ptr::null(), &cfg,
+                ptr::null_mut(), 10, &mut count,
+            )
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_next_solar_eclipse_utc_rejects_null() {
+        let utc = test_utc();
+        let cfg = dhruv_eclipse_config_default();
+        let mut result = std::mem::MaybeUninit::<DhruvSolarEclipseResultUtc>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_next_solar_eclipse_utc(ptr::null(), &utc, &cfg, result.as_mut_ptr(), &mut found)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_prev_solar_eclipse_utc_rejects_null() {
+        let utc = test_utc();
+        let cfg = dhruv_eclipse_config_default();
+        let mut result = std::mem::MaybeUninit::<DhruvSolarEclipseResultUtc>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_prev_solar_eclipse_utc(ptr::null(), &utc, &cfg, result.as_mut_ptr(), &mut found)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_search_solar_eclipses_utc_rejects_null() {
+        let cfg = dhruv_eclipse_config_default();
+        let mut count: u32 = 0;
+        let status = unsafe {
+            dhruv_search_solar_eclipses_utc(
+                ptr::null(), ptr::null(), ptr::null(), &cfg,
+                ptr::null_mut(), 10, &mut count,
+            )
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_next_stationary_utc_rejects_null() {
+        let utc = test_utc();
+        let cfg = dhruv_stationary_config_default();
+        let mut event = std::mem::MaybeUninit::<DhruvStationaryEventUtc>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_next_stationary_utc(ptr::null(), 199, &utc, &cfg, event.as_mut_ptr(), &mut found)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_prev_stationary_utc_rejects_null() {
+        let utc = test_utc();
+        let cfg = dhruv_stationary_config_default();
+        let mut event = std::mem::MaybeUninit::<DhruvStationaryEventUtc>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_prev_stationary_utc(ptr::null(), 199, &utc, &cfg, event.as_mut_ptr(), &mut found)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_search_stationary_utc_rejects_null() {
+        let cfg = dhruv_stationary_config_default();
+        let mut count: u32 = 0;
+        let status = unsafe {
+            dhruv_search_stationary_utc(
+                ptr::null(), 199, ptr::null(), ptr::null(), &cfg,
+                ptr::null_mut(), 10, &mut count,
+            )
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_next_max_speed_utc_rejects_null() {
+        let utc = test_utc();
+        let cfg = dhruv_stationary_config_default();
+        let mut event = std::mem::MaybeUninit::<DhruvMaxSpeedEventUtc>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_next_max_speed_utc(ptr::null(), 199, &utc, &cfg, event.as_mut_ptr(), &mut found)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_prev_max_speed_utc_rejects_null() {
+        let utc = test_utc();
+        let cfg = dhruv_stationary_config_default();
+        let mut event = std::mem::MaybeUninit::<DhruvMaxSpeedEventUtc>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_prev_max_speed_utc(ptr::null(), 199, &utc, &cfg, event.as_mut_ptr(), &mut found)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_search_max_speed_utc_rejects_null() {
+        let cfg = dhruv_stationary_config_default();
+        let mut count: u32 = 0;
+        let status = unsafe {
+            dhruv_search_max_speed_utc(
+                ptr::null(), 199, ptr::null(), ptr::null(), &cfg,
+                ptr::null_mut(), 10, &mut count,
+            )
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    // Group B null rejection
+
+    #[test]
+    fn ffi_compute_rise_set_utc_rejects_null() {
+        let mut out = std::mem::MaybeUninit::<DhruvRiseSetResultUtc>::uninit();
+        let status = unsafe {
+            dhruv_compute_rise_set_utc(
+                ptr::null(), ptr::null(), ptr::null(), ptr::null(),
+                0, ptr::null(), ptr::null(), out.as_mut_ptr(),
+            )
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_compute_all_events_utc_rejects_null() {
+        let status = unsafe {
+            dhruv_compute_all_events_utc(
+                ptr::null(), ptr::null(), ptr::null(), ptr::null(),
+                ptr::null(), ptr::null(), ptr::null_mut(),
+            )
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_compute_bhavas_utc_rejects_null() {
+        let mut out = std::mem::MaybeUninit::<DhruvBhavaResult>::uninit();
+        let status = unsafe {
+            dhruv_compute_bhavas_utc(
+                ptr::null(), ptr::null(), ptr::null(), ptr::null(),
+                ptr::null(), ptr::null(), out.as_mut_ptr(),
+            )
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_ascendant_deg_utc_rejects_null() {
+        let mut out: f64 = 0.0;
+        let status = unsafe {
+            dhruv_ascendant_deg_utc(ptr::null(), ptr::null(), ptr::null(), ptr::null(), &mut out)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_mc_deg_utc_rejects_null() {
+        let mut out: f64 = 0.0;
+        let status = unsafe {
+            dhruv_mc_deg_utc(ptr::null(), ptr::null(), ptr::null(), ptr::null(), &mut out)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    // Group C null rejection
+
+    #[test]
+    fn ffi_ayanamsha_mean_deg_utc_rejects_null() {
+        let mut out: f64 = 0.0;
+        let status = unsafe {
+            dhruv_ayanamsha_mean_deg_utc(ptr::null(), 0, ptr::null(), &mut out)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_ayanamsha_true_deg_utc_rejects_null() {
+        let mut out: f64 = 0.0;
+        let status = unsafe {
+            dhruv_ayanamsha_true_deg_utc(ptr::null(), 0, ptr::null(), 0.0, &mut out)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_ayanamsha_deg_utc_rejects_null() {
+        let mut out: f64 = 0.0;
+        let status = unsafe {
+            dhruv_ayanamsha_deg_utc(ptr::null(), 0, ptr::null(), 0, &mut out)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_nutation_iau2000b_utc_rejects_null() {
+        let mut dpsi: f64 = 0.0;
+        let mut deps: f64 = 0.0;
+        let status = unsafe {
+            dhruv_nutation_iau2000b_utc(ptr::null(), ptr::null(), &mut dpsi, &mut deps)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_lunar_node_deg_utc_rejects_null() {
+        let mut out: f64 = 0.0;
+        let status = unsafe {
+            dhruv_lunar_node_deg_utc(ptr::null(), 0, 0, ptr::null(), &mut out)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_rashi_from_tropical_utc_rejects_null() {
+        let mut out = std::mem::MaybeUninit::<DhruvRashiInfo>::uninit();
+        let status = unsafe {
+            dhruv_rashi_from_tropical_utc(ptr::null(), 280.5, 0, ptr::null(), 0, out.as_mut_ptr())
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_nakshatra_from_tropical_utc_rejects_null() {
+        let mut out = std::mem::MaybeUninit::<DhruvNakshatraInfo>::uninit();
+        let status = unsafe {
+            dhruv_nakshatra_from_tropical_utc(ptr::null(), 280.5, 0, ptr::null(), 0, out.as_mut_ptr())
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_nakshatra28_from_tropical_utc_rejects_null() {
+        let mut out = std::mem::MaybeUninit::<DhruvNakshatra28Info>::uninit();
+        let status = unsafe {
+            dhruv_nakshatra28_from_tropical_utc(ptr::null(), 280.5, 0, ptr::null(), 0, out.as_mut_ptr())
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    // Group D null rejection
+
+    #[test]
+    fn ffi_query_utc_rejects_null() {
+        let mut out = DhruvSphericalState {
+            lon_deg: 0.0, lat_deg: 0.0, distance_km: 0.0,
+            lon_speed: 0.0, lat_speed: 0.0, distance_speed: 0.0,
+        };
+        let status = unsafe {
+            dhruv_query_utc(ptr::null(), 499, 10, 2, ptr::null(), &mut out)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    // --- UTC conversion helpers ---
+
+    #[test]
+    fn ffi_utc_to_jd_utc_roundtrip() {
+        let utc = DhruvUtcTime { year: 2024, month: 3, day: 20, hour: 12, minute: 0, second: 0.0 };
+        let jd = ffi_utc_to_jd_utc(&utc);
+        // 2024-03-20 12:00 UTC ≈ JD 2460390.0
+        assert!((jd - 2_460_390.0).abs() < 0.01, "jd={jd}");
+    }
+
+    #[test]
+    fn ffi_zeroed_utc_is_zero() {
+        assert_eq!(ZEROED_UTC.year, 0);
+        assert_eq!(ZEROED_UTC.month, 0);
+        assert!((ZEROED_UTC.second - 0.0).abs() < 1e-15);
     }
 }
