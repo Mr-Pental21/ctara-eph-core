@@ -279,6 +279,36 @@ enum Commands {
         #[arg(long)]
         eop: PathBuf,
     },
+    /// Compute all 16 sphutas for a date and location
+    Sphutas {
+        /// UTC datetime (YYYY-MM-DDThh:mm:ssZ)
+        #[arg(long)]
+        date: String,
+        /// Latitude in degrees (north positive)
+        #[arg(long)]
+        lat: f64,
+        /// Longitude in degrees (east positive)
+        #[arg(long)]
+        lon: f64,
+        /// Altitude in meters (default 0)
+        #[arg(long, default_value = "0")]
+        alt: f64,
+        /// Ayanamsha system code (0-19, default 0=Lahiri)
+        #[arg(long, default_value = "0")]
+        ayanamsha: i32,
+        /// Apply nutation correction
+        #[arg(long)]
+        nutation: bool,
+        /// Path to SPK kernel
+        #[arg(long)]
+        bsp: PathBuf,
+        /// Path to leap second kernel
+        #[arg(long)]
+        lsk: PathBuf,
+        /// Path to IERS EOP file (finals2000A.all)
+        #[arg(long)]
+        eop: PathBuf,
+    },
     /// Combined panchang: tithi, karana, yoga, vaar, hora, ghatika
     Panchang {
         /// UTC datetime (YYYY-MM-DDThh:mm:ssZ)
@@ -778,6 +808,87 @@ fn main() {
                     std::process::exit(1);
                 }
             }
+        }
+
+        Commands::Sphutas {
+            date,
+            lat,
+            lon,
+            alt,
+            ayanamsha,
+            nutation,
+            bsp,
+            lsk,
+            eop,
+        } => {
+            let utc = parse_utc(&date).unwrap_or_else(|e| {
+                eprintln!("{e}");
+                std::process::exit(1);
+            });
+            let system = require_aya_system(ayanamsha);
+            let engine = load_engine(&bsp, &lsk);
+            let eop_kernel = load_eop(&eop);
+            let location = GeoLocation::new(lat, lon, alt);
+
+            // Get graha sidereal longitudes
+            let jd_tdb = utc.to_jd_tdb(engine.lsk());
+            let graha_lons = dhruv_search::graha_sidereal_longitudes(&engine, jd_tdb, system, nutation)
+                .unwrap_or_else(|e| {
+                    eprintln!("Error computing graha longitudes: {e}");
+                    std::process::exit(1);
+                });
+
+            // Get lagna (sidereal)
+            let jd_utc = jd_tdb; // approximate; for more precision would use LSK
+            let asc_rad = dhruv_vedic_base::ascendant_longitude_rad(engine.lsk(), &eop_kernel, &location, jd_utc)
+                .unwrap_or_else(|e| {
+                    eprintln!("Error computing lagna: {e}");
+                    std::process::exit(1);
+                });
+            let t = dhruv_vedic_base::jd_tdb_to_centuries(jd_tdb);
+            let aya = dhruv_vedic_base::ayanamsha_deg(system, t, nutation);
+            let lagna_sid = (asc_rad.to_degrees() - aya).rem_euclid(360.0);
+
+            // Get 8th lord longitude
+            let lagna_rashi_idx = (lagna_sid / 30.0).floor() as u8;
+            let eighth_rashi_idx = dhruv_vedic_base::nth_rashi_from(lagna_rashi_idx, 8);
+            let eighth_lord = dhruv_vedic_base::rashi_lord_by_index(eighth_rashi_idx).unwrap();
+            let eighth_lord_lon = graha_lons.longitude(eighth_lord);
+
+            // Build sphuta inputs (gulika = 0 for now, as it requires upagraha computation)
+            let inputs = dhruv_vedic_base::SphutalInputs {
+                sun: graha_lons.longitude(dhruv_vedic_base::Graha::Surya),
+                moon: graha_lons.longitude(dhruv_vedic_base::Graha::Chandra),
+                mars: graha_lons.longitude(dhruv_vedic_base::Graha::Mangal),
+                jupiter: graha_lons.longitude(dhruv_vedic_base::Graha::Guru),
+                venus: graha_lons.longitude(dhruv_vedic_base::Graha::Shukra),
+                rahu: graha_lons.longitude(dhruv_vedic_base::Graha::Rahu),
+                lagna: lagna_sid,
+                eighth_lord: eighth_lord_lon,
+                gulika: 0.0,
+            };
+
+            let results = dhruv_vedic_base::all_sphutas(&inputs);
+            println!("Sphutas for {} at {:.4}°N, {:.4}°E\n", date, lat, lon);
+            println!("Graha longitudes (sidereal, aya code={} {}):",
+                     ayanamsha, if nutation { "+nutation" } else { "" });
+            for graha in dhruv_vedic_base::graha::ALL_GRAHAS {
+                println!("  {:8} {:>8.4}°", graha.name(), graha_lons.longitude(graha));
+            }
+            println!("  {:8} {:>8.4}°\n", "Lagna", lagna_sid);
+            println!("Sphutas:");
+            for (sphuta, lon) in &results {
+                let rashi_info = dhruv_vedic_base::rashi_from_longitude(*lon);
+                println!("  {:24} {:>8.4}° ({} {}°{:02}'{:04.1}\")",
+                    sphuta.name(), lon,
+                    rashi_info.rashi.name(),
+                    rashi_info.dms.degrees,
+                    rashi_info.dms.minutes,
+                    rashi_info.dms.seconds,
+                );
+            }
+            println!("\nNote: Gulika=0° (placeholder until upagraha computation is available).");
+            println!("  TriSphuta, ChatusSphuta, PanchaSphuta, SookshmaTrisphuta depend on Gulika.");
         }
 
         Commands::Panchang {

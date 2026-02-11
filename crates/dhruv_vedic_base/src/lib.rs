@@ -9,6 +9,8 @@
 //! - Nakshatra (lunar mansion) with pada, 27 and 28 schemes
 //! - Tithi (lunar day), Karana (half-tithi), Yoga (luni-solar yoga)
 //! - Vaar (weekday), Hora (planetary hour), Ghatika (time division)
+//! - Graha (planet) enum with rashi lordship
+//! - Sphuta (sensitive point) calculations (16 formulas)
 //!
 //! All implementations are clean-room, derived from IAU standards
 //! and public astronomical formulas.
@@ -20,6 +22,7 @@ pub mod bhava;
 pub mod bhava_types;
 pub mod error;
 pub mod ghatika;
+pub mod graha;
 pub mod hora;
 pub mod karana;
 pub mod lunar_nodes;
@@ -29,7 +32,9 @@ pub mod rashi;
 pub mod riseset;
 pub mod riseset_types;
 pub mod samvatsara;
+pub mod sphuta;
 pub mod tithi;
+pub mod util;
 pub mod vaar;
 pub mod yoga;
 
@@ -68,3 +73,14 @@ pub use ayana_type::{ALL_AYANAS, Ayana, ayana_from_sidereal_longitude};
 pub use samvatsara::{
     ALL_SAMVATSARAS, SAMVATSARA_EPOCH_YEAR, Samvatsara, samvatsara_from_year,
 };
+pub use graha::{
+    ALL_GRAHAS, Graha, GRAHA_KAKSHA_VALUES, SAPTA_GRAHAS, nth_rashi_from, rashi_lord,
+    rashi_lord_by_index,
+};
+pub use sphuta::{
+    ALL_SPHUTAS, Sphuta, SphutalInputs, all_sphutas, avayoga_sphuta, beeja_sphuta, bhrigu_bindu,
+    chatussphuta, deha_sphuta, kshetra_sphuta, kunda, mrityu_sphuta, panchasphuta, prana_sphuta,
+    rahu_tithi_sphuta, sookshma_trisphuta, tithi_sphuta, trisphuta, yoga_sphuta,
+    yoga_sphuta_normalized,
+};
+pub use util::normalize_360;

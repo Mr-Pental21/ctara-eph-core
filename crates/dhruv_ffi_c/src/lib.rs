@@ -31,7 +31,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 13;
+pub const DHRUV_API_VERSION: u32 = 14;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -5708,6 +5708,216 @@ pub unsafe extern "C" fn dhruv_ghatika_from_sunrises(
     })
 }
 
+// ---------------------------------------------------------------------------
+// Graha + Sphuta FFI (Phase 10a)
+// ---------------------------------------------------------------------------
+
+/// Number of grahas.
+pub const DHRUV_GRAHA_COUNT: u32 = 9;
+/// Number of sapta grahas (excludes Rahu/Ketu).
+pub const DHRUV_SAPTA_GRAHA_COUNT: u32 = 7;
+/// Number of sphutas.
+pub const DHRUV_SPHUTA_COUNT: u32 = 16;
+
+/// Return the name of a graha by index (0-8). Returns null for invalid index.
+///
+/// The returned pointer is static and must not be freed.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_graha_name(index: u32) -> *const std::ffi::c_char {
+    let all = dhruv_vedic_base::graha::ALL_GRAHAS;
+    if index >= all.len() as u32 {
+        return ptr::null();
+    }
+    let name = all[index as usize].name();
+    name.as_ptr() as *const std::ffi::c_char
+}
+
+/// Return the English name of a graha by index (0-8). Returns null for invalid index.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_graha_english_name(index: u32) -> *const std::ffi::c_char {
+    let all = dhruv_vedic_base::graha::ALL_GRAHAS;
+    if index >= all.len() as u32 {
+        return ptr::null();
+    }
+    let name = all[index as usize].english_name();
+    name.as_ptr() as *const std::ffi::c_char
+}
+
+/// Return the graha index (0-8) that is the lord of the rashi at `rashi_index` (0-11).
+/// Returns -1 for invalid rashi_index.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_rashi_lord(rashi_index: u32) -> i32 {
+    match dhruv_vedic_base::rashi_lord_by_index(rashi_index as u8) {
+        Some(g) => g.index() as i32,
+        None => -1,
+    }
+}
+
+/// Return the name of a sphuta by index (0-15). Returns null for invalid index.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_sphuta_name(index: u32) -> *const std::ffi::c_char {
+    let all = dhruv_vedic_base::sphuta::ALL_SPHUTAS;
+    if index >= all.len() as u32 {
+        return ptr::null();
+    }
+    let name = all[index as usize].name();
+    name.as_ptr() as *const std::ffi::c_char
+}
+
+/// C-compatible inputs for all_sphutas.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvSphutalInputs {
+    pub sun: f64,
+    pub moon: f64,
+    pub mars: f64,
+    pub jupiter: f64,
+    pub venus: f64,
+    pub rahu: f64,
+    pub lagna: f64,
+    pub eighth_lord: f64,
+    pub gulika: f64,
+}
+
+/// C-compatible result for all_sphutas.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvSphutalResult {
+    /// Longitudes for each sphuta (indexed 0-15 matching ALL_SPHUTAS order).
+    pub longitudes: [f64; 16],
+}
+
+/// Compute all 16 sphutas from the given inputs.
+///
+/// # Safety
+/// `inputs` and `out` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_all_sphutas(
+    inputs: *const DhruvSphutalInputs,
+    out: *mut DhruvSphutalResult,
+) -> DhruvStatus {
+    if inputs.is_null() || out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let inp = unsafe { &*inputs };
+    let vedic_inputs = dhruv_vedic_base::SphutalInputs {
+        sun: inp.sun,
+        moon: inp.moon,
+        mars: inp.mars,
+        jupiter: inp.jupiter,
+        venus: inp.venus,
+        rahu: inp.rahu,
+        lagna: inp.lagna,
+        eighth_lord: inp.eighth_lord,
+        gulika: inp.gulika,
+    };
+    let results = dhruv_vedic_base::all_sphutas(&vedic_inputs);
+    let mut lons = [0.0f64; 16];
+    for (i, (_sphuta, lon)) in results.iter().enumerate() {
+        lons[i] = *lon;
+    }
+    unsafe {
+        (*out).longitudes = lons;
+    }
+    DhruvStatus::Ok
+}
+
+/// Compute a single sphuta: Bhrigu Bindu.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_bhrigu_bindu(rahu: f64, moon: f64) -> f64 {
+    dhruv_vedic_base::bhrigu_bindu(rahu, moon)
+}
+
+/// Compute a single sphuta: Prana Sphuta.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_prana_sphuta(lagna: f64, moon: f64) -> f64 {
+    dhruv_vedic_base::prana_sphuta(lagna, moon)
+}
+
+/// Compute a single sphuta: Deha Sphuta.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_deha_sphuta(moon: f64, lagna: f64) -> f64 {
+    dhruv_vedic_base::deha_sphuta(moon, lagna)
+}
+
+/// Compute a single sphuta: Mrityu Sphuta.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_mrityu_sphuta(eighth_lord: f64, lagna: f64) -> f64 {
+    dhruv_vedic_base::mrityu_sphuta(eighth_lord, lagna)
+}
+
+/// Compute a single sphuta: Tithi Sphuta.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_tithi_sphuta(moon: f64, sun: f64, lagna: f64) -> f64 {
+    dhruv_vedic_base::tithi_sphuta(moon, sun, lagna)
+}
+
+/// Compute a single sphuta: Yoga Sphuta.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_yoga_sphuta(sun: f64, moon: f64) -> f64 {
+    dhruv_vedic_base::yoga_sphuta(sun, moon)
+}
+
+/// Compute a single sphuta: Yoga Sphuta Normalized.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_yoga_sphuta_normalized(sun: f64, moon: f64) -> f64 {
+    dhruv_vedic_base::yoga_sphuta_normalized(sun, moon)
+}
+
+/// Compute a single sphuta: Rahu Tithi Sphuta.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_rahu_tithi_sphuta(rahu: f64, sun: f64, lagna: f64) -> f64 {
+    dhruv_vedic_base::rahu_tithi_sphuta(rahu, sun, lagna)
+}
+
+/// Compute a single sphuta: Kshetra Sphuta.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_kshetra_sphuta(venus: f64, moon: f64, mars: f64, jupiter: f64, lagna: f64) -> f64 {
+    dhruv_vedic_base::kshetra_sphuta(venus, moon, mars, jupiter, lagna)
+}
+
+/// Compute a single sphuta: Beeja Sphuta.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_beeja_sphuta(sun: f64, venus: f64, jupiter: f64) -> f64 {
+    dhruv_vedic_base::beeja_sphuta(sun, venus, jupiter)
+}
+
+/// Compute a single sphuta: TriSphuta.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_trisphuta(lagna: f64, moon: f64, gulika: f64) -> f64 {
+    dhruv_vedic_base::trisphuta(lagna, moon, gulika)
+}
+
+/// Compute a single sphuta: ChatusSphuta.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_chatussphuta(trisphuta_val: f64, sun: f64) -> f64 {
+    dhruv_vedic_base::chatussphuta(trisphuta_val, sun)
+}
+
+/// Compute a single sphuta: PanchaSphuta.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_panchasphuta(chatussphuta_val: f64, rahu: f64) -> f64 {
+    dhruv_vedic_base::panchasphuta(chatussphuta_val, rahu)
+}
+
+/// Compute a single sphuta: Sookshma TriSphuta.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_sookshma_trisphuta(lagna: f64, moon: f64, gulika: f64, sun: f64) -> f64 {
+    dhruv_vedic_base::sookshma_trisphuta(lagna, moon, gulika, sun)
+}
+
+/// Compute a single sphuta: Avayoga Sphuta.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_avayoga_sphuta(sun: f64, moon: f64) -> f64 {
+    dhruv_vedic_base::avayoga_sphuta(sun, moon)
+}
+
+/// Compute a single sphuta: Kunda.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_kunda(lagna: f64, moon: f64, mars: f64) -> f64 {
+    dhruv_vedic_base::kunda(lagna, moon, mars)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -6145,8 +6355,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_13() {
-        assert_eq!(dhruv_api_version(), 13);
+    fn ffi_api_version_is_14() {
+        assert_eq!(dhruv_api_version(), 14);
     }
 
     // --- Search error mapping ---
@@ -7346,5 +7556,98 @@ mod tests {
     fn ffi_ghatika_from_sunrises_null() {
         let s = unsafe { dhruv_ghatika_from_sunrises(ptr::null(), 2451545.5, 2451545.0, 2451546.0, ptr::null_mut()) };
         assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_api_version_14() {
+        assert_eq!(DHRUV_API_VERSION, 14);
+    }
+
+    #[test]
+    fn ffi_graha_name_valid() {
+        let name = dhruv_graha_name(0);
+        assert!(!name.is_null());
+    }
+
+    #[test]
+    fn ffi_graha_name_invalid() {
+        assert!(dhruv_graha_name(9).is_null());
+        assert!(dhruv_graha_name(100).is_null());
+    }
+
+    #[test]
+    fn ffi_graha_english_name_valid() {
+        let name = dhruv_graha_english_name(0);
+        assert!(!name.is_null());
+    }
+
+    #[test]
+    fn ffi_rashi_lord_valid() {
+        // Mesha (0) -> Mangal (2)
+        assert_eq!(dhruv_rashi_lord(0), 2);
+        // Simha (4) -> Surya (0)
+        assert_eq!(dhruv_rashi_lord(4), 0);
+        // Karka (3) -> Chandra (1)
+        assert_eq!(dhruv_rashi_lord(3), 1);
+    }
+
+    #[test]
+    fn ffi_rashi_lord_invalid() {
+        assert_eq!(dhruv_rashi_lord(12), -1);
+        assert_eq!(dhruv_rashi_lord(255), -1);
+    }
+
+    #[test]
+    fn ffi_sphuta_name_valid() {
+        let name = dhruv_sphuta_name(0);
+        assert!(!name.is_null());
+    }
+
+    #[test]
+    fn ffi_sphuta_name_invalid() {
+        assert!(dhruv_sphuta_name(16).is_null());
+    }
+
+    #[test]
+    fn ffi_all_sphutas_null() {
+        let mut result = DhruvSphutalResult { longitudes: [0.0; 16] };
+        let s = unsafe { dhruv_all_sphutas(ptr::null(), &mut result) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+
+        let inputs = DhruvSphutalInputs {
+            sun: 100.0, moon: 200.0, mars: 150.0, jupiter: 250.0,
+            venus: 300.0, rahu: 50.0, lagna: 120.0, eighth_lord: 180.0, gulika: 270.0,
+        };
+        let s = unsafe { dhruv_all_sphutas(&inputs, ptr::null_mut()) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_all_sphutas_values_in_range() {
+        let inputs = DhruvSphutalInputs {
+            sun: 100.0, moon: 200.0, mars: 150.0, jupiter: 250.0,
+            venus: 300.0, rahu: 50.0, lagna: 120.0, eighth_lord: 180.0, gulika: 270.0,
+        };
+        let mut result = DhruvSphutalResult { longitudes: [0.0; 16] };
+        let s = unsafe { dhruv_all_sphutas(&inputs, &mut result) };
+        assert_eq!(s, DhruvStatus::Ok);
+        for lon in &result.longitudes {
+            assert!(*lon >= 0.0 && *lon < 360.0, "lon={lon} out of range");
+        }
+    }
+
+    #[test]
+    fn ffi_individual_sphuta_functions() {
+        // Bhrigu Bindu
+        let bb = dhruv_bhrigu_bindu(120.0, 240.0);
+        assert!((bb - 180.0).abs() < 1e-10);
+
+        // Yoga Sphuta
+        let ys = dhruv_yoga_sphuta(100.0, 200.0);
+        assert!((ys - 300.0).abs() < 1e-10);
+
+        // Avayoga: complement of yoga
+        let as_ = dhruv_avayoga_sphuta(100.0, 200.0);
+        assert!((as_ - 60.0).abs() < 1e-10);
     }
 }

@@ -412,3 +412,27 @@ pub fn panchang(
     let config = SankrantiConfig::new(system, use_nutation);
     Ok(dhruv_search::panchang_for_date(eng, eop, &utc, location, &rs_config, &config)?)
 }
+
+// ---------------------------------------------------------------------------
+// Graha / Sphuta convenience
+// ---------------------------------------------------------------------------
+
+/// Query sidereal longitudes of all 9 grahas at the given date.
+pub fn graha_longitudes(
+    date: UtcDate,
+    system: AyanamshaSystem,
+    use_nutation: bool,
+) -> Result<dhruv_search::GrahaLongitudes, DhruvError> {
+    let eng = engine()?;
+    let jd = utc_to_jd_tdb(date)?;
+    Ok(dhruv_search::graha_sidereal_longitudes(eng, jd, system, use_nutation)?)
+}
+
+/// Compute all 16 sphutas for the given inputs.
+///
+/// This is a thin wrapper over [`dhruv_vedic_base::all_sphutas`].
+pub fn sphutas(
+    inputs: &dhruv_vedic_base::SphutalInputs,
+) -> [(dhruv_vedic_base::Sphuta, f64); 16] {
+    dhruv_vedic_base::all_sphutas(inputs)
+}

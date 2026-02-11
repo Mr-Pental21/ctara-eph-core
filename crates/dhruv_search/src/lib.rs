@@ -13,6 +13,8 @@ pub mod conjunction_types;
 pub mod eclipse;
 pub mod eclipse_types;
 pub mod error;
+pub mod jyotish;
+pub mod jyotish_types;
 pub mod lunar_phase;
 pub mod lunar_phase_types;
 pub mod panchang;
@@ -59,3 +61,5 @@ pub use stationary::{
 pub use stationary_types::{
     MaxSpeedEvent, MaxSpeedType, StationaryConfig, StationaryEvent, StationType,
 };
+pub use jyotish::graha_sidereal_longitudes;
+pub use jyotish_types::GrahaLongitudes;
