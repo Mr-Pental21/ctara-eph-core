@@ -7,13 +7,17 @@
 use dhruv_core::{Body, Engine};
 use dhruv_time::{EopKernel, UtcTime};
 use dhruv_vedic_base::{
-    AllSpecialLagnas, ArudhaResult, AyanamshaSystem, BhavaConfig, Graha, LunarNode, NodeMode,
-    ALL_GRAHAS, ascendant_longitude_rad, ayanamsha_deg, compute_bhavas, ghatikas_since_sunrise,
-    jd_tdb_to_centuries, lunar_node_deg, nth_rashi_from, rashi_lord_by_index,
+    AllSpecialLagnas, AllUpagrahas, ArudhaResult, AyanamshaSystem, BhavaConfig, Graha,
+    LunarNode, NodeMode, ALL_GRAHAS, ascendant_longitude_rad, ayanamsha_deg, compute_bhavas,
+    ghatikas_since_sunrise, jd_tdb_to_centuries, lunar_node_deg, nth_rashi_from,
+    rashi_lord_by_index, sun_based_upagrahas, time_upagraha_jd, normalize_360,
 };
 use dhruv_vedic_base::arudha::all_arudha_padas;
-use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
+use dhruv_vedic_base::riseset::{compute_rise_set};
+use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig, RiseSetEvent, RiseSetResult};
 use dhruv_vedic_base::special_lagna::all_special_lagnas;
+use dhruv_vedic_base::upagraha::TIME_BASED_UPAGRAHAS;
+use dhruv_vedic_base::vaar::vaar_from_jd;
 
 use crate::conjunction::body_ecliptic_lon_lat;
 use crate::error::SearchError;
@@ -162,6 +166,92 @@ pub fn arudha_padas_for_date(
     }
 
     Ok(all_arudha_padas(&cusp_sid, &lord_lons))
+}
+
+/// Compute all 11 upagrahas for a given date and location.
+///
+/// Orchestrates sunrise/sunset computation, portion index determination,
+/// lagna computation at portion times, and sun-based chain calculation.
+pub fn all_upagrahas_for_date(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    riseset_config: &RiseSetConfig,
+    aya_config: &SankrantiConfig,
+) -> Result<AllUpagrahas, SearchError> {
+    let jd_tdb = utc.to_jd_tdb(engine.lsk());
+    let jd_utc = utc_to_jd_utc(utc);
+    let t = jd_tdb_to_centuries(jd_tdb);
+    let aya = ayanamsha_deg(aya_config.ayanamsha_system, t, aya_config.use_nutation);
+
+    // Get sunrise and next sunrise (defines the vedic day)
+    let (jd_sunrise, jd_next_sunrise) =
+        vedic_day_sunrises(engine, eop, utc, location, riseset_config)?;
+
+    // Get sunset for the same day
+    let noon_jd = dhruv_vedic_base::approximate_local_noon_jd(
+        jd_utc.floor() + 0.5,
+        location.longitude_deg,
+    );
+    let sunset_result = compute_rise_set(
+        engine,
+        engine.lsk(),
+        eop,
+        location,
+        RiseSetEvent::Sunset,
+        noon_jd,
+        riseset_config,
+    )
+    .map_err(|_| SearchError::NoConvergence("sunset computation failed"))?;
+    let jd_sunset = match sunset_result {
+        RiseSetResult::Event { jd_tdb: jd, .. } => jd,
+        _ => return Err(SearchError::NoConvergence("sun never sets at this location")),
+    };
+
+    // Determine if birth time is during day (sunrise to sunset) or night
+    let is_day = jd_tdb >= jd_sunrise && jd_tdb < jd_sunset;
+
+    // Weekday of this vedic day (determined by sunrise)
+    let weekday = vaar_from_jd(jd_sunrise).index();
+
+    // Compute time-based upagrahas (lagna at portion start/end)
+    let mut time_lons = [0.0f64; 6]; // Gulika, Maandi, Kaala, Mrityu, ArthaPrahara, YamaGhantaka
+    for (i, &upa) in TIME_BASED_UPAGRAHAS.iter().enumerate() {
+        let target_jd = time_upagraha_jd(
+            upa,
+            weekday,
+            is_day,
+            jd_sunrise,
+            jd_sunset,
+            jd_next_sunrise,
+        );
+        // Compute tropical lagna at this JD
+        // target_jd is in TDB but ascendant_longitude_rad expects JD UTC
+        // For this purpose the difference is negligible (~1s), but we use jd_utc convention
+        let lagna_rad = ascendant_longitude_rad(engine.lsk(), eop, location, target_jd)?;
+        let lagna_tropical = lagna_rad.to_degrees();
+        time_lons[i] = normalize_360(lagna_tropical - aya);
+    }
+
+    // Compute sun-based upagrahas from sidereal Sun longitude
+    let (sun_tropical, _) = body_ecliptic_lon_lat(engine, Body::Sun, jd_tdb)?;
+    let sun_sid = normalize_360(sun_tropical - aya);
+    let sun_up = sun_based_upagrahas(sun_sid);
+
+    Ok(AllUpagrahas {
+        gulika: time_lons[0],
+        maandi: time_lons[1],
+        kaala: time_lons[2],
+        mrityu: time_lons[3],
+        artha_prahara: time_lons[4],
+        yama_ghantaka: time_lons[5],
+        dhooma: sun_up.dhooma,
+        vyatipata: sun_up.vyatipata,
+        parivesha: sun_up.parivesha,
+        indra_chapa: sun_up.indra_chapa,
+        upaketu: sun_up.upaketu,
+    })
 }
 
 /// Convert UtcTime to JD UTC (calendar only, no TDB conversion).

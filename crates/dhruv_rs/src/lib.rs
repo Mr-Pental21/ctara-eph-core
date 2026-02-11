@@ -33,7 +33,7 @@ pub use convenience::{
     arudha_padas, ayana, ghatika, graha_longitudes, hora, karana, longitude, masa, nakshatra,
     nakshatra28, next_amavasya, next_purnima, next_sankranti, panchang, position, position_full,
     prev_amavasya, prev_purnima, prev_sankranti, query, query_batch, rashi, sidereal_longitude,
-    special_lagnas, sphutas, tithi, vaar, varsha, yoga,
+    special_lagnas, sphutas, tithi, upagrahas, vaar, varsha, yoga,
 };
 pub use date::UtcDate;
 pub use error::DhruvError;
@@ -53,7 +53,8 @@ pub use dhruv_vedic_base::{
 };
 pub use dhruv_vedic_base::riseset_types::GeoLocation;
 pub use dhruv_vedic_base::{
-    AllSpecialLagnas, ArudhaPada, ArudhaResult, Graha, SpecialLagna, Sphuta, SphutalInputs,
+    AllSpecialLagnas, AllUpagrahas, ArudhaPada, ArudhaResult, Graha, SpecialLagna, Sphuta,
+    SphutalInputs, Upagraha,
 };
 pub use dhruv_search::GrahaLongitudes;
 

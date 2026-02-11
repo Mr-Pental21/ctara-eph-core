@@ -31,7 +31,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 16;
+pub const DHRUV_API_VERSION: u32 = 17;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -6110,8 +6110,11 @@ pub extern "C" fn dhruv_arudha_pada_name(index: u32) -> *const std::ffi::c_char 
 /// Compute a single arudha pada (pure math).
 ///
 /// Returns the arudha longitude in degrees [0, 360).
+///
+/// # Safety
+/// `out_rashi` must be null or point to a valid `u8`.
 #[unsafe(no_mangle)]
-pub extern "C" fn dhruv_arudha_pada(bhava_cusp_lon: f64, lord_lon: f64, out_rashi: *mut u8) -> f64 {
+pub unsafe extern "C" fn dhruv_arudha_pada(bhava_cusp_lon: f64, lord_lon: f64, out_rashi: *mut u8) -> f64 {
     let (lon, rashi) = dhruv_vedic_base::arudha_pada(bhava_cusp_lon, lord_lon);
     if !out_rashi.is_null() {
         unsafe { *out_rashi = rashi; }
@@ -6173,6 +6176,142 @@ pub unsafe extern "C" fn dhruv_arudha_padas_for_date(
                     rashi_index: r.rashi_index,
                 };
             }
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Upagrahas
+// ---------------------------------------------------------------------------
+
+/// Number of upagrahas.
+pub const DHRUV_UPAGRAHA_COUNT: u32 = 11;
+
+/// C-compatible result for all 11 upagrahas (sidereal longitudes).
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvAllUpagrahas {
+    pub gulika: f64,
+    pub maandi: f64,
+    pub kaala: f64,
+    pub mrityu: f64,
+    pub artha_prahara: f64,
+    pub yama_ghantaka: f64,
+    pub dhooma: f64,
+    pub vyatipata: f64,
+    pub parivesha: f64,
+    pub indra_chapa: f64,
+    pub upaketu: f64,
+}
+
+/// Return the name of an upagraha by index (0-10).
+///
+/// Returns null for invalid indices (>= 11).
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_upagraha_name(index: u32) -> *const std::ffi::c_char {
+    if index >= 11 {
+        return ptr::null();
+    }
+    let upa = dhruv_vedic_base::ALL_UPAGRAHAS[index as usize];
+    let name = match upa {
+        dhruv_vedic_base::Upagraha::Gulika => c"Gulika",
+        dhruv_vedic_base::Upagraha::Maandi => c"Maandi",
+        dhruv_vedic_base::Upagraha::Kaala => c"Kaala",
+        dhruv_vedic_base::Upagraha::Mrityu => c"Mrityu",
+        dhruv_vedic_base::Upagraha::ArthaPrahara => c"Artha Prahara",
+        dhruv_vedic_base::Upagraha::YamaGhantaka => c"Yama Ghantaka",
+        dhruv_vedic_base::Upagraha::Dhooma => c"Dhooma",
+        dhruv_vedic_base::Upagraha::Vyatipata => c"Vyatipata",
+        dhruv_vedic_base::Upagraha::Parivesha => c"Parivesha",
+        dhruv_vedic_base::Upagraha::IndraChapa => c"Indra Chapa",
+        dhruv_vedic_base::Upagraha::Upaketu => c"Upaketu",
+    };
+    name.as_ptr()
+}
+
+/// Compute the 5 sun-based upagrahas from sidereal Sun longitude.
+///
+/// Pure math, no engine needed.
+///
+/// # Safety
+/// `out` must point to a valid `DhruvAllUpagrahas`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_sun_based_upagrahas(
+    sun_sid_lon: f64,
+    out: *mut DhruvAllUpagrahas,
+) -> DhruvStatus {
+    if out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let result = dhruv_vedic_base::sun_based_upagrahas(sun_sid_lon);
+    let out = unsafe { &mut *out };
+    out.dhooma = result.dhooma;
+    out.vyatipata = result.vyatipata;
+    out.parivesha = result.parivesha;
+    out.indra_chapa = result.indra_chapa;
+    out.upaketu = result.upaketu;
+    // Time-based fields are left uninitialized — caller should only read sun-based fields
+    DhruvStatus::Ok
+}
+
+/// Compute all 11 upagrahas for a given date and location.
+///
+/// # Safety
+/// All pointers must be valid. `out` must point to a valid `DhruvAllUpagrahas`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_all_upagrahas_for_date(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    ayanamsha_system: u32,
+    use_nutation: u8,
+    out: *mut DhruvAllUpagrahas,
+) -> DhruvStatus {
+    if engine.is_null() || eop.is_null() || utc.is_null() || location.is_null() || out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+
+    let engine = unsafe { &*engine };
+    let eop = unsafe { &*eop };
+    let utc_c = unsafe { &*utc };
+    let loc_c = unsafe { &*location };
+
+    let utc_time = UtcTime {
+        year: utc_c.year,
+        month: utc_c.month,
+        day: utc_c.day,
+        hour: utc_c.hour,
+        minute: utc_c.minute,
+        second: utc_c.second,
+    };
+
+    let location = GeoLocation::new(loc_c.latitude_deg, loc_c.longitude_deg, loc_c.altitude_m);
+
+    let system = match ayanamsha_system_from_code(ayanamsha_system as i32) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidQuery,
+    };
+
+    let rs_config = dhruv_vedic_base::RiseSetConfig::default();
+    let aya_config = SankrantiConfig::new(system, use_nutation != 0);
+
+    match dhruv_search::all_upagrahas_for_date(engine, eop, &utc_time, &location, &rs_config, &aya_config) {
+        Ok(result) => {
+            let out = unsafe { &mut *out };
+            out.gulika = result.gulika;
+            out.maandi = result.maandi;
+            out.kaala = result.kaala;
+            out.mrityu = result.mrityu;
+            out.artha_prahara = result.artha_prahara;
+            out.yama_ghantaka = result.yama_ghantaka;
+            out.dhooma = result.dhooma;
+            out.vyatipata = result.vyatipata;
+            out.parivesha = result.parivesha;
+            out.indra_chapa = result.indra_chapa;
+            out.upaketu = result.upaketu;
             DhruvStatus::Ok
         }
         Err(e) => DhruvStatus::from(&e),
@@ -6616,8 +6755,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_16() {
-        assert_eq!(dhruv_api_version(), 16);
+    fn ffi_api_version_is_17() {
+        assert_eq!(dhruv_api_version(), 17);
     }
 
     // --- Search error mapping ---

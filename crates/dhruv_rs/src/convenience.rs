@@ -470,3 +470,18 @@ pub fn arudha_padas(
     let config = SankrantiConfig::new(system, use_nutation);
     Ok(dhruv_search::arudha_padas_for_date(eng, eop, &utc, location, &bhava_config, &config)?)
 }
+
+/// Compute all 11 upagrahas for a given date and location.
+pub fn upagrahas(
+    date: UtcDate,
+    eop: &EopKernel,
+    location: &GeoLocation,
+    system: AyanamshaSystem,
+    use_nutation: bool,
+) -> Result<dhruv_vedic_base::AllUpagrahas, DhruvError> {
+    let eng = engine()?;
+    let utc: UtcTime = date.into();
+    let rs_config = RiseSetConfig::default();
+    let config = SankrantiConfig::new(system, use_nutation);
+    Ok(dhruv_search::all_upagrahas_for_date(eng, eop, &utc, location, &rs_config, &config)?)
+}

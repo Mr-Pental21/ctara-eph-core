@@ -400,6 +400,36 @@ enum Commands {
         #[arg(long)]
         eop: PathBuf,
     },
+    /// Compute all 11 upagrahas for a date and location
+    Upagrahas {
+        /// UTC datetime (YYYY-MM-DDThh:mm:ssZ)
+        #[arg(long)]
+        date: String,
+        /// Latitude in degrees (north positive)
+        #[arg(long)]
+        lat: f64,
+        /// Longitude in degrees (east positive)
+        #[arg(long)]
+        lon: f64,
+        /// Altitude in meters (default 0)
+        #[arg(long, default_value = "0")]
+        alt: f64,
+        /// Ayanamsha system code (0-19, default 0=Lahiri)
+        #[arg(long, default_value = "0")]
+        ayanamsha: i32,
+        /// Apply nutation correction
+        #[arg(long)]
+        nutation: bool,
+        /// Path to SPK kernel
+        #[arg(long)]
+        bsp: PathBuf,
+        /// Path to leap second kernel
+        #[arg(long)]
+        lsk: PathBuf,
+        /// Path to IERS EOP file (finals2000A.all)
+        #[arg(long)]
+        eop: PathBuf,
+    },
 }
 
 fn aya_system_from_code(code: i32) -> Option<AyanamshaSystem> {
@@ -1073,6 +1103,74 @@ fn main() {
                     eprintln!("Error: {e}");
                     std::process::exit(1);
                 }
+            }
+        }
+
+        Commands::Upagrahas {
+            date,
+            lat,
+            lon,
+            alt,
+            ayanamsha,
+            nutation,
+            bsp,
+            lsk,
+            eop,
+        } => {
+            let system = require_aya_system(ayanamsha);
+            let utc = parse_utc(&date).unwrap_or_else(|e| {
+                eprintln!("{e}");
+                std::process::exit(1);
+            });
+            let engine = load_engine(&bsp, &lsk);
+            let eop_kernel = load_eop(&eop);
+            let location = GeoLocation::new(lat, lon, alt);
+            let rs_config = RiseSetConfig::default();
+            let config = dhruv_search::sankranti_types::SankrantiConfig::new(system, nutation);
+
+            let result = dhruv_search::all_upagrahas_for_date(
+                &engine, &eop_kernel, &utc, &location, &rs_config, &config,
+            )
+            .unwrap_or_else(|e| {
+                eprintln!("Error: {e}");
+                std::process::exit(1);
+            });
+
+            println!("Upagrahas for {} at {:.4}°N, {:.4}°E\n", date, lat, lon);
+            println!("Time-based:");
+            for (name, lon) in [
+                ("Gulika", result.gulika),
+                ("Maandi", result.maandi),
+                ("Kaala", result.kaala),
+                ("Mrityu", result.mrityu),
+                ("Artha Prahara", result.artha_prahara),
+                ("Yama Ghantaka", result.yama_ghantaka),
+            ] {
+                let rashi_info = dhruv_vedic_base::rashi_from_longitude(lon);
+                println!("  {:16} {:>8.4}° ({} {}°{:02}'{:04.1}\")",
+                    name, lon,
+                    rashi_info.rashi.name(),
+                    rashi_info.dms.degrees,
+                    rashi_info.dms.minutes,
+                    rashi_info.dms.seconds,
+                );
+            }
+            println!("\nSun-based:");
+            for (name, lon) in [
+                ("Dhooma", result.dhooma),
+                ("Vyatipata", result.vyatipata),
+                ("Parivesha", result.parivesha),
+                ("Indra Chapa", result.indra_chapa),
+                ("Upaketu", result.upaketu),
+            ] {
+                let rashi_info = dhruv_vedic_base::rashi_from_longitude(lon);
+                println!("  {:16} {:>8.4}° ({} {}°{:02}'{:04.1}\")",
+                    name, lon,
+                    rashi_info.rashi.name(),
+                    rashi_info.dms.degrees,
+                    rashi_info.dms.minutes,
+                    rashi_info.dms.seconds,
+                );
             }
         }
     }

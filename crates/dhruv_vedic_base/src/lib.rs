@@ -36,6 +36,7 @@ pub mod samvatsara;
 pub mod special_lagna;
 pub mod sphuta;
 pub mod tithi;
+pub mod upagraha;
 pub mod util;
 pub mod vaar;
 pub mod yoga;
@@ -92,5 +93,10 @@ pub use sphuta::{
     chatussphuta, deha_sphuta, kshetra_sphuta, kunda, mrityu_sphuta, panchasphuta, prana_sphuta,
     rahu_tithi_sphuta, sookshma_trisphuta, tithi_sphuta, trisphuta, yoga_sphuta,
     yoga_sphuta_normalized,
+};
+pub use upagraha::{
+    ALL_UPAGRAHAS, AllUpagrahas, SunBasedUpagrahas, TIME_BASED_UPAGRAHAS, Upagraha,
+    day_portion_index, night_portion_index, portion_jd_range, sun_based_upagrahas,
+    time_upagraha_jd, time_upagraha_planet,
 };
 pub use util::normalize_360;
