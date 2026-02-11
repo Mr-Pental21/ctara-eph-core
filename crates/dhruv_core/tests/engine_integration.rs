@@ -164,9 +164,9 @@ fn query_ecliptic_frame() {
     // Ecliptic latitude of Earth should be ~0 (Earth orbits in the ecliptic plane).
     let spherical = dhruv_frames::cartesian_to_spherical(&s_ecl.position_km);
     assert!(
-        spherical.lat_rad.abs() < 0.01,
-        "Earth ecliptic latitude {:.4} rad should be ~0",
-        spherical.lat_rad
+        spherical.lat_deg.abs() < 1.0,
+        "Earth ecliptic latitude {:.4} deg should be ~0",
+        spherical.lat_deg
     );
 }
 

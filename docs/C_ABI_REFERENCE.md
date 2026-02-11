@@ -261,8 +261,8 @@ typedef struct {
 
 ```c
 typedef struct {
-    double lon_rad;      // Longitude [0, 2*pi)
-    double lat_rad;      // Latitude [-pi/2, pi/2]
+    double lon_deg;      // Longitude [0, 360)
+    double lat_deg;      // Latitude [-90, 90]
     double distance_km;
 } DhruvSphericalCoords;
 ```
@@ -271,11 +271,11 @@ typedef struct {
 
 ```c
 typedef struct {
-    double lon_rad;         // Longitude [0, 2*pi)
-    double lat_rad;         // Latitude [-pi/2, pi/2]
+    double lon_deg;         // Longitude [0, 360)
+    double lat_deg;         // Latitude [-90, 90]
     double distance_km;
-    double lon_speed;       // rad/s
-    double lat_speed;       // rad/s
+    double lon_speed;       // deg/day
+    double lat_speed;       // deg/day
     double distance_speed;  // km/s
 } DhruvSphericalState;
 ```
@@ -584,7 +584,7 @@ DhruvStatus dhruv_cartesian_to_spherical(
 );
 ```
 
-Convert Cartesian [x,y,z] (km) to spherical (lon_rad, lat_rad, distance_km). Pure math, no engine needed.
+Convert Cartesian [x,y,z] (km) to spherical (lon_deg, lat_deg, distance_km). Pure math, no engine needed.
 
 ---
 

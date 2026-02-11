@@ -404,10 +404,10 @@ This is the critical conversion for all downstream astrology/astronomy features.
 
 ```rust
 pub struct SphericalCoords {
-    /// Longitude in radians [0, 2*pi)
-    pub lon_rad: f64,
-    /// Latitude in radians [-pi/2, pi/2]
-    pub lat_rad: f64,
+    /// Longitude in degrees [0, 360)
+    pub lon_deg: f64,
+    /// Latitude in degrees [-90, 90]
+    pub lat_deg: f64,
     /// Distance in km
     pub distance_km: f64,
 }
@@ -415,16 +415,7 @@ pub struct SphericalCoords {
 /// Convert Cartesian [x, y, z] to spherical (longitude, latitude, distance).
 /// Longitude is measured in the x-y plane from +x toward +y.
 /// Latitude is elevation from the x-y plane.
-pub fn cartesian_to_spherical(xyz: &[f64; 3]) -> SphericalCoords {
-    let r = (xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2]).sqrt();
-    let lon = xyz[1].atan2(xyz[0]);           // atan2(y, x)
-    let lat = (xyz[2] / r).asin();            // asin(z / r)
-    SphericalCoords {
-        lon_rad: if lon < 0.0 { lon + 2.0 * std::f64::consts::PI } else { lon },
-        lat_rad: lat,
-        distance_km: r,
-    }
-}
+pub fn cartesian_to_spherical(xyz: &[f64; 3]) -> SphericalCoords;
 
 /// Convert spherical back to Cartesian.
 pub fn spherical_to_cartesian(s: &SphericalCoords) -> [f64; 3];
@@ -436,7 +427,7 @@ use dhruv_frames::{icrf_to_ecliptic, cartesian_to_spherical};
 
 let ecl_pos = icrf_to_ecliptic(&state.position_km);
 let spherical = cartesian_to_spherical(&ecl_pos);
-let ecliptic_longitude_deg = spherical.lon_rad.to_degrees();
+let ecliptic_longitude_deg = spherical.lon_deg;
 // Apply ayanamsha for sidereal longitude:
 // let sidereal_lon = ecliptic_longitude_deg - ayanamsha_deg;
 ```

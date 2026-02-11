@@ -47,9 +47,9 @@ fn position_mars_from_earth() {
     let date = UtcDate::new(2024, 3, 20, 12, 0, 0.0);
     let coords = position(Body::Mars, Observer::Body(Body::Earth), date).unwrap();
 
-    // Mars ecliptic longitude should be in [0, 2*pi)
-    assert!(coords.lon_rad >= 0.0);
-    assert!(coords.lon_rad < std::f64::consts::TAU);
+    // Mars ecliptic longitude should be in [0, 360)
+    assert!(coords.lon_deg >= 0.0);
+    assert!(coords.lon_deg < 360.0);
     // Distance should be reasonable (0.3 AU – 2.7 AU)
     let au_km = 149_597_870.7;
     assert!(coords.distance_km > 0.3 * au_km);
@@ -64,14 +64,14 @@ fn position_full_returns_velocities() {
     let date = UtcDate::new(2024, 3, 20, 12, 0, 0.0);
     let state = position_full(Body::Mars, Observer::Body(Body::Earth), date).unwrap();
 
-    assert!(state.lon_rad >= 0.0);
+    assert!(state.lon_deg >= 0.0);
     assert!(state.distance_km > 0.0);
     // Angular velocities should be non-zero for a planet
     assert!(state.lon_speed != 0.0);
 }
 
 #[test]
-fn longitude_returns_radians() {
+fn longitude_returns_degrees() {
     if !ensure_init() {
         return;
     }
@@ -79,7 +79,7 @@ fn longitude_returns_radians() {
     let lon = longitude(Body::Sun, Observer::Body(Body::Earth), date).unwrap();
 
     assert!(lon >= 0.0);
-    assert!(lon < std::f64::consts::TAU);
+    assert!(lon < 360.0);
 }
 
 #[test]

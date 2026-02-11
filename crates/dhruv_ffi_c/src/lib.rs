@@ -372,10 +372,10 @@ pub unsafe extern "C" fn dhruv_query_once(
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DhruvSphericalCoords {
-    /// Longitude in radians, range [0, 2*pi).
-    pub lon_rad: f64,
-    /// Latitude in radians, range [-pi/2, pi/2].
-    pub lat_rad: f64,
+    /// Longitude in degrees, range [0, 360).
+    pub lon_deg: f64,
+    /// Latitude in degrees, range [-90, 90].
+    pub lat_deg: f64,
     /// Distance from origin in km.
     pub distance_km: f64,
 }
@@ -384,15 +384,15 @@ pub struct DhruvSphericalCoords {
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DhruvSphericalState {
-    /// Longitude in radians, range [0, 2*pi).
-    pub lon_rad: f64,
-    /// Latitude in radians, range [-pi/2, pi/2].
-    pub lat_rad: f64,
+    /// Longitude in degrees, range [0, 360).
+    pub lon_deg: f64,
+    /// Latitude in degrees, range [-90, 90].
+    pub lat_deg: f64,
     /// Distance from origin in km.
     pub distance_km: f64,
-    /// Longitude rate of change in rad/s.
+    /// Longitude rate of change in deg/day.
     pub lon_speed: f64,
-    /// Latitude rate of change in rad/s.
+    /// Latitude rate of change in deg/day.
     pub lat_speed: f64,
     /// Radial velocity in km/s.
     pub distance_speed: f64,
@@ -491,8 +491,8 @@ pub unsafe extern "C" fn dhruv_utc_to_tdb_jd(
 
 /// Convert Cartesian position [x, y, z] (km) to spherical coordinates.
 ///
-/// Pure math, no engine needed. Writes longitude (radians, 0..2pi),
-/// latitude (radians, -pi/2..pi/2), and distance (km) into `out_spherical`.
+/// Pure math, no engine needed. Writes longitude (degrees, 0..360),
+/// latitude (degrees, -90..90), and distance (km) into `out_spherical`.
 ///
 /// # Safety
 /// `position_km` and `out_spherical` must be valid, non-null pointers.
@@ -514,8 +514,8 @@ pub unsafe extern "C" fn dhruv_cartesian_to_spherical(
         // SAFETY: Pointer is checked for null; write one struct.
         unsafe {
             *out_spherical = DhruvSphericalCoords {
-                lon_rad: s.lon_rad,
-                lat_rad: s.lat_rad,
+                lon_deg: s.lon_deg,
+                lat_deg: s.lat_deg,
                 distance_km: s.distance_km,
             };
         }
@@ -561,8 +561,8 @@ pub fn dhruv_query_utc_spherical_internal(
     );
 
     Ok(DhruvSphericalState {
-        lon_rad: ss.lon_rad,
-        lat_rad: ss.lat_rad,
+        lon_deg: ss.lon_deg,
+        lat_deg: ss.lat_deg,
         distance_km: ss.distance_km,
         lon_speed: ss.lon_speed,
         lat_speed: ss.lat_speed,
@@ -2648,23 +2648,23 @@ mod tests {
     fn ffi_cartesian_to_spherical_along_x() {
         let pos = [1.0e8_f64, 0.0, 0.0];
         let mut out = DhruvSphericalCoords {
-            lon_rad: 0.0,
-            lat_rad: 0.0,
+            lon_deg: 0.0,
+            lat_deg: 0.0,
             distance_km: 0.0,
         };
         // SAFETY: Both pointers are valid stack references.
         let status = unsafe { dhruv_cartesian_to_spherical(&pos, &mut out) };
         assert_eq!(status, DhruvStatus::Ok);
-        assert!((out.lon_rad - 0.0).abs() < 1e-10);
-        assert!((out.lat_rad - 0.0).abs() < 1e-10);
+        assert!((out.lon_deg - 0.0).abs() < 1e-10);
+        assert!((out.lat_deg - 0.0).abs() < 1e-10);
         assert!((out.distance_km - 1.0e8).abs() < 1e-3);
     }
 
     #[test]
     fn ffi_cartesian_to_spherical_rejects_null() {
         let mut out = DhruvSphericalCoords {
-            lon_rad: 0.0,
-            lat_rad: 0.0,
+            lon_deg: 0.0,
+            lat_deg: 0.0,
             distance_km: 0.0,
         };
         // SAFETY: Null position pointer is intentional for validation.
@@ -2878,8 +2878,8 @@ mod tests {
     #[test]
     fn ffi_query_utc_spherical_rejects_null() {
         let mut out = DhruvSphericalState {
-            lon_rad: 0.0,
-            lat_rad: 0.0,
+            lon_deg: 0.0,
+            lat_deg: 0.0,
             distance_km: 0.0,
             lon_speed: 0.0,
             lat_speed: 0.0,

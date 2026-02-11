@@ -66,15 +66,15 @@ pub fn position_full(
     ))
 }
 
-/// Query the global engine for ecliptic longitude in radians.
+/// Query the global engine for ecliptic longitude in degrees.
 ///
-/// Shorthand for `position(target, observer, date)?.lon_rad`.
+/// Shorthand for `position(target, observer, date)?.lon_deg`.
 pub fn longitude(
     target: Body,
     observer: Observer,
     date: UtcDate,
 ) -> Result<f64, DhruvError> {
-    Ok(position(target, observer, date)?.lon_rad)
+    Ok(position(target, observer, date)?.lon_deg)
 }
 
 /// Query the global engine for a Cartesian state vector in any frame.

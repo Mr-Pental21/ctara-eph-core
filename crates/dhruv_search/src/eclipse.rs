@@ -77,7 +77,7 @@ fn moon_ecliptic(engine: &Engine, jd_tdb: f64) -> Result<(f64, f64, f64), Search
     let state = engine.query(query)?;
     let ecl = icrf_to_ecliptic(&state.position_km);
     let sph = cartesian_to_spherical(&ecl);
-    Ok((sph.lon_deg(), sph.lat_deg(), sph.distance_km))
+    Ok((sph.lon_deg, sph.lat_deg, sph.distance_km))
 }
 
 /// Query Sun's distance from Earth in km.

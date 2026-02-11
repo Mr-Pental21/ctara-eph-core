@@ -132,7 +132,7 @@ Currently returns `(ra_rad, dec_rad)`, discards distance. Change to:
 fn sun_equatorial_ra_dec(engine: &Engine, jd_tdb: f64) -> Result<(f64, f64, f64), VedicError>
 ```
 
-Returns `(ra_rad, dec_rad, distance_km)`. The distance is already computed by `cartesian_to_spherical()` — just return `sph.distance_km` alongside `sph.lon_rad` and `sph.lat_rad`.
+Returns `(ra_rad, dec_rad, distance_km)`. The distance is already computed by `cartesian_to_spherical()` — just return `sph.distance_km` alongside `sph.lon_deg` and `sph.lat_deg` (converting to radians for the RA/Dec context).
 
 ### Compute semidiameter from distance
 

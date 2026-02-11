@@ -31,7 +31,7 @@ pub(crate) fn body_ecliptic_lon_lat(
     let state = engine.query(query)?;
     let ecl = icrf_to_ecliptic(&state.position_km);
     let sph = cartesian_to_spherical(&ecl);
-    Ok((sph.lon_deg(), sph.lat_deg()))
+    Ok((sph.lon_deg, sph.lat_deg))
 }
 
 /// Query a body's ecliptic longitude, latitude, and longitude speed.
@@ -51,9 +51,7 @@ pub(crate) fn body_ecliptic_state(
     };
     let state = engine.query(query)?;
     let sph = cartesian_state_to_spherical_state(&state.position_km, &state.velocity_km_s);
-    // lon_speed is in rad/s; convert to deg/day
-    let lon_speed_deg_per_day = sph.lon_speed.to_degrees() * 86400.0;
-    Ok((sph.lon_rad.to_degrees().rem_euclid(360.0), sph.lat_rad.to_degrees(), lon_speed_deg_per_day))
+    Ok((sph.lon_deg.rem_euclid(360.0), sph.lat_deg, sph.lon_speed))
 }
 
 /// Normalize an angle to [-180, +180].

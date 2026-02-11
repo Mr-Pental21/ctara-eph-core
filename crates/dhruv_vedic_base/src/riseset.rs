@@ -58,7 +58,7 @@ fn sun_equatorial_ra_dec_dist(
     };
     let state = engine.query(query)?;
     let sph = cartesian_to_spherical(&state.position_km);
-    Ok((sph.lon_rad, sph.lat_rad, sph.distance_km))
+    Ok((sph.lon_deg.to_radians(), sph.lat_deg.to_radians(), sph.distance_km))
 }
 
 /// Compute solar angular semidiameter from Earth-Sun distance.

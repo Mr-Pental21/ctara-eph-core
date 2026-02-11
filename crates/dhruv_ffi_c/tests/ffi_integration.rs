@@ -240,8 +240,8 @@ fn ffi_full_longitude_workflow() {
 
     // Step 3: Cartesian to spherical
     let mut spherical = DhruvSphericalCoords {
-        lon_rad: 0.0,
-        lat_rad: 0.0,
+        lon_deg: 0.0,
+        lat_deg: 0.0,
         distance_km: 0.0,
     };
     // SAFETY: Both pointers are valid.
@@ -250,8 +250,7 @@ fn ffi_full_longitude_workflow() {
     };
     assert_eq!(status, DhruvStatus::Ok);
 
-    let lon_deg = spherical.lon_rad.to_degrees();
-    assert!(lon_deg >= 0.0 && lon_deg < 360.0, "longitude {lon_deg} out of range");
+    assert!(spherical.lon_deg >= 0.0 && spherical.lon_deg < 360.0, "longitude {} out of range", spherical.lon_deg);
     assert!(spherical.distance_km > 1.0e8, "Mars should be >1 AU from Sun");
 
     // SAFETY: Pointers were returned by their respective _new/_load functions.
@@ -267,8 +266,8 @@ fn ffi_query_utc_spherical_mars_heliocentric() {
     };
 
     let mut out = DhruvSphericalState {
-        lon_rad: 0.0,
-        lat_rad: 0.0,
+        lon_deg: 0.0,
+        lat_deg: 0.0,
         distance_km: 0.0,
         lon_speed: 0.0,
         lat_speed: 0.0,
@@ -289,10 +288,9 @@ fn ffi_query_utc_spherical_mars_heliocentric() {
     };
     assert_eq!(status, DhruvStatus::Ok);
 
-    let lon_deg = out.lon_rad.to_degrees();
     assert!(
-        lon_deg >= 0.0 && lon_deg < 360.0,
-        "longitude {lon_deg} out of range"
+        out.lon_deg >= 0.0 && out.lon_deg < 360.0,
+        "longitude {} out of range", out.lon_deg
     );
     assert!(out.distance_km > 1.0e8, "Mars should be >1 AU from Sun");
 
@@ -308,8 +306,8 @@ fn ffi_query_utc_spherical_speeds_finite() {
     };
 
     let mut out = DhruvSphericalState {
-        lon_rad: 0.0,
-        lat_rad: 0.0,
+        lon_deg: 0.0,
+        lat_deg: 0.0,
         distance_km: 0.0,
         lon_speed: 0.0,
         lat_speed: 0.0,

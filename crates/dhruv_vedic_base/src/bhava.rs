@@ -156,7 +156,7 @@ fn body_ecliptic_longitude_deg(
     };
     let state = engine.query(query)?;
     let sph = cartesian_to_spherical(&state.position_km);
-    Ok(normalize_deg(sph.lon_rad.to_degrees()))
+    Ok(normalize_deg(sph.lon_deg))
 }
 
 /// Equal house division: cusp[i] = start + i*30.

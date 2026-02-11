@@ -5,26 +5,14 @@ use std::f64::consts::PI;
 /// Spherical coordinates: longitude, latitude, distance.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SphericalCoords {
-    /// Longitude in radians, range [0, 2π).
+    /// Longitude in degrees, range [0, 360).
     /// Measured in the x-y plane from +x toward +y.
-    pub lon_rad: f64,
-    /// Latitude in radians, range [-π/2, π/2].
+    pub lon_deg: f64,
+    /// Latitude in degrees, range [-90, 90].
     /// Elevation above the x-y plane.
-    pub lat_rad: f64,
+    pub lat_deg: f64,
     /// Distance from origin in km.
     pub distance_km: f64,
-}
-
-impl SphericalCoords {
-    /// Longitude in degrees, range [0, 360).
-    pub fn lon_deg(&self) -> f64 {
-        self.lon_rad.to_degrees()
-    }
-
-    /// Latitude in degrees, range [-90, 90].
-    pub fn lat_deg(&self) -> f64 {
-        self.lat_rad.to_degrees()
-    }
 }
 
 /// Convert Cartesian `[x, y, z]` (km) to spherical coordinates.
@@ -40,8 +28,8 @@ pub fn cartesian_to_spherical(xyz: &[f64; 3]) -> SphericalCoords {
 
     if r == 0.0 {
         return SphericalCoords {
-            lon_rad: 0.0,
-            lat_rad: 0.0,
+            lon_deg: 0.0,
+            lat_deg: 0.0,
             distance_km: 0.0,
         };
     }
@@ -50,8 +38,8 @@ pub fn cartesian_to_spherical(xyz: &[f64; 3]) -> SphericalCoords {
     let lat = (z / r).asin();
 
     SphericalCoords {
-        lon_rad: if lon < 0.0 { lon + 2.0 * PI } else { lon },
-        lat_rad: lat,
+        lon_deg: if lon < 0.0 { lon + 2.0 * PI } else { lon }.to_degrees(),
+        lat_deg: lat.to_degrees(),
         distance_km: r,
     }
 }
@@ -59,15 +47,15 @@ pub fn cartesian_to_spherical(xyz: &[f64; 3]) -> SphericalCoords {
 /// Spherical state: position (lon, lat, distance) plus angular velocities.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SphericalState {
-    /// Longitude in radians, range [0, 2π).
-    pub lon_rad: f64,
-    /// Latitude in radians, range [-π/2, π/2].
-    pub lat_rad: f64,
+    /// Longitude in degrees, range [0, 360).
+    pub lon_deg: f64,
+    /// Latitude in degrees, range [-90, 90].
+    pub lat_deg: f64,
     /// Distance from origin in km.
     pub distance_km: f64,
-    /// Longitude rate of change in rad/s.
+    /// Longitude rate of change in deg/day.
     pub lon_speed: f64,
-    /// Latitude rate of change in rad/s.
+    /// Latitude rate of change in deg/day.
     pub lat_speed: f64,
     /// Radial velocity in km/s.
     pub distance_speed: f64,
@@ -92,8 +80,8 @@ pub fn cartesian_state_to_spherical_state(
 
     if r < TINY {
         return SphericalState {
-            lon_rad: 0.0,
-            lat_rad: 0.0,
+            lon_deg: 0.0,
+            lat_deg: 0.0,
             distance_km: 0.0,
             lon_speed: 0.0,
             lat_speed: 0.0,
@@ -120,23 +108,27 @@ pub fn cartesian_state_to_spherical_state(
         (dlon, dlat)
     };
 
+    // Convert angles to degrees, angular speeds to deg/day
+    // (dlon_dt, dlat_dt are in rad/s; multiply by to_degrees factor and 86400 s/day)
     SphericalState {
-        lon_rad: lon,
-        lat_rad: lat,
+        lon_deg: lon.to_degrees(),
+        lat_deg: lat.to_degrees(),
         distance_km: r,
-        lon_speed: dlon_dt,
-        lat_speed: dlat_dt,
+        lon_speed: dlon_dt.to_degrees() * 86400.0,
+        lat_speed: dlat_dt.to_degrees() * 86400.0,
         distance_speed: dr_dt,
     }
 }
 
 /// Convert spherical coordinates back to Cartesian `[x, y, z]` (km).
 pub fn spherical_to_cartesian(s: &SphericalCoords) -> [f64; 3] {
-    let cos_lat = s.lat_rad.cos();
+    let lon_rad = s.lon_deg.to_radians();
+    let lat_rad = s.lat_deg.to_radians();
+    let cos_lat = lat_rad.cos();
     [
-        s.distance_km * cos_lat * s.lon_rad.cos(),
-        s.distance_km * cos_lat * s.lon_rad.sin(),
-        s.distance_km * s.lat_rad.sin(),
+        s.distance_km * cos_lat * lon_rad.cos(),
+        s.distance_km * cos_lat * lon_rad.sin(),
+        s.distance_km * lat_rad.sin(),
     ]
 }
 
@@ -149,28 +141,28 @@ mod tests {
     #[test]
     fn along_x_axis() {
         let s = cartesian_to_spherical(&[1.0e8, 0.0, 0.0]);
-        assert!((s.lon_rad - 0.0).abs() < EPS);
-        assert!((s.lat_rad - 0.0).abs() < EPS);
+        assert!((s.lon_deg - 0.0).abs() < EPS);
+        assert!((s.lat_deg - 0.0).abs() < EPS);
         assert!((s.distance_km - 1.0e8).abs() < EPS);
     }
 
     #[test]
     fn along_y_axis() {
         let s = cartesian_to_spherical(&[0.0, 1.0e8, 0.0]);
-        assert!((s.lon_rad - PI / 2.0).abs() < EPS);
-        assert!((s.lat_rad - 0.0).abs() < EPS);
+        assert!((s.lon_deg - 90.0).abs() < EPS);
+        assert!((s.lat_deg - 0.0).abs() < EPS);
     }
 
     #[test]
     fn along_negative_x() {
         let s = cartesian_to_spherical(&[-1.0e8, 0.0, 0.0]);
-        assert!((s.lon_rad - PI).abs() < EPS);
+        assert!((s.lon_deg - 180.0).abs() < EPS);
     }
 
     #[test]
     fn along_z_axis() {
         let s = cartesian_to_spherical(&[0.0, 0.0, 1.0e8]);
-        assert!((s.lat_rad - PI / 2.0).abs() < EPS);
+        assert!((s.lat_deg - 90.0).abs() < EPS);
         assert!((s.distance_km - 1.0e8).abs() < EPS);
     }
 
@@ -197,9 +189,9 @@ mod tests {
 
     #[test]
     fn longitude_always_positive() {
-        // Negative x, negative y → third quadrant → lon in [π, 3π/2)
+        // Negative x, negative y → third quadrant → lon in [180, 270)
         let s = cartesian_to_spherical(&[-1.0, -1.0, 0.0]);
-        assert!(s.lon_rad >= 0.0 && s.lon_rad < 2.0 * PI);
+        assert!(s.lon_deg >= 0.0 && s.lon_deg < 360.0);
     }
 
     #[test]
@@ -208,11 +200,12 @@ mod tests {
         let r = 1.0e8;
         let v = 30.0; // km/s
         let s = cartesian_state_to_spherical_state(&[r, 0.0, 0.0], &[0.0, v, 0.0]);
-        assert!((s.lon_rad - 0.0).abs() < EPS);
-        assert!((s.lat_rad - 0.0).abs() < EPS);
+        assert!((s.lon_deg - 0.0).abs() < EPS);
+        assert!((s.lat_deg - 0.0).abs() < EPS);
         assert!((s.distance_km - r).abs() < EPS);
-        // dlon/dt = (x*vy - y*vx) / rxy² = (R*v) / R² = v/R
-        assert!((s.lon_speed - v / r).abs() < EPS);
+        // dlon/dt in rad/s = v/R; convert to deg/day = (v/R) * (180/pi) * 86400
+        let expected_deg_per_day = (v / r).to_degrees() * 86400.0;
+        assert!((s.lon_speed - expected_deg_per_day).abs() < EPS * 1e10);
         assert!(s.lat_speed.abs() < EPS);
         assert!(s.distance_speed.abs() < EPS);
     }
@@ -225,9 +218,9 @@ mod tests {
         let s = cartesian_state_to_spherical_state(&[r, 0.0, 0.0], &[0.0, 0.0, v]);
         assert!(s.lat_speed > 0.0);
         assert!(s.lon_speed.abs() < EPS);
-        // dlat/dt = (vz * rxy² - z*(x*vx+y*vy)) / (r²*rxy)
-        //         = (v * R² - 0) / (R² * R) = v / R
-        assert!((s.lat_speed - v / r).abs() < EPS);
+        // dlat/dt in rad/s = v/R; convert to deg/day
+        let expected_deg_per_day = (v / r).to_degrees() * 86400.0;
+        assert!((s.lat_speed - expected_deg_per_day).abs() < EPS * 1e10);
         assert!(s.distance_speed.abs() < EPS);
     }
 
@@ -237,8 +230,8 @@ mod tests {
         let vel = [10.0, -20.0, 5.0];
         let s = cartesian_state_to_spherical_state(&pos, &vel);
         let c = cartesian_to_spherical(&pos);
-        assert!((s.lon_rad - c.lon_rad).abs() < EPS);
-        assert!((s.lat_rad - c.lat_rad).abs() < EPS);
+        assert!((s.lon_deg - c.lon_deg).abs() < EPS);
+        assert!((s.lat_deg - c.lat_deg).abs() < EPS);
         assert!((s.distance_km - c.distance_km).abs() < EPS);
     }
 
@@ -246,6 +239,8 @@ mod tests {
     fn spherical_state_zero_vector() {
         let s = cartesian_state_to_spherical_state(&[0.0, 0.0, 0.0], &[0.0, 0.0, 0.0]);
         assert_eq!(s.distance_km, 0.0);
+        assert_eq!(s.lon_deg, 0.0);
+        assert_eq!(s.lat_deg, 0.0);
         assert_eq!(s.lon_speed, 0.0);
         assert_eq!(s.lat_speed, 0.0);
         assert_eq!(s.distance_speed, 0.0);
