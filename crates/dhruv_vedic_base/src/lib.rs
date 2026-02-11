@@ -17,6 +17,7 @@
 
 pub mod arudha;
 pub mod ascendant;
+pub mod ashtakavarga;
 pub mod ayana_type;
 pub mod ayanamsha;
 pub mod bhava;
@@ -98,5 +99,10 @@ pub use upagraha::{
     ALL_UPAGRAHAS, AllUpagrahas, SunBasedUpagrahas, TIME_BASED_UPAGRAHAS, Upagraha,
     day_portion_index, night_portion_index, portion_jd_range, sun_based_upagrahas,
     time_upagraha_jd, time_upagraha_planet,
+};
+pub use ashtakavarga::{
+    AshtakavargaResult, BAV_TOTALS, BhinnaAshtakavarga, SAV_TOTAL, SarvaAshtakavarga,
+    calculate_all_bav, calculate_ashtakavarga, calculate_bav, calculate_sav, ekadhipatya_sodhana,
+    trikona_sodhana,
 };
 pub use util::normalize_360;

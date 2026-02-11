@@ -400,6 +400,36 @@ enum Commands {
         #[arg(long)]
         eop: PathBuf,
     },
+    /// Compute Ashtakavarga (BAV + SAV) for a date and location
+    Ashtakavarga {
+        /// UTC datetime (YYYY-MM-DDThh:mm:ssZ)
+        #[arg(long)]
+        date: String,
+        /// Latitude in degrees (north positive)
+        #[arg(long)]
+        lat: f64,
+        /// Longitude in degrees (east positive)
+        #[arg(long)]
+        lon: f64,
+        /// Altitude in meters (default 0)
+        #[arg(long, default_value = "0")]
+        alt: f64,
+        /// Ayanamsha system code (0-19, default 0=Lahiri)
+        #[arg(long, default_value = "0")]
+        ayanamsha: i32,
+        /// Apply nutation correction
+        #[arg(long)]
+        nutation: bool,
+        /// Path to SPK kernel
+        #[arg(long)]
+        bsp: PathBuf,
+        /// Path to leap second kernel
+        #[arg(long)]
+        lsk: PathBuf,
+        /// Path to IERS EOP file (finals2000A.all)
+        #[arg(long)]
+        eop: PathBuf,
+    },
     /// Compute all 11 upagrahas for a date and location
     Upagrahas {
         /// UTC datetime (YYYY-MM-DDThh:mm:ssZ)
@@ -1104,6 +1134,92 @@ fn main() {
                     std::process::exit(1);
                 }
             }
+        }
+
+        Commands::Ashtakavarga {
+            date,
+            lat,
+            lon,
+            alt,
+            ayanamsha,
+            nutation,
+            bsp,
+            lsk,
+            eop,
+        } => {
+            let system = require_aya_system(ayanamsha);
+            let utc = parse_utc(&date).unwrap_or_else(|e| {
+                eprintln!("{e}");
+                std::process::exit(1);
+            });
+            let engine = load_engine(&bsp, &lsk);
+            let eop_kernel = load_eop(&eop);
+            let location = GeoLocation::new(lat, lon, alt);
+            let config = dhruv_search::sankranti_types::SankrantiConfig::new(system, nutation);
+
+            let result = dhruv_search::ashtakavarga_for_date(
+                &engine, &eop_kernel, &utc, &location, &config,
+            )
+            .unwrap_or_else(|e| {
+                eprintln!("Error: {e}");
+                std::process::exit(1);
+            });
+
+            let graha_names = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
+            let rashi_names = [
+                "Mes", "Vrs", "Mit", "Kar", "Sim", "Kan",
+                "Tul", "Vri", "Dha", "Mak", "Kum", "Mee",
+            ];
+
+            println!("Ashtakavarga for {} at {:.4}°N, {:.4}°E\n", date, lat, lon);
+
+            // BAV tables
+            println!("Bhinna Ashtakavarga (BAV):\n");
+            print!("{:>10}", "");
+            for name in &rashi_names {
+                print!("{:>5}", name);
+            }
+            println!("  Total");
+            println!("{}", "-".repeat(10 + 5 * 12 + 7));
+
+            for (i, bav) in result.bavs.iter().enumerate() {
+                print!("{:>10}", graha_names[i]);
+                for &p in &bav.points {
+                    print!("{:>5}", p);
+                }
+                let total: u8 = bav.points.iter().sum();
+                println!("{:>7}", total);
+            }
+
+            // SAV
+            println!("\nSarva Ashtakavarga (SAV):\n");
+            print!("{:>10}", "");
+            for name in &rashi_names {
+                print!("{:>5}", name);
+            }
+            println!("  Total");
+            println!("{}", "-".repeat(10 + 5 * 12 + 7));
+
+            print!("{:>10}", "SAV");
+            for &p in &result.sav.total_points {
+                print!("{:>5}", p);
+            }
+            let sav_total: u16 = result.sav.total_points.iter().map(|&p| p as u16).sum();
+            println!("{:>7}", sav_total);
+
+            print!("{:>10}", "Trikona");
+            for &p in &result.sav.after_trikona {
+                print!("{:>5}", p);
+            }
+            let tri_total: u16 = result.sav.after_trikona.iter().map(|&p| p as u16).sum();
+            println!("{:>7}", tri_total);
+
+            print!("{:>10}", "Ekadhi");
+            for &p in &result.sav.after_ekadhipatya {
+                print!("{:>5}", p);
+            }
+            let ek_total: u16 = result.sav.after_ekadhipatya.iter().map(|&p| p as u16).sum();
+            println!("{:>7}", ek_total);
         }
 
         Commands::Upagrahas {

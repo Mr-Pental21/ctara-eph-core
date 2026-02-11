@@ -7,10 +7,11 @@
 use dhruv_core::{Body, Engine};
 use dhruv_time::{EopKernel, UtcTime};
 use dhruv_vedic_base::{
-    AllSpecialLagnas, AllUpagrahas, ArudhaResult, AyanamshaSystem, BhavaConfig, Graha,
-    LunarNode, NodeMode, ALL_GRAHAS, ascendant_longitude_rad, ayanamsha_deg, compute_bhavas,
-    ghatikas_since_sunrise, jd_tdb_to_centuries, lunar_node_deg, nth_rashi_from,
-    rashi_lord_by_index, sun_based_upagrahas, time_upagraha_jd, normalize_360,
+    AllSpecialLagnas, AllUpagrahas, ArudhaResult, AshtakavargaResult, AyanamshaSystem, BhavaConfig,
+    Graha, LunarNode, NodeMode, ALL_GRAHAS, ascendant_longitude_rad, ayanamsha_deg,
+    calculate_ashtakavarga, compute_bhavas, ghatikas_since_sunrise, jd_tdb_to_centuries,
+    lunar_node_deg, nth_rashi_from, rashi_lord_by_index, sun_based_upagrahas, time_upagraha_jd,
+    normalize_360,
 };
 use dhruv_vedic_base::arudha::all_arudha_padas;
 use dhruv_vedic_base::riseset::{compute_rise_set};
@@ -252,6 +253,44 @@ pub fn all_upagrahas_for_date(
         indra_chapa: sun_up.indra_chapa,
         upaketu: sun_up.upaketu,
     })
+}
+
+/// Compute complete Ashtakavarga (BAV + SAV + Sodhana) for a given date and location.
+///
+/// Queries graha sidereal positions and ascendant, resolves rashi indices,
+/// then delegates to the pure-math `calculate_ashtakavarga()`.
+pub fn ashtakavarga_for_date(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    aya_config: &SankrantiConfig,
+) -> Result<AshtakavargaResult, SearchError> {
+    let jd_tdb = utc.to_jd_tdb(engine.lsk());
+    let jd_utc = utc_to_jd_utc(utc);
+    let t = jd_tdb_to_centuries(jd_tdb);
+    let aya = ayanamsha_deg(aya_config.ayanamsha_system, t, aya_config.use_nutation);
+
+    // Get sidereal longitudes for 7 sapta grahas (Sun..Saturn)
+    let graha_lons = graha_sidereal_longitudes(engine, jd_tdb, aya_config.ayanamsha_system, aya_config.use_nutation)?;
+
+    // Compute Lagna sidereal longitude
+    let lagna_rad = ascendant_longitude_rad(engine.lsk(), eop, location, jd_utc)?;
+    let lagna_tropical = lagna_rad.to_degrees();
+    let lagna_sid = normalize(lagna_tropical - aya);
+
+    // Extract rashi indices for 7 grahas (Sun..Saturn only, not Rahu/Ketu)
+    let sapta = [
+        Graha::Surya, Graha::Chandra, Graha::Mangal, Graha::Buddh,
+        Graha::Guru, Graha::Shukra, Graha::Shani,
+    ];
+    let mut graha_rashis = [0u8; 7];
+    for (i, &graha) in sapta.iter().enumerate() {
+        graha_rashis[i] = (graha_lons.longitude(graha) / 30.0) as u8;
+    }
+    let lagna_rashi = (lagna_sid / 30.0) as u8;
+
+    Ok(calculate_ashtakavarga(&graha_rashis, lagna_rashi))
 }
 
 /// Convert UtcTime to JD UTC (calendar only, no TDB conversion).

@@ -471,6 +471,23 @@ pub fn arudha_padas(
     Ok(dhruv_search::arudha_padas_for_date(eng, eop, &utc, location, &bhava_config, &config)?)
 }
 
+/// Compute complete Ashtakavarga (BAV + SAV + Sodhana) for a given date and location.
+///
+/// Returns all 7 Bhinna Ashtakavargas plus the Sarvashtakavarga with
+/// Trikona and Ekadhipatya Sodhana applied.
+pub fn ashtakavarga(
+    date: UtcDate,
+    eop: &EopKernel,
+    location: &GeoLocation,
+    system: AyanamshaSystem,
+    use_nutation: bool,
+) -> Result<dhruv_vedic_base::AshtakavargaResult, DhruvError> {
+    let eng = engine()?;
+    let utc: UtcTime = date.into();
+    let config = SankrantiConfig::new(system, use_nutation);
+    Ok(dhruv_search::ashtakavarga_for_date(eng, eop, &utc, location, &config)?)
+}
+
 /// Compute all 11 upagrahas for a given date and location.
 pub fn upagrahas(
     date: UtcDate,

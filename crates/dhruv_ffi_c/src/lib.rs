@@ -31,7 +31,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 17;
+pub const DHRUV_API_VERSION: u32 = 18;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -6318,6 +6318,140 @@ pub unsafe extern "C" fn dhruv_all_upagrahas_for_date(
     }
 }
 
+// ---------------------------------------------------------------------------
+// Ashtakavarga
+// ---------------------------------------------------------------------------
+
+/// Number of grahas in the Ashtakavarga system (Sun through Saturn).
+pub const DHRUV_ASHTAKAVARGA_GRAHA_COUNT: u32 = 7;
+
+/// C-compatible Bhinna Ashtakavarga for a single graha.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvBhinnaAshtakavarga {
+    /// Target graha index (0=Sun through 6=Saturn).
+    pub graha_index: u8,
+    /// Benefic points per rashi (12 entries, 0-based index, max 8 each).
+    pub points: [u8; 12],
+}
+
+/// C-compatible Sarva Ashtakavarga result.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvSarvaAshtakavarga {
+    /// SAV total per rashi (sum of all 7 BAVs).
+    pub total_points: [u8; 12],
+    /// After Trikona Sodhana.
+    pub after_trikona: [u8; 12],
+    /// After Ekadhipatya Sodhana.
+    pub after_ekadhipatya: [u8; 12],
+}
+
+/// C-compatible complete Ashtakavarga result.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvAshtakavargaResult {
+    /// Bhinna Ashtakavarga for 7 grahas.
+    pub bavs: [DhruvBhinnaAshtakavarga; 7],
+    /// Sarva Ashtakavarga with sodhana.
+    pub sav: DhruvSarvaAshtakavarga,
+}
+
+/// Calculate all BAVs from rashi indices (pure math, no engine needed).
+///
+/// # Safety
+/// `graha_rashis` must point to a valid `[u8; 7]`.
+/// `out` must point to a valid `DhruvAshtakavargaResult`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_calculate_ashtakavarga(
+    graha_rashis: *const u8,
+    lagna_rashi: u8,
+    out: *mut DhruvAshtakavargaResult,
+) -> DhruvStatus {
+    if graha_rashis.is_null() || out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let rashis = unsafe { std::slice::from_raw_parts(graha_rashis, 7) };
+    let mut arr = [0u8; 7];
+    arr.copy_from_slice(rashis);
+
+    let result = dhruv_vedic_base::calculate_ashtakavarga(&arr, lagna_rashi);
+    let out = unsafe { &mut *out };
+    for (i, bav) in result.bavs.iter().enumerate() {
+        out.bavs[i] = DhruvBhinnaAshtakavarga {
+            graha_index: bav.graha_index,
+            points: bav.points,
+        };
+    }
+    out.sav = DhruvSarvaAshtakavarga {
+        total_points: result.sav.total_points,
+        after_trikona: result.sav.after_trikona,
+        after_ekadhipatya: result.sav.after_ekadhipatya,
+    };
+    DhruvStatus::Ok
+}
+
+/// Compute complete Ashtakavarga for a given date and location.
+///
+/// # Safety
+/// All pointers must be valid. `out` must point to a valid `DhruvAshtakavargaResult`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_ashtakavarga_for_date(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    ayanamsha_system: u32,
+    use_nutation: u8,
+    out: *mut DhruvAshtakavargaResult,
+) -> DhruvStatus {
+    if engine.is_null() || eop.is_null() || utc.is_null() || location.is_null() || out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+
+    let engine = unsafe { &*engine };
+    let eop = unsafe { &*eop };
+    let utc_c = unsafe { &*utc };
+    let loc_c = unsafe { &*location };
+
+    let utc_time = UtcTime {
+        year: utc_c.year,
+        month: utc_c.month,
+        day: utc_c.day,
+        hour: utc_c.hour,
+        minute: utc_c.minute,
+        second: utc_c.second,
+    };
+
+    let location = GeoLocation::new(loc_c.latitude_deg, loc_c.longitude_deg, loc_c.altitude_m);
+
+    let system = match ayanamsha_system_from_code(ayanamsha_system as i32) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidQuery,
+    };
+
+    let aya_config = SankrantiConfig::new(system, use_nutation != 0);
+
+    match dhruv_search::ashtakavarga_for_date(engine, eop, &utc_time, &location, &aya_config) {
+        Ok(result) => {
+            let out = unsafe { &mut *out };
+            for (i, bav) in result.bavs.iter().enumerate() {
+                out.bavs[i] = DhruvBhinnaAshtakavarga {
+                    graha_index: bav.graha_index,
+                    points: bav.points,
+                };
+            }
+            out.sav = DhruvSarvaAshtakavarga {
+                total_points: result.sav.total_points,
+                after_trikona: result.sav.after_trikona,
+                after_ekadhipatya: result.sav.after_ekadhipatya,
+            };
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -6755,8 +6889,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_17() {
-        assert_eq!(dhruv_api_version(), 17);
+    fn ffi_api_version_is_18() {
+        assert_eq!(dhruv_api_version(), 18);
     }
 
     // --- Search error mapping ---
@@ -8123,6 +8257,57 @@ mod tests {
             dhruv_special_lagnas_for_date(
                 ptr::null(), ptr::null(), ptr::null(), ptr::null(),
                 ptr::null(), 0, 0, &mut out,
+            )
+        };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    // --- Ashtakavarga ---
+
+    #[test]
+    fn ffi_ashtakavarga_graha_count() {
+        assert_eq!(DHRUV_ASHTAKAVARGA_GRAHA_COUNT, 7);
+    }
+
+    #[test]
+    fn ffi_calculate_ashtakavarga_null() {
+        let mut out = std::mem::MaybeUninit::<DhruvAshtakavargaResult>::uninit();
+        let s = unsafe {
+            dhruv_calculate_ashtakavarga(ptr::null(), 0, out.as_mut_ptr())
+        };
+        assert_eq!(s, DhruvStatus::NullPointer);
+
+        let rashis = [0u8; 7];
+        let s = unsafe {
+            dhruv_calculate_ashtakavarga(rashis.as_ptr(), 0, ptr::null_mut())
+        };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_calculate_ashtakavarga_values() {
+        let rashis = [0u8; 7];
+        let mut out = std::mem::MaybeUninit::<DhruvAshtakavargaResult>::uninit();
+        let s = unsafe {
+            dhruv_calculate_ashtakavarga(rashis.as_ptr(), 0, out.as_mut_ptr())
+        };
+        assert_eq!(s, DhruvStatus::Ok);
+        let result = unsafe { out.assume_init() };
+        // Sun BAV total should be 48
+        let sun_total: u8 = result.bavs[0].points.iter().sum();
+        assert_eq!(sun_total, 48);
+        // SAV total should be 337
+        let sav_total: u16 = result.sav.total_points.iter().map(|&p| p as u16).sum();
+        assert_eq!(sav_total, 337);
+    }
+
+    #[test]
+    fn ffi_ashtakavarga_for_date_null() {
+        let mut out = std::mem::MaybeUninit::<DhruvAshtakavargaResult>::uninit();
+        let s = unsafe {
+            dhruv_ashtakavarga_for_date(
+                ptr::null(), ptr::null(), ptr::null(), ptr::null(),
+                0, 0, out.as_mut_ptr(),
             )
         };
         assert_eq!(s, DhruvStatus::NullPointer);
