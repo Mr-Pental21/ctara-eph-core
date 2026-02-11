@@ -6,9 +6,11 @@ use std::ptr;
 use dhruv_core::{Body, Engine, EngineConfig, EngineError, Frame, Observer, Query, StateVector};
 use dhruv_search::{
     ConjunctionConfig, ConjunctionEvent, EclipseConfig, LunarEclipse, LunarEclipseType,
-    SearchError, SolarEclipse, SolarEclipseType, next_conjunction, next_lunar_eclipse,
-    next_solar_eclipse, prev_conjunction, prev_lunar_eclipse, prev_solar_eclipse,
-    search_conjunctions, search_lunar_eclipses, search_solar_eclipses,
+    MaxSpeedEvent, MaxSpeedType, SearchError, SolarEclipse, SolarEclipseType, StationaryConfig,
+    StationaryEvent, StationType, next_conjunction, next_lunar_eclipse, next_max_speed,
+    next_solar_eclipse, next_stationary, prev_conjunction, prev_lunar_eclipse, prev_max_speed,
+    prev_solar_eclipse, prev_stationary, search_conjunctions, search_lunar_eclipses,
+    search_max_speed, search_solar_eclipses, search_stationary,
 };
 use dhruv_vedic_base::{
     AyanamshaSystem, BhavaConfig, BhavaReferenceMode, BhavaStartingPoint, BhavaSystem,
@@ -19,7 +21,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 7;
+pub const DHRUV_API_VERSION: u32 = 8;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -2173,6 +2175,405 @@ pub unsafe extern "C" fn dhruv_search_solar_eclipses(
     })
 }
 
+// ---------------------------------------------------------------------------
+// Stationary point & max-speed search
+// ---------------------------------------------------------------------------
+
+/// Station retrograde: planet begins retrograde motion.
+pub const DHRUV_STATION_RETROGRADE: i32 = 0;
+/// Station direct: planet resumes direct motion.
+pub const DHRUV_STATION_DIRECT: i32 = 1;
+
+/// Max direct speed: peak forward velocity.
+pub const DHRUV_MAX_SPEED_DIRECT: i32 = 0;
+/// Max retrograde speed: peak retrograde velocity.
+pub const DHRUV_MAX_SPEED_RETROGRADE: i32 = 1;
+
+/// C-compatible stationary search configuration.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvStationaryConfig {
+    /// Coarse scan step size in days.
+    pub step_size_days: f64,
+    /// Maximum bisection iterations.
+    pub max_iterations: u32,
+    /// Convergence threshold in days.
+    pub convergence_days: f64,
+    /// Numerical central difference step in days (used by max-speed only).
+    pub numerical_step_days: f64,
+}
+
+/// C-compatible stationary point event result.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvStationaryEvent {
+    /// Event time as Julian Date (TDB).
+    pub jd_tdb: f64,
+    /// NAIF body code.
+    pub body_code: i32,
+    /// Ecliptic longitude at station in degrees.
+    pub longitude_deg: f64,
+    /// Ecliptic latitude at station in degrees.
+    pub latitude_deg: f64,
+    /// Station type code (see DHRUV_STATION_* constants).
+    pub station_type: i32,
+}
+
+/// C-compatible max-speed event result.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvMaxSpeedEvent {
+    /// Event time as Julian Date (TDB).
+    pub jd_tdb: f64,
+    /// NAIF body code.
+    pub body_code: i32,
+    /// Ecliptic longitude at peak speed in degrees.
+    pub longitude_deg: f64,
+    /// Ecliptic latitude at peak speed in degrees.
+    pub latitude_deg: f64,
+    /// Longitude speed at peak in degrees per day.
+    pub speed_deg_per_day: f64,
+    /// Speed type code (see DHRUV_MAX_SPEED_* constants).
+    pub speed_type: i32,
+}
+
+fn stationary_config_from_ffi(cfg: &DhruvStationaryConfig) -> StationaryConfig {
+    StationaryConfig {
+        step_size_days: cfg.step_size_days,
+        max_iterations: cfg.max_iterations,
+        convergence_days: cfg.convergence_days,
+        numerical_step_days: cfg.numerical_step_days,
+    }
+}
+
+fn station_type_to_code(t: StationType) -> i32 {
+    match t {
+        StationType::StationRetrograde => DHRUV_STATION_RETROGRADE,
+        StationType::StationDirect => DHRUV_STATION_DIRECT,
+    }
+}
+
+fn max_speed_type_to_code(t: MaxSpeedType) -> i32 {
+    match t {
+        MaxSpeedType::MaxDirect => DHRUV_MAX_SPEED_DIRECT,
+        MaxSpeedType::MaxRetrograde => DHRUV_MAX_SPEED_RETROGRADE,
+    }
+}
+
+impl From<&StationaryEvent> for DhruvStationaryEvent {
+    fn from(e: &StationaryEvent) -> Self {
+        Self {
+            jd_tdb: e.jd_tdb,
+            body_code: e.body.code(),
+            longitude_deg: e.longitude_deg,
+            latitude_deg: e.latitude_deg,
+            station_type: station_type_to_code(e.station_type),
+        }
+    }
+}
+
+impl From<&MaxSpeedEvent> for DhruvMaxSpeedEvent {
+    fn from(e: &MaxSpeedEvent) -> Self {
+        Self {
+            jd_tdb: e.jd_tdb,
+            body_code: e.body.code(),
+            longitude_deg: e.longitude_deg,
+            latitude_deg: e.latitude_deg,
+            speed_deg_per_day: e.speed_deg_per_day,
+            speed_type: max_speed_type_to_code(e.speed_type),
+        }
+    }
+}
+
+/// Returns default stationary search configuration (inner planet defaults).
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_stationary_config_default() -> DhruvStationaryConfig {
+    DhruvStationaryConfig {
+        step_size_days: 1.0,
+        max_iterations: 50,
+        convergence_days: 1e-8,
+        numerical_step_days: 0.01,
+    }
+}
+
+/// Find the next stationary point after `jd_tdb`.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_next_stationary(
+    engine: *const DhruvEngineHandle,
+    body_code: i32,
+    jd_tdb: f64,
+    config: *const DhruvStationaryConfig,
+    out_event: *mut DhruvStationaryEvent,
+    out_found: *mut u8,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || config.is_null() || out_event.is_null() || out_found.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        let body = match Body::from_code(body_code) {
+            Some(b) => b,
+            None => return DhruvStatus::InvalidQuery,
+        };
+
+        let engine_ref = unsafe { &*engine };
+        let cfg_ref = unsafe { &*config };
+        let rust_config = stationary_config_from_ffi(cfg_ref);
+
+        match next_stationary(engine_ref, body, jd_tdb, &rust_config) {
+            Ok(Some(event)) => {
+                unsafe {
+                    *out_event = DhruvStationaryEvent::from(&event);
+                    *out_found = 1;
+                }
+                DhruvStatus::Ok
+            }
+            Ok(None) => {
+                unsafe { *out_found = 0 };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Find the previous stationary point before `jd_tdb`.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_prev_stationary(
+    engine: *const DhruvEngineHandle,
+    body_code: i32,
+    jd_tdb: f64,
+    config: *const DhruvStationaryConfig,
+    out_event: *mut DhruvStationaryEvent,
+    out_found: *mut u8,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || config.is_null() || out_event.is_null() || out_found.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        let body = match Body::from_code(body_code) {
+            Some(b) => b,
+            None => return DhruvStatus::InvalidQuery,
+        };
+
+        let engine_ref = unsafe { &*engine };
+        let cfg_ref = unsafe { &*config };
+        let rust_config = stationary_config_from_ffi(cfg_ref);
+
+        match prev_stationary(engine_ref, body, jd_tdb, &rust_config) {
+            Ok(Some(event)) => {
+                unsafe {
+                    *out_event = DhruvStationaryEvent::from(&event);
+                    *out_found = 1;
+                }
+                DhruvStatus::Ok
+            }
+            Ok(None) => {
+                unsafe { *out_found = 0 };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Search for all stationary points in a time range.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+/// `out_events` must point to at least `max_count` contiguous `DhruvStationaryEvent`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_search_stationary(
+    engine: *const DhruvEngineHandle,
+    body_code: i32,
+    jd_start: f64,
+    jd_end: f64,
+    config: *const DhruvStationaryConfig,
+    out_events: *mut DhruvStationaryEvent,
+    max_count: u32,
+    out_count: *mut u32,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null()
+            || config.is_null()
+            || out_events.is_null()
+            || out_count.is_null()
+        {
+            return DhruvStatus::NullPointer;
+        }
+
+        let body = match Body::from_code(body_code) {
+            Some(b) => b,
+            None => return DhruvStatus::InvalidQuery,
+        };
+
+        let engine_ref = unsafe { &*engine };
+        let cfg_ref = unsafe { &*config };
+        let rust_config = stationary_config_from_ffi(cfg_ref);
+
+        match search_stationary(engine_ref, body, jd_start, jd_end, &rust_config) {
+            Ok(events) => {
+                let count = events.len().min(max_count as usize);
+                let out_slice = unsafe {
+                    std::slice::from_raw_parts_mut(out_events, max_count as usize)
+                };
+                for (i, e) in events.iter().take(count).enumerate() {
+                    out_slice[i] = DhruvStationaryEvent::from(e);
+                }
+                unsafe { *out_count = count as u32 };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Find the next max-speed event after `jd_tdb`.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_next_max_speed(
+    engine: *const DhruvEngineHandle,
+    body_code: i32,
+    jd_tdb: f64,
+    config: *const DhruvStationaryConfig,
+    out_event: *mut DhruvMaxSpeedEvent,
+    out_found: *mut u8,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || config.is_null() || out_event.is_null() || out_found.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        let body = match Body::from_code(body_code) {
+            Some(b) => b,
+            None => return DhruvStatus::InvalidQuery,
+        };
+
+        let engine_ref = unsafe { &*engine };
+        let cfg_ref = unsafe { &*config };
+        let rust_config = stationary_config_from_ffi(cfg_ref);
+
+        match next_max_speed(engine_ref, body, jd_tdb, &rust_config) {
+            Ok(Some(event)) => {
+                unsafe {
+                    *out_event = DhruvMaxSpeedEvent::from(&event);
+                    *out_found = 1;
+                }
+                DhruvStatus::Ok
+            }
+            Ok(None) => {
+                unsafe { *out_found = 0 };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Find the previous max-speed event before `jd_tdb`.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_prev_max_speed(
+    engine: *const DhruvEngineHandle,
+    body_code: i32,
+    jd_tdb: f64,
+    config: *const DhruvStationaryConfig,
+    out_event: *mut DhruvMaxSpeedEvent,
+    out_found: *mut u8,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || config.is_null() || out_event.is_null() || out_found.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        let body = match Body::from_code(body_code) {
+            Some(b) => b,
+            None => return DhruvStatus::InvalidQuery,
+        };
+
+        let engine_ref = unsafe { &*engine };
+        let cfg_ref = unsafe { &*config };
+        let rust_config = stationary_config_from_ffi(cfg_ref);
+
+        match prev_max_speed(engine_ref, body, jd_tdb, &rust_config) {
+            Ok(Some(event)) => {
+                unsafe {
+                    *out_event = DhruvMaxSpeedEvent::from(&event);
+                    *out_found = 1;
+                }
+                DhruvStatus::Ok
+            }
+            Ok(None) => {
+                unsafe { *out_found = 0 };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Search for all max-speed events in a time range.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+/// `out_events` must point to at least `max_count` contiguous `DhruvMaxSpeedEvent`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_search_max_speed(
+    engine: *const DhruvEngineHandle,
+    body_code: i32,
+    jd_start: f64,
+    jd_end: f64,
+    config: *const DhruvStationaryConfig,
+    out_events: *mut DhruvMaxSpeedEvent,
+    max_count: u32,
+    out_count: *mut u32,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null()
+            || config.is_null()
+            || out_events.is_null()
+            || out_count.is_null()
+        {
+            return DhruvStatus::NullPointer;
+        }
+
+        let body = match Body::from_code(body_code) {
+            Some(b) => b,
+            None => return DhruvStatus::InvalidQuery,
+        };
+
+        let engine_ref = unsafe { &*engine };
+        let cfg_ref = unsafe { &*config };
+        let rust_config = stationary_config_from_ffi(cfg_ref);
+
+        match search_max_speed(engine_ref, body, jd_start, jd_end, &rust_config) {
+            Ok(events) => {
+                let count = events.len().min(max_count as usize);
+                let out_slice = unsafe {
+                    std::slice::from_raw_parts_mut(out_events, max_count as usize)
+                };
+                for (i, e) in events.iter().take(count).enumerate() {
+                    out_slice[i] = DhruvMaxSpeedEvent::from(e);
+                }
+                unsafe { *out_count = count as u32 };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
 fn ffi_boundary(f: impl FnOnce() -> DhruvStatus) -> DhruvStatus {
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
         Ok(status) => status,
@@ -2643,8 +3044,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_7() {
-        assert_eq!(dhruv_api_version(), 7);
+    fn ffi_api_version_is_8() {
+        assert_eq!(dhruv_api_version(), 8);
     }
 
     // --- Search error mapping ---
@@ -2901,5 +3302,195 @@ mod tests {
     #[test]
     fn ffi_option_jd_none() {
         assert!((option_jd(None) - DHRUV_JD_ABSENT).abs() < 1e-15);
+    }
+
+    // --- Stationary/max-speed FFI tests ---
+
+    #[test]
+    fn ffi_stationary_config_default_values() {
+        let cfg = dhruv_stationary_config_default();
+        assert!((cfg.step_size_days - 1.0).abs() < 1e-10);
+        assert_eq!(cfg.max_iterations, 50);
+        assert!((cfg.convergence_days - 1e-8).abs() < 1e-15);
+        assert!((cfg.numerical_step_days - 0.01).abs() < 1e-10);
+    }
+
+    #[test]
+    fn ffi_station_type_constants() {
+        assert_eq!(DHRUV_STATION_RETROGRADE, 0);
+        assert_eq!(DHRUV_STATION_DIRECT, 1);
+    }
+
+    #[test]
+    fn ffi_max_speed_type_constants() {
+        assert_eq!(DHRUV_MAX_SPEED_DIRECT, 0);
+        assert_eq!(DHRUV_MAX_SPEED_RETROGRADE, 1);
+    }
+
+    #[test]
+    fn ffi_next_stationary_rejects_null() {
+        let cfg = dhruv_stationary_config_default();
+        let mut event = std::mem::MaybeUninit::<DhruvStationaryEvent>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_next_stationary(
+                ptr::null(),
+                199,
+                2_460_000.5,
+                &cfg,
+                event.as_mut_ptr(),
+                &mut found,
+            )
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_prev_stationary_rejects_null() {
+        let cfg = dhruv_stationary_config_default();
+        let mut event = std::mem::MaybeUninit::<DhruvStationaryEvent>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_prev_stationary(
+                ptr::null(),
+                199,
+                2_460_000.5,
+                &cfg,
+                event.as_mut_ptr(),
+                &mut found,
+            )
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_search_stationary_rejects_null() {
+        let cfg = dhruv_stationary_config_default();
+        let mut count: u32 = 0;
+        let status = unsafe {
+            dhruv_search_stationary(
+                ptr::null(),
+                199,
+                2_460_000.5,
+                2_460_100.5,
+                &cfg,
+                ptr::null_mut(),
+                10,
+                &mut count,
+            )
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_next_stationary_rejects_invalid_body() {
+        let fake_engine = std::ptr::NonNull::<DhruvEngineHandle>::dangling().as_ptr();
+        let cfg = dhruv_stationary_config_default();
+        let mut event = std::mem::MaybeUninit::<DhruvStationaryEvent>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_next_stationary(
+                fake_engine as *const _,
+                999999,
+                2_460_000.5,
+                &cfg,
+                event.as_mut_ptr(),
+                &mut found,
+            )
+        };
+        assert_eq!(status, DhruvStatus::InvalidQuery);
+    }
+
+    #[test]
+    fn ffi_next_stationary_rejects_sun() {
+        let fake_engine = std::ptr::NonNull::<DhruvEngineHandle>::dangling().as_ptr();
+        let cfg = dhruv_stationary_config_default();
+        let mut event = std::mem::MaybeUninit::<DhruvStationaryEvent>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_next_stationary(
+                fake_engine as *const _,
+                10, // Sun
+                2_460_000.5,
+                &cfg,
+                event.as_mut_ptr(),
+                &mut found,
+            )
+        };
+        assert_eq!(status, DhruvStatus::InvalidSearchConfig);
+    }
+
+    #[test]
+    fn ffi_next_max_speed_rejects_null() {
+        let cfg = dhruv_stationary_config_default();
+        let mut event = std::mem::MaybeUninit::<DhruvMaxSpeedEvent>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_next_max_speed(
+                ptr::null(),
+                199,
+                2_460_000.5,
+                &cfg,
+                event.as_mut_ptr(),
+                &mut found,
+            )
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_prev_max_speed_rejects_null() {
+        let cfg = dhruv_stationary_config_default();
+        let mut event = std::mem::MaybeUninit::<DhruvMaxSpeedEvent>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_prev_max_speed(
+                ptr::null(),
+                199,
+                2_460_000.5,
+                &cfg,
+                event.as_mut_ptr(),
+                &mut found,
+            )
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_search_max_speed_rejects_null() {
+        let cfg = dhruv_stationary_config_default();
+        let mut count: u32 = 0;
+        let status = unsafe {
+            dhruv_search_max_speed(
+                ptr::null(),
+                199,
+                2_460_000.5,
+                2_460_100.5,
+                &cfg,
+                ptr::null_mut(),
+                10,
+                &mut count,
+            )
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_next_max_speed_rejects_earth() {
+        let fake_engine = std::ptr::NonNull::<DhruvEngineHandle>::dangling().as_ptr();
+        let cfg = dhruv_stationary_config_default();
+        let mut event = std::mem::MaybeUninit::<DhruvMaxSpeedEvent>::uninit();
+        let mut found: u8 = 0;
+        let status = unsafe {
+            dhruv_next_max_speed(
+                fake_engine as *const _,
+                399, // Earth
+                2_460_000.5,
+                &cfg,
+                event.as_mut_ptr(),
+                &mut found,
+            )
+        };
+        assert_eq!(status, DhruvStatus::InvalidSearchConfig);
     }
 }

@@ -8,7 +8,7 @@
 //! the target separation. Standard numerical root-finding; no external code referenced.
 
 use dhruv_core::{Body, Engine, Frame, Observer, Query};
-use dhruv_frames::{cartesian_to_spherical, icrf_to_ecliptic};
+use dhruv_frames::{cartesian_state_to_spherical_state, cartesian_to_spherical, icrf_to_ecliptic};
 
 use crate::conjunction_types::{ConjunctionConfig, ConjunctionEvent, SearchDirection};
 use crate::error::SearchError;
@@ -17,7 +17,7 @@ use crate::error::SearchError;
 const MAX_SCAN_DAYS: f64 = 800.0;
 
 /// Query a body's ecliptic longitude and latitude in degrees.
-fn body_ecliptic_lon_lat(
+pub(crate) fn body_ecliptic_lon_lat(
     engine: &Engine,
     body: Body,
     jd_tdb: f64,
@@ -34,8 +34,30 @@ fn body_ecliptic_lon_lat(
     Ok((sph.lon_deg(), sph.lat_deg()))
 }
 
+/// Query a body's ecliptic longitude, latitude, and longitude speed.
+///
+/// Returns `(lon_deg, lat_deg, lon_speed_deg_per_day)`.
+/// Uses `Frame::EclipticJ2000` so the engine rotates both position and velocity.
+pub(crate) fn body_ecliptic_state(
+    engine: &Engine,
+    body: Body,
+    jd_tdb: f64,
+) -> Result<(f64, f64, f64), SearchError> {
+    let query = Query {
+        target: body,
+        observer: Observer::Body(Body::Earth),
+        frame: Frame::EclipticJ2000,
+        epoch_tdb_jd: jd_tdb,
+    };
+    let state = engine.query(query)?;
+    let sph = cartesian_state_to_spherical_state(&state.position_km, &state.velocity_km_s);
+    // lon_speed is in rad/s; convert to deg/day
+    let lon_speed_deg_per_day = sph.lon_speed.to_degrees() * 86400.0;
+    Ok((sph.lon_rad.to_degrees().rem_euclid(360.0), sph.lat_rad.to_degrees(), lon_speed_deg_per_day))
+}
+
 /// Normalize an angle to [-180, +180].
-fn normalize_to_pm180(deg: f64) -> f64 {
+pub(crate) fn normalize_to_pm180(deg: f64) -> f64 {
     let mut d = deg % 360.0;
     if d > 180.0 {
         d -= 360.0;

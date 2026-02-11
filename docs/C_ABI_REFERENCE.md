@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 7`
+**ABI version:** `DHRUV_API_VERSION = 8`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -29,6 +29,8 @@ Complete reference for the `dhruv_ffi_c` C-compatible API surface.
    - [Conjunction / Aspect Search](#conjunction--aspect-search)
    - [Lunar Eclipse](#lunar-eclipse)
    - [Solar Eclipse](#solar-eclipse)
+   - [Stationary Point Search](#stationary-point-search)
+   - [Max Speed Search](#max-speed-search)
 
 ---
 
@@ -190,6 +192,20 @@ enum DhruvStatus {
 | `DHRUV_SOLAR_ECLIPSE_ANNULAR` | 1 |
 | `DHRUV_SOLAR_ECLIPSE_TOTAL` | 2 |
 | `DHRUV_SOLAR_ECLIPSE_HYBRID` | 3 |
+
+### Stationary Point Type Codes
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `DHRUV_STATION_RETROGRADE` | 0 | Planet begins retrograde motion |
+| `DHRUV_STATION_DIRECT` | 1 | Planet resumes direct motion |
+
+### Max Speed Type Codes
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `DHRUV_MAX_SPEED_DIRECT` | 0 | Peak forward (direct) speed |
+| `DHRUV_MAX_SPEED_RETROGRADE` | 1 | Peak retrograde speed |
 
 ### Sentinel Values
 
@@ -409,6 +425,42 @@ typedef struct {
 } DhruvSolarEclipseResult;
 ```
 
+### DhruvStationaryConfig
+
+```c
+typedef struct {
+    double   step_size_days;        // Coarse scan step (default 1.0)
+    uint32_t max_iterations;        // Max bisection iterations (default 50)
+    double   convergence_days;      // Convergence threshold (default 1e-8)
+    double   numerical_step_days;   // Central difference step (default 0.01)
+} DhruvStationaryConfig;
+```
+
+### DhruvStationaryEvent
+
+```c
+typedef struct {
+    double  jd_tdb;          // Event time (JD TDB)
+    int32_t body_code;       // NAIF body code
+    double  longitude_deg;   // Ecliptic longitude at station
+    double  latitude_deg;    // Ecliptic latitude at station
+    int32_t station_type;    // DHRUV_STATION_* constant
+} DhruvStationaryEvent;
+```
+
+### DhruvMaxSpeedEvent
+
+```c
+typedef struct {
+    double  jd_tdb;              // Event time (JD TDB)
+    int32_t body_code;           // NAIF body code
+    double  longitude_deg;       // Ecliptic longitude at peak speed
+    double  latitude_deg;        // Ecliptic latitude at peak speed
+    double  speed_deg_per_day;   // Longitude speed at peak (deg/day)
+    int32_t speed_type;          // DHRUV_MAX_SPEED_* constant
+} DhruvMaxSpeedEvent;
+```
+
 ---
 
 ## Functions
@@ -419,7 +471,7 @@ typedef struct {
 uint32_t dhruv_api_version(void);
 ```
 
-Returns the ABI version number (currently 7).
+Returns the ABI version number (currently 8).
 
 ---
 
@@ -899,6 +951,102 @@ Search for all solar eclipses in a time range.
 
 ---
 
+### Stationary Point Search
+
+```c
+DhruvStationaryConfig dhruv_stationary_config_default(void);
+```
+
+Returns default: `step_size_days=1.0`, `max_iterations=50`, `convergence_days=1e-8`, `numerical_step_days=0.01`.
+
+```c
+DhruvStatus dhruv_next_stationary(
+    const DhruvEngineHandle*     engine,
+    int32_t                      body_code,   // NAIF code (not Sun/Moon/Earth)
+    double                       jd_tdb,
+    const DhruvStationaryConfig* config,
+    DhruvStationaryEvent*        out_event,
+    uint8_t*                     out_found
+);
+```
+
+Find the next stationary point after `jd_tdb`. Returns `InvalidSearchConfig` for Sun, Moon, or Earth.
+
+```c
+DhruvStatus dhruv_prev_stationary(
+    const DhruvEngineHandle*     engine,
+    int32_t                      body_code,
+    double                       jd_tdb,
+    const DhruvStationaryConfig* config,
+    DhruvStationaryEvent*        out_event,
+    uint8_t*                     out_found
+);
+```
+
+Find the previous stationary point before `jd_tdb`.
+
+```c
+DhruvStatus dhruv_search_stationary(
+    const DhruvEngineHandle*     engine,
+    int32_t                      body_code,
+    double                       jd_start,
+    double                       jd_end,
+    const DhruvStationaryConfig* config,
+    DhruvStationaryEvent*        out_events,  // Array of max_count
+    uint32_t                     max_count,
+    uint32_t*                    out_count
+);
+```
+
+Search for all stationary points in a time range.
+
+---
+
+### Max Speed Search
+
+```c
+DhruvStatus dhruv_next_max_speed(
+    const DhruvEngineHandle*     engine,
+    int32_t                      body_code,   // NAIF code (not Earth)
+    double                       jd_tdb,
+    const DhruvStationaryConfig* config,
+    DhruvMaxSpeedEvent*          out_event,
+    uint8_t*                     out_found
+);
+```
+
+Find the next max-speed event after `jd_tdb`. Sun and Moon are allowed. Returns `InvalidSearchConfig` for Earth.
+
+```c
+DhruvStatus dhruv_prev_max_speed(
+    const DhruvEngineHandle*     engine,
+    int32_t                      body_code,
+    double                       jd_tdb,
+    const DhruvStationaryConfig* config,
+    DhruvMaxSpeedEvent*          out_event,
+    uint8_t*                     out_found
+);
+```
+
+Find the previous max-speed event before `jd_tdb`.
+
+```c
+DhruvStatus dhruv_search_max_speed(
+    const DhruvEngineHandle*     engine,
+    int32_t                      body_code,
+    double                       jd_start,
+    double                       jd_end,
+    const DhruvStationaryConfig* config,
+    DhruvMaxSpeedEvent*          out_events,  // Array of max_count
+    uint32_t                     max_count,
+    uint32_t*                    out_count
+);
+```
+
+Search for all max-speed events in a time range.
+
+---
+
 ## Function Summary
 
 | # | Function | Engine | LSK | EOP | Pure Math |
@@ -944,5 +1092,12 @@ Search for all solar eclipses in a time range.
 | 39 | `dhruv_next_solar_eclipse` | yes | | | |
 | 40 | `dhruv_prev_solar_eclipse` | yes | | | |
 | 41 | `dhruv_search_solar_eclipses` | yes | | | |
+| 42 | `dhruv_stationary_config_default` | | | | yes |
+| 43 | `dhruv_next_stationary` | yes | | | |
+| 44 | `dhruv_prev_stationary` | yes | | | |
+| 45 | `dhruv_search_stationary` | yes | | | |
+| 46 | `dhruv_next_max_speed` | yes | | | |
+| 47 | `dhruv_prev_max_speed` | yes | | | |
+| 48 | `dhruv_search_max_speed` | yes | | | |
 
-**Total exported symbols: 41 functions**
+**Total exported symbols: 48 functions**
