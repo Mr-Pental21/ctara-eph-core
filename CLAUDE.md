@@ -54,9 +54,12 @@ This repository is clean-room and permissive-license only.
 
 
 ## Git
-- Short commit messages, imperative mood
+- Commit after changes are made and tested.
+- Short commit messages, imperative mood.
 - No boilerplate, signatures, or Co-Authored-By lines
 
 
 ## General Rules 
 - Always verify changes against the actual codebase before making claims. Never fabricate CI status, tool versions, or test results. If you can't verify something, say so explicitly.
+- Update relevant documentation after changes.
+- After having added a functionality in library Add C ABIs, CLI and rust(dhruv_rs) bindings.
