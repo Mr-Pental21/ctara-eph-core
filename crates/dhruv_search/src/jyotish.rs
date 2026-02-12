@@ -8,10 +8,10 @@ use dhruv_core::{Body, Engine};
 use dhruv_time::{EopKernel, UtcTime};
 use dhruv_vedic_base::{
     AllSpecialLagnas, AllUpagrahas, ArudhaResult, AshtakavargaResult, AyanamshaSystem, BhavaConfig,
-    Graha, LunarNode, NodeMode, ALL_GRAHAS, ascendant_longitude_rad, ayanamsha_deg,
+    Graha, LunarNode, NodeMode, ALL_GRAHAS, lagna_longitude_rad, ayanamsha_deg,
     calculate_ashtakavarga, compute_bhavas, ghatikas_since_sunrise, jd_tdb_to_centuries,
     lunar_node_deg, nth_rashi_from, rashi_lord_by_index, sun_based_upagrahas, time_upagraha_jd,
-    normalize_360,
+    normalize_360, nakshatra_from_longitude, rashi_from_longitude,
 };
 use dhruv_vedic_base::arudha::all_arudha_padas;
 use dhruv_vedic_base::riseset::{compute_rise_set};
@@ -22,7 +22,7 @@ use dhruv_vedic_base::vaar::vaar_from_jd;
 
 use crate::conjunction::body_ecliptic_lon_lat;
 use crate::error::SearchError;
-use crate::jyotish_types::GrahaLongitudes;
+use crate::jyotish_types::{GrahaEntry, GrahaLongitudes, GrahaPositions, GrahaPositionsConfig};
 use crate::panchang::vedic_day_sunrises;
 use crate::sankranti_types::SankrantiConfig;
 
@@ -102,7 +102,7 @@ pub fn special_lagnas_for_date(
 
     // Compute Lagna (Ascendant) sidereal longitude
     let jd_utc = utc_to_jd_utc(utc);
-    let lagna_rad = ascendant_longitude_rad(engine.lsk(), eop, location, jd_utc)?;
+    let lagna_rad = lagna_longitude_rad(engine.lsk(), eop, location, jd_utc)?;
     let lagna_tropical = lagna_rad.to_degrees();
     let lagna_sid = normalize(lagna_tropical - aya);
 
@@ -228,9 +228,9 @@ pub fn all_upagrahas_for_date(
             jd_next_sunrise,
         );
         // Compute tropical lagna at this JD
-        // target_jd is in TDB but ascendant_longitude_rad expects JD UTC
+        // target_jd is in TDB but lagna_longitude_rad expects JD UTC
         // For this purpose the difference is negligible (~1s), but we use jd_utc convention
-        let lagna_rad = ascendant_longitude_rad(engine.lsk(), eop, location, target_jd)?;
+        let lagna_rad = lagna_longitude_rad(engine.lsk(), eop, location, target_jd)?;
         let lagna_tropical = lagna_rad.to_degrees();
         time_lons[i] = normalize_360(lagna_tropical - aya);
     }
@@ -255,9 +255,126 @@ pub fn all_upagrahas_for_date(
     })
 }
 
+/// Compute comprehensive graha positions with optional nakshatra, lagna, outer planets, bhava.
+///
+/// Central orchestration function: computes sidereal longitudes for all 9 grahas,
+/// optionally adding nakshatra/pada, lagna, outer planets (Uranus/Neptune/Pluto),
+/// and bhava placement.
+pub fn graha_positions(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    bhava_config: &BhavaConfig,
+    aya_config: &SankrantiConfig,
+    config: &GrahaPositionsConfig,
+) -> Result<GrahaPositions, SearchError> {
+    let jd_tdb = utc.to_jd_tdb(engine.lsk());
+    let jd_utc = utc_to_jd_utc(utc);
+    let t = jd_tdb_to_centuries(jd_tdb);
+    let aya = ayanamsha_deg(aya_config.ayanamsha_system, t, aya_config.use_nutation);
+
+    // 1. Get 9 graha sidereal longitudes
+    let graha_lons = graha_sidereal_longitudes(
+        engine, jd_tdb, aya_config.ayanamsha_system, aya_config.use_nutation,
+    )?;
+
+    // 2. Optionally compute bhava cusps (needed for bhava placement)
+    let bhava_result = if config.include_bhava {
+        Some(compute_bhavas(engine, engine.lsk(), eop, location, jd_utc, bhava_config)?)
+    } else {
+        None
+    };
+
+    // Build GrahaEntry for each of the 9 grahas
+    let mut grahas = [GrahaEntry::sentinel(); 9];
+    for graha in ALL_GRAHAS {
+        let idx = graha.index() as usize;
+        let sid_lon = graha_lons.longitude(graha);
+        grahas[idx] = make_graha_entry(sid_lon, config, bhava_result.as_ref(), aya);
+    }
+
+    // 3. Optionally compute lagna
+    let lagna = if config.include_lagna {
+        let lagna_rad = lagna_longitude_rad(engine.lsk(), eop, location, jd_utc)?;
+        let lagna_sid = normalize(lagna_rad.to_degrees() - aya);
+        make_graha_entry(lagna_sid, config, bhava_result.as_ref(), aya)
+    } else {
+        GrahaEntry::sentinel()
+    };
+
+    // 4. Optionally compute outer planets
+    let outer_planets = if config.include_outer_planets {
+        let outer_bodies = [Body::Uranus, Body::Neptune, Body::Pluto];
+        let mut entries = [GrahaEntry::sentinel(); 3];
+        for (i, &body) in outer_bodies.iter().enumerate() {
+            let (lon_tropical, _lat) = body_ecliptic_lon_lat(engine, body, jd_tdb)?;
+            let sid_lon = normalize(lon_tropical - aya);
+            entries[i] = make_graha_entry(sid_lon, config, bhava_result.as_ref(), aya);
+        }
+        entries
+    } else {
+        [GrahaEntry::sentinel(); 3]
+    };
+
+    Ok(GrahaPositions { grahas, lagna, outer_planets })
+}
+
+/// Build a GrahaEntry from a sidereal longitude, applying optional computations.
+fn make_graha_entry(
+    sid_lon: f64,
+    config: &GrahaPositionsConfig,
+    bhava_result: Option<&dhruv_vedic_base::BhavaResult>,
+    aya: f64,
+) -> GrahaEntry {
+    let rashi_info = rashi_from_longitude(sid_lon);
+    let (nakshatra, nakshatra_index, pada) = if config.include_nakshatra {
+        let nak = nakshatra_from_longitude(sid_lon);
+        (nak.nakshatra, nak.nakshatra_index, nak.pada)
+    } else {
+        (dhruv_vedic_base::Nakshatra::Ashwini, 255, 0)
+    };
+    let bhava_number = if let Some(result) = bhava_result {
+        // Determine which bhava this longitude falls in (use tropical for matching bhava cusps)
+        let tropical_lon = normalize(sid_lon + aya);
+        find_bhava_number(tropical_lon, result)
+    } else {
+        0
+    };
+    GrahaEntry {
+        sidereal_longitude: sid_lon,
+        rashi: rashi_info.rashi,
+        rashi_index: rashi_info.rashi_index,
+        nakshatra,
+        nakshatra_index,
+        pada,
+        bhava_number,
+    }
+}
+
+/// Find which bhava (1-12) a tropical ecliptic longitude falls in.
+fn find_bhava_number(tropical_deg: f64, result: &dhruv_vedic_base::BhavaResult) -> u8 {
+    for bhava in &result.bhavas {
+        let start = bhava.start_deg;
+        let end = bhava.end_deg;
+        if start < end {
+            if tropical_deg >= start && tropical_deg < end {
+                return bhava.number;
+            }
+        } else {
+            // Wraps around 360/0 boundary
+            if tropical_deg >= start || tropical_deg < end {
+                return bhava.number;
+            }
+        }
+    }
+    // Fallback: should not happen, but assign to bhava 1
+    1
+}
+
 /// Compute complete Ashtakavarga (BAV + SAV + Sodhana) for a given date and location.
 ///
-/// Queries graha sidereal positions and ascendant, resolves rashi indices,
+/// Uses `graha_positions()` to compute graha + lagna sidereal longitudes,
 /// then delegates to the pure-math `calculate_ashtakavarga()`.
 pub fn ashtakavarga_for_date(
     engine: &Engine,
@@ -266,29 +383,25 @@ pub fn ashtakavarga_for_date(
     location: &GeoLocation,
     aya_config: &SankrantiConfig,
 ) -> Result<AshtakavargaResult, SearchError> {
-    let jd_tdb = utc.to_jd_tdb(engine.lsk());
-    let jd_utc = utc_to_jd_utc(utc);
-    let t = jd_tdb_to_centuries(jd_tdb);
-    let aya = ayanamsha_deg(aya_config.ayanamsha_system, t, aya_config.use_nutation);
+    let config = GrahaPositionsConfig {
+        include_nakshatra: false,
+        include_lagna: true,
+        include_outer_planets: false,
+        include_bhava: false,
+    };
+    let bhava_config = BhavaConfig::default();
+    let positions = graha_positions(engine, eop, utc, location, &bhava_config, aya_config, &config)?;
 
-    // Get sidereal longitudes for 7 sapta grahas (Sun..Saturn)
-    let graha_lons = graha_sidereal_longitudes(engine, jd_tdb, aya_config.ayanamsha_system, aya_config.use_nutation)?;
-
-    // Compute Lagna sidereal longitude
-    let lagna_rad = ascendant_longitude_rad(engine.lsk(), eop, location, jd_utc)?;
-    let lagna_tropical = lagna_rad.to_degrees();
-    let lagna_sid = normalize(lagna_tropical - aya);
-
-    // Extract rashi indices for 7 grahas (Sun..Saturn only, not Rahu/Ketu)
+    // Extract rashi indices for 7 sapta grahas (Sun..Saturn only)
     let sapta = [
         Graha::Surya, Graha::Chandra, Graha::Mangal, Graha::Buddh,
         Graha::Guru, Graha::Shukra, Graha::Shani,
     ];
     let mut graha_rashis = [0u8; 7];
     for (i, &graha) in sapta.iter().enumerate() {
-        graha_rashis[i] = (graha_lons.longitude(graha) / 30.0) as u8;
+        graha_rashis[i] = positions.grahas[graha.index() as usize].rashi_index;
     }
-    let lagna_rashi = (lagna_sid / 30.0) as u8;
+    let lagna_rashi = positions.lagna.rashi_index;
 
     Ok(calculate_ashtakavarga(&graha_rashis, lagna_rashi))
 }

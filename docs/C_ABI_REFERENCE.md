@@ -145,7 +145,7 @@ enum DhruvStatus {
 
 | Constant | Value | Description |
 |----------|-------|-------------|
-| `DHRUV_BHAVA_START_ASCENDANT` | -1 | Use Ascendant as starting point |
+| `DHRUV_BHAVA_START_LAGNA` | -1 | Use Lagna (Ascendant) as starting point |
 | `DHRUV_BHAVA_START_CUSTOM` | -2 | Use `custom_start_deg` field |
 | *(positive value)* | NAIF code | Use ecliptic longitude of specified body |
 
@@ -350,7 +350,7 @@ typedef struct {
 ```c
 typedef struct {
     DhruvBhava bhavas[12];
-    double     ascendant_deg;  // Ascendant longitude in degrees
+    double     lagna_deg;      // Lagna (Ascendant) longitude in degrees
     double     mc_deg;         // MC (Midheaven) longitude in degrees
 } DhruvBhavaResult;
 ```
@@ -780,7 +780,7 @@ Compute 12 bhava cusps with Ascendant and MC.
 **Note:** KP, Koch, Topocentric, and Alcabitus systems require `|latitude| <= 66.5 deg`.
 
 ```c
-DhruvStatus dhruv_ascendant_deg(
+DhruvStatus dhruv_lagna_deg(
     const DhruvLskHandle*   lsk,
     const DhruvEopHandle*   eop,
     const DhruvGeoLocation* location,
@@ -1079,7 +1079,7 @@ Search for all max-speed events in a time range.
 | 26 | `dhruv_bhava_config_default` | | | | yes |
 | 27 | `dhruv_bhava_system_count` | | | | yes |
 | 28 | `dhruv_compute_bhavas` | yes | yes | yes | |
-| 29 | `dhruv_ascendant_deg` | | yes | yes | |
+| 29 | `dhruv_lagna_deg` | | yes | yes | |
 | 30 | `dhruv_mc_deg` | | yes | yes | |
 | 31 | `dhruv_conjunction_config_default` | | | | yes |
 | 32 | `dhruv_next_conjunction` | yes | | | |

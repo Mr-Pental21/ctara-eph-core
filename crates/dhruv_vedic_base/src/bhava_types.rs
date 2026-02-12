@@ -69,8 +69,8 @@ impl BhavaSystem {
 /// What defines the starting point for house cusps.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BhavaStartingPoint {
-    /// Use the Ascendant as the starting point (default).
-    Ascendant,
+    /// Use the Lagna (Ascendant) as the starting point (default).
+    Lagna,
     /// Use a body's ecliptic longitude as the starting point.
     BodyLongitude(Body),
     /// Use an arbitrary ecliptic degree as the starting point.
@@ -79,7 +79,7 @@ pub enum BhavaStartingPoint {
 
 impl Default for BhavaStartingPoint {
     fn default() -> Self {
-        Self::Ascendant
+        Self::Lagna
     }
 }
 
@@ -108,7 +108,7 @@ impl Default for BhavaConfig {
     fn default() -> Self {
         Self {
             system: BhavaSystem::Equal,
-            starting_point: BhavaStartingPoint::Ascendant,
+            starting_point: BhavaStartingPoint::Lagna,
             reference_mode: BhavaReferenceMode::StartOfFirst,
         }
     }
@@ -127,13 +127,13 @@ pub struct Bhava {
     pub end_deg: f64,
 }
 
-/// Full result of a bhava computation: 12 bhavas plus Ascendant/MC.
+/// Full result of a bhava computation: 12 bhavas plus Lagna/MC.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BhavaResult {
     /// The 12 bhavas, indexed 0..12 (bhava[0] = house 1).
     pub bhavas: [Bhava; 12],
-    /// Ecliptic longitude of the Ascendant in degrees, [0, 360).
-    pub ascendant_deg: f64,
+    /// Ecliptic longitude of the Lagna (Ascendant) in degrees, [0, 360).
+    pub lagna_deg: f64,
     /// Ecliptic longitude of the MC in degrees, [0, 360).
     pub mc_deg: f64,
 }
@@ -156,7 +156,7 @@ mod tests {
     fn default_config() {
         let c = BhavaConfig::default();
         assert_eq!(c.system, BhavaSystem::Equal);
-        assert_eq!(c.starting_point, BhavaStartingPoint::Ascendant);
+        assert_eq!(c.starting_point, BhavaStartingPoint::Lagna);
         assert_eq!(c.reference_mode, BhavaReferenceMode::StartOfFirst);
     }
 

@@ -85,7 +85,7 @@ For sun-based upagrahas:
 
 - All longitudes are sidereal degrees [0, 360)
 - Portion indices are computed algorithmically (no lookup tables needed)
-- Lagna uses `ascendant_longitude_rad()` from the ascendant module
+- Lagna uses `lagna_longitude_rad()` from the lagna module
 - Vedic day boundaries from `vedic_day_sunrises()` (existing infrastructure)
 - Sunset computed via `compute_rise_set()` with `RiseSetEvent::Sunset`
 

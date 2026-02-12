@@ -857,7 +857,7 @@ fn ffi_bhava_equal_new_delhi() {
             start_deg: 0.0,
             end_deg: 0.0,
         }; 12],
-        ascendant_deg: 0.0,
+        lagna_deg: 0.0,
         mc_deg: 0.0,
     };
 
@@ -871,9 +871,9 @@ fn ffi_bhava_equal_new_delhi() {
 
     // Ascendant should be in [0, 360)
     assert!(
-        result.ascendant_deg >= 0.0 && result.ascendant_deg < 360.0,
+        result.lagna_deg >= 0.0 && result.lagna_deg < 360.0,
         "Asc = {} deg",
-        result.ascendant_deg
+        result.lagna_deg
     );
 
     // Equal cusps: each 30 deg apart
@@ -888,10 +888,10 @@ fn ffi_bhava_equal_new_delhi() {
 
     // Cusp 1 ≈ Ascendant
     assert!(
-        (result.bhavas[0].cusp_deg - result.ascendant_deg).abs() < 0.01,
+        (result.bhavas[0].cusp_deg - result.lagna_deg).abs() < 0.01,
         "cusp 1 = {}, Asc = {}",
         result.bhavas[0].cusp_deg,
-        result.ascendant_deg
+        result.lagna_deg
     );
 
     unsafe { dhruv_eop_free(eop_ptr) };
@@ -900,7 +900,7 @@ fn ffi_bhava_equal_new_delhi() {
 }
 
 #[test]
-fn ffi_ascendant_deg_new_delhi() {
+fn ffi_lagna_deg_new_delhi() {
     if !all_kernels_available() {
         eprintln!("Skipping: not all kernel files available");
         return;
@@ -927,7 +927,7 @@ fn ffi_ascendant_deg_new_delhi() {
     let mut asc: f64 = 0.0;
 
     // SAFETY: All pointers are valid.
-    let status = unsafe { dhruv_ascendant_deg(lsk_ptr, eop_ptr, &loc, jd_utc, &mut asc) };
+    let status = unsafe { dhruv_lagna_deg(lsk_ptr, eop_ptr, &loc, jd_utc, &mut asc) };
     assert_eq!(status, DhruvStatus::Ok);
     assert!(
         asc >= 0.0 && asc < 360.0,
@@ -987,7 +987,7 @@ fn ffi_bhava_body_starting_point() {
             start_deg: 0.0,
             end_deg: 0.0,
         }; 12],
-        ascendant_deg: 0.0,
+        lagna_deg: 0.0,
         mc_deg: 0.0,
     };
 

@@ -90,7 +90,7 @@ Source: Jataka Parijata, Uttara Kalamrita.
 The engine-dependent function `special_lagnas_for_date()`:
 1. Queries Sun and Moon tropical longitudes via `body_ecliptic_lon_lat()`
 2. Subtracts ayanamsha for sidereal positions
-3. Computes Lagna via `ascendant_longitude_rad()` (Meeus Ch. 13)
+3. Computes Lagna via `lagna_longitude_rad()` (Meeus Ch. 13)
 4. Gets sunrise pair via `vedic_day_sunrises()` for ghatika calculation
 5. Determines lords via `rashi_lord_by_index()` for Indu Lagna
 6. Delegates to pure-math `all_special_lagnas()`

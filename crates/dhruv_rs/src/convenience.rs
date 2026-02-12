@@ -506,6 +506,24 @@ pub fn ashtakavarga(
     Ok(dhruv_search::ashtakavarga_for_date(eng, eop, &utc, location, &config)?)
 }
 
+/// Compute comprehensive graha positions with optional features.
+///
+/// Set config flags to include nakshatra/pada, lagna, outer planets, and bhava placement.
+pub fn graha_positions(
+    date: UtcDate,
+    eop: &EopKernel,
+    location: &GeoLocation,
+    system: AyanamshaSystem,
+    use_nutation: bool,
+    config: &dhruv_search::GrahaPositionsConfig,
+) -> Result<dhruv_search::GrahaPositions, DhruvError> {
+    let eng = engine()?;
+    let utc: UtcTime = date.into();
+    let bhava_config = dhruv_vedic_base::BhavaConfig::default();
+    let aya_config = SankrantiConfig::new(system, use_nutation);
+    Ok(dhruv_search::graha_positions(eng, eop, &utc, location, &bhava_config, &aya_config, config)?)
+}
+
 /// Compute all 11 upagrahas for a given date and location.
 pub fn upagrahas(
     date: UtcDate,

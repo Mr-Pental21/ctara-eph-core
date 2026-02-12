@@ -481,6 +481,48 @@ enum Commands {
         #[arg(long)]
         eop: PathBuf,
     },
+    /// Compute comprehensive graha positions
+    GrahaPositions {
+        /// UTC datetime (YYYY-MM-DDThh:mm:ssZ)
+        #[arg(long)]
+        date: String,
+        /// Latitude in degrees (north positive)
+        #[arg(long)]
+        lat: f64,
+        /// Longitude in degrees (east positive)
+        #[arg(long)]
+        lon: f64,
+        /// Altitude in meters (default 0)
+        #[arg(long, default_value = "0")]
+        alt: f64,
+        /// Ayanamsha system code (0-19, default 0=Lahiri)
+        #[arg(long, default_value = "0")]
+        ayanamsha: i32,
+        /// Apply nutation correction
+        #[arg(long)]
+        nutation: bool,
+        /// Include nakshatra and pada
+        #[arg(long)]
+        nakshatra: bool,
+        /// Include lagna (ascendant)
+        #[arg(long)]
+        lagna: bool,
+        /// Include outer planets (Uranus, Neptune, Pluto)
+        #[arg(long)]
+        outer: bool,
+        /// Include bhava placement
+        #[arg(long)]
+        bhava: bool,
+        /// Path to SPK kernel
+        #[arg(long)]
+        bsp: PathBuf,
+        /// Path to leap second kernel
+        #[arg(long)]
+        lsk: PathBuf,
+        /// Path to IERS EOP file (finals2000A.all)
+        #[arg(long)]
+        eop: PathBuf,
+    },
 }
 
 fn aya_system_from_code(code: i32) -> Option<AyanamshaSystem> {
@@ -1009,7 +1051,7 @@ fn main() {
 
             // Get lagna (sidereal)
             let jd_utc = jd_tdb; // approximate; for more precision would use LSK
-            let asc_rad = dhruv_vedic_base::ascendant_longitude_rad(engine.lsk(), &eop_kernel, &location, jd_utc)
+            let asc_rad = dhruv_vedic_base::lagna_longitude_rad(engine.lsk(), &eop_kernel, &location, jd_utc)
                 .unwrap_or_else(|e| {
                     eprintln!("Error computing lagna: {e}");
                     std::process::exit(1);
@@ -1351,6 +1393,125 @@ fn main() {
                     rashi_info.dms.minutes,
                     rashi_info.dms.seconds,
                 );
+            }
+        }
+        Commands::GrahaPositions {
+            date,
+            lat,
+            lon,
+            alt,
+            ayanamsha,
+            nutation,
+            nakshatra,
+            lagna,
+            outer,
+            bhava,
+            bsp,
+            lsk,
+            eop,
+        } => {
+            let system = require_aya_system(ayanamsha);
+            let utc = parse_utc(&date).unwrap_or_else(|e| {
+                eprintln!("{e}");
+                std::process::exit(1);
+            });
+            let engine = load_engine(&bsp, &lsk);
+            let eop_kernel = load_eop(&eop);
+            let location = GeoLocation::new(lat, lon, alt);
+            let bhava_config = BhavaConfig::default();
+            let aya_config = SankrantiConfig::new(system, nutation);
+            let gp_config = dhruv_search::GrahaPositionsConfig {
+                include_nakshatra: nakshatra,
+                include_lagna: lagna,
+                include_outer_planets: outer,
+                include_bhava: bhava,
+            };
+
+            let result = dhruv_search::graha_positions(
+                &engine, &eop_kernel, &utc, &location, &bhava_config, &aya_config, &gp_config,
+            )
+            .unwrap_or_else(|e| {
+                eprintln!("Error: {e}");
+                std::process::exit(1);
+            });
+
+            println!("Graha Positions for {} at {:.4}°N, {:.4}°E\n", date, lat, lon);
+
+            // Header
+            let graha_names = [
+                "Sun", "Moon", "Mars", "Mercury", "Jupiter",
+                "Venus", "Saturn", "Rahu", "Ketu",
+            ];
+            print!("{:<10} {:>10} {:>6}", "Graha", "Longitude", "Rashi");
+            if nakshatra {
+                print!(" {:>14} {:>4}", "Nakshatra", "Pada");
+            }
+            if bhava {
+                print!(" {:>5}", "Bhava");
+            }
+            println!();
+            println!("{}", "-".repeat(if nakshatra && bhava { 55 } else if nakshatra { 48 } else if bhava { 33 } else { 28 }));
+
+            for (i, entry) in result.grahas.iter().enumerate() {
+                print!("{:<10} {:>9.4}° {:>6}",
+                    graha_names[i],
+                    entry.sidereal_longitude,
+                    entry.rashi.name(),
+                );
+                if nakshatra {
+                    print!(" {:>14} {:>4}",
+                        entry.nakshatra.name(),
+                        if entry.pada > 0 { entry.pada.to_string() } else { "-".to_string() },
+                    );
+                }
+                if bhava {
+                    print!(" {:>5}",
+                        if entry.bhava_number > 0 { entry.bhava_number.to_string() } else { "-".to_string() },
+                    );
+                }
+                println!();
+            }
+
+            if lagna {
+                let entry = &result.lagna;
+                print!("{:<10} {:>9.4}° {:>6}",
+                    "Lagna",
+                    entry.sidereal_longitude,
+                    entry.rashi.name(),
+                );
+                if nakshatra {
+                    print!(" {:>14} {:>4}",
+                        entry.nakshatra.name(),
+                        if entry.pada > 0 { entry.pada.to_string() } else { "-".to_string() },
+                    );
+                }
+                if bhava {
+                    print!(" {:>5}", "1");
+                }
+                println!();
+            }
+
+            if outer {
+                let planet_names = ["Uranus", "Neptune", "Pluto"];
+                for (i, entry) in result.outer_planets.iter().enumerate() {
+                    print!("{:<10} {:>9.4}° {:>6}",
+                        planet_names[i],
+                        entry.sidereal_longitude,
+                        entry.rashi.name(),
+                    );
+                    if nakshatra {
+                        print!(" {:>14} {:>4}",
+                            entry.nakshatra.name(),
+                            if entry.pada > 0 { entry.pada.to_string() } else { "-".to_string() },
+                        );
+                    }
+                    if bhava {
+                        print!(" {:>5}",
+                            if entry.bhava_number > 0 { entry.bhava_number.to_string() } else { "-".to_string() },
+                        );
+                    }
+                    println!();
+                }
             }
         }
     }

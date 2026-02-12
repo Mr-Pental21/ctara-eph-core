@@ -14,7 +14,7 @@ use dhruv_core::{Body, Engine, Frame, Observer, Query};
 use dhruv_frames::{OBLIQUITY_J2000_RAD, cartesian_to_spherical};
 use dhruv_time::{LeapSecondKernel, jd_to_tdb_seconds, tdb_seconds_to_jd};
 
-use crate::ascendant::{ascendant_mc_ramc_from_lst, compute_lst_rad_pub};
+use crate::lagna::{lagna_mc_ramc_from_lst, compute_lst_rad_pub};
 use crate::bhava_types::{
     Bhava, BhavaConfig, BhavaReferenceMode, BhavaResult, BhavaStartingPoint, BhavaSystem,
     normalize_deg,
@@ -47,10 +47,10 @@ pub fn compute_bhavas(
     jd_utc: f64,
     config: &BhavaConfig,
 ) -> Result<BhavaResult, VedicError> {
-    // Compute LST once, then derive Asc, MC, RAMC
+    // Compute LST once, then derive Lagna, MC, RAMC
     let lst = compute_lst_rad_pub(lsk, eop, location, jd_utc)?;
     let lat_rad = location.latitude_rad();
-    let (asc_rad, mc_rad, ramc) = ascendant_mc_ramc_from_lst(lst, lat_rad);
+    let (asc_rad, mc_rad, ramc) = lagna_mc_ramc_from_lst(lst, lat_rad);
     let eps = OBLIQUITY_J2000_RAD;
 
     let asc_deg = normalize_deg(asc_rad.to_degrees());
@@ -92,7 +92,7 @@ pub fn compute_bhavas(
     // the Asc/MC/IC/Desc are still computed normally; only the cusp numbering
     // is shifted for equal systems
     let final_cusps = if !config.system.is_equal_division()
-        && config.starting_point != BhavaStartingPoint::Ascendant
+        && config.starting_point != BhavaStartingPoint::Lagna
     {
         // For quadrant systems, starting point only applies to equal division
         cusps
@@ -104,7 +104,7 @@ pub fn compute_bhavas(
 
     Ok(BhavaResult {
         bhavas,
-        ascendant_deg: asc_deg,
+        lagna_deg: asc_deg,
         mc_deg,
     })
 }
@@ -128,7 +128,7 @@ fn resolve_starting_point_deg(
     lsk: &LeapSecondKernel,
 ) -> Result<f64, VedicError> {
     match starting_point {
-        BhavaStartingPoint::Ascendant => Ok(asc_deg),
+        BhavaStartingPoint::Lagna => Ok(asc_deg),
         BhavaStartingPoint::CustomDeg(deg) => Ok(normalize_deg(*deg)),
         BhavaStartingPoint::BodyLongitude(body) => {
             body_ecliptic_longitude_deg(engine, *body, jd_utc, lsk)

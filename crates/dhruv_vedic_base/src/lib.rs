@@ -3,7 +3,7 @@
 //! This crate provides:
 //! - Ayanamsha computation for 20 sidereal reference systems
 //! - Sunrise/sunset and twilight calculations
-//! - Ascendant (Lagna) and MC computation
+//! - Lagna (Ascendant) and MC computation
 //! - Bhava (house) systems: 10 division methods
 //! - Rashi (zodiac sign) and DMS conversion
 //! - Nakshatra (lunar mansion) with pada, 27 and 28 schemes
@@ -16,7 +16,7 @@
 //! and public astronomical formulas.
 
 pub mod arudha;
-pub mod ascendant;
+pub mod lagna;
 pub mod ashtakavarga;
 pub mod ayana_type;
 pub mod ayanamsha;
@@ -45,7 +45,7 @@ pub mod yoga;
 pub use arudha::{
     ALL_ARUDHA_PADAS, ArudhaPada, ArudhaResult, all_arudha_padas, arudha_pada,
 };
-pub use ascendant::{ascendant_and_mc_rad, ascendant_longitude_rad, mc_longitude_rad, ramc_rad};
+pub use lagna::{lagna_and_mc_rad, lagna_longitude_rad, mc_longitude_rad, ramc_rad};
 pub use ayanamsha::{
     AyanamshaSystem, ayanamsha_deg, ayanamsha_mean_deg, ayanamsha_true_deg,
     jd_tdb_to_centuries, tdb_seconds_to_centuries,

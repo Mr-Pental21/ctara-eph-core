@@ -1,7 +1,7 @@
-//! Ascendant (Lagna) and MC (Midheaven) computation.
+//! Lagna (Ascendant) and MC (Midheaven) computation.
 //!
 //! Standalone reusable module implementing the standard spherical astronomy
-//! formulas for the ecliptic longitude of the Ascendant and MC.
+//! formulas for the ecliptic longitude of the Lagna and MC.
 //!
 //! Sources: Meeus, "Astronomical Algorithms" (2nd ed), Chapter 13;
 //! standard spherical astronomy (Montenbruck & Pfleger).
@@ -30,13 +30,13 @@ fn compute_lst_rad(
     Ok(lst.rem_euclid(TAU))
 }
 
-/// Ecliptic longitude of the Ascendant in radians.
+/// Ecliptic longitude of the Lagna (Ascendant) in radians.
 ///
 /// Formula (Meeus Ch. 13):
 /// `Asc = atan2(-cos(LST), sin(LST)*cos(eps) + tan(phi)*sin(eps))`
 ///
 /// Returns a value in [0, 2*pi).
-pub fn ascendant_longitude_rad(
+pub fn lagna_longitude_rad(
     lsk: &LeapSecondKernel,
     eop: &EopKernel,
     location: &GeoLocation,
@@ -71,10 +71,10 @@ pub fn mc_longitude_rad(
     Ok(mc.rem_euclid(TAU))
 }
 
-/// Compute both Ascendant and MC (shares LST computation).
+/// Compute both Lagna and MC (shares LST computation).
 ///
-/// Returns `(ascendant_rad, mc_rad)`, both in [0, 2*pi).
-pub fn ascendant_and_mc_rad(
+/// Returns `(lagna_rad, mc_rad)`, both in [0, 2*pi).
+pub fn lagna_and_mc_rad(
     lsk: &LeapSecondKernel,
     eop: &EopKernel,
     location: &GeoLocation,
@@ -107,10 +107,10 @@ pub fn ramc_rad(
     compute_lst_rad(lsk, eop, location, jd_utc)
 }
 
-/// Internal helper: compute Ascendant, MC, and RAMC from a pre-computed LST.
+/// Internal helper: compute Lagna, MC, and RAMC from a pre-computed LST.
 ///
 /// Used by bhava computation to avoid redundant LST calculations.
-pub(crate) fn ascendant_mc_ramc_from_lst(
+pub(crate) fn lagna_mc_ramc_from_lst(
     lst_rad: f64,
     latitude_rad: f64,
 ) -> (f64, f64, f64) {
@@ -245,7 +245,7 @@ mod tests {
     fn ramc_equals_lst() {
         // Test the internal helper
         let lst = 1.234;
-        let (_, _, ramc) = ascendant_mc_ramc_from_lst(lst, 0.5);
+        let (_, _, ramc) = lagna_mc_ramc_from_lst(lst, 0.5);
         assert!(
             (ramc - lst.rem_euclid(TAU)).abs() < 1e-15,
             "ramc={ramc}, lst={lst}"

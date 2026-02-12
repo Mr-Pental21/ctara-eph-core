@@ -168,7 +168,7 @@ Source: Standard coordinate transformation (Meeus Ch. 13).
 
 ## Configuration
 
-- **BhavaStartingPoint::Ascendant** — default, cusp 1 at Ascendant longitude
+- **BhavaStartingPoint::Lagna** — default, cusp 1 at Lagna (Ascendant) longitude
 - **BhavaStartingPoint::BodyLongitude(body)** — cusp 1 at body's ecliptic longitude
 - **BhavaStartingPoint::CustomDeg(deg)** — cusp 1 at arbitrary ecliptic degree
 - **BhavaReferenceMode::StartOfFirst** — starting point is cusp 1 (default)

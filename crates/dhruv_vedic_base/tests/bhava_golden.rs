@@ -43,7 +43,7 @@ fn jd_0h_utc(year: i32, month: u32, day: u32) -> f64 {
 }
 
 #[test]
-fn new_delhi_ascendant_reasonable_range() {
+fn new_delhi_lagna_reasonable_range() {
     let Some((engine, lsk, eop)) = load_test_resources() else {
         return;
     };
@@ -52,7 +52,7 @@ fn new_delhi_ascendant_reasonable_range() {
 
     let config = BhavaConfig {
         system: BhavaSystem::Equal,
-        starting_point: BhavaStartingPoint::Ascendant,
+        starting_point: BhavaStartingPoint::Lagna,
         reference_mode: BhavaReferenceMode::StartOfFirst,
     };
 
@@ -61,9 +61,9 @@ fn new_delhi_ascendant_reasonable_range() {
 
     // Ascendant should be in [0, 360)
     assert!(
-        result.ascendant_deg >= 0.0 && result.ascendant_deg < 360.0,
-        "Asc = {} deg, out of range",
-        result.ascendant_deg
+        result.lagna_deg >= 0.0 && result.lagna_deg < 360.0,
+        "Lagna = {} deg, out of range",
+        result.lagna_deg
     );
 
     // MC should be in [0, 360)
@@ -98,10 +98,10 @@ fn equal_cusps_30_deg_intervals() {
 
     // First cusp should equal Ascendant
     assert!(
-        (result.bhavas[0].cusp_deg - result.ascendant_deg).abs() < 0.01,
+        (result.bhavas[0].cusp_deg - result.lagna_deg).abs() < 0.01,
         "cusp 1 = {}, Asc = {}",
         result.bhavas[0].cusp_deg,
-        result.ascendant_deg
+        result.lagna_deg
     );
 }
 
@@ -115,7 +115,7 @@ fn sripati_angular_cusps_match_asc_ic_desc_mc() {
 
     let config = BhavaConfig {
         system: BhavaSystem::Sripati,
-        starting_point: BhavaStartingPoint::Ascendant,
+        starting_point: BhavaStartingPoint::Lagna,
         reference_mode: BhavaReferenceMode::StartOfFirst,
     };
     let result = compute_bhavas(&engine, &lsk, &eop, &loc, jd_utc, &config)
@@ -123,10 +123,10 @@ fn sripati_angular_cusps_match_asc_ic_desc_mc() {
 
     // Cusp 1 = Asc
     assert!(
-        (result.bhavas[0].cusp_deg - result.ascendant_deg).abs() < 0.01,
+        (result.bhavas[0].cusp_deg - result.lagna_deg).abs() < 0.01,
         "cusp 1 = {}, Asc = {}",
         result.bhavas[0].cusp_deg,
-        result.ascendant_deg
+        result.lagna_deg
     );
 
     // Cusp 10 = MC
@@ -138,7 +138,7 @@ fn sripati_angular_cusps_match_asc_ic_desc_mc() {
     );
 
     // Cusp 7 = Desc = Asc + 180
-    let desc = (result.ascendant_deg + 180.0).rem_euclid(360.0);
+    let desc = (result.lagna_deg + 180.0).rem_euclid(360.0);
     assert!(
         (result.bhavas[6].cusp_deg - desc).abs().min(
             (result.bhavas[6].cusp_deg - desc + 360.0).abs()
@@ -170,7 +170,7 @@ fn kp_placidus_valid_cusps() {
 
     let config = BhavaConfig {
         system: BhavaSystem::KP,
-        starting_point: BhavaStartingPoint::Ascendant,
+        starting_point: BhavaStartingPoint::Lagna,
         reference_mode: BhavaReferenceMode::StartOfFirst,
     };
     let result = compute_bhavas(&engine, &lsk, &eop, &loc, jd_utc, &config)
@@ -187,7 +187,7 @@ fn kp_placidus_valid_cusps() {
 
     // Cusp 1 ≈ Asc, Cusp 10 ≈ MC
     assert!(
-        (result.bhavas[0].cusp_deg - result.ascendant_deg).abs() < 0.01,
+        (result.bhavas[0].cusp_deg - result.lagna_deg).abs() < 0.01,
         "KP cusp 1 should match Asc"
     );
     assert!(
@@ -207,7 +207,7 @@ fn all_10_systems_produce_valid_results() {
     for &system in BhavaSystem::all() {
         let config = BhavaConfig {
             system,
-            starting_point: BhavaStartingPoint::Ascendant,
+            starting_point: BhavaStartingPoint::Lagna,
             reference_mode: BhavaReferenceMode::StartOfFirst,
         };
 
@@ -261,7 +261,7 @@ fn extreme_latitude_kp_returns_error() {
 
     let config = BhavaConfig {
         system: BhavaSystem::KP,
-        starting_point: BhavaStartingPoint::Ascendant,
+        starting_point: BhavaStartingPoint::Lagna,
         reference_mode: BhavaReferenceMode::StartOfFirst,
     };
 
@@ -279,12 +279,12 @@ fn middle_of_first_shifts_cusps() {
 
     let config_start = BhavaConfig {
         system: BhavaSystem::Equal,
-        starting_point: BhavaStartingPoint::Ascendant,
+        starting_point: BhavaStartingPoint::Lagna,
         reference_mode: BhavaReferenceMode::StartOfFirst,
     };
     let config_mid = BhavaConfig {
         system: BhavaSystem::Equal,
-        starting_point: BhavaStartingPoint::Ascendant,
+        starting_point: BhavaStartingPoint::Lagna,
         reference_mode: BhavaReferenceMode::MiddleOfFirst,
     };
 

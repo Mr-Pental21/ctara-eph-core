@@ -32,7 +32,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 18;
+pub const DHRUV_API_VERSION: u32 = 19;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -1211,8 +1211,8 @@ pub const DHRUV_BHAVA_ALCABITUS: i32 = 9;
 pub const DHRUV_BHAVA_REF_START: i32 = 0;
 pub const DHRUV_BHAVA_REF_MIDDLE: i32 = 1;
 
-/// Starting point: use the Ascendant.
-pub const DHRUV_BHAVA_START_ASCENDANT: i32 = -1;
+/// Starting point: use the Lagna (Ascendant).
+pub const DHRUV_BHAVA_START_LAGNA: i32 = -1;
 /// Starting point: use a custom ecliptic degree (see `custom_start_deg`).
 pub const DHRUV_BHAVA_START_CUSTOM: i32 = -2;
 // Positive values = NAIF body codes for BodyLongitude starting point.
@@ -1227,7 +1227,7 @@ pub const DHRUV_BHAVA_START_CUSTOM: i32 = -2;
 pub struct DhruvBhavaConfig {
     /// House system code (0-9, see DHRUV_BHAVA_* constants).
     pub system: i32,
-    /// Starting point: -1=Ascendant, -2=custom deg, or positive NAIF body code.
+    /// Starting point: -1=Lagna, -2=custom deg, or positive NAIF body code.
     pub starting_point: i32,
     /// Custom ecliptic degree, used only when starting_point == -2.
     pub custom_start_deg: f64,
@@ -1250,7 +1250,7 @@ pub struct DhruvBhava {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DhruvBhavaResult {
     pub bhavas: [DhruvBhava; 12],
-    pub ascendant_deg: f64,
+    pub lagna_deg: f64,
     pub mc_deg: f64,
 }
 
@@ -1266,7 +1266,7 @@ fn bhava_config_from_ffi(cfg: &DhruvBhavaConfig) -> Result<BhavaConfig, DhruvSta
     let system = bhava_system_from_code(cfg.system).ok_or(DhruvStatus::InvalidQuery)?;
 
     let starting_point = match cfg.starting_point {
-        DHRUV_BHAVA_START_ASCENDANT => BhavaStartingPoint::Ascendant,
+        DHRUV_BHAVA_START_LAGNA => BhavaStartingPoint::Lagna,
         DHRUV_BHAVA_START_CUSTOM => BhavaStartingPoint::CustomDeg(cfg.custom_start_deg),
         code if code > 0 => {
             let body = Body::from_code(code).ok_or(DhruvStatus::InvalidQuery)?;
@@ -1288,12 +1288,12 @@ fn bhava_config_from_ffi(cfg: &DhruvBhavaConfig) -> Result<BhavaConfig, DhruvSta
     })
 }
 
-/// Returns default bhava configuration (Equal, Ascendant, StartOfFirst).
+/// Returns default bhava configuration (Equal, Lagna, StartOfFirst).
 #[unsafe(no_mangle)]
 pub extern "C" fn dhruv_bhava_config_default() -> DhruvBhavaConfig {
     DhruvBhavaConfig {
         system: DHRUV_BHAVA_EQUAL,
-        starting_point: DHRUV_BHAVA_START_ASCENDANT,
+        starting_point: DHRUV_BHAVA_START_LAGNA,
         custom_start_deg: 0.0,
         reference_mode: DHRUV_BHAVA_REF_START,
     }
@@ -1368,7 +1368,7 @@ pub unsafe extern "C" fn dhruv_compute_bhavas(
                 unsafe {
                     *out_result = DhruvBhavaResult {
                         bhavas: ffi_bhavas,
-                        ascendant_deg: result.ascendant_deg,
+                        lagna_deg: result.lagna_deg,
                         mc_deg: result.mc_deg,
                     };
                 }
@@ -1379,14 +1379,14 @@ pub unsafe extern "C" fn dhruv_compute_bhavas(
     })
 }
 
-/// Compute the Ascendant ecliptic longitude in degrees.
+/// Compute the Lagna (Ascendant) ecliptic longitude in degrees.
 ///
 /// Requires LSK, EOP, and location (no engine needed).
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn dhruv_ascendant_deg(
+pub unsafe extern "C" fn dhruv_lagna_deg(
     lsk: *const DhruvLskHandle,
     eop: *const DhruvEopHandle,
     location: *const DhruvGeoLocation,
@@ -1409,7 +1409,7 @@ pub unsafe extern "C" fn dhruv_ascendant_deg(
             loc_ref.altitude_m,
         );
 
-        match dhruv_vedic_base::ascendant_longitude_rad(lsk_ref, eop_ref, &geo, jd_utc) {
+        match dhruv_vedic_base::lagna_longitude_rad(lsk_ref, eop_ref, &geo, jd_utc) {
             Ok(rad) => {
                 // SAFETY: Pointer checked for null.
                 unsafe { *out_deg = rad.to_degrees() };
@@ -4583,7 +4583,7 @@ pub unsafe extern "C" fn dhruv_compute_bhavas_utc(
                 unsafe {
                     *out_result = DhruvBhavaResult {
                         bhavas: ffi_bhavas,
-                        ascendant_deg: result.ascendant_deg,
+                        lagna_deg: result.lagna_deg,
                         mc_deg: result.mc_deg,
                     };
                 }
@@ -4594,12 +4594,12 @@ pub unsafe extern "C" fn dhruv_compute_bhavas_utc(
     })
 }
 
-/// Compute the Ascendant with UTC input.
+/// Compute the Lagna (Ascendant) with UTC input.
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn dhruv_ascendant_deg_utc(
+pub unsafe extern "C" fn dhruv_lagna_deg_utc(
     lsk: *const DhruvLskHandle,
     eop: *const DhruvEopHandle,
     location: *const DhruvGeoLocation,
@@ -4615,7 +4615,7 @@ pub unsafe extern "C" fn dhruv_ascendant_deg_utc(
         let loc_ref = unsafe { &*location };
         let geo = GeoLocation::new(loc_ref.latitude_deg, loc_ref.longitude_deg, loc_ref.altitude_m);
         let jd_utc = ffi_utc_to_jd_utc(unsafe { &*utc });
-        match dhruv_vedic_base::ascendant_longitude_rad(lsk_ref, eop_ref, &geo, jd_utc) {
+        match dhruv_vedic_base::lagna_longitude_rad(lsk_ref, eop_ref, &geo, jd_utc) {
             Ok(rad) => {
                 unsafe { *out_deg = rad.to_degrees() };
                 DhruvStatus::Ok
@@ -6664,6 +6664,132 @@ pub unsafe extern "C" fn dhruv_ashtakavarga_for_date(
     }
 }
 
+// ---------------------------------------------------------------------------
+// Graha Positions C-compatible types
+// ---------------------------------------------------------------------------
+
+/// C-compatible graha positions configuration.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvGrahaPositionsConfig {
+    pub include_nakshatra: u8,
+    pub include_lagna: u8,
+    pub include_outer_planets: u8,
+    pub include_bhava: u8,
+}
+
+/// C-compatible single graha entry.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvGrahaEntry {
+    pub sidereal_longitude: f64,
+    /// 0-based rashi index (0-11).
+    pub rashi_index: u8,
+    /// 0-based nakshatra index (0-26), 255 if not computed.
+    pub nakshatra_index: u8,
+    /// Pada (1-4), 0 if not computed.
+    pub pada: u8,
+    /// Bhava number (1-12), 0 if not computed.
+    pub bhava_number: u8,
+}
+
+/// C-compatible graha positions result.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvGrahaPositions {
+    /// 9 Vedic grahas (indexed by graha index 0-8).
+    pub grahas: [DhruvGrahaEntry; 9],
+    /// Lagna entry (sentinel if not computed).
+    pub lagna: DhruvGrahaEntry,
+    /// Outer planets: [Uranus, Neptune, Pluto].
+    pub outer_planets: [DhruvGrahaEntry; 3],
+}
+
+fn graha_entry_to_ffi(entry: &dhruv_search::GrahaEntry) -> DhruvGrahaEntry {
+    DhruvGrahaEntry {
+        sidereal_longitude: entry.sidereal_longitude,
+        rashi_index: entry.rashi_index,
+        nakshatra_index: entry.nakshatra_index,
+        pada: entry.pada,
+        bhava_number: entry.bhava_number,
+    }
+}
+
+/// Compute comprehensive graha positions.
+///
+/// # Safety
+/// All pointers must be valid. `out` must point to a valid `DhruvGrahaPositions`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_graha_positions(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    bhava_config: *const DhruvBhavaConfig,
+    ayanamsha_system: u32,
+    use_nutation: u8,
+    config: *const DhruvGrahaPositionsConfig,
+    out: *mut DhruvGrahaPositions,
+) -> DhruvStatus {
+    if engine.is_null() || eop.is_null() || utc.is_null() || location.is_null()
+        || bhava_config.is_null() || config.is_null() || out.is_null()
+    {
+        return DhruvStatus::NullPointer;
+    }
+
+    let engine = unsafe { &*engine };
+    let eop = unsafe { &*eop };
+    let utc_c = unsafe { &*utc };
+    let loc_c = unsafe { &*location };
+    let bhava_cfg_c = unsafe { &*bhava_config };
+    let cfg_c = unsafe { &*config };
+
+    let utc_time = UtcTime {
+        year: utc_c.year,
+        month: utc_c.month,
+        day: utc_c.day,
+        hour: utc_c.hour,
+        minute: utc_c.minute,
+        second: utc_c.second,
+    };
+
+    let location = GeoLocation::new(loc_c.latitude_deg, loc_c.longitude_deg, loc_c.altitude_m);
+
+    let system = match ayanamsha_system_from_code(ayanamsha_system as i32) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidQuery,
+    };
+
+    let rust_bhava_config = match bhava_config_from_ffi(bhava_cfg_c) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+
+    let rust_config = dhruv_search::GrahaPositionsConfig {
+        include_nakshatra: cfg_c.include_nakshatra != 0,
+        include_lagna: cfg_c.include_lagna != 0,
+        include_outer_planets: cfg_c.include_outer_planets != 0,
+        include_bhava: cfg_c.include_bhava != 0,
+    };
+
+    let aya_config = SankrantiConfig::new(system, use_nutation != 0);
+
+    match dhruv_search::graha_positions(engine, eop, &utc_time, &location, &rust_bhava_config, &aya_config, &rust_config) {
+        Ok(result) => {
+            let out = unsafe { &mut *out };
+            for i in 0..9 {
+                out.grahas[i] = graha_entry_to_ffi(&result.grahas[i]);
+            }
+            out.lagna = graha_entry_to_ffi(&result.lagna);
+            for i in 0..3 {
+                out.outer_planets[i] = graha_entry_to_ffi(&result.outer_planets[i]);
+            }
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -6961,7 +7087,7 @@ mod tests {
     fn ffi_bhava_config_default_values() {
         let cfg = dhruv_bhava_config_default();
         assert_eq!(cfg.system, DHRUV_BHAVA_EQUAL);
-        assert_eq!(cfg.starting_point, DHRUV_BHAVA_START_ASCENDANT);
+        assert_eq!(cfg.starting_point, DHRUV_BHAVA_START_LAGNA);
         assert_eq!(cfg.reference_mode, DHRUV_BHAVA_REF_START);
         assert!((cfg.custom_start_deg - 0.0).abs() < 1e-15);
     }
@@ -6980,7 +7106,7 @@ mod tests {
                 start_deg: 0.0,
                 end_deg: 0.0,
             }; 12],
-            ascendant_deg: 0.0,
+            lagna_deg: 0.0,
             mc_deg: 0.0,
         };
         // SAFETY: Null pointers intentional for validation.
@@ -7002,7 +7128,7 @@ mod tests {
     fn ffi_bhava_config_invalid_system() {
         let cfg = DhruvBhavaConfig {
             system: 99,
-            starting_point: DHRUV_BHAVA_START_ASCENDANT,
+            starting_point: DHRUV_BHAVA_START_LAGNA,
             custom_start_deg: 0.0,
             reference_mode: DHRUV_BHAVA_REF_START,
         };
@@ -7023,11 +7149,11 @@ mod tests {
     }
 
     #[test]
-    fn ffi_ascendant_deg_rejects_null() {
+    fn ffi_lagna_deg_rejects_null() {
         let mut out: f64 = 0.0;
         // SAFETY: Null pointers intentional for validation.
         let status = unsafe {
-            dhruv_ascendant_deg(ptr::null(), ptr::null(), ptr::null(), 0.0, &mut out)
+            dhruv_lagna_deg(ptr::null(), ptr::null(), ptr::null(), 0.0, &mut out)
         };
         assert_eq!(status, DhruvStatus::NullPointer);
     }
@@ -7101,8 +7227,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_18() {
-        assert_eq!(dhruv_api_version(), 18);
+    fn ffi_api_version_is_19() {
+        assert_eq!(dhruv_api_version(), 19);
     }
 
     // --- Search error mapping ---
@@ -8108,10 +8234,10 @@ mod tests {
     }
 
     #[test]
-    fn ffi_ascendant_deg_utc_rejects_null() {
+    fn ffi_lagna_deg_utc_rejects_null() {
         let mut out: f64 = 0.0;
         let status = unsafe {
-            dhruv_ascendant_deg_utc(ptr::null(), ptr::null(), ptr::null(), ptr::null(), &mut out)
+            dhruv_lagna_deg_utc(ptr::null(), ptr::null(), ptr::null(), ptr::null(), &mut out)
         };
         assert_eq!(status, DhruvStatus::NullPointer);
     }
@@ -8520,6 +8646,25 @@ mod tests {
             dhruv_ashtakavarga_for_date(
                 ptr::null(), ptr::null(), ptr::null(), ptr::null(),
                 0, 0, out.as_mut_ptr(),
+            )
+        };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_graha_positions_rejects_null() {
+        let mut out = std::mem::MaybeUninit::<DhruvGrahaPositions>::uninit();
+        let cfg = DhruvGrahaPositionsConfig {
+            include_nakshatra: 0,
+            include_lagna: 0,
+            include_outer_planets: 0,
+            include_bhava: 0,
+        };
+        let bhava_cfg = dhruv_bhava_config_default();
+        let s = unsafe {
+            dhruv_graha_positions(
+                ptr::null(), ptr::null(), ptr::null(), ptr::null(),
+                &bhava_cfg, 0, 0, &cfg, out.as_mut_ptr(),
             )
         };
         assert_eq!(s, DhruvStatus::NullPointer);
