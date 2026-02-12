@@ -1442,75 +1442,52 @@ fn main() {
                 "Sun", "Moon", "Mars", "Mercury", "Jupiter",
                 "Venus", "Saturn", "Rahu", "Ketu",
             ];
-            print!("{:<10} {:>10} {:>6}", "Graha", "Longitude", "Rashi");
+            print!("{:<10} {:>10}  {:<10}", "Graha", "Longitude", "Rashi");
             if nakshatra {
-                print!(" {:>14} {:>4}", "Nakshatra", "Pada");
+                print!("  {:<18} {:>4}", "Nakshatra", "Pada");
             }
             if bhava {
-                print!(" {:>5}", "Bhava");
+                print!("  {:>5}", "Bhava");
             }
             println!();
-            println!("{}", "-".repeat(if nakshatra && bhava { 55 } else if nakshatra { 48 } else if bhava { 33 } else { 28 }));
+            let width = 32
+                + if nakshatra { 24 } else { 0 }
+                + if bhava { 7 } else { 0 };
+            println!("{}", "-".repeat(width));
 
-            for (i, entry) in result.grahas.iter().enumerate() {
-                print!("{:<10} {:>9.4}° {:>6}",
-                    graha_names[i],
+            let print_entry = |name: &str, entry: &dhruv_search::GrahaEntry, force_bhava: Option<u8>| {
+                print!("{:<10} {:>9.4}°  {:<10}",
+                    name,
                     entry.sidereal_longitude,
                     entry.rashi.name(),
                 );
                 if nakshatra {
-                    print!(" {:>14} {:>4}",
+                    print!("  {:<18} {:>4}",
                         entry.nakshatra.name(),
-                        if entry.pada > 0 { entry.pada.to_string() } else { "-".to_string() },
+                        if entry.pada > 0 { entry.pada.to_string() } else { "-".into() },
                     );
                 }
                 if bhava {
-                    print!(" {:>5}",
-                        if entry.bhava_number > 0 { entry.bhava_number.to_string() } else { "-".to_string() },
+                    let bh = force_bhava.unwrap_or(entry.bhava_number);
+                    print!("  {:>5}",
+                        if bh > 0 { bh.to_string() } else { "-".into() },
                     );
                 }
                 println!();
+            };
+
+            for (i, entry) in result.grahas.iter().enumerate() {
+                print_entry(graha_names[i], entry, None);
             }
 
             if lagna {
-                let entry = &result.lagna;
-                print!("{:<10} {:>9.4}° {:>6}",
-                    "Lagna",
-                    entry.sidereal_longitude,
-                    entry.rashi.name(),
-                );
-                if nakshatra {
-                    print!(" {:>14} {:>4}",
-                        entry.nakshatra.name(),
-                        if entry.pada > 0 { entry.pada.to_string() } else { "-".to_string() },
-                    );
-                }
-                if bhava {
-                    print!(" {:>5}", "1");
-                }
-                println!();
+                print_entry("Lagna", &result.lagna, Some(1));
             }
 
             if outer {
                 let planet_names = ["Uranus", "Neptune", "Pluto"];
                 for (i, entry) in result.outer_planets.iter().enumerate() {
-                    print!("{:<10} {:>9.4}° {:>6}",
-                        planet_names[i],
-                        entry.sidereal_longitude,
-                        entry.rashi.name(),
-                    );
-                    if nakshatra {
-                        print!(" {:>14} {:>4}",
-                            entry.nakshatra.name(),
-                            if entry.pada > 0 { entry.pada.to_string() } else { "-".to_string() },
-                        );
-                    }
-                    if bhava {
-                        print!(" {:>5}",
-                            if entry.bhava_number > 0 { entry.bhava_number.to_string() } else { "-".to_string() },
-                        );
-                    }
-                    println!();
+                    print_entry(planet_names[i], entry, None);
                 }
             }
         }
