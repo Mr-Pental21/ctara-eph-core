@@ -1,5 +1,5 @@
-//! Panchang classification: Tithi, Karana, Yoga, Vaar, Hora, Ghatika,
-//! Masa, Ayana, and Varsha determination.
+//! Panchang classification: Tithi, Karana, Yoga, Nakshatra, Vaar, Hora,
+//! Ghatika, Masa, Ayana, and Varsha determination.
 //!
 //! Given a UTC date, these functions determine the panchang elements.
 //! All functions accept and return UTC times; JD TDB is internal only.
@@ -9,11 +9,11 @@
 use dhruv_core::{Body, Engine};
 use dhruv_time::{EopKernel, LeapSecondKernel, UtcTime, calendar_to_jd};
 use dhruv_vedic_base::{
-    Ayana, GeoLocation, Rashi, RiseSetConfig, RiseSetEvent, RiseSetResult,
+    Ayana, GeoLocation, NAKSHATRA_SPAN_27, Rashi, RiseSetConfig, RiseSetEvent, RiseSetResult,
     approximate_local_noon_jd, ayana_from_sidereal_longitude, ayanamsha_deg,
     compute_rise_set, ghatika_from_elapsed, hora_at, jd_tdb_to_centuries,
-    karana_from_elongation, masa_from_rashi_index, rashi_from_longitude, samvatsara_from_year,
-    tithi_from_elongation, vaar_from_jd, yoga_from_sum,
+    karana_from_elongation, masa_from_rashi_index, nakshatra_from_longitude, rashi_from_longitude,
+    samvatsara_from_year, tithi_from_elongation, vaar_from_jd, yoga_from_sum,
     KARANA_SEGMENT_DEG, TITHI_SEGMENT_DEG, YOGA_SEGMENT_DEG, HORA_COUNT,
 };
 
@@ -21,8 +21,8 @@ use crate::conjunction::body_ecliptic_lon_lat;
 use crate::error::SearchError;
 use crate::lunar_phase::{next_amavasya, prev_amavasya};
 use crate::panchang_types::{
-    AyanaInfo, GhatikaInfo, HoraInfo, KaranaInfo, MasaInfo, PanchangInfo, TithiInfo, VaarInfo,
-    VarshaInfo, YogaInfo,
+    AyanaInfo, GhatikaInfo, HoraInfo, KaranaInfo, MasaInfo, PanchangInfo, PanchangNakshatraInfo,
+    TithiInfo, VaarInfo, VarshaInfo, YogaInfo,
 };
 use crate::sankranti::{next_specific_sankranti, prev_specific_sankranti};
 use crate::sankranti_types::SankrantiConfig;
@@ -232,6 +232,67 @@ pub fn sidereal_sum_at(
     let moon_sid = (moon_trop - aya).rem_euclid(360.0);
     let sun_sid = (sun_trop - aya).rem_euclid(360.0);
     Ok((moon_sid + sun_sid).rem_euclid(360.0))
+}
+
+/// Moon's sidereal longitude at a given JD TDB.
+///
+/// Returns Moon_sid mod 360 in degrees [0, 360).
+pub fn moon_sidereal_longitude_at(
+    engine: &Engine,
+    jd_tdb: f64,
+    config: &SankrantiConfig,
+) -> Result<f64, SearchError> {
+    let (moon_trop, _) = body_ecliptic_lon_lat(engine, Body::Moon, jd_tdb)?;
+    let t = jd_tdb_to_centuries(jd_tdb);
+    let aya = ayanamsha_deg(config.ayanamsha_system, t, config.use_nutation);
+    Ok((moon_trop - aya).rem_euclid(360.0))
+}
+
+/// Determine the Moon's Nakshatra (27-scheme) for a given date.
+///
+/// Returns nakshatra name, index, pada, and start/end times.
+pub fn nakshatra_for_date(
+    engine: &Engine,
+    utc: &UtcTime,
+    config: &SankrantiConfig,
+) -> Result<PanchangNakshatraInfo, SearchError> {
+    let jd = utc.to_jd_tdb(engine.lsk());
+    let moon_sid = moon_sidereal_longitude_at(engine, jd, config)?;
+    nakshatra_at(engine, jd, moon_sid, config)
+}
+
+/// Determine the Moon's Nakshatra from a pre-computed sidereal longitude.
+///
+/// Accepts Moon's sidereal longitude in degrees [0, 360) at `jd_tdb`.
+/// The engine is still needed for boundary bisection (finding start/end times).
+pub fn nakshatra_at(
+    engine: &Engine,
+    jd_tdb: f64,
+    moon_sidereal_deg: f64,
+    config: &SankrantiConfig,
+) -> Result<PanchangNakshatraInfo, SearchError> {
+    let pos = nakshatra_from_longitude(moon_sidereal_deg);
+
+    let start_target = (pos.nakshatra_index as f64) * NAKSHATRA_SPAN_27;
+    let end_target = ((pos.nakshatra_index as f64) + 1.0) * NAKSHATRA_SPAN_27;
+
+    // Moon moves ~13.2 deg/day, so one nakshatra (~13.33 deg) ≈ 1 day.
+    // Step 0.5 days for boundary search.
+    let moon_fn =
+        |t: f64| -> Result<f64, SearchError> { moon_sidereal_longitude_at(engine, t, config) };
+
+    let start_jd = find_angle_boundary(&moon_fn, jd_tdb, start_target, -0.5, 20)?
+        .ok_or(SearchError::NoConvergence("could not find nakshatra start"))?;
+    let end_jd = find_angle_boundary(&moon_fn, jd_tdb, end_target, 0.5, 20)?
+        .ok_or(SearchError::NoConvergence("could not find nakshatra end"))?;
+
+    Ok(PanchangNakshatraInfo {
+        nakshatra: pos.nakshatra,
+        nakshatra_index: pos.nakshatra_index,
+        pada: pos.pada,
+        start: UtcTime::from_jd_tdb(start_jd, engine.lsk()),
+        end: UtcTime::from_jd_tdb(end_jd, engine.lsk()),
+    })
 }
 
 /// Generic boundary search for angular segments.
@@ -626,10 +687,12 @@ pub fn panchang_for_date(
     // Category A intermediates: compute body longitudes once
     let elong = elongation_at(engine, jd)?;
     let sum = sidereal_sum_at(engine, jd, config)?;
+    let moon_sid = moon_sidereal_longitude_at(engine, jd, config)?;
 
     let tithi = tithi_at(engine, jd, elong)?;
     let karana = karana_at(engine, jd, elong)?;
     let yoga = yoga_at(engine, jd, sum, config)?;
+    let nakshatra = nakshatra_at(engine, jd, moon_sid, config)?;
 
     // Category B intermediates: compute sunrises once
     let (sunrise_jd, next_sunrise_jd) =
@@ -656,6 +719,7 @@ pub fn panchang_for_date(
         vaar,
         hora,
         ghatika,
+        nakshatra,
         masa,
         ayana,
         varsha,

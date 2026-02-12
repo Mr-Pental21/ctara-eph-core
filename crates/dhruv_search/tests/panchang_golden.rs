@@ -11,7 +11,8 @@ use dhruv_search::panchang_types::{AyanaInfo, MasaInfo, VarshaInfo};
 use dhruv_search::sankranti_types::SankrantiConfig;
 use dhruv_search::{
     ayana_for_date, elongation_at, ghatika_for_date, ghatika_from_sunrises, hora_for_date,
-    hora_from_sunrises, karana_at, karana_for_date, masa_for_date, panchang_for_date,
+    hora_from_sunrises, karana_at, karana_for_date, masa_for_date,
+    moon_sidereal_longitude_at, nakshatra_at, nakshatra_for_date, panchang_for_date,
     sidereal_sum_at, tithi_at, tithi_for_date, vaar_for_date, vaar_from_sunrises, varsha_for_date,
     vedic_day_sunrises, yoga_at, yoga_for_date,
 };
@@ -252,6 +253,19 @@ fn ghatika_from_sunrises_matches_for_date() {
     assert_eq!(direct, via_sr);
 }
 
+/// nakshatra_at(engine, jd, moon_sid) == nakshatra_for_date(engine, utc, config)
+#[test]
+fn nakshatra_at_matches_for_date() {
+    let Some(engine) = load_engine() else { return };
+    let utc = UtcTime::new(2024, 1, 15, 12, 0, 0.0);
+    let config = default_config();
+    let direct = nakshatra_for_date(&engine, &utc, &config).unwrap();
+    let jd = utc.to_jd_tdb(engine.lsk());
+    let moon_sid = moon_sidereal_longitude_at(&engine, jd, &config).unwrap();
+    let via_at = nakshatra_at(&engine, jd, moon_sid, &config).unwrap();
+    assert_eq!(direct, via_at);
+}
+
 /// panchang_for_date gives consistent results with individual _for_date calls
 #[test]
 fn panchang_combined_matches_individual() {
@@ -267,6 +281,7 @@ fn panchang_combined_matches_individual() {
     let tithi = tithi_for_date(&engine, &utc).unwrap();
     let karana = karana_for_date(&engine, &utc).unwrap();
     let yoga = yoga_for_date(&engine, &utc, &config).unwrap();
+    let nakshatra = nakshatra_for_date(&engine, &utc, &config).unwrap();
     let vaar = vaar_for_date(&engine, &eop, &utc, &loc, &rs).unwrap();
     let hora = hora_for_date(&engine, &eop, &utc, &loc, &rs).unwrap();
     let ghatika = ghatika_for_date(&engine, &eop, &utc, &loc, &rs).unwrap();
@@ -274,6 +289,7 @@ fn panchang_combined_matches_individual() {
     assert_eq!(combined.tithi, tithi, "tithi mismatch");
     assert_eq!(combined.karana, karana, "karana mismatch");
     assert_eq!(combined.yoga, yoga, "yoga mismatch");
+    assert_eq!(combined.nakshatra, nakshatra, "nakshatra mismatch");
     assert_eq!(combined.vaar, vaar, "vaar mismatch");
     assert_eq!(combined.hora, hora, "hora mismatch");
     assert_eq!(combined.ghatika, ghatika, "ghatika mismatch");

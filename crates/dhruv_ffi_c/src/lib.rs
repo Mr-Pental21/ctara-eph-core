@@ -5280,9 +5280,21 @@ pub unsafe extern "C" fn dhruv_ghatika_for_date(
     })
 }
 
+/// C-compatible Panchang Nakshatra info (Moon's nakshatra with boundaries).
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvPanchangNakshatraInfo {
+    /// 0-based nakshatra index (0=Ashwini .. 26=Revati).
+    pub nakshatra_index: i32,
+    /// Pada (quarter) within the nakshatra (1-4).
+    pub pada: i32,
+    pub start: DhruvUtcTime,
+    pub end: DhruvUtcTime,
+}
+
 /// C-compatible combined Panchang info.
 ///
-/// Contains all six daily elements plus optional calendar fields.
+/// Contains all seven daily elements plus optional calendar fields.
 /// Calendar fields use `*_valid` flags (0=absent, 1=present).
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -5293,6 +5305,7 @@ pub struct DhruvPanchangInfo {
     pub vaar: DhruvVaarInfo,
     pub hora: DhruvHoraInfo,
     pub ghatika: DhruvGhatikaInfo,
+    pub nakshatra: DhruvPanchangNakshatraInfo,
     /// 1 if masa/ayana/varsha fields are populated, 0 otherwise.
     pub calendar_valid: u8,
     pub masa: DhruvMasaInfo,
@@ -5418,6 +5431,12 @@ pub unsafe extern "C" fn dhruv_panchang_for_date(
                             value: info.ghatika.value as i32,
                             start: utc_time_to_ffi(&info.ghatika.start),
                             end: utc_time_to_ffi(&info.ghatika.end),
+                        },
+                        nakshatra: DhruvPanchangNakshatraInfo {
+                            nakshatra_index: info.nakshatra.nakshatra_index as i32,
+                            pada: info.nakshatra.pada as i32,
+                            start: utc_time_to_ffi(&info.nakshatra.start),
+                            end: utc_time_to_ffi(&info.nakshatra.end),
                         },
                         calendar_valid,
                         masa: masa_ffi,

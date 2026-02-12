@@ -63,9 +63,9 @@ pub use lunar_nodes::{
     true_rahu_deg,
 };
 pub use nakshatra::{
-    ALL_NAKSHATRAS_27, ALL_NAKSHATRAS_28, Nakshatra, Nakshatra28, Nakshatra28Info, NakshatraInfo,
-    nakshatra28_from_longitude, nakshatra28_from_tropical, nakshatra_from_longitude,
-    nakshatra_from_tropical,
+    ALL_NAKSHATRAS_27, ALL_NAKSHATRAS_28, NAKSHATRA_SPAN_27, Nakshatra, Nakshatra28,
+    Nakshatra28Info, NakshatraInfo, nakshatra28_from_longitude, nakshatra28_from_tropical,
+    nakshatra_from_longitude, nakshatra_from_tropical,
 };
 pub use rashi::{
     ALL_RASHIS, Dms, Rashi, RashiInfo, deg_to_dms, rashi_from_longitude, rashi_from_tropical,

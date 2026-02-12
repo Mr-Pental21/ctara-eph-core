@@ -41,13 +41,14 @@ pub use lunar_phase::{
 pub use lunar_phase_types::{LunarPhase, LunarPhaseEvent};
 pub use panchang::{
     ayana_for_date, elongation_at, ghatika_for_date, ghatika_from_sunrises, hora_for_date,
-    hora_from_sunrises, karana_at, karana_for_date, masa_for_date, panchang_for_date,
+    hora_from_sunrises, karana_at, karana_for_date, masa_for_date,
+    moon_sidereal_longitude_at, nakshatra_at, nakshatra_for_date, panchang_for_date,
     sidereal_sum_at, tithi_at, tithi_for_date, vaar_for_date, vaar_from_sunrises,
     varsha_for_date, vedic_day_sunrises, yoga_at, yoga_for_date,
 };
 pub use panchang_types::{
-    AyanaInfo, GhatikaInfo, HoraInfo, KaranaInfo, MasaInfo, PanchangInfo, TithiInfo, VaarInfo,
-    VarshaInfo, YogaInfo,
+    AyanaInfo, GhatikaInfo, HoraInfo, KaranaInfo, MasaInfo, PanchangInfo, PanchangNakshatraInfo,
+    TithiInfo, VaarInfo, VarshaInfo, YogaInfo,
 };
 pub use sankranti::{
     next_sankranti, next_specific_sankranti, prev_sankranti, prev_specific_sankranti,

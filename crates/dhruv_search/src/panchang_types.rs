@@ -2,7 +2,7 @@
 
 use dhruv_time::UtcTime;
 use dhruv_vedic_base::{
-    Ayana, Hora, Karana, Masa, Paksha, Samvatsara, Tithi, Vaar, Yoga,
+    Ayana, Hora, Karana, Masa, Nakshatra, Paksha, Samvatsara, Tithi, Vaar, Yoga,
 };
 
 /// Masa (lunar month) classification result.
@@ -120,7 +120,22 @@ pub struct GhatikaInfo {
     pub end: UtcTime,
 }
 
-/// Combined daily panchang: all six elements for a single moment,
+/// Moon's nakshatra classification result with start/end times.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PanchangNakshatraInfo {
+    /// The nakshatra.
+    pub nakshatra: Nakshatra,
+    /// 0-based nakshatra index (0=Ashwini .. 26=Revati).
+    pub nakshatra_index: u8,
+    /// Pada (quarter) within the nakshatra, 1-4.
+    pub pada: u8,
+    /// Start of this nakshatra (UTC).
+    pub start: UtcTime,
+    /// End of this nakshatra (UTC).
+    pub end: UtcTime,
+}
+
+/// Combined daily panchang: all seven elements for a single moment,
 /// with optional calendar elements (masa, ayana, varsha).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PanchangInfo {
@@ -136,6 +151,8 @@ pub struct PanchangInfo {
     pub hora: HoraInfo,
     /// Ghatika (1-60 division of Vedic day).
     pub ghatika: GhatikaInfo,
+    /// Moon's nakshatra.
+    pub nakshatra: PanchangNakshatraInfo,
     /// Masa (lunar month). Present when `include_calendar` is true.
     pub masa: Option<MasaInfo>,
     /// Ayana (solstice period). Present when `include_calendar` is true.

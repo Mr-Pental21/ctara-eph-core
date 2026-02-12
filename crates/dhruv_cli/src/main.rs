@@ -1132,6 +1132,8 @@ fn main() {
                     println!("  Start:  {}  End: {}", info.hora.start, info.hora.end);
                     println!("Ghatika:  {}/60", info.ghatika.value);
                     println!("  Start:  {}  End: {}", info.ghatika.start, info.ghatika.end);
+                    println!("Nakshatra: {} (index {}, pada {})", info.nakshatra.nakshatra.name(), info.nakshatra.nakshatra_index, info.nakshatra.pada);
+                    println!("  Start:  {}  End: {}", info.nakshatra.start, info.nakshatra.end);
                     if let Some(m) = info.masa {
                         let adhika_str = if m.adhika { " (Adhika)" } else { "" };
                         println!("Masa:     {}{}", m.masa.name(), adhika_str);
