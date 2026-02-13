@@ -8,8 +8,7 @@ use std::path::Path;
 use dhruv_core::{Body, Engine, EngineConfig};
 use dhruv_time::{EopKernel, LeapSecondKernel};
 use dhruv_vedic_base::{
-    BhavaConfig, BhavaReferenceMode, BhavaStartingPoint, BhavaSystem, GeoLocation,
-    compute_bhavas,
+    BhavaConfig, BhavaReferenceMode, BhavaStartingPoint, BhavaSystem, GeoLocation, compute_bhavas,
 };
 
 const SPK_PATH: &str = "../../data/de442s.bsp";
@@ -140,9 +139,10 @@ fn sripati_angular_cusps_match_asc_ic_desc_mc() {
     // Cusp 7 = Desc = Asc + 180
     let desc = (result.lagna_deg + 180.0).rem_euclid(360.0);
     assert!(
-        (result.bhavas[6].cusp_deg - desc).abs().min(
-            (result.bhavas[6].cusp_deg - desc + 360.0).abs()
-        ) < 0.01,
+        (result.bhavas[6].cusp_deg - desc)
+            .abs()
+            .min((result.bhavas[6].cusp_deg - desc + 360.0).abs())
+            < 0.01,
         "cusp 7 = {}, Desc = {}",
         result.bhavas[6].cusp_deg,
         desc
@@ -151,9 +151,10 @@ fn sripati_angular_cusps_match_asc_ic_desc_mc() {
     // Cusp 4 = IC = MC + 180
     let ic = (result.mc_deg + 180.0).rem_euclid(360.0);
     assert!(
-        (result.bhavas[3].cusp_deg - ic).abs().min(
-            (result.bhavas[3].cusp_deg - ic + 360.0).abs()
-        ) < 0.01,
+        (result.bhavas[3].cusp_deg - ic)
+            .abs()
+            .min((result.bhavas[3].cusp_deg - ic + 360.0).abs())
+            < 0.01,
         "cusp 4 = {}, IC = {}",
         result.bhavas[3].cusp_deg,
         ic
@@ -293,8 +294,5 @@ fn middle_of_first_shifts_cusps() {
 
     // For equal houses, middle-of-first shifts all cusps back by 15 deg
     let diff = (result_start.bhavas[0].cusp_deg - result_mid.bhavas[0].cusp_deg).rem_euclid(360.0);
-    assert!(
-        (diff - 15.0).abs() < 0.01,
-        "shift = {diff}, expected 15"
-    );
+    assert!((diff - 15.0).abs() < 0.01, "shift = {diff}, expected 15");
 }

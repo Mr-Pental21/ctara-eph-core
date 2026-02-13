@@ -7,7 +7,7 @@ use std::path::Path;
 
 use dhruv_core::{Body, Engine, EngineConfig};
 use dhruv_search::{
-    MaxSpeedType, SearchError, StationaryConfig, StationType, next_max_speed, next_stationary,
+    MaxSpeedType, SearchError, StationType, StationaryConfig, next_max_speed, next_stationary,
     prev_stationary, search_stationary,
 };
 
@@ -19,12 +19,7 @@ fn load_engine() -> Option<Engine> {
         eprintln!("Skipping stationary_golden: kernel files not found");
         return None;
     }
-    let config = EngineConfig::with_single_spk(
-        SPK_PATH.into(),
-        LSK_PATH.into(),
-        1024,
-        false,
-    );
+    let config = EngineConfig::with_single_spk(SPK_PATH.into(), LSK_PATH.into(), 1024, false);
     Engine::new(config).ok()
 }
 
@@ -39,8 +34,8 @@ fn mercury_station_retrograde_apr_2024() {
     let Some(engine) = load_engine() else { return };
     let jd_start = jd_from_date(2024, 3, 1.0);
     let config = StationaryConfig::inner_planet();
-    let result = next_stationary(&engine, Body::Mercury, jd_start, &config)
-        .expect("search should succeed");
+    let result =
+        next_stationary(&engine, Body::Mercury, jd_start, &config).expect("search should succeed");
     let event = result.expect("should find a Mercury station");
 
     // Mercury station retrograde ~2024-Apr-01 ± a few days
@@ -49,7 +44,8 @@ fn mercury_station_retrograde_apr_2024() {
     assert!(
         diff_days < 3.0,
         "Mercury station off by {diff_days:.1} days, got JD {}, expected ~JD {}",
-        event.jd_tdb, expected_jd
+        event.jd_tdb,
+        expected_jd
     );
     assert_eq!(event.station_type, StationType::StationRetrograde);
     assert_eq!(event.body, Body::Mercury);
@@ -64,8 +60,8 @@ fn mercury_station_direct_apr_2024() {
     // Start after the retrograde station
     let jd_start = jd_from_date(2024, 4, 5.0);
     let config = StationaryConfig::inner_planet();
-    let result = next_stationary(&engine, Body::Mercury, jd_start, &config)
-        .expect("search should succeed");
+    let result =
+        next_stationary(&engine, Body::Mercury, jd_start, &config).expect("search should succeed");
     let event = result.expect("should find a Mercury direct station");
 
     let expected_jd = jd_from_date(2024, 4, 25.0);
@@ -84,8 +80,8 @@ fn mercury_station_retrograde_aug_2024() {
     let Some(engine) = load_engine() else { return };
     let jd_start = jd_from_date(2024, 7, 1.0);
     let config = StationaryConfig::inner_planet();
-    let result = next_stationary(&engine, Body::Mercury, jd_start, &config)
-        .expect("search should succeed");
+    let result =
+        next_stationary(&engine, Body::Mercury, jd_start, &config).expect("search should succeed");
     let event = result.expect("should find a Mercury station");
 
     let expected_jd = jd_from_date(2024, 8, 5.0);
@@ -144,8 +140,8 @@ fn prev_stationary_mercury() {
     let Some(engine) = load_engine() else { return };
     let jd_start = jd_from_date(2024, 5, 1.0);
     let config = StationaryConfig::inner_planet();
-    let result = prev_stationary(&engine, Body::Mercury, jd_start, &config)
-        .expect("search should succeed");
+    let result =
+        prev_stationary(&engine, Body::Mercury, jd_start, &config).expect("search should succeed");
     let event = result.expect("should find a previous Mercury station");
 
     // Should find a station before May 2024 — the direct station ~Apr 25 or earlier
@@ -218,8 +214,8 @@ fn saturn_station_retrograde_2024() {
     let Some(engine) = load_engine() else { return };
     let jd_start = jd_from_date(2024, 5, 1.0);
     let config = StationaryConfig::outer_planet();
-    let result = next_stationary(&engine, Body::Saturn, jd_start, &config)
-        .expect("search should succeed");
+    let result =
+        next_stationary(&engine, Body::Saturn, jd_start, &config).expect("search should succeed");
     let event = result.expect("should find a Saturn station");
 
     let expected_jd = jd_from_date(2024, 6, 29.0);
@@ -243,8 +239,12 @@ fn max_speed_classifies_direct_and_retrograde() {
     let events = dhruv_search::search_max_speed(&engine, Body::Mercury, jd_start, jd_end, &config)
         .expect("search should succeed");
 
-    let has_direct = events.iter().any(|e| e.speed_type == MaxSpeedType::MaxDirect);
-    let has_retro = events.iter().any(|e| e.speed_type == MaxSpeedType::MaxRetrograde);
+    let has_direct = events
+        .iter()
+        .any(|e| e.speed_type == MaxSpeedType::MaxDirect);
+    let has_retro = events
+        .iter()
+        .any(|e| e.speed_type == MaxSpeedType::MaxRetrograde);
     assert!(has_direct, "should have at least one MaxDirect event");
     assert!(has_retro, "should have at least one MaxRetrograde event");
 }

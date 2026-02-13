@@ -317,8 +317,7 @@ impl Engine {
         config.validate()?;
         let mut spk_kernels = Vec::with_capacity(config.spk_paths.len());
         for path in &config.spk_paths {
-            let spk = SpkKernel::load(path)
-                .map_err(|e| EngineError::KernelLoad(e.to_string()))?;
+            let spk = SpkKernel::load(path).map_err(|e| EngineError::KernelLoad(e.to_string()))?;
             spk_kernels.push(spk);
         }
         let lsk = LeapSecondKernel::load(&config.lsk_path)
@@ -440,10 +439,7 @@ impl Engine {
     }
 
     /// Evaluate a query and return telemetry alongside the result.
-    pub fn query_with_stats(
-        &self,
-        query: Query,
-    ) -> Result<(StateVector, QueryStats), EngineError> {
+    pub fn query_with_stats(&self, query: Query) -> Result<(StateVector, QueryStats), EngineError> {
         let mut ctx = ComputationContext::new();
         let state = self.query_with_ctx(query, &mut ctx)?;
         Ok((state, ctx.stats()))
@@ -507,10 +503,7 @@ impl Engine {
 
     /// Evaluate multiple queries, sharing memoization across queries at the
     /// same epoch. Returns results in input order.
-    pub fn query_batch(
-        &self,
-        queries: &[Query],
-    ) -> Vec<Result<StateVector, EngineError>> {
+    pub fn query_batch(&self, queries: &[Query]) -> Vec<Result<StateVector, EngineError>> {
         self.query_batch_with_stats(queries).0
     }
 
@@ -520,8 +513,7 @@ impl Engine {
         &self,
         queries: &[Query],
     ) -> (Vec<Result<StateVector, EngineError>>, QueryStats) {
-        let mut results: Vec<Result<StateVector, EngineError>> =
-            Vec::with_capacity(queries.len());
+        let mut results: Vec<Result<StateVector, EngineError>> = Vec::with_capacity(queries.len());
 
         // Group by epoch bits to share context across same-epoch queries.
         // Build index groups, process each group with a shared context,
@@ -595,7 +587,10 @@ mod tests {
             cache_capacity: 256,
             strict_validation: true,
         };
-        assert!(matches!(Engine::new(config), Err(EngineError::InvalidConfig(_))));
+        assert!(matches!(
+            Engine::new(config),
+            Err(EngineError::InvalidConfig(_))
+        ));
     }
 
     #[test]
@@ -607,7 +602,10 @@ mod tests {
             cache_capacity: 256,
             strict_validation: true,
         };
-        assert!(matches!(Engine::new(config), Err(EngineError::InvalidConfig(_))));
+        assert!(matches!(
+            Engine::new(config),
+            Err(EngineError::InvalidConfig(_))
+        ));
     }
 
     #[test]
@@ -619,7 +617,10 @@ mod tests {
             cache_capacity: 256,
             strict_validation: true,
         };
-        assert!(matches!(Engine::new(config), Err(EngineError::InvalidConfig(_))));
+        assert!(matches!(
+            Engine::new(config),
+            Err(EngineError::InvalidConfig(_))
+        ));
     }
 
     #[test]
@@ -631,18 +632,16 @@ mod tests {
             cache_capacity: 0,
             strict_validation: true,
         };
-        assert!(matches!(Engine::new(config), Err(EngineError::InvalidConfig(_))));
+        assert!(matches!(
+            Engine::new(config),
+            Err(EngineError::InvalidConfig(_))
+        ));
     }
 
     #[test]
     fn with_single_spk_convenience() {
         let (spk, lsk) = kernel_paths();
-        let config = EngineConfig::with_single_spk(
-            spk,
-            lsk,
-            256,
-            true,
-        );
+        let config = EngineConfig::with_single_spk(spk, lsk, 256, true);
         assert_eq!(config.spk_paths.len(), 1);
         assert_eq!(config.cache_capacity, 256);
         assert!(config.strict_validation);

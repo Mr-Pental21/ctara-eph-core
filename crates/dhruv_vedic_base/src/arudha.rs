@@ -16,18 +16,18 @@ use crate::util::normalize_360;
 /// The 12 Arudha Padas.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ArudhaPada {
-    ArudhaLagna,    // A1/AL
-    DhanaPada,      // A2
-    VikramaPada,    // A3
-    MatriPada,      // A4
-    MantraPada,     // A5
-    RogaPada,       // A6
-    DaraPada,       // A7
-    MrityuPada,     // A8
-    PitriPada,      // A9
-    RajyaPada,      // A10
-    LabhaPada,      // A11
-    Upapada,        // A12/UL
+    ArudhaLagna, // A1/AL
+    DhanaPada,   // A2
+    VikramaPada, // A3
+    MatriPada,   // A4
+    MantraPada,  // A5
+    RogaPada,    // A6
+    DaraPada,    // A7
+    MrityuPada,  // A8
+    PitriPada,   // A9
+    RajyaPada,   // A10
+    LabhaPada,   // A11
+    Upapada,     // A12/UL
 }
 
 /// All 12 arudha padas in order (A1 through A12).
@@ -133,10 +133,7 @@ pub fn arudha_pada(bhava_cusp_lon: f64, lord_lon: f64) -> (f64, u8) {
 /// Arguments:
 /// - `bhava_cusps`: 12 sidereal cusp longitudes (index 0 = 1st house)
 /// - `lord_lons`: 12 sidereal lord longitudes (one per house, resolved from cusp rashi)
-pub fn all_arudha_padas(
-    bhava_cusps: &[f64; 12],
-    lord_lons: &[f64; 12],
-) -> [ArudhaResult; 12] {
+pub fn all_arudha_padas(bhava_cusps: &[f64; 12], lord_lons: &[f64; 12]) -> [ArudhaResult; 12] {
     let mut results = [ArudhaResult {
         pada: ArudhaPada::ArudhaLagna,
         longitude_deg: 0.0,
@@ -223,12 +220,10 @@ mod tests {
     #[test]
     fn all_arudha_padas_basic() {
         let cusps = [
-            0.0, 30.0, 60.0, 90.0, 120.0, 150.0,
-            180.0, 210.0, 240.0, 270.0, 300.0, 330.0,
+            0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0, 210.0, 240.0, 270.0, 300.0, 330.0,
         ];
         let lords = [
-            45.0, 75.0, 105.0, 135.0, 165.0, 195.0,
-            225.0, 255.0, 285.0, 315.0, 345.0, 15.0,
+            45.0, 75.0, 105.0, 135.0, 165.0, 195.0, 225.0, 255.0, 285.0, 315.0, 345.0, 15.0,
         ];
         let results = all_arudha_padas(&cusps, &lords);
 

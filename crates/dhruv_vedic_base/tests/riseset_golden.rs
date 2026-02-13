@@ -8,8 +8,8 @@ use std::path::Path;
 use dhruv_core::{Engine, EngineConfig};
 use dhruv_time::{EopKernel, LeapSecondKernel};
 use dhruv_vedic_base::{
-    GeoLocation, RiseSetConfig, RiseSetEvent, RiseSetResult,
-    approximate_local_noon_jd, compute_rise_set,
+    GeoLocation, RiseSetConfig, RiseSetEvent, RiseSetResult, approximate_local_noon_jd,
+    compute_rise_set,
 };
 
 const SPK_PATH: &str = "../../data/de442s.bsp";
@@ -61,8 +61,13 @@ fn new_delhi_equinox_sunrise() {
     let noon = approximate_local_noon_jd(jd_0h, loc.longitude_deg);
 
     let result = compute_rise_set(
-        &engine, &lsk, &eop, &loc,
-        RiseSetEvent::Sunrise, noon, &config,
+        &engine,
+        &lsk,
+        &eop,
+        &loc,
+        RiseSetEvent::Sunrise,
+        noon,
+        &config,
     )
     .unwrap();
 
@@ -89,8 +94,13 @@ fn new_delhi_equinox_sunset() {
     let noon = approximate_local_noon_jd(jd_0h, loc.longitude_deg);
 
     let result = compute_rise_set(
-        &engine, &lsk, &eop, &loc,
-        RiseSetEvent::Sunset, noon, &config,
+        &engine,
+        &lsk,
+        &eop,
+        &loc,
+        RiseSetEvent::Sunset,
+        noon,
+        &config,
     )
     .unwrap();
 
@@ -117,12 +127,21 @@ fn tromso_summer_never_sets() {
     let noon = approximate_local_noon_jd(jd_0h, loc.longitude_deg);
 
     let result = compute_rise_set(
-        &engine, &lsk, &eop, &loc,
-        RiseSetEvent::Sunrise, noon, &config,
+        &engine,
+        &lsk,
+        &eop,
+        &loc,
+        RiseSetEvent::Sunrise,
+        noon,
+        &config,
     )
     .unwrap();
 
-    assert_eq!(result, RiseSetResult::NeverSets, "Tromso summer solstice should be midnight sun");
+    assert_eq!(
+        result,
+        RiseSetResult::NeverSets,
+        "Tromso summer solstice should be midnight sun"
+    );
 }
 
 #[test]
@@ -136,10 +155,19 @@ fn tromso_winter_never_rises() {
     let noon = approximate_local_noon_jd(jd_0h, loc.longitude_deg);
 
     let result = compute_rise_set(
-        &engine, &lsk, &eop, &loc,
-        RiseSetEvent::Sunrise, noon, &config,
+        &engine,
+        &lsk,
+        &eop,
+        &loc,
+        RiseSetEvent::Sunrise,
+        noon,
+        &config,
     )
     .unwrap();
 
-    assert_eq!(result, RiseSetResult::NeverRises, "Tromso winter solstice should be polar night");
+    assert_eq!(
+        result,
+        RiseSetResult::NeverRises,
+        "Tromso winter solstice should be polar night"
+    );
 }

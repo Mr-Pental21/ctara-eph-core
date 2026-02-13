@@ -7,7 +7,7 @@ use std::path::Path;
 
 use dhruv_core::{Engine, EngineConfig};
 use dhruv_search::sankranti_types::SankrantiConfig;
-use dhruv_search::{drishti_for_date, DrishtiConfig};
+use dhruv_search::{DrishtiConfig, drishti_for_date};
 use dhruv_time::{EopKernel, UtcTime};
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
 use dhruv_vedic_base::{BhavaConfig, Graha};
@@ -63,7 +63,14 @@ fn base_all_flags_off() {
     };
 
     let result = drishti_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("drishti_for_date should succeed");
 
@@ -134,7 +141,14 @@ fn include_lagna_only() {
     };
 
     let result = drishti_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("drishti_for_date should succeed");
 
@@ -143,12 +157,17 @@ fn include_lagna_only() {
         let e = &result.graha_to_lagna[i];
         assert!(
             e.angular_distance >= 0.0 && e.angular_distance < 360.0,
-            "lagna[{i}] angular_distance out of range: {}", e.angular_distance,
+            "lagna[{i}] angular_distance out of range: {}",
+            e.angular_distance,
         );
     }
 
     // At least some lagna entries should be nonzero
-    let nonzero = result.graha_to_lagna.iter().filter(|e| e.total_virupa > 0.0).count();
+    let nonzero = result
+        .graha_to_lagna
+        .iter()
+        .filter(|e| e.total_virupa > 0.0)
+        .count();
     assert!(nonzero > 0, "expected some nonzero lagna drishti entries");
 }
 
@@ -170,7 +189,14 @@ fn include_bhava_only() {
     };
 
     let result = drishti_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("drishti_for_date should succeed");
 
@@ -215,7 +241,14 @@ fn include_bindus_only() {
     };
 
     let result = drishti_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("drishti_for_date should succeed");
 
@@ -260,18 +293,31 @@ fn all_flags_on() {
     };
 
     let result = drishti_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("drishti_for_date should succeed");
 
     // All sections should have nonzero entries
-    let lagna_nonzero = result.graha_to_lagna.iter().filter(|e| e.total_virupa > 0.0).count();
+    let lagna_nonzero = result
+        .graha_to_lagna
+        .iter()
+        .filter(|e| e.total_virupa > 0.0)
+        .count();
     assert!(lagna_nonzero > 0, "lagna should have nonzero entries");
 
     let mut bhava_nonzero = 0;
     for row in &result.graha_to_bhava {
         for e in row {
-            if e.total_virupa > 0.0 { bhava_nonzero += 1; }
+            if e.total_virupa > 0.0 {
+                bhava_nonzero += 1;
+            }
         }
     }
     assert!(bhava_nonzero > 0, "bhava should have nonzero entries");
@@ -279,7 +325,9 @@ fn all_flags_on() {
     let mut bindus_nonzero = 0;
     for row in &result.graha_to_bindus {
         for e in row {
-            if e.total_virupa > 0.0 { bindus_nonzero += 1; }
+            if e.total_virupa > 0.0 {
+                bindus_nonzero += 1;
+            }
         }
     }
     assert!(bindus_nonzero > 0, "bindus should have nonzero entries");
@@ -299,7 +347,14 @@ fn special_aspects_present() {
     let config = DrishtiConfig::default();
 
     let result = drishti_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("drishti_for_date should succeed");
 
@@ -311,7 +366,9 @@ fn special_aspects_present() {
             assert!(
                 (e.total_virupa - expected).abs() < 1e-10,
                 "total_virupa mismatch at [{i}][{j}]: {} != {} + {}",
-                e.total_virupa, e.base_virupa, e.special_virupa,
+                e.total_virupa,
+                e.base_virupa,
+                e.special_virupa,
             );
         }
     }

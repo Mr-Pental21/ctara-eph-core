@@ -118,11 +118,20 @@ fn search_all_sankrantis_2024() {
     let config = default_config();
     let events = search_sankrantis(&engine, &start, &end, &config).unwrap();
     // A year should have 12 sankrantis (one per rashi)
-    assert_eq!(events.len(), 12, "expected 12 sankrantis, got {}", events.len());
+    assert_eq!(
+        events.len(),
+        12,
+        "expected 12 sankrantis, got {}",
+        events.len()
+    );
     // Each rashi should appear exactly once
     let mut seen = [false; 12];
     for ev in &events {
-        assert!(!seen[ev.rashi_index as usize], "duplicate rashi: {}", ev.rashi.name());
+        assert!(
+            !seen[ev.rashi_index as usize],
+            "duplicate rashi: {}",
+            ev.rashi.name()
+        );
         seen[ev.rashi_index as usize] = true;
     }
     // All rashis seen

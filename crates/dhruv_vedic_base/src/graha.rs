@@ -204,7 +204,11 @@ mod tests {
     #[test]
     fn naif_codes_present_for_sapta_grahas() {
         for g in SAPTA_GRAHAS {
-            assert!(g.naif_code().is_some(), "{} should have NAIF code", g.name());
+            assert!(
+                g.naif_code().is_some(),
+                "{} should have NAIF code",
+                g.name()
+            );
         }
     }
 

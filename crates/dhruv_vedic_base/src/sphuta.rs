@@ -249,18 +249,48 @@ pub fn all_sphutas(inputs: &SphutalInputs) -> [(Sphuta, f64); 16] {
         (Sphuta::BhriguBindu, bhrigu_bindu(inputs.rahu, inputs.moon)),
         (Sphuta::PranaSphuta, prana_sphuta(inputs.lagna, inputs.moon)),
         (Sphuta::DehaSphuta, deha_sphuta(inputs.moon, inputs.lagna)),
-        (Sphuta::MrityuSphuta, mrityu_sphuta(inputs.eighth_lord, inputs.lagna)),
-        (Sphuta::TithiSphuta, tithi_sphuta(inputs.moon, inputs.sun, inputs.lagna)),
+        (
+            Sphuta::MrityuSphuta,
+            mrityu_sphuta(inputs.eighth_lord, inputs.lagna),
+        ),
+        (
+            Sphuta::TithiSphuta,
+            tithi_sphuta(inputs.moon, inputs.sun, inputs.lagna),
+        ),
         (Sphuta::YogaSphuta, yoga_sphuta(inputs.sun, inputs.moon)),
-        (Sphuta::YogaSphutaNormalized, yoga_sphuta_normalized(inputs.sun, inputs.moon)),
-        (Sphuta::RahuTithiSphuta, rahu_tithi_sphuta(inputs.rahu, inputs.sun, inputs.lagna)),
-        (Sphuta::KshetraSphuta, kshetra_sphuta(inputs.venus, inputs.moon, inputs.mars, inputs.jupiter, inputs.lagna)),
-        (Sphuta::BeejaSphuta, beeja_sphuta(inputs.sun, inputs.venus, inputs.jupiter)),
+        (
+            Sphuta::YogaSphutaNormalized,
+            yoga_sphuta_normalized(inputs.sun, inputs.moon),
+        ),
+        (
+            Sphuta::RahuTithiSphuta,
+            rahu_tithi_sphuta(inputs.rahu, inputs.sun, inputs.lagna),
+        ),
+        (
+            Sphuta::KshetraSphuta,
+            kshetra_sphuta(
+                inputs.venus,
+                inputs.moon,
+                inputs.mars,
+                inputs.jupiter,
+                inputs.lagna,
+            ),
+        ),
+        (
+            Sphuta::BeejaSphuta,
+            beeja_sphuta(inputs.sun, inputs.venus, inputs.jupiter),
+        ),
         (Sphuta::TriSphuta, tri),
         (Sphuta::ChatusSphuta, chatus),
         (Sphuta::PanchaSphuta, panchasphuta(chatus, inputs.rahu)),
-        (Sphuta::SookshmaTrisphuta, sookshma_trisphuta(inputs.lagna, inputs.moon, inputs.gulika, inputs.sun)),
-        (Sphuta::AvayogaSphuta, avayoga_sphuta(inputs.sun, inputs.moon)),
+        (
+            Sphuta::SookshmaTrisphuta,
+            sookshma_trisphuta(inputs.lagna, inputs.moon, inputs.gulika, inputs.sun),
+        ),
+        (
+            Sphuta::AvayogaSphuta,
+            avayoga_sphuta(inputs.sun, inputs.moon),
+        ),
         (Sphuta::Kunda, kunda(inputs.lagna, inputs.moon, inputs.mars)),
     ]
 }
@@ -371,7 +401,10 @@ mod tests {
         let as_ = avayoga_sphuta(100.0, 200.0);
         // yoga + avayoga should sum to 360 (or 0 if both are 0/360)
         let sum = normalize_360(ys + as_);
-        assert!(sum.abs() < 1e-10 || (sum - 360.0).abs() < 1e-10, "sum={sum}");
+        assert!(
+            sum.abs() < 1e-10 || (sum - 360.0).abs() < 1e-10,
+            "sum={sum}"
+        );
     }
 
     #[test]

@@ -150,7 +150,7 @@ mod tests {
         let at_one = 2.0 * 1.0 + 3.0 * 1.0 + 5.0 * 1.0;
         assert!((clenshaw(&coeffs, 1.0) - at_one).abs() < EPS);
 
-        let at_neg_one = 2.0 * 1.0 + 3.0 * (-1.0) + 5.0 * 1.0;
+        let at_neg_one = 2.0 - 3.0 + 5.0;
         assert!((clenshaw(&coeffs, -1.0) - at_neg_one).abs() < EPS);
     }
 }

@@ -28,13 +28,19 @@ fn load_engine() -> Option<Engine> {
 fn purnima_jan_2024() {
     let Some(engine) = load_engine() else { return };
     let utc = UtcTime::new(2024, 1, 1, 0, 0, 0.0);
-    let event = next_purnima(&engine, &utc).unwrap().expect("should find purnima");
+    let event = next_purnima(&engine, &utc)
+        .unwrap()
+        .expect("should find purnima");
     assert_eq!(event.utc.year, 2024);
     assert_eq!(event.utc.month, 1);
     assert_eq!(event.utc.day, 25);
     // Within 2 hours of 17:54 UTC
     let diff_hours = (event.utc.hour as f64 + event.utc.minute as f64 / 60.0 - 17.9).abs();
-    assert!(diff_hours < 2.0, "off by {diff_hours:.1}h, got {}", event.utc);
+    assert!(
+        diff_hours < 2.0,
+        "off by {diff_hours:.1}h, got {}",
+        event.utc
+    );
 }
 
 /// NASA: New Moon 2024-Jan-11 ~11:57 UTC
@@ -42,12 +48,18 @@ fn purnima_jan_2024() {
 fn amavasya_jan_2024() {
     let Some(engine) = load_engine() else { return };
     let utc = UtcTime::new(2024, 1, 1, 0, 0, 0.0);
-    let event = next_amavasya(&engine, &utc).unwrap().expect("should find amavasya");
+    let event = next_amavasya(&engine, &utc)
+        .unwrap()
+        .expect("should find amavasya");
     assert_eq!(event.utc.year, 2024);
     assert_eq!(event.utc.month, 1);
     assert_eq!(event.utc.day, 11);
     let diff_hours = (event.utc.hour as f64 + event.utc.minute as f64 / 60.0 - 11.95).abs();
-    assert!(diff_hours < 2.0, "off by {diff_hours:.1}h, got {}", event.utc);
+    assert!(
+        diff_hours < 2.0,
+        "off by {diff_hours:.1}h, got {}",
+        event.utc
+    );
 }
 
 /// NASA: Full Moon 2024-Feb-24 ~12:30 UTC
@@ -55,7 +67,9 @@ fn amavasya_jan_2024() {
 fn purnima_feb_2024() {
     let Some(engine) = load_engine() else { return };
     let utc = UtcTime::new(2024, 2, 1, 0, 0, 0.0);
-    let event = next_purnima(&engine, &utc).unwrap().expect("should find purnima");
+    let event = next_purnima(&engine, &utc)
+        .unwrap()
+        .expect("should find purnima");
     assert_eq!(event.utc.year, 2024);
     assert_eq!(event.utc.month, 2);
     assert_eq!(event.utc.day, 24);
@@ -101,7 +115,9 @@ fn search_amavasyas_2024() {
 fn prev_purnima_from_feb_2024() {
     let Some(engine) = load_engine() else { return };
     let utc = UtcTime::new(2024, 2, 15, 0, 0, 0.0);
-    let event = prev_purnima(&engine, &utc).unwrap().expect("should find prev purnima");
+    let event = prev_purnima(&engine, &utc)
+        .unwrap()
+        .expect("should find prev purnima");
     // Should find Jan 25 full moon
     assert_eq!(event.utc.year, 2024);
     assert_eq!(event.utc.month, 1);
@@ -113,7 +129,9 @@ fn prev_purnima_from_feb_2024() {
 fn prev_amavasya_from_feb_2024() {
     let Some(engine) = load_engine() else { return };
     let utc = UtcTime::new(2024, 2, 1, 0, 0, 0.0);
-    let event = prev_amavasya(&engine, &utc).unwrap().expect("should find prev amavasya");
+    let event = prev_amavasya(&engine, &utc)
+        .unwrap()
+        .expect("should find prev amavasya");
     // Should find Jan 11 new moon
     assert_eq!(event.utc.year, 2024);
     assert_eq!(event.utc.month, 1);
@@ -125,7 +143,9 @@ fn prev_amavasya_from_feb_2024() {
 fn purnima_longitude_opposition() {
     let Some(engine) = load_engine() else { return };
     let utc = UtcTime::new(2024, 3, 1, 0, 0, 0.0);
-    let event = next_purnima(&engine, &utc).unwrap().expect("should find purnima");
+    let event = next_purnima(&engine, &utc)
+        .unwrap()
+        .expect("should find purnima");
     let diff = (event.moon_longitude_deg - event.sun_longitude_deg).abs();
     let sep = if diff > 180.0 { 360.0 - diff } else { diff };
     assert!(
@@ -139,11 +159,10 @@ fn purnima_longitude_opposition() {
 fn amavasya_longitude_conjunction() {
     let Some(engine) = load_engine() else { return };
     let utc = UtcTime::new(2024, 3, 1, 0, 0, 0.0);
-    let event = next_amavasya(&engine, &utc).unwrap().expect("should find amavasya");
+    let event = next_amavasya(&engine, &utc)
+        .unwrap()
+        .expect("should find amavasya");
     let diff = (event.moon_longitude_deg - event.sun_longitude_deg).abs();
     let sep = if diff > 180.0 { 360.0 - diff } else { diff };
-    assert!(
-        sep < 1.0,
-        "expected ~0 deg separation, got {sep:.2}"
-    );
+    assert!(sep < 1.0, "expected ~0 deg separation, got {sep:.2}");
 }

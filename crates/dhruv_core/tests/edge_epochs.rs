@@ -46,7 +46,10 @@ fn query_at_kernel_start_boundary() {
 
     // JD 2415020.5 = 1899-Dec-31 — should be within DE442s
     let result = engine.query(earth_ssb_query(2_415_020.5));
-    assert!(result.is_ok(), "query near kernel start should succeed: {result:?}");
+    assert!(
+        result.is_ok(),
+        "query near kernel start should succeed: {result:?}"
+    );
 
     let state = result.unwrap();
     let r = (state.position_km[0].powi(2)
@@ -70,7 +73,10 @@ fn query_at_kernel_end_boundary() {
 
     // JD 2488068.5 = ~2099-Dec-20 — should be within DE442s
     let result = engine.query(earth_ssb_query(2_488_068.5));
-    assert!(result.is_ok(), "query near kernel end should succeed: {result:?}");
+    assert!(
+        result.is_ok(),
+        "query near kernel end should succeed: {result:?}"
+    );
 
     let state = result.unwrap();
     let r = (state.position_km[0].powi(2)
@@ -151,7 +157,10 @@ fn query_all_bodies_at_j2000() {
             + state.position_km[1].powi(2)
             + state.position_km[2].powi(2))
         .sqrt();
-        assert!(r > 0.0 && r.is_finite(), "{body:?}: position magnitude {r} invalid");
+        assert!(
+            r > 0.0 && r.is_finite(),
+            "{body:?}: position magnitude {r} invalid"
+        );
     }
 }
 

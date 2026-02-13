@@ -3,8 +3,8 @@
 //! Provides `UtcTime`, the canonical UTC representation used throughout
 //! the engine. Conversion to/from JD TDB requires a [`LeapSecondKernel`].
 
-use crate::julian::{calendar_to_jd, jd_to_calendar, jd_to_tdb_seconds, tdb_seconds_to_jd};
 use crate::LeapSecondKernel;
+use crate::julian::{calendar_to_jd, jd_to_calendar, jd_to_tdb_seconds, tdb_seconds_to_jd};
 
 /// UTC calendar date with sub-second precision.
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -9,12 +9,11 @@
 use dhruv_core::{Body, Engine};
 use dhruv_time::{EopKernel, LeapSecondKernel, UtcTime, calendar_to_jd};
 use dhruv_vedic_base::{
-    Ayana, GeoLocation, NAKSHATRA_SPAN_27, Rashi, RiseSetConfig, RiseSetEvent, RiseSetResult,
-    approximate_local_noon_jd, ayana_from_sidereal_longitude, ayanamsha_deg,
-    compute_rise_set, ghatika_from_elapsed, hora_at, jd_tdb_to_centuries,
-    karana_from_elongation, masa_from_rashi_index, nakshatra_from_longitude, rashi_from_longitude,
-    samvatsara_from_year, tithi_from_elongation, vaar_from_jd, yoga_from_sum,
-    KARANA_SEGMENT_DEG, TITHI_SEGMENT_DEG, YOGA_SEGMENT_DEG, HORA_COUNT,
+    Ayana, GeoLocation, HORA_COUNT, KARANA_SEGMENT_DEG, NAKSHATRA_SPAN_27, Rashi, RiseSetConfig,
+    RiseSetEvent, RiseSetResult, TITHI_SEGMENT_DEG, YOGA_SEGMENT_DEG, approximate_local_noon_jd,
+    ayana_from_sidereal_longitude, ayanamsha_deg, compute_rise_set, ghatika_from_elapsed, hora_at,
+    jd_tdb_to_centuries, karana_from_elongation, masa_from_rashi_index, nakshatra_from_longitude,
+    rashi_from_longitude, samvatsara_from_year, tithi_from_elongation, vaar_from_jd, yoga_from_sum,
 };
 
 use crate::conjunction::body_ecliptic_lon_lat;
@@ -64,8 +63,9 @@ pub fn masa_for_date(
     config: &SankrantiConfig,
 ) -> Result<MasaInfo, SearchError> {
     // Find bracketing new moons
-    let prev_nm = prev_amavasya(engine, utc)?
-        .ok_or(SearchError::NoConvergence("could not find previous new moon"))?;
+    let prev_nm = prev_amavasya(engine, utc)?.ok_or(SearchError::NoConvergence(
+        "could not find previous new moon",
+    ))?;
     let next_nm = next_amavasya(engine, utc)?
         .ok_or(SearchError::NoConvergence("could not find next new moon"))?;
 
@@ -113,16 +113,14 @@ pub fn ayana_for_date(
     };
 
     // Find the start of this ayana (previous transition)
-    let start_event = prev_specific_sankranti(engine, utc, start_rashi, config)?
-        .ok_or(SearchError::NoConvergence(
-            "could not find ayana start sankranti",
-        ))?;
+    let start_event = prev_specific_sankranti(engine, utc, start_rashi, config)?.ok_or(
+        SearchError::NoConvergence("could not find ayana start sankranti"),
+    )?;
 
     // Find the end of this ayana (next transition)
-    let end_event = next_specific_sankranti(engine, utc, end_rashi, config)?
-        .ok_or(SearchError::NoConvergence(
-            "could not find ayana end sankranti",
-        ))?;
+    let end_event = next_specific_sankranti(engine, utc, end_rashi, config)?.ok_or(
+        SearchError::NoConvergence("could not find ayana end sankranti"),
+    )?;
 
     Ok(AyanaInfo {
         ayana: current_ayana,
@@ -189,15 +187,12 @@ fn find_chaitra_pratipada_for(
     // Find Mesha Sankranti (Sun entering sidereal 0 deg) near this date
     let search_start = UtcTime::new(utc.year, 1, 15, 0, 0, 0.0);
     let mesha_sankranti = next_specific_sankranti(engine, &search_start, Rashi::Mesha, config)?
-        .ok_or(SearchError::NoConvergence(
-            "could not find Mesha Sankranti",
-        ))?;
+        .ok_or(SearchError::NoConvergence("could not find Mesha Sankranti"))?;
 
     // Find the next new moon after Mesha Sankranti
-    let nm = next_amavasya(engine, &mesha_sankranti.utc)?
-        .ok_or(SearchError::NoConvergence(
-            "could not find new moon after Mesha Sankranti",
-        ))?;
+    let nm = next_amavasya(engine, &mesha_sankranti.utc)?.ok_or(SearchError::NoConvergence(
+        "could not find new moon after Mesha Sankranti",
+    ))?;
 
     Ok(nm.utc)
 }
@@ -326,10 +321,7 @@ fn utc_to_jd_utc(utc: &UtcTime) -> f64 {
 ///
 /// Tithi = which of 30 segments of Moon-Sun elongation (12 deg each) the
 /// current moment falls in. Returns tithi with start/end UTC times.
-pub fn tithi_for_date(
-    engine: &Engine,
-    utc: &UtcTime,
-) -> Result<TithiInfo, SearchError> {
+pub fn tithi_for_date(engine: &Engine, utc: &UtcTime) -> Result<TithiInfo, SearchError> {
     let jd = utc.to_jd_tdb(engine.lsk());
     let elong = elongation_at(engine, jd)?;
     tithi_at(engine, jd, elong)
@@ -372,10 +364,7 @@ pub fn tithi_at(
 ///
 /// Karana = which of 60 segments of Moon-Sun elongation (6 deg each) the
 /// current moment falls in. Uses traditional fixed/movable mapping.
-pub fn karana_for_date(
-    engine: &Engine,
-    utc: &UtcTime,
-) -> Result<KaranaInfo, SearchError> {
+pub fn karana_for_date(engine: &Engine, utc: &UtcTime) -> Result<KaranaInfo, SearchError> {
     let jd = utc.to_jd_tdb(engine.lsk());
     let elong = elongation_at(engine, jd)?;
     karana_at(engine, jd, elong)
@@ -440,8 +429,7 @@ pub fn yoga_at(
     let start_target = (pos.yoga_index as f64) * YOGA_SEGMENT_DEG;
     let end_target = ((pos.yoga_index as f64) + 1.0) * YOGA_SEGMENT_DEG;
 
-    let sum_fn =
-        |t: f64| -> Result<f64, SearchError> { sidereal_sum_at(engine, t, config) };
+    let sum_fn = |t: f64| -> Result<f64, SearchError> { sidereal_sum_at(engine, t, config) };
 
     let start_jd = find_angle_boundary(&sum_fn, jd_tdb, start_target, -0.25, 20)?
         .ok_or(SearchError::NoConvergence("could not find yoga start"))?;
@@ -493,7 +481,11 @@ pub fn vedic_day_sunrises(
 
     let today_sunrise_jd = match today_result {
         RiseSetResult::Event { jd_tdb, .. } => jd_tdb,
-        _ => return Err(SearchError::NoConvergence("sun never rises at this location")),
+        _ => {
+            return Err(SearchError::NoConvergence(
+                "sun never rises at this location",
+            ));
+        }
     };
 
     if jd_tdb >= today_sunrise_jd {
@@ -548,7 +540,11 @@ pub fn vaar_for_date(
 ) -> Result<VaarInfo, SearchError> {
     let (sunrise_jd, next_sunrise_jd) =
         vedic_day_sunrises(engine, eop, utc, location, riseset_config)?;
-    Ok(vaar_from_sunrises(sunrise_jd, next_sunrise_jd, engine.lsk()))
+    Ok(vaar_from_sunrises(
+        sunrise_jd,
+        next_sunrise_jd,
+        engine.lsk(),
+    ))
 }
 
 /// Determine the Vaar from pre-computed sunrise boundaries.
@@ -582,7 +578,12 @@ pub fn hora_for_date(
     let (sunrise_jd, next_sunrise_jd) =
         vedic_day_sunrises(engine, eop, utc, location, riseset_config)?;
     let jd_tdb = utc.to_jd_tdb(engine.lsk());
-    Ok(hora_from_sunrises(jd_tdb, sunrise_jd, next_sunrise_jd, engine.lsk()))
+    Ok(hora_from_sunrises(
+        jd_tdb,
+        sunrise_jd,
+        next_sunrise_jd,
+        engine.lsk(),
+    ))
 }
 
 /// Determine the Hora from pre-computed sunrise boundaries.
@@ -632,7 +633,12 @@ pub fn ghatika_for_date(
     let (sunrise_jd, next_sunrise_jd) =
         vedic_day_sunrises(engine, eop, utc, location, riseset_config)?;
     let jd_tdb = utc.to_jd_tdb(engine.lsk());
-    Ok(ghatika_from_sunrises(jd_tdb, sunrise_jd, next_sunrise_jd, engine.lsk()))
+    Ok(ghatika_from_sunrises(
+        jd_tdb,
+        sunrise_jd,
+        next_sunrise_jd,
+        engine.lsk(),
+    ))
 }
 
 /// Determine the Ghatika from pre-computed sunrise boundaries.

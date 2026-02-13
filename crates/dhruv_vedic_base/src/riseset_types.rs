@@ -81,10 +81,7 @@ impl RiseSetEvent {
     pub fn is_rising(self) -> bool {
         matches!(
             self,
-            Self::Sunrise
-                | Self::CivilDawn
-                | Self::NauticalDawn
-                | Self::AstronomicalDawn
+            Self::Sunrise | Self::CivilDawn | Self::NauticalDawn | Self::AstronomicalDawn
         )
     }
 
@@ -191,10 +188,7 @@ impl RiseSetConfig {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RiseSetResult {
     /// Event occurs at the given Julian Date (TDB).
-    Event {
-        jd_tdb: f64,
-        event: RiseSetEvent,
-    },
+    Event { jd_tdb: f64, event: RiseSetEvent },
     /// Sun never rises during this solar day (polar night).
     NeverRises,
     /// Sun never sets during this solar day (midnight sun).
@@ -332,10 +326,7 @@ mod tests {
             ..Default::default()
         };
         let h = c.target_altitude_deg(RiseSetEvent::CivilDawn, 16.0, 0.0);
-        assert!(
-            (h - (-6.0)).abs() < 1e-10,
-            "civil dawn: {h}, expected -6.0"
-        );
+        assert!((h - (-6.0)).abs() < 1e-10, "civil dawn: {h}, expected -6.0");
     }
 
     #[test]
@@ -346,12 +337,10 @@ mod tests {
         // Dip at 1000m ≈ 1.015 deg
         assert!(
             h < base - 0.9,
-            "1000m altitude: {h} should be < {}", base - 0.9
+            "1000m altitude: {h} should be < {}",
+            base - 0.9
         );
-        assert!(
-            h > base - 1.2,
-            "1000m altitude: {h} too negative"
-        );
+        assert!(h > base - 1.2, "1000m altitude: {h} too negative");
     }
 
     #[test]
@@ -382,10 +371,7 @@ mod tests {
         //         = sin(-0.8333 deg) / 1 = -0.01454
         let h0_rad = (-0.8333_f64).to_radians();
         let cos_h = h0_rad.sin(); // phi=0, dec=0 simplification
-        assert!(
-            (cos_h - (-0.01454)).abs() < 0.001,
-            "cos_h = {cos_h}"
-        );
+        assert!((cos_h - (-0.01454)).abs() < 0.001, "cos_h = {cos_h}");
     }
 
     #[test]
@@ -395,10 +381,7 @@ mod tests {
         let phi = 70.0_f64.to_radians();
         let dec = (-23.44_f64).to_radians();
         let cos_h = (h0.sin() - phi.sin() * dec.sin()) / (phi.cos() * dec.cos());
-        assert!(
-            cos_h > 1.0,
-            "cos_h = {cos_h}, should be > 1 (never rises)"
-        );
+        assert!(cos_h > 1.0, "cos_h = {cos_h}, should be > 1 (never rises)");
     }
 
     #[test]
@@ -408,10 +391,7 @@ mod tests {
         let phi = 70.0_f64.to_radians();
         let dec = 23.44_f64.to_radians();
         let cos_h = (h0.sin() - phi.sin() * dec.sin()) / (phi.cos() * dec.cos());
-        assert!(
-            cos_h < -1.0,
-            "cos_h = {cos_h}, should be < -1 (never sets)"
-        );
+        assert!(cos_h < -1.0, "cos_h = {cos_h}, should be < -1 (never sets)");
     }
 
     #[test]

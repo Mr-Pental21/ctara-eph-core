@@ -58,10 +58,9 @@ fn evaluate_mars_barycenter_at_j2000() {
         .expect("should evaluate Mars Bary at J2000");
 
     // Sanity: Mars should be roughly 1-3 AU from SSB.
-    let r = (eval.position_km[0].powi(2)
-        + eval.position_km[1].powi(2)
-        + eval.position_km[2].powi(2))
-    .sqrt();
+    let r =
+        (eval.position_km[0].powi(2) + eval.position_km[1].powi(2) + eval.position_km[2].powi(2))
+            .sqrt();
     let au_km = 1.496e8;
     assert!(
         r > 0.5 * au_km && r < 4.0 * au_km,
@@ -73,7 +72,10 @@ fn evaluate_mars_barycenter_at_j2000() {
         + eval.velocity_km_s[1].powi(2)
         + eval.velocity_km_s[2].powi(2))
     .sqrt();
-    assert!(v > 0.1 && v < 100.0, "Mars velocity {v:.3} km/s out of range");
+    assert!(
+        v > 0.1 && v < 100.0,
+        "Mars velocity {v:.3} km/s out of range"
+    );
 }
 
 #[test]

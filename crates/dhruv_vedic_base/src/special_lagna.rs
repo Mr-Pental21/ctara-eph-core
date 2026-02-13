@@ -177,9 +177,9 @@ pub fn pranapada_lagna(sun_lon: f64, ghatikas: f64) -> f64 {
     let sign_type = sun_rashi % 3;
 
     match sign_type {
-        1 => base,                              // Movable: no addition
-        2 => normalize_360(base + 240.0),       // Fixed: +240
-        _ => normalize_360(base + 120.0),       // Dual: +120
+        1 => base,                        // Movable: no addition
+        2 => normalize_360(base + 240.0), // Fixed: +240
+        _ => normalize_360(base + 120.0), // Dual: +120
     }
 }
 
@@ -455,10 +455,10 @@ mod tests {
     #[test]
     fn all_special_lagnas_results_in_range() {
         let result = all_special_lagnas(
-            45.0,   // sun
-            120.0,  // moon
-            200.0,  // lagna
-            25.0,   // ghatikas
+            45.0,          // sun
+            120.0,         // moon
+            200.0,         // lagna
+            25.0,          // ghatikas
             Graha::Shukra, // lagna lord
             Graha::Guru,   // moon 9th lord
         );

@@ -6,21 +6,20 @@
 
 use dhruv_core::{Body, Engine};
 use dhruv_time::{EopKernel, UtcTime};
-use dhruv_vedic_base::{
-    AllSpecialLagnas, AllUpagrahas, ArudhaResult, AshtakavargaResult, AyanamshaSystem, BhavaConfig,
-    DrishtiEntry, Graha, LunarNode, NodeMode, Upagraha, ALL_GRAHAS, lagna_longitude_rad,
-    ayanamsha_deg, bhrigu_bindu, calculate_ashtakavarga, compute_bhavas, ghatikas_since_sunrise,
-    graha_drishti, graha_drishti_matrix, hora_lagna, ghati_lagna, pranapada_lagna, sree_lagna,
-    jd_tdb_to_centuries, lunar_node_deg, nth_rashi_from, rashi_lord_by_index,
-    sun_based_upagrahas, time_upagraha_jd, normalize_360,
-    nakshatra_from_longitude, rashi_from_longitude,
-};
 use dhruv_vedic_base::arudha::all_arudha_padas;
-use dhruv_vedic_base::riseset::{compute_rise_set};
+use dhruv_vedic_base::riseset::compute_rise_set;
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig, RiseSetEvent, RiseSetResult};
 use dhruv_vedic_base::special_lagna::all_special_lagnas;
 use dhruv_vedic_base::upagraha::TIME_BASED_UPAGRAHAS;
 use dhruv_vedic_base::vaar::vaar_from_jd;
+use dhruv_vedic_base::{
+    ALL_GRAHAS, AllSpecialLagnas, AllUpagrahas, ArudhaResult, AshtakavargaResult, AyanamshaSystem,
+    BhavaConfig, DrishtiEntry, Graha, LunarNode, NodeMode, Upagraha, ayanamsha_deg, bhrigu_bindu,
+    calculate_ashtakavarga, compute_bhavas, ghati_lagna, ghatikas_since_sunrise, graha_drishti,
+    graha_drishti_matrix, hora_lagna, jd_tdb_to_centuries, lagna_longitude_rad, lunar_node_deg,
+    nakshatra_from_longitude, normalize_360, nth_rashi_from, pranapada_lagna, rashi_from_longitude,
+    rashi_lord_by_index, sree_lagna, sun_based_upagrahas, time_upagraha_jd,
+};
 
 use crate::conjunction::body_ecliptic_lon_lat;
 use crate::error::SearchError;
@@ -112,7 +111,8 @@ pub fn special_lagnas_for_date(
     let lagna_sid = normalize(lagna_tropical - aya);
 
     // Get sunrise pair for ghatikas
-    let (jd_sunrise, jd_next_sunrise) = vedic_day_sunrises(engine, eop, utc, location, riseset_config)?;
+    let (jd_sunrise, jd_next_sunrise) =
+        vedic_day_sunrises(engine, eop, utc, location, riseset_config)?;
     let ghatikas = ghatikas_since_sunrise(jd_tdb, jd_sunrise, jd_next_sunrise);
 
     // Determine lords for Indu Lagna
@@ -152,7 +152,12 @@ pub fn arudha_padas_for_date(
     let bhava_result = compute_bhavas(engine, engine.lsk(), eop, location, jd_utc, bhava_config)?;
 
     // Get sidereal graha positions
-    let graha_lons = graha_sidereal_longitudes(engine, jd_tdb, aya_config.ayanamsha_system, aya_config.use_nutation)?;
+    let graha_lons = graha_sidereal_longitudes(
+        engine,
+        jd_tdb,
+        aya_config.ayanamsha_system,
+        aya_config.use_nutation,
+    )?;
 
     // Convert cusp tropical longitudes to sidereal
     let t = jd_tdb_to_centuries(jd_tdb);
@@ -196,10 +201,8 @@ pub fn all_upagrahas_for_date(
         vedic_day_sunrises(engine, eop, utc, location, riseset_config)?;
 
     // Get sunset for the same day
-    let noon_jd = dhruv_vedic_base::approximate_local_noon_jd(
-        jd_utc.floor() + 0.5,
-        location.longitude_deg,
-    );
+    let noon_jd =
+        dhruv_vedic_base::approximate_local_noon_jd(jd_utc.floor() + 0.5, location.longitude_deg);
     let sunset_result = compute_rise_set(
         engine,
         engine.lsk(),
@@ -212,7 +215,11 @@ pub fn all_upagrahas_for_date(
     .map_err(|_| SearchError::NoConvergence("sunset computation failed"))?;
     let jd_sunset = match sunset_result {
         RiseSetResult::Event { jd_tdb: jd, .. } => jd,
-        _ => return Err(SearchError::NoConvergence("sun never sets at this location")),
+        _ => {
+            return Err(SearchError::NoConvergence(
+                "sun never sets at this location",
+            ));
+        }
     };
 
     // Determine if birth time is during day (sunrise to sunset) or night
@@ -224,14 +231,8 @@ pub fn all_upagrahas_for_date(
     // Compute time-based upagrahas (lagna at portion start/end)
     let mut time_lons = [0.0f64; 6]; // Gulika, Maandi, Kaala, Mrityu, ArthaPrahara, YamaGhantaka
     for (i, &upa) in TIME_BASED_UPAGRAHAS.iter().enumerate() {
-        let target_jd = time_upagraha_jd(
-            upa,
-            weekday,
-            is_day,
-            jd_sunrise,
-            jd_sunset,
-            jd_next_sunrise,
-        );
+        let target_jd =
+            time_upagraha_jd(upa, weekday, is_day, jd_sunrise, jd_sunset, jd_next_sunrise);
         // Compute tropical lagna at this JD
         // target_jd is in TDB but lagna_longitude_rad expects JD UTC
         // For this purpose the difference is negligible (~1s), but we use jd_utc convention
@@ -281,12 +282,22 @@ pub fn graha_positions(
 
     // 1. Get 9 graha sidereal longitudes
     let graha_lons = graha_sidereal_longitudes(
-        engine, jd_tdb, aya_config.ayanamsha_system, aya_config.use_nutation,
+        engine,
+        jd_tdb,
+        aya_config.ayanamsha_system,
+        aya_config.use_nutation,
     )?;
 
     // 2. Optionally compute bhava cusps (needed for bhava placement)
     let bhava_result = if config.include_bhava {
-        Some(compute_bhavas(engine, engine.lsk(), eop, location, jd_utc, bhava_config)?)
+        Some(compute_bhavas(
+            engine,
+            engine.lsk(),
+            eop,
+            location,
+            jd_utc,
+            bhava_config,
+        )?)
     } else {
         None
     };
@@ -322,7 +333,11 @@ pub fn graha_positions(
         [GrahaEntry::sentinel(); 3]
     };
 
-    Ok(GrahaPositions { grahas, lagna, outer_planets })
+    Ok(GrahaPositions {
+        grahas,
+        lagna,
+        outer_planets,
+    })
 }
 
 /// Build a GrahaEntry from a sidereal longitude, applying optional computations.
@@ -395,12 +410,25 @@ pub fn ashtakavarga_for_date(
         include_bhava: false,
     };
     let bhava_config = BhavaConfig::default();
-    let positions = graha_positions(engine, eop, utc, location, &bhava_config, aya_config, &config)?;
+    let positions = graha_positions(
+        engine,
+        eop,
+        utc,
+        location,
+        &bhava_config,
+        aya_config,
+        &config,
+    )?;
 
     // Extract rashi indices for 7 sapta grahas (Sun..Saturn only)
     let sapta = [
-        Graha::Surya, Graha::Chandra, Graha::Mangal, Graha::Buddh,
-        Graha::Guru, Graha::Shukra, Graha::Shani,
+        Graha::Surya,
+        Graha::Chandra,
+        Graha::Mangal,
+        Graha::Buddh,
+        Graha::Guru,
+        Graha::Shukra,
+        Graha::Shani,
     ];
     let mut graha_rashis = [0u8; 7];
     for (i, &graha) in sapta.iter().enumerate() {
@@ -445,7 +473,10 @@ pub fn core_bindus(
 
     // 1. Graha sidereal longitudes (need Sun, Moon, Rahu for various computations)
     let graha_lons = graha_sidereal_longitudes(
-        engine, jd_tdb, aya_config.ayanamsha_system, aya_config.use_nutation,
+        engine,
+        jd_tdb,
+        aya_config.ayanamsha_system,
+        aya_config.use_nutation,
     )?;
     let sun_sid = graha_lons.longitude(Graha::Surya);
     let moon_sid = graha_lons.longitude(Graha::Chandra);
@@ -457,7 +488,11 @@ pub fn core_bindus(
 
     // 3. Bhava cusps (always needed for arudha padas; also for bhava enrichment)
     let bhava_result = compute_bhavas(engine, engine.lsk(), eop, location, jd_utc, bhava_config)?;
-    let bhava_opt = if config.include_bhava { Some(&bhava_result) } else { None };
+    let bhava_opt = if config.include_bhava {
+        Some(&bhava_result)
+    } else {
+        None
+    };
 
     // 4. Arudha padas
     let mut cusp_sid = [0.0f64; 12];
@@ -482,18 +517,25 @@ pub fn core_bindus(
     let ghatikas = ghatikas_since_sunrise(jd_tdb, jd_sunrise, jd_next_sunrise);
 
     // 6. Sunset (for gulika/maandi day/night determination)
-    let noon_jd = dhruv_vedic_base::approximate_local_noon_jd(
-        jd_utc.floor() + 0.5,
-        location.longitude_deg,
-    );
+    let noon_jd =
+        dhruv_vedic_base::approximate_local_noon_jd(jd_utc.floor() + 0.5, location.longitude_deg);
     let sunset_result = compute_rise_set(
-        engine, engine.lsk(), eop, location,
-        RiseSetEvent::Sunset, noon_jd, riseset_config,
+        engine,
+        engine.lsk(),
+        eop,
+        location,
+        RiseSetEvent::Sunset,
+        noon_jd,
+        riseset_config,
     )
     .map_err(|_| SearchError::NoConvergence("sunset computation failed"))?;
     let jd_sunset = match sunset_result {
         RiseSetResult::Event { jd_tdb: jd, .. } => jd,
-        _ => return Err(SearchError::NoConvergence("sun never sets at this location")),
+        _ => {
+            return Err(SearchError::NoConvergence(
+                "sun never sets at this location",
+            ));
+        }
     };
 
     // Weekday and day/night for upagraha portion computation
@@ -502,15 +544,23 @@ pub fn core_bindus(
 
     // 7. Gulika & Maandi
     let gulika_jd = time_upagraha_jd(
-        Upagraha::Gulika, weekday, is_day,
-        jd_sunrise, jd_sunset, jd_next_sunrise,
+        Upagraha::Gulika,
+        weekday,
+        is_day,
+        jd_sunrise,
+        jd_sunset,
+        jd_next_sunrise,
     );
     let gulika_rad = lagna_longitude_rad(engine.lsk(), eop, location, gulika_jd)?;
     let gulika_sid = normalize_360(gulika_rad.to_degrees() - aya);
 
     let maandi_jd = time_upagraha_jd(
-        Upagraha::Maandi, weekday, is_day,
-        jd_sunrise, jd_sunset, jd_next_sunrise,
+        Upagraha::Maandi,
+        weekday,
+        is_day,
+        jd_sunrise,
+        jd_sunset,
+        jd_next_sunrise,
     );
     let maandi_rad = lagna_longitude_rad(engine.lsk(), eop, location, maandi_jd)?;
     let maandi_sid = normalize_360(maandi_rad.to_degrees() - aya);
@@ -558,7 +608,10 @@ pub fn drishti_for_date(
 
     // 1. Graha sidereal longitudes (always needed)
     let graha_lons = graha_sidereal_longitudes(
-        engine, jd_tdb, aya_config.ayanamsha_system, aya_config.use_nutation,
+        engine,
+        jd_tdb,
+        aya_config.ayanamsha_system,
+        aya_config.use_nutation,
     )?;
 
     // 2. Graha-to-graha matrix (always computed)
@@ -580,7 +633,8 @@ pub fn drishti_for_date(
 
     // 4. Graha-to-bhava cusps
     let graha_to_bhava = if config.include_bhava {
-        let bhava_result = compute_bhavas(engine, engine.lsk(), eop, location, jd_utc, bhava_config)?;
+        let bhava_result =
+            compute_bhavas(engine, engine.lsk(), eop, location, jd_utc, bhava_config)?;
         let mut cusp_sid = [0.0f64; 12];
         for i in 0..12 {
             cusp_sid[i] = normalize(bhava_result.bhavas[i].cusp_deg - aya);
@@ -601,7 +655,14 @@ pub fn drishti_for_date(
     let graha_to_bindus = if config.include_bindus {
         let bindus_cfg = BindusConfig::default();
         let bindus = core_bindus(
-            engine, eop, utc, location, bhava_config, riseset_config, aya_config, &bindus_cfg,
+            engine,
+            eop,
+            utc,
+            location,
+            bhava_config,
+            riseset_config,
+            aya_config,
+            &bindus_cfg,
         )?;
 
         // Extract 19 sidereal longitudes: 12 arudha + 7 special
@@ -642,12 +703,14 @@ fn utc_to_jd_utc(utc: &UtcTime) -> f64 {
     // Julian Day from calendar date (Meeus algorithm)
     let y = utc.year as f64;
     let m = utc.month as f64;
-    let d = utc.day as f64
-        + utc.hour as f64 / 24.0
-        + utc.minute as f64 / 1440.0
-        + utc.second / 86400.0;
+    let d =
+        utc.day as f64 + utc.hour as f64 / 24.0 + utc.minute as f64 / 1440.0 + utc.second / 86400.0;
 
-    let (y2, m2) = if m <= 2.0 { (y - 1.0, m + 12.0) } else { (y, m) };
+    let (y2, m2) = if m <= 2.0 {
+        (y - 1.0, m + 12.0)
+    } else {
+        (y, m)
+    };
     let a = (y2 / 100.0).floor();
     let b = 2.0 - a + (a / 4.0).floor();
 

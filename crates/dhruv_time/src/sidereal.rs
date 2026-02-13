@@ -50,9 +50,7 @@ pub fn gmst_rad(jd_ut1: f64) -> f64 {
     let t4 = t3 * t;
     let t5 = t4 * t;
 
-    let poly_arcsec = 0.014506
-        + 4612.156534 * t
-        + 1.3915817 * t2
+    let poly_arcsec = 0.014506 + 4612.156534 * t + 1.3915817 * t2
         - 0.00000044 * t3
         - 0.000029956 * t4
         - 0.0000000368 * t5;
@@ -103,10 +101,7 @@ mod tests {
         // GMST advances ~361° per day (one sidereal day > one solar day).
         // After rem_euclid, g2 should be about ~0.986° ahead of g1.
         // Just check they're not equal.
-        assert!(
-            (g2 - g1).abs() > 0.001,
-            "GMST should differ between days"
-        );
+        assert!((g2 - g1).abs() > 0.001, "GMST should differ between days");
     }
 
     #[test]
@@ -122,7 +117,7 @@ mod tests {
         // ERA should always be in [0, 2π)
         for &jd in &[2_451_545.0, 2_451_544.5, 2_460_000.5, 2_440_000.5] {
             let theta = earth_rotation_angle_rad(jd);
-            assert!(theta >= 0.0 && theta < TAU, "ERA out of range: {theta}");
+            assert!((0.0..TAU).contains(&theta), "ERA out of range: {theta}");
         }
     }
 
@@ -130,7 +125,7 @@ mod tests {
     fn gmst_range() {
         for &jd in &[2_451_545.0, 2_451_544.5, 2_460_000.5, 2_440_000.5] {
             let g = gmst_rad(jd);
-            assert!(g >= 0.0 && g < TAU, "GMST out of range: {g}");
+            assert!((0.0..TAU).contains(&g), "GMST out of range: {g}");
         }
     }
 }

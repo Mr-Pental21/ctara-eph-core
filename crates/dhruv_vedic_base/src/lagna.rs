@@ -46,10 +46,7 @@ pub fn lagna_longitude_rad(
     let eps = OBLIQUITY_J2000_RAD;
     let phi = location.latitude_rad();
 
-    let asc = f64::atan2(
-        -lst.cos(),
-        lst.sin() * eps.cos() + phi.tan() * eps.sin(),
-    );
+    let asc = f64::atan2(-lst.cos(), lst.sin() * eps.cos() + phi.tan() * eps.sin());
     Ok(asc.rem_euclid(TAU))
 }
 
@@ -84,10 +81,7 @@ pub fn lagna_and_mc_rad(
     let eps = OBLIQUITY_J2000_RAD;
     let phi = location.latitude_rad();
 
-    let asc = f64::atan2(
-        -lst.cos(),
-        lst.sin() * eps.cos() + phi.tan() * eps.sin(),
-    );
+    let asc = f64::atan2(-lst.cos(), lst.sin() * eps.cos() + phi.tan() * eps.sin());
 
     let mc = f64::atan2(lst.sin(), lst.cos() * eps.cos());
 
@@ -110,10 +104,7 @@ pub fn ramc_rad(
 /// Internal helper: compute Lagna, MC, and RAMC from a pre-computed LST.
 ///
 /// Used by bhava computation to avoid redundant LST calculations.
-pub(crate) fn lagna_mc_ramc_from_lst(
-    lst_rad: f64,
-    latitude_rad: f64,
-) -> (f64, f64, f64) {
+pub(crate) fn lagna_mc_ramc_from_lst(lst_rad: f64, latitude_rad: f64) -> (f64, f64, f64) {
     let eps = OBLIQUITY_J2000_RAD;
 
     let asc = f64::atan2(
@@ -123,7 +114,11 @@ pub(crate) fn lagna_mc_ramc_from_lst(
 
     let mc = f64::atan2(lst_rad.sin(), lst_rad.cos() * eps.cos());
 
-    (asc.rem_euclid(TAU), mc.rem_euclid(TAU), lst_rad.rem_euclid(TAU))
+    (
+        asc.rem_euclid(TAU),
+        mc.rem_euclid(TAU),
+        lst_rad.rem_euclid(TAU),
+    )
 }
 
 /// Compute LST — public(crate) for bhava module reuse.
@@ -160,11 +155,8 @@ mod tests {
         let phi: f64 = 0.0; // equator
         let lst: f64 = 0.0;
 
-        let asc = f64::atan2(
-            -lst.cos(),
-            lst.sin() * eps.cos() + phi.tan() * eps.sin(),
-        )
-        .rem_euclid(TAU);
+        let asc =
+            f64::atan2(-lst.cos(), lst.sin() * eps.cos() + phi.tan() * eps.sin()).rem_euclid(TAU);
 
         // At equator, LST=0: Asc = 270 deg = 3*pi/2
         let expected = 3.0 * PI / 2.0;
@@ -182,7 +174,11 @@ mod tests {
         let lst: f64 = 0.0;
 
         let mc = f64::atan2(lst.sin(), lst.cos() * eps.cos()).rem_euclid(TAU);
-        assert!(mc.abs() < 1e-10, "MC at LST=0 = {} deg, expected 0", mc.to_degrees());
+        assert!(
+            mc.abs() < 1e-10,
+            "MC at LST=0 = {} deg, expected 0",
+            mc.to_degrees()
+        );
     }
 
     /// As LST sweeps 0..2*pi, Ascendant should cover the full circle.
@@ -197,13 +193,14 @@ mod tests {
 
         for i in 0..n {
             let lst = TAU * (i as f64) / (n as f64);
-            let asc = f64::atan2(
-                -lst.cos(),
-                lst.sin() * eps.cos() + phi.tan() * eps.sin(),
-            )
-            .rem_euclid(TAU);
-            if asc < min_asc { min_asc = asc; }
-            if asc > max_asc { max_asc = asc; }
+            let asc = f64::atan2(-lst.cos(), lst.sin() * eps.cos() + phi.tan() * eps.sin())
+                .rem_euclid(TAU);
+            if asc < min_asc {
+                min_asc = asc;
+            }
+            if asc > max_asc {
+                max_asc = asc;
+            }
         }
 
         // Should span nearly 0..2*pi
@@ -220,22 +217,22 @@ mod tests {
         // Sample a few LST values
         let lsts: [f64; 4] = [0.5, 1.5, 3.0, 4.5];
         for &lst in &lsts {
-            let asc = f64::atan2(
-                -lst.cos(),
-                lst.sin() * eps.cos() + phi.tan() * eps.sin(),
-            )
-            .rem_euclid(TAU);
+            let asc = f64::atan2(-lst.cos(), lst.sin() * eps.cos() + phi.tan() * eps.sin())
+                .rem_euclid(TAU);
 
             let mc = f64::atan2(lst.sin(), lst.cos() * eps.cos()).rem_euclid(TAU);
 
             let mut diff = (asc - mc).abs();
-            if diff > PI { diff = TAU - diff; }
+            if diff > PI {
+                diff = TAU - diff;
+            }
 
             // At low latitudes the difference is approximately 90 deg (+/- ~20 deg)
             assert!(
                 diff > 1.0 && diff < 2.2,
                 "LST={:.1}: |Asc-MC| = {:.1} deg, expected ~90",
-                lst.to_degrees(), diff.to_degrees()
+                lst.to_degrees(),
+                diff.to_degrees()
             );
         }
     }

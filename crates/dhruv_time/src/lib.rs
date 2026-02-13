@@ -19,8 +19,7 @@ use std::path::Path;
 pub use eop::{EopData, EopKernel};
 pub use error::TimeError;
 pub use julian::{
-    calendar_to_jd, jd_to_calendar, jd_to_tdb_seconds, tdb_seconds_to_jd, J2000_JD,
-    SECONDS_PER_DAY,
+    J2000_JD, SECONDS_PER_DAY, calendar_to_jd, jd_to_calendar, jd_to_tdb_seconds, tdb_seconds_to_jd,
 };
 pub use lsk::LskData;
 pub use sidereal::{earth_rotation_angle_rad, gmst_rad, local_sidereal_time_rad};
@@ -97,9 +96,7 @@ impl Epoch {
         let jd = calendar_to_jd(year, month, day_frac);
         let utc_s = jd_to_tdb_seconds(jd); // Note: this is UTC seconds past J2000, not TDB
         let tdb_s = lsk.utc_to_tdb(utc_s);
-        Self {
-            tdb_seconds: tdb_s,
-        }
+        Self { tdb_seconds: tdb_s }
     }
 
     /// TDB seconds past J2000.0.

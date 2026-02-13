@@ -66,10 +66,7 @@ pub struct SphericalState {
 ///
 /// Derives `dlon/dt`, `dlat/dt`, `dr/dt` from standard vector calculus.
 /// Degenerate cases (r ≈ 0 or rxy ≈ 0) set speeds to zero.
-pub fn cartesian_state_to_spherical_state(
-    pos: &[f64; 3],
-    vel: &[f64; 3],
-) -> SphericalState {
+pub fn cartesian_state_to_spherical_state(pos: &[f64; 3], vel: &[f64; 3]) -> SphericalState {
     let (x, y, z) = (pos[0], pos[1], pos[2]);
     let (vx, vy, vz) = (vel[0], vel[1], vel[2]);
 

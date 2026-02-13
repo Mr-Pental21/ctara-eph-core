@@ -30,29 +30,24 @@ pub fn fundamental_arguments(t: f64) -> [f64; 5] {
     let t4 = t3 * t;
 
     // l: mean anomaly of the Moon (arcsec)
-    let l = (485868.249036 + 1717915923.2178 * t + 31.8792 * t2
-        + 0.051635 * t3 - 0.00024470 * t4)
+    let l = (485868.249036 + 1717915923.2178 * t + 31.8792 * t2 + 0.051635 * t3 - 0.00024470 * t4)
         * AS2RAD;
 
     // l': mean anomaly of the Sun (arcsec)
-    let lp = (1287104.79305 + 129596581.0481 * t - 0.5532 * t2
-        + 0.000136 * t3 - 0.00001149 * t4)
+    let lp = (1287104.79305 + 129596581.0481 * t - 0.5532 * t2 + 0.000136 * t3 - 0.00001149 * t4)
         * AS2RAD;
 
     // F: mean argument of latitude of the Moon (arcsec)
-    let f = (335779.526232 + 1739527262.8478 * t - 12.7512 * t2
-        - 0.001037 * t3 + 0.00000417 * t4)
+    let f = (335779.526232 + 1739527262.8478 * t - 12.7512 * t2 - 0.001037 * t3 + 0.00000417 * t4)
         * AS2RAD;
 
     // D: mean elongation of the Moon from the Sun (arcsec)
-    let d = (1072260.70369 + 1602961601.2090 * t - 6.3706 * t2
-        + 0.006593 * t3 - 0.00003169 * t4)
+    let d = (1072260.70369 + 1602961601.2090 * t - 6.3706 * t2 + 0.006593 * t3 - 0.00003169 * t4)
         * AS2RAD;
 
     // Ω: mean longitude of the ascending node of the Moon (arcsec)
-    let om = (450160.398036 - 6962890.5431 * t + 7.4722 * t2
-        + 0.007702 * t3 - 0.00005939 * t4)
-        * AS2RAD;
+    let om =
+        (450160.398036 - 6962890.5431 * t + 7.4722 * t2 + 0.007702 * t3 - 0.00005939 * t4) * AS2RAD;
 
     [l, lp, f, d, om]
 }
@@ -207,14 +202,8 @@ mod tests {
     fn typical_amplitude() {
         // At T=0.24 (~2024), nutation should be within typical bounds
         let (dpsi, deps) = nutation_iau2000b(0.24);
-        assert!(
-            dpsi.abs() < 20.0,
-            "|Δψ| should be < 20 arcsec, got {dpsi}"
-        );
-        assert!(
-            deps.abs() < 10.0,
-            "|Δε| should be < 10 arcsec, got {deps}"
-        );
+        assert!(dpsi.abs() < 20.0, "|Δψ| should be < 20 arcsec, got {dpsi}");
+        assert!(deps.abs() < 10.0, "|Δε| should be < 10 arcsec, got {deps}");
     }
 
     #[test]
@@ -223,14 +212,8 @@ mod tests {
         // The 18.6-year nutation cycle was near a node in 2024.
         let t = (2_460_310.5 - 2_451_545.0) / 36525.0;
         let (dpsi, deps) = nutation_iau2000b(t);
-        assert!(
-            dpsi.abs() < 18.0,
-            "|Δψ| should be < 18 arcsec, got {dpsi}"
-        );
-        assert!(
-            deps.abs() < 10.0,
-            "|Δε| should be < 10 arcsec, got {deps}"
-        );
+        assert!(dpsi.abs() < 18.0, "|Δψ| should be < 18 arcsec, got {dpsi}");
+        assert!(deps.abs() < 10.0, "|Δε| should be < 10 arcsec, got {deps}");
     }
 
     #[test]

@@ -199,7 +199,14 @@ pub fn next_conjunction(
     jd_tdb: f64,
     config: &ConjunctionConfig,
 ) -> Result<Option<ConjunctionEvent>, SearchError> {
-    find_event(engine, body1, body2, jd_tdb, SearchDirection::Forward, config)
+    find_event(
+        engine,
+        body1,
+        body2,
+        jd_tdb,
+        SearchDirection::Forward,
+        config,
+    )
 }
 
 /// Find the previous conjunction/aspect event before `jd_tdb`.
@@ -232,9 +239,7 @@ pub fn search_conjunctions(
     config.validate().map_err(SearchError::InvalidConfig)?;
 
     if jd_end <= jd_start {
-        return Err(SearchError::InvalidConfig(
-            "jd_end must be after jd_start",
-        ));
+        return Err(SearchError::InvalidConfig("jd_end must be after jd_start"));
     }
 
     let mut events = Vec::new();

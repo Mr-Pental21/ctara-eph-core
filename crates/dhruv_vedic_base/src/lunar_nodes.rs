@@ -246,9 +246,21 @@ mod tests {
     #[test]
     fn unified_api_matches_direct() {
         let t = 0.24;
-        assert_eq!(lunar_node_deg(LunarNode::Rahu, t, NodeMode::Mean), mean_rahu_deg(t));
-        assert_eq!(lunar_node_deg(LunarNode::Ketu, t, NodeMode::Mean), mean_ketu_deg(t));
-        assert_eq!(lunar_node_deg(LunarNode::Rahu, t, NodeMode::True), true_rahu_deg(t));
-        assert_eq!(lunar_node_deg(LunarNode::Ketu, t, NodeMode::True), true_ketu_deg(t));
+        assert_eq!(
+            lunar_node_deg(LunarNode::Rahu, t, NodeMode::Mean),
+            mean_rahu_deg(t)
+        );
+        assert_eq!(
+            lunar_node_deg(LunarNode::Ketu, t, NodeMode::Mean),
+            mean_ketu_deg(t)
+        );
+        assert_eq!(
+            lunar_node_deg(LunarNode::Rahu, t, NodeMode::True),
+            true_rahu_deg(t)
+        );
+        assert_eq!(
+            lunar_node_deg(LunarNode::Ketu, t, NodeMode::True),
+            true_ketu_deg(t)
+        );
     }
 }

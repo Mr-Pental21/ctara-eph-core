@@ -6,7 +6,7 @@
 use std::path::Path;
 
 use dhruv_core::{Body, Engine, EngineConfig};
-use dhruv_search::{ConjunctionConfig, search_conjunctions, next_conjunction, prev_conjunction};
+use dhruv_search::{ConjunctionConfig, next_conjunction, prev_conjunction, search_conjunctions};
 
 const SPK_PATH: &str = "../../kernels/data/de442s.bsp";
 const LSK_PATH: &str = "../../kernels/data/naif0012.tls";
@@ -16,12 +16,7 @@ fn load_engine() -> Option<Engine> {
         eprintln!("Skipping conjunction_golden: kernel files not found");
         return None;
     }
-    let config = EngineConfig::with_single_spk(
-        SPK_PATH.into(),
-        LSK_PATH.into(),
-        1024,
-        false,
-    );
+    let config = EngineConfig::with_single_spk(SPK_PATH.into(), LSK_PATH.into(), 1024, false);
     Engine::new(config).ok()
 }
 
@@ -47,7 +42,8 @@ fn new_moon_jan_2024() {
     assert!(
         diff_hours < 2.0,
         "new moon off by {diff_hours:.1}h, got JD {}, expected ~JD {}",
-        event.jd_tdb, expected_jd
+        event.jd_tdb,
+        expected_jd
     );
     // Separation should be near 0
     assert!(
@@ -73,7 +69,8 @@ fn full_moon_jan_2024() {
     assert!(
         diff_hours < 2.0,
         "full moon off by {diff_hours:.1}h, got JD {}, expected ~JD {}",
-        event.jd_tdb, expected_jd
+        event.jd_tdb,
+        expected_jd
     );
     assert!(
         (event.actual_separation_deg - 180.0).abs() < 1.0,
@@ -98,7 +95,8 @@ fn jupiter_saturn_conjunction_2020() {
     assert!(
         diff_days < 1.0,
         "great conjunction off by {diff_days:.2} days, got JD {}, expected ~JD {}",
-        event.jd_tdb, expected_jd
+        event.jd_tdb,
+        expected_jd
     );
     // Separation should be very small (<1 deg)
     assert!(
@@ -123,10 +121,7 @@ fn first_quarter_moon_jan_2024() {
     // First quarter ~2024-Jan-18
     let expected_jd = jd_from_date(2024, 1, 18.0);
     let diff_days = (event.jd_tdb - expected_jd).abs();
-    assert!(
-        diff_days < 2.0,
-        "first quarter off by {diff_days:.1} days"
-    );
+    assert!(diff_days < 2.0, "first quarter off by {diff_days:.1} days");
     assert!(
         (event.actual_separation_deg - 270.0).abs() < 2.0,
         "separation = {} deg, expected ~270",
@@ -178,8 +173,5 @@ fn prev_new_moon() {
     );
     let expected_jd = jd_from_date(2024, 1, 11.5);
     let diff_days = (event.jd_tdb - expected_jd).abs();
-    assert!(
-        diff_days < 2.0,
-        "prev new moon off by {diff_days:.1} days"
-    );
+    assert!(diff_days < 2.0, "prev new moon off by {diff_days:.1} days");
 }

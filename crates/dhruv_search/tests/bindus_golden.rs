@@ -9,10 +9,10 @@ use std::path::Path;
 
 use dhruv_core::{Engine, EngineConfig};
 use dhruv_search::sankranti_types::SankrantiConfig;
-use dhruv_search::{core_bindus, BindusConfig};
+use dhruv_search::{BindusConfig, core_bindus};
 use dhruv_time::{EopKernel, UtcTime};
-use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
 use dhruv_vedic_base::BhavaConfig;
+use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
 
 const SPK_PATH: &str = "../../kernels/data/de442s.bsp";
 const LSK_PATH: &str = "../../kernels/data/naif0012.tls";
@@ -64,7 +64,14 @@ fn base_all_flags_off() {
     };
 
     let result = core_bindus(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("core_bindus should succeed");
 
@@ -72,12 +79,22 @@ fn base_all_flags_off() {
     for (i, entry) in result.arudha_padas.iter().enumerate() {
         assert!(
             entry.sidereal_longitude >= 0.0 && entry.sidereal_longitude < 360.0,
-            "arudha_pada[{}] longitude out of range: {}", i, entry.sidereal_longitude,
+            "arudha_pada[{}] longitude out of range: {}",
+            i,
+            entry.sidereal_longitude,
         );
         // Sentinel values for disabled features
-        assert_eq!(entry.nakshatra_index, 255, "arudha_pada[{}] nakshatra should be sentinel", i);
+        assert_eq!(
+            entry.nakshatra_index, 255,
+            "arudha_pada[{}] nakshatra should be sentinel",
+            i
+        );
         assert_eq!(entry.pada, 0, "arudha_pada[{}] pada should be sentinel", i);
-        assert_eq!(entry.bhava_number, 0, "arudha_pada[{}] bhava should be sentinel", i);
+        assert_eq!(
+            entry.bhava_number, 0,
+            "arudha_pada[{}] bhava should be sentinel",
+            i
+        );
     }
 
     // 7 sensitive points: valid longitudes, sentinel nak/bhava
@@ -93,9 +110,15 @@ fn base_all_flags_off() {
     for (name, entry) in &points {
         assert!(
             entry.sidereal_longitude >= 0.0 && entry.sidereal_longitude < 360.0,
-            "{} longitude out of range: {}", name, entry.sidereal_longitude,
+            "{} longitude out of range: {}",
+            name,
+            entry.sidereal_longitude,
         );
-        assert_eq!(entry.nakshatra_index, 255, "{} nakshatra should be sentinel", name);
+        assert_eq!(
+            entry.nakshatra_index, 255,
+            "{} nakshatra should be sentinel",
+            name
+        );
         assert_eq!(entry.pada, 0, "{} pada should be sentinel", name);
         assert_eq!(entry.bhava_number, 0, "{} bhava should be sentinel", name);
     }
@@ -118,7 +141,14 @@ fn include_nakshatra() {
     };
 
     let result = core_bindus(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("core_bindus should succeed");
 
@@ -139,11 +169,15 @@ fn include_nakshatra() {
     for (name, entry) in &all_entries {
         assert!(
             entry.nakshatra_index <= 26,
-            "{} nakshatra_index should be 0-26, got {}", name, entry.nakshatra_index,
+            "{} nakshatra_index should be 0-26, got {}",
+            name,
+            entry.nakshatra_index,
         );
         assert!(
             entry.pada >= 1 && entry.pada <= 4,
-            "{} pada should be 1-4, got {}", name, entry.pada,
+            "{} pada should be 1-4, got {}",
+            name,
+            entry.pada,
         );
         // Bhava should still be sentinel
         assert_eq!(entry.bhava_number, 0, "{} bhava should be sentinel", name);
@@ -167,17 +201,30 @@ fn include_bhava() {
     };
 
     let result = core_bindus(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("core_bindus should succeed");
 
     for (i, entry) in result.arudha_padas.iter().enumerate() {
         assert!(
             entry.bhava_number >= 1 && entry.bhava_number <= 12,
-            "arudha_pada[{}] bhava should be 1-12, got {}", i, entry.bhava_number,
+            "arudha_pada[{}] bhava should be 1-12, got {}",
+            i,
+            entry.bhava_number,
         );
         // Nakshatra should still be sentinel
-        assert_eq!(entry.nakshatra_index, 255, "arudha_pada[{}] nakshatra should be sentinel", i);
+        assert_eq!(
+            entry.nakshatra_index, 255,
+            "arudha_pada[{}] nakshatra should be sentinel",
+            i
+        );
     }
 
     let points = [
@@ -192,9 +239,15 @@ fn include_bhava() {
     for (name, entry) in &points {
         assert!(
             entry.bhava_number >= 1 && entry.bhava_number <= 12,
-            "{} bhava should be 1-12, got {}", name, entry.bhava_number,
+            "{} bhava should be 1-12, got {}",
+            name,
+            entry.bhava_number,
         );
-        assert_eq!(entry.nakshatra_index, 255, "{} nakshatra should be sentinel", name);
+        assert_eq!(
+            entry.nakshatra_index, 255,
+            "{} nakshatra should be sentinel",
+            name
+        );
     }
 }
 
@@ -215,7 +268,14 @@ fn all_flags_on() {
     };
 
     let result = core_bindus(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("core_bindus should succeed");
 
@@ -223,13 +283,23 @@ fn all_flags_on() {
     for (i, entry) in result.arudha_padas.iter().enumerate() {
         assert!(
             entry.sidereal_longitude >= 0.0 && entry.sidereal_longitude < 360.0,
-            "arudha_pada[{}] longitude out of range", i,
+            "arudha_pada[{}] longitude out of range",
+            i,
         );
-        assert!(entry.nakshatra_index <= 26, "arudha_pada[{}] nakshatra out of range", i);
-        assert!(entry.pada >= 1 && entry.pada <= 4, "arudha_pada[{}] pada out of range", i);
+        assert!(
+            entry.nakshatra_index <= 26,
+            "arudha_pada[{}] nakshatra out of range",
+            i
+        );
+        assert!(
+            entry.pada >= 1 && entry.pada <= 4,
+            "arudha_pada[{}] pada out of range",
+            i
+        );
         assert!(
             entry.bhava_number >= 1 && entry.bhava_number <= 12,
-            "arudha_pada[{}] bhava out of range", i,
+            "arudha_pada[{}] bhava out of range",
+            i,
         );
     }
 
@@ -245,13 +315,23 @@ fn all_flags_on() {
     for (name, entry) in &points {
         assert!(
             entry.sidereal_longitude >= 0.0 && entry.sidereal_longitude < 360.0,
-            "{} longitude out of range", name,
+            "{} longitude out of range",
+            name,
         );
-        assert!(entry.nakshatra_index <= 26, "{} nakshatra out of range", name);
-        assert!(entry.pada >= 1 && entry.pada <= 4, "{} pada out of range", name);
+        assert!(
+            entry.nakshatra_index <= 26,
+            "{} nakshatra out of range",
+            name
+        );
+        assert!(
+            entry.pada >= 1 && entry.pada <= 4,
+            "{} pada out of range",
+            name
+        );
         assert!(
             entry.bhava_number >= 1 && entry.bhava_number <= 12,
-            "{} bhava out of range", name,
+            "{} bhava out of range",
+            name,
         );
     }
 }
@@ -270,12 +350,24 @@ fn arudha_padas_match_standalone() {
     let config = BindusConfig::default();
 
     let bindus = core_bindus(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("core_bindus should succeed");
 
     let standalone = dhruv_search::arudha_padas_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &aya_config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &aya_config,
     )
     .expect("arudha_padas_for_date should succeed");
 
@@ -284,7 +376,9 @@ fn arudha_padas_match_standalone() {
         assert!(
             diff < 1e-10,
             "arudha_pada[{}] mismatch: bindus={:.10}, standalone={:.10}",
-            i, bindus.arudha_padas[i].sidereal_longitude, standalone[i].longitude_deg,
+            i,
+            bindus.arudha_padas[i].sidereal_longitude,
+            standalone[i].longitude_deg,
         );
     }
 }
@@ -303,27 +397,57 @@ fn special_lagnas_match_standalone() {
     let config = BindusConfig::default();
 
     let bindus = core_bindus(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("core_bindus should succeed");
 
     let standalone = dhruv_search::special_lagnas_for_date(
-        &engine, &eop, &utc, &location, &rs_config, &aya_config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &rs_config,
+        &aya_config,
     )
     .expect("special_lagnas_for_date should succeed");
 
     let checks = [
-        ("hora_lagna", bindus.hora_lagna.sidereal_longitude, standalone.hora_lagna),
-        ("ghati_lagna", bindus.ghati_lagna.sidereal_longitude, standalone.ghati_lagna),
-        ("pranapada_lagna", bindus.pranapada_lagna.sidereal_longitude, standalone.pranapada_lagna),
-        ("sree_lagna", bindus.sree_lagna.sidereal_longitude, standalone.sree_lagna),
+        (
+            "hora_lagna",
+            bindus.hora_lagna.sidereal_longitude,
+            standalone.hora_lagna,
+        ),
+        (
+            "ghati_lagna",
+            bindus.ghati_lagna.sidereal_longitude,
+            standalone.ghati_lagna,
+        ),
+        (
+            "pranapada_lagna",
+            bindus.pranapada_lagna.sidereal_longitude,
+            standalone.pranapada_lagna,
+        ),
+        (
+            "sree_lagna",
+            bindus.sree_lagna.sidereal_longitude,
+            standalone.sree_lagna,
+        ),
     ];
     for (name, bindus_lon, standalone_lon) in &checks {
         let diff = (bindus_lon - standalone_lon).abs();
         assert!(
             diff < 1e-10,
             "{} mismatch: bindus={:.10}, standalone={:.10}",
-            name, bindus_lon, standalone_lon,
+            name,
+            bindus_lon,
+            standalone_lon,
         );
     }
 }
@@ -342,12 +466,24 @@ fn gulika_maandi_match_upagrahas() {
     let config = BindusConfig::default();
 
     let bindus = core_bindus(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("core_bindus should succeed");
 
     let standalone = dhruv_search::all_upagrahas_for_date(
-        &engine, &eop, &utc, &location, &rs_config, &aya_config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &rs_config,
+        &aya_config,
     )
     .expect("all_upagrahas_for_date should succeed");
 
@@ -355,13 +491,15 @@ fn gulika_maandi_match_upagrahas() {
     assert!(
         gulika_diff < 1e-10,
         "gulika mismatch: bindus={:.10}, standalone={:.10}",
-        bindus.gulika.sidereal_longitude, standalone.gulika,
+        bindus.gulika.sidereal_longitude,
+        standalone.gulika,
     );
 
     let maandi_diff = (bindus.maandi.sidereal_longitude - standalone.maandi).abs();
     assert!(
         maandi_diff < 1e-10,
         "maandi mismatch: bindus={:.10}, standalone={:.10}",
-        bindus.maandi.sidereal_longitude, standalone.maandi,
+        bindus.maandi.sidereal_longitude,
+        standalone.maandi,
     );
 }

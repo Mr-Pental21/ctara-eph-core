@@ -196,10 +196,10 @@ pub fn portion_jd_range(portion_index: u8, base_jd: f64, end_jd: f64) -> (f64, f
 /// - use_end: true = use end of portion (Maandi), false = use start
 pub const fn time_upagraha_planet(upagraha: Upagraha) -> (u8, bool) {
     match upagraha {
-        Upagraha::Gulika => (PLANET_RAHU, false),      // start of Rahu's portion
-        Upagraha::Maandi => (PLANET_RAHU, true),        // end of Rahu's portion
-        Upagraha::Kaala => (PLANET_SUN, false),         // start of Sun's portion
-        Upagraha::Mrityu => (PLANET_MARS, false),       // start of Mars's portion
+        Upagraha::Gulika => (PLANET_RAHU, false), // start of Rahu's portion
+        Upagraha::Maandi => (PLANET_RAHU, true),  // end of Rahu's portion
+        Upagraha::Kaala => (PLANET_SUN, false),   // start of Sun's portion
+        Upagraha::Mrityu => (PLANET_MARS, false), // start of Mars's portion
         Upagraha::ArthaPrahara => (PLANET_MERCURY, false), // start of Mercury's portion
         Upagraha::YamaGhantaka => (PLANET_JUPITER, false), // start of Jupiter's portion
         // Sun-based upagrahas don't use portions

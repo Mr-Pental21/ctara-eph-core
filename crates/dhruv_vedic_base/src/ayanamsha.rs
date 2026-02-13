@@ -199,11 +199,7 @@ pub fn ayanamsha_mean_deg(system: AyanamshaSystem, t_centuries: f64) -> f64 {
 /// * `t_centuries` — Julian centuries of TDB since J2000.0
 /// * `delta_psi_arcsec` — nutation in longitude in arcseconds (from an
 ///   external nutation model such as IAU 2000B)
-pub fn ayanamsha_true_deg(
-    system: AyanamshaSystem,
-    t_centuries: f64,
-    delta_psi_arcsec: f64,
-) -> f64 {
+pub fn ayanamsha_true_deg(system: AyanamshaSystem, t_centuries: f64, delta_psi_arcsec: f64) -> f64 {
     let mean = ayanamsha_mean_deg(system, t_centuries);
     if system.uses_true_equinox() {
         mean + delta_psi_arcsec / 3600.0
@@ -269,10 +265,7 @@ mod tests {
         let at_1 = ayanamsha_mean_deg(AyanamshaSystem::Lahiri, 1.0);
         let diff = at_1 - at_0;
         // ~1.397 deg/century
-        assert!(
-            (diff - 1.397).abs() < 0.01,
-            "one century drift = {diff}"
-        );
+        assert!((diff - 1.397).abs() < 0.01, "one century drift = {diff}");
     }
 
     #[test]
@@ -375,7 +368,10 @@ mod tests {
             if sys == AyanamshaSystem::TrueLahiri {
                 assert!(sys.uses_true_equinox());
             } else {
-                assert!(!sys.uses_true_equinox(), "{sys:?} should not use true equinox");
+                assert!(
+                    !sys.uses_true_equinox(),
+                    "{sys:?} should not use true equinox"
+                );
             }
         }
     }

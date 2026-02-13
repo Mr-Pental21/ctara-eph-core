@@ -23,11 +23,7 @@ pub fn general_precession_longitude_arcsec(t: f64) -> f64 {
     let t3 = t2 * t;
     let t4 = t3 * t;
     let t5 = t4 * t;
-    5028.796195 * t
-        + 1.1054348 * t2
-        + 0.00007964 * t3
-        - 0.000023857 * t4
-        - 0.0000000383 * t5
+    5028.796195 * t + 1.1054348 * t2 + 0.00007964 * t3 - 0.000023857 * t4 - 0.0000000383 * t5
 }
 
 /// IAU 2006 general precession in ecliptic longitude, in degrees.

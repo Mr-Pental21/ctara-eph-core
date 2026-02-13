@@ -39,80 +39,80 @@ const fn bits(offsets: &[u8]) -> u16 {
 const RULES: [[u16; 8]; 7] = [
     // Sun (total: 48)
     [
-        bits(&[1, 2, 4, 7, 8, 9, 10, 11]),     // from Sun
-        bits(&[3, 6, 10, 11]),                    // from Moon
-        bits(&[1, 2, 4, 7, 8, 9, 10, 11]),       // from Mars
-        bits(&[3, 5, 6, 9, 10, 11, 12]),          // from Mercury
-        bits(&[5, 6, 9, 11]),                      // from Jupiter
-        bits(&[6, 7, 12]),                         // from Venus
-        bits(&[1, 2, 4, 7, 8, 9, 10, 11]),       // from Saturn
-        bits(&[3, 4, 6, 10, 11, 12]),             // from Lagna
+        bits(&[1, 2, 4, 7, 8, 9, 10, 11]), // from Sun
+        bits(&[3, 6, 10, 11]),             // from Moon
+        bits(&[1, 2, 4, 7, 8, 9, 10, 11]), // from Mars
+        bits(&[3, 5, 6, 9, 10, 11, 12]),   // from Mercury
+        bits(&[5, 6, 9, 11]),              // from Jupiter
+        bits(&[6, 7, 12]),                 // from Venus
+        bits(&[1, 2, 4, 7, 8, 9, 10, 11]), // from Saturn
+        bits(&[3, 4, 6, 10, 11, 12]),      // from Lagna
     ],
     // Moon (total: 49)
     [
-        bits(&[3, 6, 7, 8, 10, 11]),             // from Sun
-        bits(&[1, 3, 6, 7, 10, 11]),             // from Moon
-        bits(&[2, 3, 5, 6, 9, 10, 11]),          // from Mars
-        bits(&[1, 3, 4, 5, 7, 8, 10, 11]),       // from Mercury
-        bits(&[1, 4, 7, 8, 10, 11, 12]),          // from Jupiter
-        bits(&[3, 4, 5, 7, 9, 10, 11]),           // from Venus
-        bits(&[3, 5, 6, 11]),                      // from Saturn
-        bits(&[3, 6, 10, 11]),                     // from Lagna
+        bits(&[3, 6, 7, 8, 10, 11]),       // from Sun
+        bits(&[1, 3, 6, 7, 10, 11]),       // from Moon
+        bits(&[2, 3, 5, 6, 9, 10, 11]),    // from Mars
+        bits(&[1, 3, 4, 5, 7, 8, 10, 11]), // from Mercury
+        bits(&[1, 4, 7, 8, 10, 11, 12]),   // from Jupiter
+        bits(&[3, 4, 5, 7, 9, 10, 11]),    // from Venus
+        bits(&[3, 5, 6, 11]),              // from Saturn
+        bits(&[3, 6, 10, 11]),             // from Lagna
     ],
     // Mars (total: 39)
     [
-        bits(&[3, 5, 6, 10, 11]),                 // from Sun
-        bits(&[3, 6, 11]),                         // from Moon
-        bits(&[1, 2, 4, 7, 8, 10, 11]),           // from Mars
-        bits(&[3, 5, 6, 11]),                      // from Mercury
-        bits(&[6, 10, 11, 12]),                    // from Jupiter
-        bits(&[6, 8, 11, 12]),                     // from Venus
-        bits(&[1, 4, 7, 8, 9, 10, 11]),           // from Saturn
-        bits(&[1, 3, 6, 10, 11]),                  // from Lagna
+        bits(&[3, 5, 6, 10, 11]),       // from Sun
+        bits(&[3, 6, 11]),              // from Moon
+        bits(&[1, 2, 4, 7, 8, 10, 11]), // from Mars
+        bits(&[3, 5, 6, 11]),           // from Mercury
+        bits(&[6, 10, 11, 12]),         // from Jupiter
+        bits(&[6, 8, 11, 12]),          // from Venus
+        bits(&[1, 4, 7, 8, 9, 10, 11]), // from Saturn
+        bits(&[1, 3, 6, 10, 11]),       // from Lagna
     ],
     // Mercury (total: 54)
     [
-        bits(&[5, 6, 9, 11, 12]),                 // from Sun
-        bits(&[2, 4, 6, 8, 10, 11]),              // from Moon
-        bits(&[1, 2, 4, 7, 8, 9, 10, 11]),        // from Mars
-        bits(&[1, 3, 5, 6, 9, 10, 11, 12]),       // from Mercury
-        bits(&[6, 8, 11, 12]),                     // from Jupiter
-        bits(&[1, 2, 3, 4, 5, 8, 9, 11]),         // from Venus
-        bits(&[1, 2, 4, 7, 8, 9, 10, 11]),        // from Saturn
-        bits(&[1, 2, 4, 6, 8, 10, 11]),            // from Lagna
+        bits(&[5, 6, 9, 11, 12]),           // from Sun
+        bits(&[2, 4, 6, 8, 10, 11]),        // from Moon
+        bits(&[1, 2, 4, 7, 8, 9, 10, 11]),  // from Mars
+        bits(&[1, 3, 5, 6, 9, 10, 11, 12]), // from Mercury
+        bits(&[6, 8, 11, 12]),              // from Jupiter
+        bits(&[1, 2, 3, 4, 5, 8, 9, 11]),   // from Venus
+        bits(&[1, 2, 4, 7, 8, 9, 10, 11]),  // from Saturn
+        bits(&[1, 2, 4, 6, 8, 10, 11]),     // from Lagna
     ],
     // Jupiter (total: 56)
     [
-        bits(&[1, 2, 3, 4, 7, 8, 9, 10, 11]),    // from Sun
-        bits(&[2, 5, 7, 9, 11]),                   // from Moon
-        bits(&[1, 2, 4, 7, 8, 10, 11]),            // from Mars
-        bits(&[1, 2, 4, 5, 6, 9, 10, 11]),         // from Mercury
-        bits(&[1, 2, 3, 4, 7, 8, 10, 11]),         // from Jupiter
-        bits(&[2, 5, 6, 9, 10, 11]),               // from Venus
-        bits(&[3, 5, 6, 12]),                       // from Saturn
-        bits(&[1, 2, 4, 5, 6, 7, 9, 10, 11]),     // from Lagna
+        bits(&[1, 2, 3, 4, 7, 8, 9, 10, 11]), // from Sun
+        bits(&[2, 5, 7, 9, 11]),              // from Moon
+        bits(&[1, 2, 4, 7, 8, 10, 11]),       // from Mars
+        bits(&[1, 2, 4, 5, 6, 9, 10, 11]),    // from Mercury
+        bits(&[1, 2, 3, 4, 7, 8, 10, 11]),    // from Jupiter
+        bits(&[2, 5, 6, 9, 10, 11]),          // from Venus
+        bits(&[3, 5, 6, 12]),                 // from Saturn
+        bits(&[1, 2, 4, 5, 6, 7, 9, 10, 11]), // from Lagna
     ],
     // Venus (total: 52)
     [
-        bits(&[8, 11, 12]),                        // from Sun
-        bits(&[1, 2, 3, 4, 5, 8, 9, 11, 12]),     // from Moon
-        bits(&[3, 4, 6, 9, 11, 12]),               // from Mars
-        bits(&[3, 5, 6, 9, 11]),                    // from Mercury
-        bits(&[5, 8, 9, 10, 11]),                   // from Jupiter
-        bits(&[1, 2, 3, 4, 5, 8, 9, 10, 11]),      // from Venus
-        bits(&[3, 4, 5, 8, 9, 10, 11]),             // from Saturn
-        bits(&[1, 2, 3, 4, 5, 8, 9, 11]),           // from Lagna
+        bits(&[8, 11, 12]),                   // from Sun
+        bits(&[1, 2, 3, 4, 5, 8, 9, 11, 12]), // from Moon
+        bits(&[3, 4, 6, 9, 11, 12]),          // from Mars
+        bits(&[3, 5, 6, 9, 11]),              // from Mercury
+        bits(&[5, 8, 9, 10, 11]),             // from Jupiter
+        bits(&[1, 2, 3, 4, 5, 8, 9, 10, 11]), // from Venus
+        bits(&[3, 4, 5, 8, 9, 10, 11]),       // from Saturn
+        bits(&[1, 2, 3, 4, 5, 8, 9, 11]),     // from Lagna
     ],
     // Saturn (total: 39)
     [
-        bits(&[1, 2, 4, 7, 8, 10, 11]),           // from Sun
-        bits(&[3, 6, 11]),                          // from Moon
-        bits(&[3, 5, 6, 10, 11, 12]),              // from Mars
-        bits(&[6, 8, 9, 10, 11, 12]),              // from Mercury
-        bits(&[5, 6, 11, 12]),                      // from Jupiter
-        bits(&[6, 11, 12]),                         // from Venus
-        bits(&[3, 5, 6, 11]),                       // from Saturn
-        bits(&[1, 3, 4, 6, 10, 11]),               // from Lagna
+        bits(&[1, 2, 4, 7, 8, 10, 11]), // from Sun
+        bits(&[3, 6, 11]),              // from Moon
+        bits(&[3, 5, 6, 10, 11, 12]),   // from Mars
+        bits(&[6, 8, 9, 10, 11, 12]),   // from Mercury
+        bits(&[5, 6, 11, 12]),          // from Jupiter
+        bits(&[6, 11, 12]),             // from Venus
+        bits(&[3, 5, 6, 11]),           // from Saturn
+        bits(&[1, 3, 4, 6, 10, 11]),    // from Lagna
     ],
 ];
 
@@ -181,10 +181,7 @@ pub fn calculate_bav(
 }
 
 /// Calculate BAV for all 7 grahas.
-pub fn calculate_all_bav(
-    graha_rashis: &[u8; 7],
-    lagna_rashi: u8,
-) -> [BhinnaAshtakavarga; 7] {
+pub fn calculate_all_bav(graha_rashis: &[u8; 7], lagna_rashi: u8) -> [BhinnaAshtakavarga; 7] {
     let mut bavs = [BhinnaAshtakavarga {
         graha_index: 0,
         points: [0; 12],
@@ -240,12 +237,7 @@ pub fn calculate_sav(bavs: &[BhinnaAshtakavarga; 7]) -> SarvaAshtakavarga {
 /// - Earth: Vrishabha(1), Kanya(5), Makara(9)
 /// - Air:   Mithuna(2), Tula(6), Kumbha(10)
 /// - Water: Karka(3), Vrischika(7), Meena(11)
-const TRIKONA_GROUPS: [[usize; 3]; 4] = [
-    [0, 4, 8],
-    [1, 5, 9],
-    [2, 6, 10],
-    [3, 7, 11],
-];
+const TRIKONA_GROUPS: [[usize; 3]; 4] = [[0, 4, 8], [1, 5, 9], [2, 6, 10], [3, 7, 11]];
 
 /// Apply Trikona Sodhana: subtract minimum from each trikona triangle.
 pub fn trikona_sodhana(totals: &[u8; 12]) -> [u8; 12] {
@@ -269,8 +261,8 @@ pub fn trikona_sodhana(totals: &[u8; 12]) -> [u8; 12] {
 /// pairs are in different trikona groups and already reduced. Sun and Moon
 /// each rule a single sign, so no pairs.
 const EKADHIPATYA_PAIRS: [[usize; 2]; 2] = [
-    [2, 5],   // Mercury: Mithuna(2), Kanya(5)
-    [8, 11],  // Jupiter: Dhanu(8), Meena(11)
+    [2, 5],  // Mercury: Mithuna(2), Kanya(5)
+    [8, 11], // Jupiter: Dhanu(8), Meena(11)
 ];
 
 /// Apply Ekadhipatya Sodhana: subtract minimum from same-lord pairs.
@@ -305,10 +297,7 @@ pub struct AshtakavargaResult {
 /// Arguments:
 /// - `graha_rashis`: 0-based rashi index for 7 grahas (Sun..Saturn)
 /// - `lagna_rashi`: 0-based rashi index of the Ascendant
-pub fn calculate_ashtakavarga(
-    graha_rashis: &[u8; 7],
-    lagna_rashi: u8,
-) -> AshtakavargaResult {
+pub fn calculate_ashtakavarga(graha_rashis: &[u8; 7], lagna_rashi: u8) -> AshtakavargaResult {
     let bavs = calculate_all_bav(graha_rashis, lagna_rashi);
     let sav = calculate_sav(&bavs);
     AshtakavargaResult { bavs, sav }
@@ -327,10 +316,7 @@ mod tests {
         // Verify that the sum of favorable offsets per graha matches expected totals.
         // This is chart-independent: just count the bits in the rules.
         for (graha, &expected) in BAV_TOTALS.iter().enumerate() {
-            let total: u32 = RULES[graha]
-                .iter()
-                .map(|&mask| mask.count_ones())
-                .sum();
+            let total: u32 = RULES[graha].iter().map(|&mask| mask.count_ones()).sum();
             assert_eq!(
                 total as u8, expected,
                 "BAV total mismatch for graha {graha}: got {total}, expected {expected}"

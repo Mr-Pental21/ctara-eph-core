@@ -11,10 +11,9 @@ use dhruv_search::panchang_types::{AyanaInfo, MasaInfo, VarshaInfo};
 use dhruv_search::sankranti_types::SankrantiConfig;
 use dhruv_search::{
     ayana_for_date, elongation_at, ghatika_for_date, ghatika_from_sunrises, hora_for_date,
-    hora_from_sunrises, karana_at, karana_for_date, masa_for_date,
-    moon_sidereal_longitude_at, nakshatra_at, nakshatra_for_date, panchang_for_date,
-    sidereal_sum_at, tithi_at, tithi_for_date, vaar_for_date, vaar_from_sunrises, varsha_for_date,
-    vedic_day_sunrises, yoga_at, yoga_for_date,
+    hora_from_sunrises, karana_at, karana_for_date, masa_for_date, moon_sidereal_longitude_at,
+    nakshatra_at, nakshatra_for_date, panchang_for_date, sidereal_sum_at, tithi_at, tithi_for_date,
+    vaar_for_date, vaar_from_sunrises, varsha_for_date, vedic_day_sunrises, yoga_at, yoga_for_date,
 };
 use dhruv_time::{EopKernel, UtcTime};
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
@@ -45,7 +44,12 @@ fn masa_jan_2024() {
     let config = default_config();
     let info: MasaInfo = masa_for_date(&engine, &utc, &config).unwrap();
     // Mid-January is typically Pausha masa
-    assert_eq!(info.masa, Masa::Pausha, "expected Pausha, got {}", info.masa.name());
+    assert_eq!(
+        info.masa,
+        Masa::Pausha,
+        "expected Pausha, got {}",
+        info.masa.name()
+    );
     assert!(!info.adhika, "should not be adhika");
     // Start should be before the query date
     assert!(info.start.to_jd_tdb(engine.lsk()) < utc.to_jd_tdb(engine.lsk()));
@@ -61,7 +65,12 @@ fn masa_apr_2024() {
     let config = default_config();
     let info: MasaInfo = masa_for_date(&engine, &utc, &config).unwrap();
     // Mid-April is typically Chaitra masa
-    assert_eq!(info.masa, Masa::Chaitra, "expected Chaitra, got {}", info.masa.name());
+    assert_eq!(
+        info.masa,
+        Masa::Chaitra,
+        "expected Chaitra, got {}",
+        info.masa.name()
+    );
 }
 
 /// Masa in mid-October 2024: should be Ashvina
@@ -72,7 +81,12 @@ fn masa_oct_2024() {
     let config = default_config();
     let info: MasaInfo = masa_for_date(&engine, &utc, &config).unwrap();
     // Mid-October is typically Ashvina masa
-    assert_eq!(info.masa, Masa::Ashvina, "expected Ashvina, got {}", info.masa.name());
+    assert_eq!(
+        info.masa,
+        Masa::Ashvina,
+        "expected Ashvina, got {}",
+        info.masa.name()
+    );
 }
 
 /// Ayana in mid-January 2024: Uttarayana (after Makar Sankranti ~Jan 15)
@@ -110,7 +124,10 @@ fn ayana_brackets_query() {
     let jd = utc.to_jd_tdb(engine.lsk());
     let jd_start = info.start.to_jd_tdb(engine.lsk());
     let jd_end = info.end.to_jd_tdb(engine.lsk());
-    assert!(jd_start < jd, "start {jd_start} should be before query {jd}");
+    assert!(
+        jd_start < jd,
+        "start {jd_start} should be before query {jd}"
+    );
     assert!(jd_end > jd, "end {jd_end} should be after query {jd}");
 }
 
@@ -124,7 +141,11 @@ fn varsha_2024() {
     let config = default_config();
     let info: VarshaInfo = varsha_for_date(&engine, &utc, &config).unwrap();
     // Verify the order is between 1 and 60
-    assert!(info.order >= 1 && info.order <= 60, "order should be 1-60, got {}", info.order);
+    assert!(
+        info.order >= 1 && info.order <= 60,
+        "order should be 1-60, got {}",
+        info.order
+    );
     // Start should be before query, end after
     let jd = utc.to_jd_tdb(engine.lsk());
     let jd_start = info.start.to_jd_tdb(engine.lsk());
@@ -157,7 +178,11 @@ fn varsha_consecutive_years() {
     );
 
     // Orders should differ by 1
-    let expected_order = if v2023.order == 60 { 1 } else { v2023.order + 1 };
+    let expected_order = if v2023.order == 60 {
+        1
+    } else {
+        v2023.order + 1
+    };
     assert_eq!(v2024.order, expected_order, "orders should be consecutive");
 }
 
@@ -293,9 +318,18 @@ fn panchang_combined_matches_individual() {
     assert_eq!(combined.vaar, vaar, "vaar mismatch");
     assert_eq!(combined.hora, hora, "hora mismatch");
     assert_eq!(combined.ghatika, ghatika, "ghatika mismatch");
-    assert!(combined.masa.is_none(), "masa should be None without calendar");
-    assert!(combined.ayana.is_none(), "ayana should be None without calendar");
-    assert!(combined.varsha.is_none(), "varsha should be None without calendar");
+    assert!(
+        combined.masa.is_none(),
+        "masa should be None without calendar"
+    );
+    assert!(
+        combined.ayana.is_none(),
+        "ayana should be None without calendar"
+    );
+    assert!(
+        combined.varsha.is_none(),
+        "varsha should be None without calendar"
+    );
 }
 
 /// panchang_for_date with include_calendar includes masa, ayana, varsha

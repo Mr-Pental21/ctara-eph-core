@@ -178,9 +178,9 @@ fn parse_values(text: &str, out: &mut Vec<f64>) -> Result<(), TimeError> {
         } else {
             // Replace Fortran 'D' exponent with 'E'.
             let normalized = token.replace('D', "E").replace('d', "e");
-            let val: f64 = normalized.parse().map_err(|e| {
-                TimeError::LskParse(format!("cannot parse '{token}' as f64: {e}"))
-            })?;
+            let val: f64 = normalized
+                .parse()
+                .map_err(|e| TimeError::LskParse(format!("cannot parse '{token}' as f64: {e}")))?;
             out.push(val);
         }
     }
@@ -272,10 +272,7 @@ DELTET/DELTA_AT        = ( 10,   @1972-JAN-1
         // 1972-Jan-01 00:00 = JD 2441317.5
         // seconds past J2000 = (2441317.5 - 2451545.0) * 86400
         let expected = (2_441_317.5 - 2_451_545.0) * 86_400.0;
-        assert!(
-            (s - expected).abs() < 1.0,
-            "got {s}, expected {expected}"
-        );
+        assert!((s - expected).abs() < 1.0, "got {s}, expected {expected}");
     }
 
     #[test]
@@ -283,9 +280,6 @@ DELTET/DELTA_AT        = ( 10,   @1972-JAN-1
         let s = parse_naif_date("2017-JAN-1").unwrap();
         // 2017-Jan-01 00:00 = JD 2457754.5
         let expected = (2_457_754.5 - 2_451_545.0) * 86_400.0;
-        assert!(
-            (s - expected).abs() < 1.0,
-            "got {s}, expected {expected}"
-        );
+        assert!((s - expected).abs() < 1.0, "got {s}, expected {expected}");
     }
 }

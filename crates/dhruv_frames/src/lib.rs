@@ -14,6 +14,6 @@ pub use obliquity::{COS_OBL, OBLIQUITY_J2000_DEG, OBLIQUITY_J2000_RAD, SIN_OBL};
 pub use precession::{general_precession_longitude_arcsec, general_precession_longitude_deg};
 pub use rotation::{ecliptic_to_icrf, icrf_to_ecliptic};
 pub use spherical::{
-    cartesian_state_to_spherical_state, cartesian_to_spherical, spherical_to_cartesian,
-    SphericalCoords, SphericalState,
+    SphericalCoords, SphericalState, cartesian_state_to_spherical_state, cartesian_to_spherical,
+    spherical_to_cartesian,
 };

@@ -39,7 +39,10 @@ fn query_rejects_non_finite_epoch() {
         frame: Frame::IcrfJ2000,
         epoch_tdb_jd: f64::NAN,
     };
-    assert!(matches!(engine.query(query), Err(EngineError::InvalidQuery(_))));
+    assert!(matches!(
+        engine.query(query),
+        Err(EngineError::InvalidQuery(_))
+    ));
 }
 
 #[test]
@@ -54,7 +57,10 @@ fn query_rejects_same_target_observer() {
         frame: Frame::IcrfJ2000,
         epoch_tdb_jd: 2_451_545.0,
     };
-    assert!(matches!(engine.query(query), Err(EngineError::UnsupportedQuery(_))));
+    assert!(matches!(
+        engine.query(query),
+        Err(EngineError::UnsupportedQuery(_))
+    ));
 }
 
 #[test]
@@ -216,7 +222,10 @@ fn context_avoids_redundant_evaluations() {
         + state.position_km[1].powi(2)
         + state.position_km[2].powi(2))
     .sqrt();
-    assert!(r > 340_000.0 && r < 420_000.0, "Moon-Earth distance {r:.0} km");
+    assert!(
+        r > 340_000.0 && r < 420_000.0,
+        "Moon-Earth distance {r:.0} km"
+    );
 
     // Moon chain: 301->3, 3->0 (2 evals)
     // Earth chain: 399->3 (1 eval, but 3->0 is cached = 1 hit)
@@ -261,12 +270,10 @@ fn query_batch_matches_individual() {
 
     for (i, q) in queries.iter().enumerate() {
         let individual = engine.query(*q).expect("individual query should succeed");
-        let batch = batch_results[i].as_ref().expect("batch query should succeed");
-        assert_eq!(
-            individual, *batch,
-            "mismatch for body {:?}",
-            q.target
-        );
+        let batch = batch_results[i]
+            .as_ref()
+            .expect("batch query should succeed");
+        assert_eq!(individual, *batch, "mismatch for body {:?}", q.target);
     }
 }
 
@@ -372,7 +379,9 @@ fn multi_kernel_loads_and_queries() {
         frame: Frame::IcrfJ2000,
         epoch_tdb_jd: 2_451_545.0,
     };
-    let state = engine.query(query).expect("should succeed with multi-kernel");
+    let state = engine
+        .query(query)
+        .expect("should succeed with multi-kernel");
 
     let r = (state.position_km[0].powi(2)
         + state.position_km[1].powi(2)

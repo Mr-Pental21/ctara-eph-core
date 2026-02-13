@@ -23,12 +23,12 @@
 use dhruv_core::{Body, Engine, Frame, Observer, Query};
 use dhruv_frames::{cartesian_to_spherical, icrf_to_ecliptic};
 
-use crate::conjunction::{search_conjunctions, next_conjunction, prev_conjunction};
+use crate::conjunction::{next_conjunction, prev_conjunction, search_conjunctions};
 use crate::conjunction_types::ConjunctionConfig;
-use crate::grahan_types::{
-    GrahanConfig, ChandraGrahan, ChandraGrahanType, SuryaGrahan, SuryaGrahanType,
-};
 use crate::error::SearchError;
+use crate::grahan_types::{
+    ChandraGrahan, ChandraGrahanType, GrahanConfig, SuryaGrahan, SuryaGrahanType,
+};
 
 // ---------------------------------------------------------------------------
 // Constants (IAU 2015 nominal values)
@@ -265,10 +265,11 @@ fn compute_chandra_grahan(
     let moon_radius = moon_angular_radius_deg(moon_dist);
     let shadow_offset = moon_shadow_offset_deg(engine, full_moon_jd)?;
 
-    let grahan_type = match classify_chandra(shadow_offset, moon_radius, umbral_radius, penumbral_radius) {
-        Some(t) => t,
-        None => return Ok(None),
-    };
+    let grahan_type =
+        match classify_chandra(shadow_offset, moon_radius, umbral_radius, penumbral_radius) {
+            Some(t) => t,
+            None => return Ok(None),
+        };
 
     if !config.include_penumbral && grahan_type == ChandraGrahanType::Penumbral {
         return Ok(None);
@@ -424,7 +425,14 @@ pub fn search_chandra_grahan(
     }
 
     let moon_config = ConjunctionConfig::opposition(MOON_STEP_DAYS);
-    let full_moons = search_conjunctions(engine, Body::Sun, Body::Moon, jd_start, jd_end, &moon_config)?;
+    let full_moons = search_conjunctions(
+        engine,
+        Body::Sun,
+        Body::Moon,
+        jd_start,
+        jd_end,
+        &moon_config,
+    )?;
 
     let mut results = Vec::new();
     for fm in &full_moons {
@@ -535,34 +543,25 @@ fn compute_surya_grahan(
     let internal_sep = (sun_r - moon_r).abs();
 
     // C1: first external contact (disks start touching)
-    let c1_jd = find_surya_contact(engine, new_moon_jd - half_window, new_moon_jd, external_sep)
-        .ok();
+    let c1_jd =
+        find_surya_contact(engine, new_moon_jd - half_window, new_moon_jd, external_sep).ok();
 
     // C4: last external contact (disks stop touching)
-    let c4_jd = find_surya_contact(engine, new_moon_jd, new_moon_jd + half_window, external_sep)
-        .ok();
+    let c4_jd =
+        find_surya_contact(engine, new_moon_jd, new_moon_jd + half_window, external_sep).ok();
 
     // C2/C3: internal contacts (only for total/annular)
-    let (c2_jd, c3_jd) =
-        if grahan_type == SuryaGrahanType::Total || grahan_type == SuryaGrahanType::Annular {
-            let c2 = find_surya_contact(
-                engine,
-                new_moon_jd - half_window,
-                new_moon_jd,
-                internal_sep,
-            )
-            .ok();
-            let c3 = find_surya_contact(
-                engine,
-                new_moon_jd,
-                new_moon_jd + half_window,
-                internal_sep,
-            )
-            .ok();
-            (c2, c3)
-        } else {
-            (None, None)
-        };
+    let (c2_jd, c3_jd) = if grahan_type == SuryaGrahanType::Total
+        || grahan_type == SuryaGrahanType::Annular
+    {
+        let c2 =
+            find_surya_contact(engine, new_moon_jd - half_window, new_moon_jd, internal_sep).ok();
+        let c3 =
+            find_surya_contact(engine, new_moon_jd, new_moon_jd + half_window, internal_sep).ok();
+        (c2, c3)
+    } else {
+        (None, None)
+    };
 
     Ok(Some(SuryaGrahan {
         grahan_type,
@@ -639,7 +638,14 @@ pub fn search_surya_grahan(
     }
 
     let moon_config = ConjunctionConfig::conjunction(MOON_STEP_DAYS);
-    let new_moons = search_conjunctions(engine, Body::Sun, Body::Moon, jd_start, jd_end, &moon_config)?;
+    let new_moons = search_conjunctions(
+        engine,
+        Body::Sun,
+        Body::Moon,
+        jd_start,
+        jd_end,
+        &moon_config,
+    )?;
 
     let mut results = Vec::new();
     for nm in &new_moons {

@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use dhruv_time::{calendar_to_jd, jd_to_tdb_seconds, LeapSecondKernel};
+use dhruv_time::{LeapSecondKernel, calendar_to_jd, jd_to_tdb_seconds};
 
 fn lsk_path() -> std::path::PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../kernels/data/naif0012.tls")

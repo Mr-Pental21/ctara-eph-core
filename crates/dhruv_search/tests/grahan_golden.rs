@@ -7,9 +7,8 @@ use std::path::Path;
 
 use dhruv_core::{Engine, EngineConfig};
 use dhruv_search::{
-    ChandraGrahanType, GrahanConfig,
-    next_chandra_grahan, prev_chandra_grahan, search_chandra_grahan,
-    next_surya_grahan, prev_surya_grahan, search_surya_grahan,
+    ChandraGrahanType, GrahanConfig, next_chandra_grahan, next_surya_grahan, prev_chandra_grahan,
+    prev_surya_grahan, search_chandra_grahan, search_surya_grahan,
 };
 
 const SPK_PATH: &str = "../../kernels/data/de442s.bsp";
@@ -20,12 +19,7 @@ fn load_engine() -> Option<Engine> {
         eprintln!("Skipping grahan_golden: kernel files not found");
         return None;
     }
-    let config = EngineConfig::with_single_spk(
-        SPK_PATH.into(),
-        LSK_PATH.into(),
-        1024,
-        false,
-    );
+    let config = EngineConfig::with_single_spk(SPK_PATH.into(), LSK_PATH.into(), 1024, false);
     Engine::new(config).ok()
 }
 
@@ -44,8 +38,7 @@ fn chandra_grahan_2024_mar_penumbral() {
     let Some(engine) = load_engine() else { return };
     let jd_start = jd_from_date(2024, 3, 1.0);
     let config = GrahanConfig::default();
-    let result = next_chandra_grahan(&engine, jd_start, &config)
-        .expect("search should succeed");
+    let result = next_chandra_grahan(&engine, jd_start, &config).expect("search should succeed");
     let grahan = result.expect("should find a chandra grahan");
 
     // Should be in March 2024
@@ -54,7 +47,8 @@ fn chandra_grahan_2024_mar_penumbral() {
     assert!(
         diff_hours < 12.0,
         "chandra grahan off by {diff_hours:.1}h, got JD {}, expected ~JD {}",
-        grahan.greatest_grahan_jd, expected_jd
+        grahan.greatest_grahan_jd,
+        expected_jd
     );
     assert_eq!(grahan.grahan_type, ChandraGrahanType::Penumbral);
 }
@@ -66,8 +60,7 @@ fn chandra_grahan_2025_mar_total() {
     let Some(engine) = load_engine() else { return };
     let jd_start = jd_from_date(2025, 3, 1.0);
     let config = GrahanConfig::default();
-    let result = next_chandra_grahan(&engine, jd_start, &config)
-        .expect("search should succeed");
+    let result = next_chandra_grahan(&engine, jd_start, &config).expect("search should succeed");
     let grahan = result.expect("should find a chandra grahan");
 
     let expected_jd = jd_from_date(2025, 3, 14.29); // ~06:59 UTC
@@ -93,8 +86,8 @@ fn chandra_grahan_2024_count() {
     let jd_start = jd_from_date(2024, 1, 1.0);
     let jd_end = jd_from_date(2025, 1, 1.0);
     let config = GrahanConfig::default();
-    let results = search_chandra_grahan(&engine, jd_start, jd_end, &config)
-        .expect("search should succeed");
+    let results =
+        search_chandra_grahan(&engine, jd_start, jd_end, &config).expect("search should succeed");
 
     // 2024 has 2 chandra grahan: Mar 25 (penumbral) and Sep 18 (partial)
     assert!(
@@ -114,8 +107,8 @@ fn penumbral_filter() {
         include_penumbral: false,
         ..Default::default()
     };
-    let results = search_chandra_grahan(&engine, jd_start, jd_end, &config)
-        .expect("search should succeed");
+    let results =
+        search_chandra_grahan(&engine, jd_start, jd_end, &config).expect("search should succeed");
 
     // With penumbral excluded, should have fewer grahan
     for e in &results {
@@ -133,8 +126,7 @@ fn prev_chandra_grahan_from_2024() {
     let Some(engine) = load_engine() else { return };
     let jd = jd_from_date(2024, 3, 1.0);
     let config = GrahanConfig::default();
-    let result = prev_chandra_grahan(&engine, jd, &config)
-        .expect("search should succeed");
+    let result = prev_chandra_grahan(&engine, jd, &config).expect("search should succeed");
     let grahan = result.expect("should find previous chandra grahan");
 
     // Previous chandra grahan should be before our search date
@@ -156,8 +148,7 @@ fn surya_grahan_2024_apr() {
     let Some(engine) = load_engine() else { return };
     let jd_start = jd_from_date(2024, 3, 1.0);
     let config = GrahanConfig::default();
-    let result = next_surya_grahan(&engine, jd_start, &config)
-        .expect("search should succeed");
+    let result = next_surya_grahan(&engine, jd_start, &config).expect("search should succeed");
     let grahan = result.expect("should find a surya grahan");
 
     let expected_jd = jd_from_date(2024, 4, 8.763); // ~18:18 UTC
@@ -165,7 +156,8 @@ fn surya_grahan_2024_apr() {
     assert!(
         diff_hours < 12.0,
         "surya grahan off by {diff_hours:.1}h, got JD {}, expected ~JD {}",
-        grahan.greatest_grahan_jd, expected_jd
+        grahan.greatest_grahan_jd,
+        expected_jd
     );
     // Geocentric: could be Partial or Total depending on exact geometry
     // Magnitude should be close to 1.0 (Moon is close to Sun's size)
@@ -184,8 +176,7 @@ fn surya_grahan_2024_oct() {
     let Some(engine) = load_engine() else { return };
     let jd_start = jd_from_date(2024, 9, 1.0);
     let config = GrahanConfig::default();
-    let result = next_surya_grahan(&engine, jd_start, &config)
-        .expect("search should succeed");
+    let result = next_surya_grahan(&engine, jd_start, &config).expect("search should succeed");
     let grahan = result.expect("should find a surya grahan");
 
     let expected_jd = jd_from_date(2024, 10, 2.78); // ~18:45 UTC
@@ -210,8 +201,8 @@ fn surya_grahan_2024_count() {
     let jd_start = jd_from_date(2024, 1, 1.0);
     let jd_end = jd_from_date(2025, 1, 1.0);
     let config = GrahanConfig::default();
-    let results = search_surya_grahan(&engine, jd_start, jd_end, &config)
-        .expect("search should succeed");
+    let results =
+        search_surya_grahan(&engine, jd_start, jd_end, &config).expect("search should succeed");
 
     assert!(
         results.len() >= 2,
@@ -226,8 +217,7 @@ fn prev_surya_grahan_from_2024() {
     let Some(engine) = load_engine() else { return };
     let jd = jd_from_date(2024, 3, 1.0);
     let config = GrahanConfig::default();
-    let result = prev_surya_grahan(&engine, jd, &config)
-        .expect("search should succeed");
+    let result = prev_surya_grahan(&engine, jd, &config).expect("search should succeed");
     let grahan = result.expect("should find previous surya grahan");
 
     assert!(grahan.greatest_grahan_jd < jd);

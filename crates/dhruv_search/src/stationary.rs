@@ -19,7 +19,7 @@ use crate::conjunction::body_ecliptic_state;
 use crate::conjunction_types::SearchDirection;
 use crate::error::SearchError;
 use crate::stationary_types::{
-    MaxSpeedEvent, MaxSpeedType, StationaryConfig, StationaryEvent, StationType,
+    MaxSpeedEvent, MaxSpeedType, StationType, StationaryConfig, StationaryEvent,
 };
 
 /// Maximum scan range in days (~800 days covers all synodic periods).
@@ -203,9 +203,7 @@ pub fn search_stationary(
     validate_stationary_body(body)?;
 
     if jd_end <= jd_start {
-        return Err(SearchError::InvalidConfig(
-            "jd_end must be after jd_start",
-        ));
+        return Err(SearchError::InvalidConfig("jd_end must be after jd_start"));
     }
 
     let mut events = Vec::new();
@@ -269,12 +267,7 @@ pub fn search_stationary(
 // ---------------------------------------------------------------------------
 
 /// Numerical acceleration via central difference: (v(t+h) - v(t-h)) / (2h).
-fn numerical_acceleration(
-    engine: &Engine,
-    body: Body,
-    t: f64,
-    h: f64,
-) -> Result<f64, SearchError> {
+fn numerical_acceleration(engine: &Engine, body: Body, t: f64, h: f64) -> Result<f64, SearchError> {
     let (_, _, v_plus) = body_ecliptic_state(engine, body, t + h)?;
     let (_, _, v_minus) = body_ecliptic_state(engine, body, t - h)?;
     Ok((v_plus - v_minus) / (2.0 * h))
@@ -313,9 +306,8 @@ fn find_max_speed_event(
                 (t_curr, a_curr, t_prev, a_prev)
             };
 
-            let accel_at = |t: f64| -> Result<f64, SearchError> {
-                numerical_acceleration(engine, body, t, h)
-            };
+            let accel_at =
+                |t: f64| -> Result<f64, SearchError> { numerical_acceleration(engine, body, t, h) };
 
             let t_peak = bisect_zero(
                 t_a,
@@ -384,9 +376,7 @@ pub fn search_max_speed(
     validate_max_speed_body(body)?;
 
     if jd_end <= jd_start {
-        return Err(SearchError::InvalidConfig(
-            "jd_end must be after jd_start",
-        ));
+        return Err(SearchError::InvalidConfig("jd_end must be after jd_start"));
     }
 
     let mut events = Vec::new();
@@ -401,9 +391,8 @@ pub fn search_max_speed(
         let a_curr = numerical_acceleration(engine, body, t_curr, h)?;
 
         if a_prev * a_curr < 0.0 {
-            let accel_at = |t: f64| -> Result<f64, SearchError> {
-                numerical_acceleration(engine, body, t, h)
-            };
+            let accel_at =
+                |t: f64| -> Result<f64, SearchError> { numerical_acceleration(engine, body, t, h) };
 
             let t_peak = bisect_zero(
                 t_prev,

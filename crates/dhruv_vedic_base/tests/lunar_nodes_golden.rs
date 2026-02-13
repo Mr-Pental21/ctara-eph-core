@@ -3,8 +3,7 @@
 //! All tests are pure math (no kernel files needed).
 
 use dhruv_vedic_base::{
-    LunarNode, NodeMode, lunar_node_deg, mean_ketu_deg, mean_rahu_deg, true_ketu_deg,
-    true_rahu_deg,
+    LunarNode, NodeMode, lunar_node_deg, mean_ketu_deg, mean_rahu_deg, true_ketu_deg, true_rahu_deg,
 };
 
 /// Helper: normalize to [0, 360).
@@ -65,10 +64,7 @@ fn ketu_always_opposite_rahu_mean() {
         let rahu = mean_rahu_deg(t);
         let ketu = mean_ketu_deg(t);
         let diff = norm(ketu - rahu);
-        assert!(
-            (diff - 180.0).abs() < 1e-10,
-            "t={t}: Ketu-Rahu = {diff}"
-        );
+        assert!((diff - 180.0).abs() < 1e-10, "t={t}: Ketu-Rahu = {diff}");
     }
 }
 

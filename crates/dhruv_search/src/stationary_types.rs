@@ -161,7 +161,10 @@ mod tests {
 
     #[test]
     fn station_type_eq() {
-        assert_eq!(StationType::StationRetrograde, StationType::StationRetrograde);
+        assert_eq!(
+            StationType::StationRetrograde,
+            StationType::StationRetrograde
+        );
         assert_ne!(StationType::StationRetrograde, StationType::StationDirect);
     }
 

@@ -3,8 +3,8 @@
 //! Pure-math tests (no kernel files needed).
 
 use dhruv_vedic_base::{
-    AyanamshaSystem, Nakshatra, Nakshatra28, Rashi, deg_to_dms, nakshatra28_from_longitude,
-    nakshatra_from_longitude, nakshatra_from_tropical, rashi_from_longitude, rashi_from_tropical,
+    AyanamshaSystem, Nakshatra, Nakshatra28, Rashi, deg_to_dms, nakshatra_from_longitude,
+    nakshatra_from_tropical, nakshatra28_from_longitude, rashi_from_longitude, rashi_from_tropical,
 };
 
 // ---------------------------------------------------------------------------
@@ -43,7 +43,11 @@ fn rashi_dms_precision() {
     assert_eq!(info.rashi, Rashi::Vrishabha);
     assert_eq!(info.dms.degrees, 15);
     assert_eq!(info.dms.minutes, 30);
-    assert!((info.dms.seconds - 15.5).abs() < 0.01, "seconds = {}", info.dms.seconds);
+    assert!(
+        (info.dms.seconds - 15.5).abs() < 0.01,
+        "seconds = {}",
+        info.dms.seconds
+    );
 }
 
 #[test]
@@ -61,7 +65,10 @@ fn dms_round_trip() {
     // 23.853 deg → 23 deg 51' 10.8"
     let d = deg_to_dms(23.853);
     let reconstructed = d.degrees as f64 + d.minutes as f64 / 60.0 + d.seconds / 3600.0;
-    assert!((reconstructed - 23.853).abs() < 1e-10, "reconstructed = {reconstructed}");
+    assert!(
+        (reconstructed - 23.853).abs() < 1e-10,
+        "reconstructed = {reconstructed}"
+    );
 }
 
 // ---------------------------------------------------------------------------

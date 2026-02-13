@@ -13,9 +13,8 @@ use std::f64::consts::TAU;
 use dhruv_core::{Body, Engine, Frame, Observer, Query};
 use dhruv_frames::cartesian_to_spherical;
 use dhruv_time::{
-    EopKernel, LeapSecondKernel,
-    gmst_rad, local_sidereal_time_rad,
-    jd_to_tdb_seconds, tdb_seconds_to_jd,
+    EopKernel, LeapSecondKernel, gmst_rad, jd_to_tdb_seconds, local_sidereal_time_rad,
+    tdb_seconds_to_jd,
 };
 
 use crate::error::VedicError;
@@ -46,10 +45,7 @@ pub fn approximate_local_noon_jd(jd_ut_midnight: f64, longitude_deg: f64) -> f64
 ///
 /// Returns `(ra_rad, dec_rad, distance_km)` where RA is in [0, 2pi),
 /// Dec in [-pi/2, pi/2], and distance in km.
-fn sun_equatorial_ra_dec_dist(
-    engine: &Engine,
-    jd_tdb: f64,
-) -> Result<(f64, f64, f64), VedicError> {
+fn sun_equatorial_ra_dec_dist(engine: &Engine, jd_tdb: f64) -> Result<(f64, f64, f64), VedicError> {
     let query = Query {
         target: Body::Sun,
         observer: Observer::Body(Body::Earth),
@@ -58,7 +54,11 @@ fn sun_equatorial_ra_dec_dist(
     };
     let state = engine.query(query)?;
     let sph = cartesian_to_spherical(&state.position_km);
-    Ok((sph.lon_deg.to_radians(), sph.lat_deg.to_radians(), sph.distance_km))
+    Ok((
+        sph.lon_deg.to_radians(),
+        sph.lat_deg.to_radians(),
+        sph.distance_km,
+    ))
 }
 
 /// Compute solar angular semidiameter from Earth-Sun distance.
@@ -248,7 +248,15 @@ pub fn compute_all_events(
 
     let mut results = Vec::with_capacity(events.len());
     for &evt in &events {
-        results.push(compute_rise_set(engine, lsk, eop, location, evt, jd_utc_noon, config)?);
+        results.push(compute_rise_set(
+            engine,
+            lsk,
+            eop,
+            location,
+            evt,
+            jd_utc_noon,
+            config,
+        )?);
     }
     Ok(results)
 }

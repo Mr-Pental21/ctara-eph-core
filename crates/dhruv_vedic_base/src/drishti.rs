@@ -277,7 +277,10 @@ mod tests {
     #[test]
     fn no_special_for_sun() {
         for a in [60.0, 90.0, 120.0, 135.0, 180.0, 225.0, 270.0, 285.0] {
-            assert!((special_virupa(Graha::Surya, a)).abs() < EPS, "Sun should have no special at {a}");
+            assert!(
+                (special_virupa(Graha::Surya, a)).abs() < EPS,
+                "Sun should have no special at {a}"
+            );
         }
     }
 
@@ -370,9 +373,15 @@ mod tests {
         let matrix = graha_drishti_matrix(&lons);
         for i in 0..9 {
             let e = &matrix.entries[i][i];
-            assert!((e.angular_distance).abs() < EPS, "diagonal[{i}] angular_distance");
+            assert!(
+                (e.angular_distance).abs() < EPS,
+                "diagonal[{i}] angular_distance"
+            );
             assert!((e.base_virupa).abs() < EPS, "diagonal[{i}] base_virupa");
-            assert!((e.special_virupa).abs() < EPS, "diagonal[{i}] special_virupa");
+            assert!(
+                (e.special_virupa).abs() < EPS,
+                "diagonal[{i}] special_virupa"
+            );
             assert!((e.total_virupa).abs() < EPS, "diagonal[{i}] total_virupa");
         }
     }
@@ -404,7 +413,10 @@ mod tests {
             }
         }
         // Most of 72 off-diagonal entries should be nonzero
-        assert!(nonzero_count > 30, "expected many nonzero entries, got {nonzero_count}");
+        assert!(
+            nonzero_count > 30,
+            "expected many nonzero entries, got {nonzero_count}"
+        );
     }
 
     #[test]
@@ -415,7 +427,10 @@ mod tests {
         lons[Graha::Surya.index() as usize] = 100.0;
         let matrix = graha_drishti_matrix(&lons);
         let entry = &matrix.entries[Graha::Mangal.index() as usize][Graha::Surya.index() as usize];
-        assert!((entry.special_virupa - 15.0).abs() < EPS, "Mars special aspect");
+        assert!(
+            (entry.special_virupa - 15.0).abs() < EPS,
+            "Mars special aspect"
+        );
     }
 
     #[test]
@@ -425,7 +440,10 @@ mod tests {
         lons[Graha::Surya.index() as usize] = 135.0;
         let matrix = graha_drishti_matrix(&lons);
         let entry = &matrix.entries[Graha::Guru.index() as usize][Graha::Surya.index() as usize];
-        assert!((entry.special_virupa - 30.0).abs() < EPS, "Jupiter special aspect");
+        assert!(
+            (entry.special_virupa - 30.0).abs() < EPS,
+            "Jupiter special aspect"
+        );
     }
 
     #[test]
@@ -435,6 +453,9 @@ mod tests {
         lons[Graha::Surya.index() as usize] = 75.0;
         let matrix = graha_drishti_matrix(&lons);
         let entry = &matrix.entries[Graha::Shani.index() as usize][Graha::Surya.index() as usize];
-        assert!((entry.special_virupa - 45.0).abs() < EPS, "Saturn special aspect");
+        assert!(
+            (entry.special_virupa - 45.0).abs() < EPS,
+            "Saturn special aspect"
+        );
     }
 }

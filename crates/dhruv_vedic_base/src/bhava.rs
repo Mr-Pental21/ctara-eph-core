@@ -14,12 +14,12 @@ use dhruv_core::{Body, Engine, Frame, Observer, Query};
 use dhruv_frames::{OBLIQUITY_J2000_RAD, cartesian_to_spherical};
 use dhruv_time::{LeapSecondKernel, jd_to_tdb_seconds, tdb_seconds_to_jd};
 
-use crate::lagna::{lagna_mc_ramc_from_lst, compute_lst_rad_pub};
 use crate::bhava_types::{
     Bhava, BhavaConfig, BhavaReferenceMode, BhavaResult, BhavaStartingPoint, BhavaSystem,
     normalize_deg,
 };
 use crate::error::VedicError;
+use crate::lagna::{compute_lst_rad_pub, lagna_mc_ramc_from_lst};
 use crate::riseset_types::GeoLocation;
 
 use dhruv_time::EopKernel;
@@ -57,15 +57,12 @@ pub fn compute_bhavas(
     let mc_deg = normalize_deg(mc_rad.to_degrees());
 
     // Resolve starting point
-    let start_deg = resolve_starting_point_deg(
-        engine, &config.starting_point, asc_deg, jd_utc, lsk,
-    )?;
+    let start_deg =
+        resolve_starting_point_deg(engine, &config.starting_point, asc_deg, jd_utc, lsk)?;
 
     // Compute raw cusps (12 ecliptic longitudes in degrees)
     let cusps = match config.system {
-        BhavaSystem::Equal | BhavaSystem::SuryaSiddhanta => {
-            compute_equal(start_deg)
-        }
+        BhavaSystem::Equal | BhavaSystem::SuryaSiddhanta => compute_equal(start_deg),
         BhavaSystem::Sripati => compute_sripati(asc_deg, mc_deg),
         BhavaSystem::KP => {
             check_latitude(location)?;
@@ -178,10 +175,10 @@ fn compute_sripati(asc_deg: f64, mc_deg: f64) -> [f64; 12] {
     let ic_deg = normalize_deg(mc_deg + 180.0);
 
     let mut cusps = [0.0; 12];
-    cusps[0] = asc_deg;  // cusp 1
-    cusps[3] = ic_deg;    // cusp 4
-    cusps[6] = desc_deg;  // cusp 7
-    cusps[9] = mc_deg;    // cusp 10
+    cusps[0] = asc_deg; // cusp 1
+    cusps[3] = ic_deg; // cusp 4
+    cusps[6] = desc_deg; // cusp 7
+    cusps[9] = mc_deg; // cusp 10
 
     // Trisect Asc -> IC (quadrant 1: houses 2, 3)
     let arc1 = arc_forward(asc_deg, ic_deg);
@@ -280,7 +277,9 @@ fn placidus_cusp(
         ra = new_ra;
     }
 
-    Ok(normalize_deg(equator_to_ecliptic_longitude_rad(ra, eps).to_degrees()))
+    Ok(normalize_deg(
+        equator_to_ecliptic_longitude_rad(ra, eps).to_degrees(),
+    ))
 }
 
 /// Koch house system: MC-to-horizon time division.
@@ -309,17 +308,13 @@ fn compute_koch(
     cusps[9] = mc_deg;
 
     // Houses 11, 12
-    cusps[10] = normalize_deg(
-        equator_to_ecliptic_longitude_rad(ramc + sa / 3.0, eps).to_degrees(),
-    );
-    cusps[11] = normalize_deg(
-        equator_to_ecliptic_longitude_rad(ramc + 2.0 * sa / 3.0, eps).to_degrees(),
-    );
+    cusps[10] = normalize_deg(equator_to_ecliptic_longitude_rad(ramc + sa / 3.0, eps).to_degrees());
+    cusps[11] =
+        normalize_deg(equator_to_ecliptic_longitude_rad(ramc + 2.0 * sa / 3.0, eps).to_degrees());
 
     // Houses 2, 3 (below horizon)
-    cusps[1] = normalize_deg(
-        equator_to_ecliptic_longitude_rad(ramc + PI + sa / 3.0, eps).to_degrees(),
-    );
+    cusps[1] =
+        normalize_deg(equator_to_ecliptic_longitude_rad(ramc + PI + sa / 3.0, eps).to_degrees());
     cusps[2] = normalize_deg(
         equator_to_ecliptic_longitude_rad(ramc + PI + 2.0 * sa / 3.0, eps).to_degrees(),
     );
@@ -339,9 +334,7 @@ fn compute_koch(
 fn compute_regiomontanus(ramc: f64, lat: f64, eps: f64) -> [f64; 12] {
     let mut cusps = [0.0; 12];
     for (i, cusp) in cusps.iter_mut().enumerate() {
-        *cusp = normalize_deg(
-            regiomontanus_cusp_rad(ramc, lat, eps, i as i32).to_degrees(),
-        );
+        *cusp = normalize_deg(regiomontanus_cusp_rad(ramc, lat, eps, i as i32).to_degrees());
     }
     cusps
 }
@@ -480,7 +473,9 @@ fn topocentric_cusp(
         ra = new_ra;
     }
 
-    Ok(normalize_deg(equator_to_ecliptic_longitude_rad(ra, eps).to_degrees()))
+    Ok(normalize_deg(
+        equator_to_ecliptic_longitude_rad(ra, eps).to_degrees(),
+    ))
 }
 
 /// Alcabitus: semi-arc equator division + ecliptic projection.
@@ -509,9 +504,8 @@ fn compute_alcabitus(
     cusps[9] = mc_deg;
 
     // Cusps 11, 12: divide the diurnal semi-arc of the Ascendant
-    cusps[10] = normalize_deg(
-        equator_to_ecliptic_longitude_rad(ramc + sa_diurnal / 3.0, eps).to_degrees(),
-    );
+    cusps[10] =
+        normalize_deg(equator_to_ecliptic_longitude_rad(ramc + sa_diurnal / 3.0, eps).to_degrees());
     cusps[11] = normalize_deg(
         equator_to_ecliptic_longitude_rad(ramc + 2.0 * sa_diurnal / 3.0, eps).to_degrees(),
     );
@@ -688,10 +682,7 @@ mod tests {
 
         // For equal houses, shift = 15 deg
         let diff = arc_forward(bhavas_mid[0].cusp_deg, bhavas_start[0].cusp_deg);
-        assert!(
-            (diff - 15.0).abs() < 1e-10,
-            "shift = {diff}, expected 15"
-        );
+        assert!((diff - 15.0).abs() < 1e-10, "shift = {diff}, expected 15");
     }
 
     #[test]
