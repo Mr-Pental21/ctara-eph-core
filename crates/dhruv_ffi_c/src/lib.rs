@@ -8,16 +8,17 @@ use dhruv_search::{
     ChandraGrahan, ChandraGrahanType, ConjunctionConfig, ConjunctionEvent, GrahanConfig,
     LunarPhase, MaxSpeedEvent, MaxSpeedType, SankrantiConfig, SearchError, StationType,
     StationaryConfig, StationaryEvent, SuryaGrahan, SuryaGrahanType, ayana_for_date,
-    body_ecliptic_lon_lat, elongation_at, ghatika_for_date, ghatika_from_sunrises,
-    graha_sidereal_longitudes, hora_for_date, hora_from_sunrises, karana_at, karana_for_date,
-    masa_for_date, nakshatra_at, nakshatra_for_date, next_amavasya, next_chandra_grahan,
-    next_conjunction, next_max_speed, next_purnima, next_sankranti, next_specific_sankranti,
-    next_stationary, next_surya_grahan, panchang_for_date, prev_amavasya, prev_chandra_grahan,
-    prev_conjunction, prev_max_speed, prev_purnima, prev_sankranti, prev_specific_sankranti,
-    prev_stationary, prev_surya_grahan, search_amavasyas, search_chandra_grahan,
-    search_conjunctions, search_max_speed, search_purnimas, search_sankrantis, search_stationary,
-    search_surya_grahan, sidereal_sum_at, special_lagnas_for_date, tithi_at, tithi_for_date,
-    vaar_for_date, vaar_from_sunrises, varsha_for_date, vedic_day_sunrises, yoga_at, yoga_for_date,
+    body_ecliptic_lon_lat, elongation_at, full_kundali_for_date, ghatika_for_date,
+    ghatika_from_sunrises, graha_sidereal_longitudes, hora_for_date, hora_from_sunrises, karana_at,
+    karana_for_date, masa_for_date, nakshatra_at, nakshatra_for_date, next_amavasya,
+    next_chandra_grahan, next_conjunction, next_max_speed, next_purnima, next_sankranti,
+    next_specific_sankranti, next_stationary, next_surya_grahan, panchang_for_date, prev_amavasya,
+    prev_chandra_grahan, prev_conjunction, prev_max_speed, prev_purnima, prev_sankranti,
+    prev_specific_sankranti, prev_stationary, prev_surya_grahan, search_amavasyas,
+    search_chandra_grahan, search_conjunctions, search_max_speed, search_purnimas,
+    search_sankrantis, search_stationary, search_surya_grahan, sidereal_sum_at,
+    special_lagnas_for_date, tithi_at, tithi_for_date, vaar_for_date, vaar_from_sunrises,
+    varsha_for_date, vedic_day_sunrises, yoga_at, yoga_for_date,
 };
 use dhruv_time::UtcTime;
 use dhruv_vedic_base::{
@@ -32,7 +33,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 27;
+pub const DHRUV_API_VERSION: u32 = 28;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -8385,6 +8386,230 @@ pub unsafe extern "C" fn dhruv_drishti(
     }
 }
 
+/// C-compatible full kundali configuration.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvFullKundaliConfig {
+    /// Include graha positions section.
+    pub include_graha_positions: u8,
+    /// Include bindus section.
+    pub include_bindus: u8,
+    /// Include drishti section.
+    pub include_drishti: u8,
+    /// Include ashtakavarga section.
+    pub include_ashtakavarga: u8,
+    /// Include upagrahas section.
+    pub include_upagrahas: u8,
+    /// Graha positions config.
+    pub graha_positions_config: DhruvGrahaPositionsConfig,
+    /// Bindus config.
+    pub bindus_config: DhruvBindusConfig,
+    /// Drishti config.
+    pub drishti_config: DhruvDrishtiConfig,
+}
+
+/// C-compatible full kundali result.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvFullKundaliResult {
+    pub graha_positions_valid: u8,
+    pub graha_positions: DhruvGrahaPositions,
+    pub bindus_valid: u8,
+    pub bindus: DhruvBindusResult,
+    pub drishti_valid: u8,
+    pub drishti: DhruvDrishtiResult,
+    pub ashtakavarga_valid: u8,
+    pub ashtakavarga: DhruvAshtakavargaResult,
+    pub upagrahas_valid: u8,
+    pub upagrahas: DhruvAllUpagrahas,
+}
+
+/// Compute a full kundali in one call, reusing shared intermediates.
+///
+/// # Safety
+/// All pointers must be valid. `out` must point to a valid `DhruvFullKundaliResult`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_full_kundali_for_date(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    bhava_config: *const DhruvBhavaConfig,
+    riseset_config: *const DhruvRiseSetConfig,
+    ayanamsha_system: u32,
+    use_nutation: u8,
+    config: *const DhruvFullKundaliConfig,
+    out: *mut DhruvFullKundaliResult,
+) -> DhruvStatus {
+    if engine.is_null()
+        || eop.is_null()
+        || utc.is_null()
+        || location.is_null()
+        || bhava_config.is_null()
+        || riseset_config.is_null()
+        || config.is_null()
+        || out.is_null()
+    {
+        return DhruvStatus::NullPointer;
+    }
+
+    let engine = unsafe { &*engine };
+    let eop = unsafe { &*eop };
+    let utc_c = unsafe { &*utc };
+    let loc_c = unsafe { &*location };
+    let bhava_cfg_c = unsafe { &*bhava_config };
+    let rs_c = unsafe { &*riseset_config };
+    let cfg_c = unsafe { &*config };
+
+    let utc_time = UtcTime {
+        year: utc_c.year,
+        month: utc_c.month,
+        day: utc_c.day,
+        hour: utc_c.hour,
+        minute: utc_c.minute,
+        second: utc_c.second,
+    };
+    let location = GeoLocation::new(loc_c.latitude_deg, loc_c.longitude_deg, loc_c.altitude_m);
+
+    let system = match ayanamsha_system_from_code(ayanamsha_system as i32) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidQuery,
+    };
+
+    let rust_bhava_config = match bhava_config_from_ffi(bhava_cfg_c) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+    let sun_limb = match sun_limb_from_code(rs_c.sun_limb) {
+        Some(l) => l,
+        None => return DhruvStatus::InvalidQuery,
+    };
+    let rs_config = RiseSetConfig {
+        use_refraction: rs_c.use_refraction != 0,
+        sun_limb,
+        altitude_correction: rs_c.altitude_correction != 0,
+    };
+    let aya_config = SankrantiConfig::new(system, use_nutation != 0);
+
+    let rust_config = dhruv_search::FullKundaliConfig {
+        include_graha_positions: cfg_c.include_graha_positions != 0,
+        include_bindus: cfg_c.include_bindus != 0,
+        include_drishti: cfg_c.include_drishti != 0,
+        include_ashtakavarga: cfg_c.include_ashtakavarga != 0,
+        include_upagrahas: cfg_c.include_upagrahas != 0,
+        graha_positions_config: dhruv_search::GrahaPositionsConfig {
+            include_nakshatra: cfg_c.graha_positions_config.include_nakshatra != 0,
+            include_lagna: cfg_c.graha_positions_config.include_lagna != 0,
+            include_outer_planets: cfg_c.graha_positions_config.include_outer_planets != 0,
+            include_bhava: cfg_c.graha_positions_config.include_bhava != 0,
+        },
+        bindus_config: dhruv_search::BindusConfig {
+            include_nakshatra: cfg_c.bindus_config.include_nakshatra != 0,
+            include_bhava: cfg_c.bindus_config.include_bhava != 0,
+        },
+        drishti_config: dhruv_search::DrishtiConfig {
+            include_bhava: cfg_c.drishti_config.include_bhava != 0,
+            include_lagna: cfg_c.drishti_config.include_lagna != 0,
+            include_bindus: cfg_c.drishti_config.include_bindus != 0,
+        },
+    };
+
+    match full_kundali_for_date(
+        engine,
+        eop,
+        &utc_time,
+        &location,
+        &rust_bhava_config,
+        &rs_config,
+        &aya_config,
+        &rust_config,
+    ) {
+        Ok(result) => {
+            // SAFETY: POD fields only; zero-init valid as "absent" default.
+            let mut out_val: DhruvFullKundaliResult = unsafe { std::mem::zeroed() };
+
+            if let Some(g) = result.graha_positions {
+                out_val.graha_positions_valid = 1;
+                for i in 0..9 {
+                    out_val.graha_positions.grahas[i] = graha_entry_to_ffi(&g.grahas[i]);
+                }
+                out_val.graha_positions.lagna = graha_entry_to_ffi(&g.lagna);
+                for i in 0..3 {
+                    out_val.graha_positions.outer_planets[i] =
+                        graha_entry_to_ffi(&g.outer_planets[i]);
+                }
+            }
+
+            if let Some(b) = result.bindus {
+                out_val.bindus_valid = 1;
+                for i in 0..12 {
+                    out_val.bindus.arudha_padas[i] = graha_entry_to_ffi(&b.arudha_padas[i]);
+                }
+                out_val.bindus.bhrigu_bindu = graha_entry_to_ffi(&b.bhrigu_bindu);
+                out_val.bindus.pranapada_lagna = graha_entry_to_ffi(&b.pranapada_lagna);
+                out_val.bindus.gulika = graha_entry_to_ffi(&b.gulika);
+                out_val.bindus.maandi = graha_entry_to_ffi(&b.maandi);
+                out_val.bindus.hora_lagna = graha_entry_to_ffi(&b.hora_lagna);
+                out_val.bindus.ghati_lagna = graha_entry_to_ffi(&b.ghati_lagna);
+                out_val.bindus.sree_lagna = graha_entry_to_ffi(&b.sree_lagna);
+            }
+
+            if let Some(d) = result.drishti {
+                out_val.drishti_valid = 1;
+                for i in 0..9 {
+                    for j in 0..9 {
+                        out_val.drishti.graha_to_graha[i][j] =
+                            drishti_entry_to_ffi(&d.graha_to_graha.entries[i][j]);
+                    }
+                    out_val.drishti.graha_to_lagna[i] = drishti_entry_to_ffi(&d.graha_to_lagna[i]);
+                    for j in 0..12 {
+                        out_val.drishti.graha_to_bhava[i][j] =
+                            drishti_entry_to_ffi(&d.graha_to_bhava[i][j]);
+                    }
+                    for j in 0..19 {
+                        out_val.drishti.graha_to_bindus[i][j] =
+                            drishti_entry_to_ffi(&d.graha_to_bindus[i][j]);
+                    }
+                }
+            }
+
+            if let Some(a) = result.ashtakavarga {
+                out_val.ashtakavarga_valid = 1;
+                for (i, bav) in a.bavs.iter().enumerate() {
+                    out_val.ashtakavarga.bavs[i] = DhruvBhinnaAshtakavarga {
+                        graha_index: bav.graha_index,
+                        points: bav.points,
+                    };
+                }
+                out_val.ashtakavarga.sav = DhruvSarvaAshtakavarga {
+                    total_points: a.sav.total_points,
+                    after_trikona: a.sav.after_trikona,
+                    after_ekadhipatya: a.sav.after_ekadhipatya,
+                };
+            }
+
+            if let Some(u) = result.upagrahas {
+                out_val.upagrahas_valid = 1;
+                out_val.upagrahas.gulika = u.gulika;
+                out_val.upagrahas.maandi = u.maandi;
+                out_val.upagrahas.kaala = u.kaala;
+                out_val.upagrahas.mrityu = u.mrityu;
+                out_val.upagrahas.artha_prahara = u.artha_prahara;
+                out_val.upagrahas.yama_ghantaka = u.yama_ghantaka;
+                out_val.upagrahas.dhooma = u.dhooma;
+                out_val.upagrahas.vyatipata = u.vyatipata;
+                out_val.upagrahas.parivesha = u.parivesha;
+                out_val.upagrahas.indra_chapa = u.indra_chapa;
+                out_val.upagrahas.upaketu = u.upaketu;
+            }
+
+            unsafe { *out = out_val };
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Graha Sidereal Longitudes
 // ---------------------------------------------------------------------------
@@ -8931,8 +9156,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_27() {
-        assert_eq!(dhruv_api_version(), 27);
+    fn ffi_api_version_is_28() {
+        assert_eq!(dhruv_api_version(), 28);
     }
 
     // --- Search error mapping ---
@@ -11009,6 +11234,50 @@ mod tests {
         let rs_cfg = dhruv_riseset_config_default();
         let s = unsafe {
             dhruv_drishti(
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+                ptr::null(),
+                &bhava_cfg,
+                &rs_cfg,
+                0,
+                0,
+                &cfg,
+                out.as_mut_ptr(),
+            )
+        };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_full_kundali_rejects_null() {
+        let mut out = std::mem::MaybeUninit::<DhruvFullKundaliResult>::uninit();
+        let cfg = DhruvFullKundaliConfig {
+            include_graha_positions: 1,
+            include_bindus: 1,
+            include_drishti: 1,
+            include_ashtakavarga: 1,
+            include_upagrahas: 1,
+            graha_positions_config: DhruvGrahaPositionsConfig {
+                include_nakshatra: 0,
+                include_lagna: 1,
+                include_outer_planets: 0,
+                include_bhava: 0,
+            },
+            bindus_config: DhruvBindusConfig {
+                include_nakshatra: 0,
+                include_bhava: 0,
+            },
+            drishti_config: DhruvDrishtiConfig {
+                include_bhava: 0,
+                include_lagna: 0,
+                include_bindus: 1,
+            },
+        };
+        let bhava_cfg = dhruv_bhava_config_default();
+        let rs_cfg = dhruv_riseset_config_default();
+        let s = unsafe {
+            dhruv_full_kundali_for_date(
                 ptr::null(),
                 ptr::null(),
                 ptr::null(),

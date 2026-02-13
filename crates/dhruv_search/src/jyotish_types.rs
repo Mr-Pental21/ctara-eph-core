@@ -1,6 +1,8 @@
 //! Types for Vedic jyotish orchestration (graha longitudes, etc.).
 
-use dhruv_vedic_base::{DrishtiEntry, Graha, GrahaDrishtiMatrix, Nakshatra, Rashi};
+use dhruv_vedic_base::{
+    AllUpagrahas, AshtakavargaResult, DrishtiEntry, Graha, GrahaDrishtiMatrix, Nakshatra, Rashi,
+};
 
 /// Sidereal longitudes of all 9 grahas.
 #[derive(Debug, Clone, Copy)]
@@ -172,4 +174,55 @@ pub struct DrishtiResult {
     /// 9×19 graha-to-core-bindus drishti (zeroed if flag off).
     /// 19 bindus = 12 arudha padas + bhrigu_bindu + pranapada + gulika + maandi + hora_lagna + ghati_lagna + sree_lagna.
     pub graha_to_bindus: [[DrishtiEntry; 19]; 9],
+}
+
+/// Configuration for one-shot full kundali computation.
+#[derive(Debug, Clone, Copy)]
+pub struct FullKundaliConfig {
+    /// Include comprehensive graha positions section.
+    pub include_graha_positions: bool,
+    /// Include core bindus section.
+    pub include_bindus: bool,
+    /// Include drishti section.
+    pub include_drishti: bool,
+    /// Include ashtakavarga section.
+    pub include_ashtakavarga: bool,
+    /// Include upagrahas section.
+    pub include_upagrahas: bool,
+    /// Config passed to graha positions computation.
+    pub graha_positions_config: GrahaPositionsConfig,
+    /// Config passed to bindus computation.
+    pub bindus_config: BindusConfig,
+    /// Config passed to drishti computation.
+    pub drishti_config: DrishtiConfig,
+}
+
+impl Default for FullKundaliConfig {
+    fn default() -> Self {
+        Self {
+            include_graha_positions: true,
+            include_bindus: true,
+            include_drishti: true,
+            include_ashtakavarga: true,
+            include_upagrahas: true,
+            graha_positions_config: GrahaPositionsConfig::default(),
+            bindus_config: BindusConfig::default(),
+            drishti_config: DrishtiConfig::default(),
+        }
+    }
+}
+
+/// One-shot full kundali result.
+#[derive(Debug, Clone)]
+pub struct FullKundaliResult {
+    /// Present when `FullKundaliConfig::include_graha_positions` is true.
+    pub graha_positions: Option<GrahaPositions>,
+    /// Present when `FullKundaliConfig::include_bindus` is true.
+    pub bindus: Option<BindusResult>,
+    /// Present when `FullKundaliConfig::include_drishti` is true.
+    pub drishti: Option<DrishtiResult>,
+    /// Present when `FullKundaliConfig::include_ashtakavarga` is true.
+    pub ashtakavarga: Option<AshtakavargaResult>,
+    /// Present when `FullKundaliConfig::include_upagrahas` is true.
+    pub upagrahas: Option<AllUpagrahas>,
 }
