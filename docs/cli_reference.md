@@ -523,14 +523,15 @@ are the handle `_free` functions above.
 **CLI equivalent:** The CLI binary manages all memory through Rust's ownership model.
 There is nothing to expose.
 
-### Name/Count Lookups (20 FFI functions)
+### Name/Count Lookups (22 FFI functions)
 
-`dhruv_rashi_name`, `dhruv_rashi_count`, `dhruv_nakshatra_name`, `dhruv_nakshatra_count`,
-`dhruv_tithi_name`, `dhruv_karana_name`, `dhruv_yoga_name`, `dhruv_vaar_name`,
-`dhruv_hora_name`, `dhruv_masa_name`, `dhruv_ayana_name`, `dhruv_samvatsara_name`,
-`dhruv_graha_name`, `dhruv_graha_english_name`, `dhruv_sphuta_name`,
-`dhruv_special_lagna_name`, `dhruv_arudha_pada_name`, `dhruv_upagraha_name`,
-`dhruv_ayanamsha_system_count`, `dhruv_bhava_system_count`, `dhruv_lunar_node_count`.
+`dhruv_rashi_name`, `dhruv_rashi_count`, `dhruv_nakshatra_name`, `dhruv_nakshatra28_name`,
+`dhruv_nakshatra_count`, `dhruv_tithi_name`, `dhruv_karana_name`, `dhruv_yoga_name`,
+`dhruv_vaar_name`, `dhruv_hora_name`, `dhruv_masa_name`, `dhruv_ayana_name`,
+`dhruv_samvatsara_name`, `dhruv_graha_name`, `dhruv_graha_english_name`,
+`dhruv_sphuta_name`, `dhruv_special_lagna_name`, `dhruv_arudha_pada_name`,
+`dhruv_upagraha_name`, `dhruv_ayanamsha_system_count`, `dhruv_bhava_system_count`,
+`dhruv_lunar_node_count`.
 
 **CLI equivalent:** Every command that produces Vedic results already prints
 human-readable names using the Rust enum `.name()` methods. For example, `dhruv rashi 45.5`
@@ -545,3 +546,13 @@ prints `Vrishabha (Taurus)`. Standalone name-lookup commands would be redundant.
 **CLI equivalent:** Each command uses sensible defaults internally.
 `RiseSetConfig::default()`, `BhavaConfig::default()`, etc. are applied
 automatically when optional flags are omitted.
+
+### UTC Convenience Helpers (4 FFI functions)
+
+`dhruv_utc_to_tdb_jd`, `dhruv_jd_tdb_to_utc`, `dhruv_riseset_result_to_utc`,
+`dhruv_query_utc_spherical`.
+
+**CLI equivalent:** The CLI accepts `--date` as an ISO 8601 UTC string and
+converts to TDB internally using `UtcDate::to_jd_tdb()`. Results are printed
+as human-readable values. These FFI functions exist because C callers cannot
+use Rust's `UtcDate` type.

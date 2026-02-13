@@ -340,7 +340,7 @@ cannot express Rust ownership.
 There is literally nothing to wrap — there are zero memory-management FFI functions
 that aren't already covered by the engine lifecycle section above.
 
-### Name/Count Lookups (20 FFI functions)
+### Name/Count Lookups (22 FFI functions)
 
 C has no enums-with-methods, so the FFI provides index-to-name functions and
 count constants for every Vedic enum:
@@ -434,6 +434,30 @@ let conj_cfg = ConjunctionConfig::default();
 let grahan_cfg = GrahanConfig::default();
 let stat_cfg = StationaryConfig::default();
 let sank_cfg = SankrantiConfig::new(system, nutation); // or SankrantiConfig::default()
+```
+
+### UTC Convenience Helpers (4 FFI functions)
+
+The C ABI provides explicit UTC conversion and UTC-input query helpers because
+C callers cannot use Rust's `UtcDate` type or the `dhruv_rs` wrappers:
+
+| FFI Function | Description |
+|---|---|
+| `dhruv_utc_to_tdb_jd(engine, y, m, d, h, min, s, out)` | UTC calendar → JD TDB |
+| `dhruv_jd_tdb_to_utc(engine, jd_tdb, out)` | JD TDB → UTC calendar components |
+| `dhruv_riseset_result_to_utc(engine, result, out)` | Rise/set JDs → UTC structs |
+| `dhruv_query_utc_spherical(engine, body, obs, frame, y, m, d, h, min, s, out)` | UTC-input spherical query |
+
+**Why no Rust wrappers:** `dhruv_rs` already accepts `UtcDate` everywhere and
+handles UTC→TDB internally. These FFI functions exist solely because C has no
+equivalent of `UtcDate::to_jd_tdb()` or the high-level `position(body, obs, date)`
+wrapper:
+
+```rust
+// Rust: UtcDate handles all conversions
+let date: UtcDate = "2024-03-20T12:00:00Z".parse()?;
+let pos = position(Body::Mars, Observer::Body(Body::Earth), date)?;  // UTC in, spherical out
+let lon = sidereal_longitude(Body::Mars, AyanamshaSystem::Lahiri, date)?;
 ```
 
 ---
