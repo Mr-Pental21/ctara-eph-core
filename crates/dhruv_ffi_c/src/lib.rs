@@ -36,7 +36,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 26;
+pub const DHRUV_API_VERSION: u32 = 27;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -7172,6 +7172,147 @@ pub unsafe extern "C" fn dhruv_ekadhipatya_sodhana(
     DhruvStatus::Ok
 }
 
+// ---------------------------------------------------------------------------
+// Pure-math: graha drishti, ghatika, hora, ghatikas_since_sunrise
+// ---------------------------------------------------------------------------
+
+/// C-compatible 9×9 graha drishti matrix (pure graha-to-graha).
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvGrahaDrishtiMatrix {
+    /// entries\[src\]\[tgt\]. Diagonal (self-aspect) entries are zeroed.
+    pub entries: [[DhruvDrishtiEntry; 9]; 9],
+}
+
+/// Compute drishti from a single graha to a single sidereal point (pure math).
+///
+/// `graha_index`: 0=Surya .. 8=Ketu.
+/// `source_lon`: sidereal longitude of the source graha (degrees).
+/// `target_lon`: sidereal longitude of the target point (degrees).
+///
+/// # Safety
+/// `out` must point to a valid `DhruvDrishtiEntry`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_graha_drishti(
+    graha_index: u32,
+    source_lon: f64,
+    target_lon: f64,
+    out: *mut DhruvDrishtiEntry,
+) -> DhruvStatus {
+    if out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let graha = match graha_index {
+        0 => dhruv_vedic_base::Graha::Surya,
+        1 => dhruv_vedic_base::Graha::Chandra,
+        2 => dhruv_vedic_base::Graha::Mangal,
+        3 => dhruv_vedic_base::Graha::Buddh,
+        4 => dhruv_vedic_base::Graha::Guru,
+        5 => dhruv_vedic_base::Graha::Shukra,
+        6 => dhruv_vedic_base::Graha::Shani,
+        7 => dhruv_vedic_base::Graha::Rahu,
+        8 => dhruv_vedic_base::Graha::Ketu,
+        _ => return DhruvStatus::InvalidQuery,
+    };
+    let entry = dhruv_vedic_base::graha_drishti(graha, source_lon, target_lon);
+    unsafe { *out = drishti_entry_to_ffi(&entry) };
+    DhruvStatus::Ok
+}
+
+/// Compute the full 9×9 graha drishti matrix from sidereal longitudes (pure math).
+///
+/// `longitudes`: pointer to 9 `f64` sidereal longitudes (Sun..Ketu order).
+///
+/// # Safety
+/// `longitudes` must point to 9 contiguous `f64`. `out` must be valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_graha_drishti_matrix(
+    longitudes: *const f64,
+    out: *mut DhruvGrahaDrishtiMatrix,
+) -> DhruvStatus {
+    if longitudes.is_null() || out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let lons = unsafe { std::slice::from_raw_parts(longitudes, 9) };
+    let mut arr = [0.0f64; 9];
+    arr.copy_from_slice(lons);
+
+    let matrix = dhruv_vedic_base::graha_drishti_matrix(&arr);
+    let out = unsafe { &mut *out };
+    for si in 0..9 {
+        for ti in 0..9 {
+            out.entries[si][ti] = drishti_entry_to_ffi(&matrix.entries[si][ti]);
+        }
+    }
+    DhruvStatus::Ok
+}
+
+/// Determine the ghatika from elapsed seconds since sunrise (pure math).
+///
+/// `seconds_since_sunrise`: seconds elapsed since the Vedic day's sunrise.
+/// `vedic_day_duration_seconds`: total seconds from sunrise to next sunrise.
+/// `out_value`: receives ghatika value (1-60).
+/// `out_index`: receives 0-based ghatika index (0-59).
+///
+/// # Safety
+/// Both output pointers must be valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_ghatika_from_elapsed(
+    seconds_since_sunrise: f64,
+    vedic_day_duration_seconds: f64,
+    out_value: *mut u8,
+    out_index: *mut u8,
+) -> DhruvStatus {
+    if out_value.is_null() || out_index.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let pos = dhruv_vedic_base::ghatika_from_elapsed(
+        seconds_since_sunrise, vedic_day_duration_seconds,
+    );
+    unsafe {
+        *out_value = pos.value;
+        *out_index = pos.index;
+    }
+    DhruvStatus::Ok
+}
+
+/// Compute ghatikas elapsed since sunrise (pure math).
+///
+/// One Vedic day = 60 ghatikas. Result can exceed 60 if `jd_moment` is past next sunrise.
+///
+/// # Safety
+/// `out_ghatikas` must be a valid pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_ghatikas_since_sunrise(
+    jd_moment: f64,
+    jd_sunrise: f64,
+    jd_next_sunrise: f64,
+    out_ghatikas: *mut f64,
+) -> DhruvStatus {
+    if out_ghatikas.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let g = dhruv_vedic_base::ghatikas_since_sunrise(jd_moment, jd_sunrise, jd_next_sunrise);
+    unsafe { *out_ghatikas = g };
+    DhruvStatus::Ok
+}
+
+/// Determine the hora lord for a given weekday and hora position (pure math).
+///
+/// `vaar_index`: 0=Sunday .. 6=Saturday.
+/// `hora_index`: 0=first hora at sunrise .. 23=last hora.
+/// Returns the hora lord index in Chaldean sequence (0=Surya, 1=Shukra, 2=Buddh,
+/// 3=Chandra, 4=Shani, 5=Guru, 6=Mangal), or -1 on invalid input.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_hora_at(vaar_index: u32, hora_index: u32) -> i32 {
+    if vaar_index > 6 || hora_index > 23 {
+        return -1;
+    }
+    let vaar = dhruv_vedic_base::ALL_VAARS[vaar_index as usize];
+    let hora = dhruv_vedic_base::hora_at(vaar, hora_index as u8);
+    hora.index() as i32
+}
+
 /// Compute complete Ashtakavarga for a given date and location.
 ///
 /// # Safety
@@ -8170,8 +8311,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_26() {
-        assert_eq!(dhruv_api_version(), 26);
+    fn ffi_api_version_is_27() {
+        assert_eq!(dhruv_api_version(), 27);
     }
 
     // --- Search error mapping ---
@@ -9887,6 +10028,115 @@ mod tests {
         assert_eq!(s, DhruvStatus::Ok);
         assert_eq!(out[2], 0);
         assert_eq!(out[5], 2);
+    }
+
+    // --- graha_drishti ---
+
+    #[test]
+    fn ffi_graha_drishti_rejects_null_out() {
+        let s = unsafe { dhruv_graha_drishti(0, 0.0, 180.0, ptr::null_mut()) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_graha_drishti_rejects_invalid_index() {
+        let mut out = std::mem::MaybeUninit::<DhruvDrishtiEntry>::uninit();
+        let s = unsafe { dhruv_graha_drishti(9, 0.0, 180.0, out.as_mut_ptr()) };
+        assert_eq!(s, DhruvStatus::InvalidQuery);
+    }
+
+    #[test]
+    fn ffi_graha_drishti_valid() {
+        let mut out = std::mem::MaybeUninit::<DhruvDrishtiEntry>::uninit();
+        // Sun (0) aspecting 180° away → full 7th aspect (60 virupa base)
+        let s = unsafe { dhruv_graha_drishti(0, 0.0, 180.0, out.as_mut_ptr()) };
+        assert_eq!(s, DhruvStatus::Ok);
+        let e = unsafe { out.assume_init() };
+        assert!((e.angular_distance - 180.0).abs() < 1e-9);
+        assert!(e.base_virupa >= 59.0); // 7th house aspect is 60 virupa
+    }
+
+    // --- graha_drishti_matrix ---
+
+    #[test]
+    fn ffi_graha_drishti_matrix_rejects_null() {
+        let mut out = std::mem::MaybeUninit::<DhruvGrahaDrishtiMatrix>::uninit();
+        let s = unsafe { dhruv_graha_drishti_matrix(ptr::null(), out.as_mut_ptr()) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+
+        let lons = [0.0f64; 9];
+        let s = unsafe { dhruv_graha_drishti_matrix(lons.as_ptr(), ptr::null_mut()) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_graha_drishti_matrix_valid() {
+        let lons = [0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0, 210.0, 240.0];
+        let mut out = std::mem::MaybeUninit::<DhruvGrahaDrishtiMatrix>::uninit();
+        let s = unsafe { dhruv_graha_drishti_matrix(lons.as_ptr(), out.as_mut_ptr()) };
+        assert_eq!(s, DhruvStatus::Ok);
+        let m = unsafe { out.assume_init() };
+        // Diagonal should be zero
+        assert_eq!(m.entries[0][0].total_virupa, 0.0);
+        // Sun→7th planet (180° away) should have high virupa
+        assert!(m.entries[0][6].base_virupa >= 59.0);
+    }
+
+    // --- ghatika_from_elapsed ---
+
+    #[test]
+    fn ffi_ghatika_from_elapsed_rejects_null() {
+        let mut idx: u8 = 0;
+        let s = unsafe { dhruv_ghatika_from_elapsed(0.0, 86400.0, ptr::null_mut(), &mut idx) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+
+        let mut val: u8 = 0;
+        let s = unsafe { dhruv_ghatika_from_elapsed(0.0, 86400.0, &mut val, ptr::null_mut()) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_ghatika_from_elapsed_valid() {
+        let mut val: u8 = 0;
+        let mut idx: u8 = 0;
+        // At sunrise (0 seconds elapsed), ghatika = 1 (index 0)
+        let s = unsafe { dhruv_ghatika_from_elapsed(0.0, 86400.0, &mut val, &mut idx) };
+        assert_eq!(s, DhruvStatus::Ok);
+        assert_eq!(val, 1);
+        assert_eq!(idx, 0);
+    }
+
+    // --- ghatikas_since_sunrise ---
+
+    #[test]
+    fn ffi_ghatikas_since_sunrise_rejects_null() {
+        let s = unsafe { dhruv_ghatikas_since_sunrise(2451545.5, 2451545.0, 2451546.0, ptr::null_mut()) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_ghatikas_since_sunrise_valid() {
+        let mut out: f64 = 0.0;
+        // Midpoint of day → 30 ghatikas
+        let s = unsafe { dhruv_ghatikas_since_sunrise(2451545.5, 2451545.0, 2451546.0, &mut out) };
+        assert_eq!(s, DhruvStatus::Ok);
+        assert!((out - 30.0).abs() < 1e-9);
+    }
+
+    // --- hora_at ---
+
+    #[test]
+    fn ffi_hora_at_invalid() {
+        assert_eq!(dhruv_hora_at(7, 0), -1); // invalid vaar
+        assert_eq!(dhruv_hora_at(0, 24), -1); // invalid hora index
+    }
+
+    #[test]
+    fn ffi_hora_at_valid() {
+        // Sunday (0), first hora → Surya (index 0)
+        assert_eq!(dhruv_hora_at(0, 0), 0);
+        // Sunday (0), second hora → Shukra (index 1)
+        assert_eq!(dhruv_hora_at(0, 1), 1);
     }
 
     #[test]

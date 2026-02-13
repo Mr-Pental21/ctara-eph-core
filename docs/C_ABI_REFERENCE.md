@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 26`
+**ABI version:** `DHRUV_API_VERSION = 27`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -37,6 +37,8 @@ Complete reference for the `dhruv_ffi_c` C-compatible API surface.
    - [Nakshatra At](#nakshatra-at)
    - [Time Upagraha JD](#time-upagraha-jd)
    - [Pure-Math Ashtakavarga](#pure-math-ashtakavarga)
+   - [Pure-Math Drishti](#pure-math-drishti)
+   - [Pure-Math Ghatika / Hora](#pure-math-ghatika--hora)
 
 ---
 
@@ -1281,6 +1283,65 @@ Apply Ekadhipatya Sodhana: subtract the minimum from same-lord pairs (Mercury: M
 
 ---
 
+### Pure-Math Drishti
+
+```c
+DhruvStatus dhruv_graha_drishti(
+    uint32_t          graha_index,   // 0=Surya .. 8=Ketu
+    double            source_lon,    // sidereal longitude (degrees)
+    double            target_lon,    // sidereal longitude (degrees)
+    DhruvDrishtiEntry* out
+);
+```
+
+Compute drishti (planetary aspect) from a single graha to a single sidereal point. Returns angular distance, base virupa, special virupa, and total virupa. Returns `DHRUV_STATUS_INVALID_QUERY` for `graha_index > 8`.
+
+```c
+DhruvStatus dhruv_graha_drishti_matrix(
+    const double*             longitudes,   // 9 sidereal longitudes (Sun..Ketu)
+    DhruvGrahaDrishtiMatrix*  out
+);
+```
+
+Compute the full 9×9 graha drishti matrix from pre-computed sidereal longitudes. Self-aspect (diagonal) entries are zeroed.
+
+---
+
+### Pure-Math Ghatika / Hora
+
+```c
+DhruvStatus dhruv_ghatika_from_elapsed(
+    double   seconds_since_sunrise,
+    double   vedic_day_duration_seconds,
+    uint8_t* out_value,    // ghatika 1-60
+    uint8_t* out_index     // 0-based index 0-59
+);
+```
+
+Determine the ghatika from elapsed seconds since sunrise. One Vedic day = 60 ghatikas.
+
+```c
+DhruvStatus dhruv_ghatikas_since_sunrise(
+    double   jd_moment,
+    double   jd_sunrise,
+    double   jd_next_sunrise,
+    double*  out_ghatikas
+);
+```
+
+Compute fractional ghatikas elapsed since sunrise. Result can exceed 60 if `jd_moment` is past the next sunrise.
+
+```c
+int32_t dhruv_hora_at(
+    uint32_t vaar_index,    // 0=Sunday .. 6=Saturday
+    uint32_t hora_index     // 0=first hora at sunrise .. 23=last
+);
+```
+
+Determine the hora lord for a given weekday and hora position. Returns the lord's Chaldean index (0=Surya, 1=Shukra, 2=Buddh, 3=Chandra, 4=Shani, 5=Guru, 6=Mangal), or -1 on invalid input.
+
+---
+
 ## Function Summary
 
 | # | Function | Engine | LSK | EOP | Pure Math |
@@ -1352,5 +1413,10 @@ Apply Ekadhipatya Sodhana: subtract the minimum from same-lord pairs (Mercury: M
 | 65 | `dhruv_calculate_sav` | | | | yes |
 | 66 | `dhruv_trikona_sodhana` | | | | yes |
 | 67 | `dhruv_ekadhipatya_sodhana` | | | | yes |
+| 68 | `dhruv_graha_drishti` | | | | yes |
+| 69 | `dhruv_graha_drishti_matrix` | | | | yes |
+| 70 | `dhruv_ghatika_from_elapsed` | | | | yes |
+| 71 | `dhruv_ghatikas_since_sunrise` | | | | yes |
+| 72 | `dhruv_hora_at` | | | | yes |
 
 **Total exported symbols: 60 functions**
