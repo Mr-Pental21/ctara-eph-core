@@ -23,3 +23,7 @@ target
 # Kernel binary data (large files fetched separately)
 kernels/data/*.bsp
 kernels/data/*.tls
+
+# Generated benchmark run artifacts
+docs/benchmarks/ffi_bench_*.txt
+docs/benchmarks/ffi_bench_*_sorted.tsv
