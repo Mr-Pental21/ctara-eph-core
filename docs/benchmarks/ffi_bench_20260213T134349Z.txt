@@ -1,0 +1,2857 @@
+    Finished `bench` profile [optimized] target(s) in 0.03s
+     Running benches/ffi_bench.rs (target/release/deps/ffi_bench-a7aaa0018ded6667)
+Gnuplot not found, using plotters backend
+Benchmarking ffi_query/engine_query_internal
+Benchmarking ffi_query/engine_query_internal: Warming up for 100.00 ms
+Benchmarking ffi_query/engine_query_internal: Collecting 10 samples in estimated 200.03 ms (267k iterations)
+Benchmarking ffi_query/engine_query_internal: Analyzing
+ffi_query/engine_query_internal
+                        time:   [742.69 ns 747.38 ns 752.98 ns]
+                        change: [-1.5465% -0.6589% +0.2498%] (p = 0.20 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_query/query_once_internal
+Benchmarking ffi_query/query_once_internal: Warming up for 100.00 ms
+Benchmarking ffi_query/query_once_internal: Collecting 20 samples in estimated 205.03 ms (40 iterations)
+Benchmarking ffi_query/query_once_internal: Analyzing
+ffi_query/query_once_internal
+                        time:   [3.9237 ms 3.9898 ms 4.0636 ms]
+                        change: [-1.1219% +1.1882% +3.6947%] (p = 0.37 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 20 measurements (5.00%)
+  1 (5.00%) high mild
+
+Benchmarking ffi_core_cabi/engine_query/rust
+Benchmarking ffi_core_cabi/engine_query/rust: Warming up for 100.00 ms
+Benchmarking ffi_core_cabi/engine_query/rust: Collecting 20 samples in estimated 200.13 ms (252k iterations)
+Benchmarking ffi_core_cabi/engine_query/rust: Analyzing
+ffi_core_cabi/engine_query/rust
+                        time:   [765.99 ns 772.95 ns 779.37 ns]
+                        change: [-3.6400% +0.2319% +3.9532%] (p = 0.91 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 20 measurements (10.00%)
+  1 (5.00%) high mild
+  1 (5.00%) high severe
+Benchmarking ffi_core_cabi/engine_query/ffi
+Benchmarking ffi_core_cabi/engine_query/ffi: Warming up for 100.00 ms
+Benchmarking ffi_core_cabi/engine_query/ffi: Collecting 20 samples in estimated 200.07 ms (255k iterations)
+Benchmarking ffi_core_cabi/engine_query/ffi: Analyzing
+ffi_core_cabi/engine_query/ffi
+                        time:   [761.72 ns 766.10 ns 771.17 ns]
+                        change: [-2.2024% +1.3642% +5.7805%] (p = 0.53 > 0.05)
+                        No change in performance detected.
+Found 3 outliers among 20 measurements (15.00%)
+  1 (5.00%) high mild
+  2 (10.00%) high severe
+Benchmarking ffi_core_cabi/query_once/rust
+Benchmarking ffi_core_cabi/query_once/rust: Warming up for 100.00 ms
+Benchmarking ffi_core_cabi/query_once/rust: Collecting 20 samples in estimated 285.96 ms (60 iterations)
+Benchmarking ffi_core_cabi/query_once/rust: Analyzing
+ffi_core_cabi/query_once/rust
+                        time:   [4.2466 ms 4.3699 ms 4.5150 ms]
+                        change: [+10.894% +14.311% +18.692%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 3 outliers among 20 measurements (15.00%)
+  2 (10.00%) high mild
+  1 (5.00%) high severe
+Benchmarking ffi_core_cabi/query_once/ffi
+Benchmarking ffi_core_cabi/query_once/ffi: Warming up for 100.00 ms
+Benchmarking ffi_core_cabi/query_once/ffi: Collecting 20 samples in estimated 253.86 ms (60 iterations)
+Benchmarking ffi_core_cabi/query_once/ffi: Analyzing
+ffi_core_cabi/query_once/ffi
+                        time:   [4.1238 ms 4.1546 ms 4.1833 ms]
+                        change: [+6.4419% +8.2174% +9.8037%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 20 measurements (10.00%)
+  2 (10.00%) low mild
+Benchmarking ffi_core_cabi/query_utc_spherical/rust
+Benchmarking ffi_core_cabi/query_utc_spherical/rust: Warming up for 100.00 ms
+Benchmarking ffi_core_cabi/query_utc_spherical/rust: Collecting 20 samples in estimated 200.12 ms (228k iterations)
+Benchmarking ffi_core_cabi/query_utc_spherical/rust: Analyzing
+ffi_core_cabi/query_utc_spherical/rust
+                        time:   [840.99 ns 844.74 ns 850.33 ns]
+                        change: [-2.4081% +0.1981% +2.7819%] (p = 0.89 > 0.05)
+                        No change in performance detected.
+Found 4 outliers among 20 measurements (20.00%)
+  1 (5.00%) low mild
+  1 (5.00%) high mild
+  2 (10.00%) high severe
+Benchmarking ffi_core_cabi/query_utc_spherical/ffi
+Benchmarking ffi_core_cabi/query_utc_spherical/ffi: Warming up for 100.00 ms
+Benchmarking ffi_core_cabi/query_utc_spherical/ffi: Collecting 20 samples in estimated 200.12 ms (227k iterations)
+Benchmarking ffi_core_cabi/query_utc_spherical/ffi: Analyzing
+ffi_core_cabi/query_utc_spherical/ffi
+                        time:   [854.64 ns 858.43 ns 863.27 ns]
+                        change: [+0.2120% +1.3444% +2.4206%] (p = 0.02 < 0.05)
+                        Change within noise threshold.
+Benchmarking ffi_core_cabi/query_utc_struct/rust
+Benchmarking ffi_core_cabi/query_utc_struct/rust: Warming up for 100.00 ms
+Benchmarking ffi_core_cabi/query_utc_struct/rust: Collecting 20 samples in estimated 200.01 ms (230k iterations)
+Benchmarking ffi_core_cabi/query_utc_struct/rust: Analyzing
+ffi_core_cabi/query_utc_struct/rust
+                        time:   [848.11 ns 858.12 ns 875.00 ns]
+                        change: [-1.2601% +0.6789% +2.7021%] (p = 0.53 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 20 measurements (10.00%)
+  2 (10.00%) high severe
+Benchmarking ffi_core_cabi/query_utc_struct/ffi
+Benchmarking ffi_core_cabi/query_utc_struct/ffi: Warming up for 100.00 ms
+Benchmarking ffi_core_cabi/query_utc_struct/ffi: Collecting 20 samples in estimated 200.03 ms (230k iterations)
+Benchmarking ffi_core_cabi/query_utc_struct/ffi: Analyzing
+ffi_core_cabi/query_utc_struct/ffi
+                        time:   [847.58 ns 856.57 ns 864.78 ns]
+                        change: [-5.9270% -2.0918% +1.2955%] (p = 0.31 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 20 measurements (10.00%)
+  2 (10.00%) high severe
+
+Benchmarking ffi_time_frame/utc_to_tdb_jd/rust
+Benchmarking ffi_time_frame/utc_to_tdb_jd/rust: Warming up for 100.00 ms
+Benchmarking ffi_time_frame/utc_to_tdb_jd/rust: Collecting 10 samples in estimated 200.00 ms (3.5M iterations)
+Benchmarking ffi_time_frame/utc_to_tdb_jd/rust: Analyzing
+ffi_time_frame/utc_to_tdb_jd/rust
+                        time:   [54.305 ns 54.704 ns 55.229 ns]
+                        change: [-0.2572% +0.4037% +1.0337%] (p = 0.28 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_time_frame/utc_to_tdb_jd/ffi
+Benchmarking ffi_time_frame/utc_to_tdb_jd/ffi: Warming up for 100.00 ms
+Benchmarking ffi_time_frame/utc_to_tdb_jd/ffi: Collecting 10 samples in estimated 200.00 ms (3.5M iterations)
+Benchmarking ffi_time_frame/utc_to_tdb_jd/ffi: Analyzing
+ffi_time_frame/utc_to_tdb_jd/ffi
+                        time:   [57.092 ns 57.576 ns 58.156 ns]
+                        change: [+2.1812% +3.4228% +5.0677%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_time_frame/jd_tdb_to_utc/rust
+Benchmarking ffi_time_frame/jd_tdb_to_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_time_frame/jd_tdb_to_utc/rust: Collecting 10 samples in estimated 200.01 ms (1.3M iterations)
+Benchmarking ffi_time_frame/jd_tdb_to_utc/rust: Analyzing
+ffi_time_frame/jd_tdb_to_utc/rust
+                        time:   [149.34 ns 149.94 ns 150.90 ns]
+                        change: [-0.9015% +0.0515% +1.0168%] (p = 0.93 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_time_frame/jd_tdb_to_utc/ffi
+Benchmarking ffi_time_frame/jd_tdb_to_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_time_frame/jd_tdb_to_utc/ffi: Collecting 10 samples in estimated 200.00 ms (1.3M iterations)
+Benchmarking ffi_time_frame/jd_tdb_to_utc/ffi: Analyzing
+ffi_time_frame/jd_tdb_to_utc/ffi
+                        time:   [150.68 ns 151.97 ns 153.47 ns]
+                        change: [+0.3355% +1.0193% +1.7819%] (p = 0.01 < 0.05)
+                        Change within noise threshold.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_time_frame/cartesian_to_spherical/rust
+Benchmarking ffi_time_frame/cartesian_to_spherical/rust: Warming up for 100.00 ms
+Benchmarking ffi_time_frame/cartesian_to_spherical/rust: Collecting 10 samples in estimated 200.00 ms (9.6M iterations)
+Benchmarking ffi_time_frame/cartesian_to_spherical/rust: Analyzing
+ffi_time_frame/cartesian_to_spherical/rust
+                        time:   [20.226 ns 20.320 ns 20.490 ns]
+                        change: [-2.4740% -0.9451% +0.7860%] (p = 0.32 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_time_frame/cartesian_to_spherical/ffi
+Benchmarking ffi_time_frame/cartesian_to_spherical/ffi: Warming up for 100.00 ms
+Benchmarking ffi_time_frame/cartesian_to_spherical/ffi: Collecting 10 samples in estimated 200.00 ms (8.8M iterations)
+Benchmarking ffi_time_frame/cartesian_to_spherical/ffi: Analyzing
+ffi_time_frame/cartesian_to_spherical/ffi
+                        time:   [22.476 ns 22.513 ns 22.564 ns]
+                        change: [-1.2361% -0.8623% -0.4906%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) low mild
+  1 (10.00%) high mild
+
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg/rust
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg/rust: Collecting 10 samples in estimated 200.00 ms (65M iterations)
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg/rust: Analyzing
+ffi_vedic_primitives/ayanamsha_mean_deg/rust
+                        time:   [3.0269 ns 3.0353 ns 3.0479 ns]
+                        change: [-0.9752% +0.4848% +1.7849%] (p = 0.54 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg/ffi
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg/ffi: Collecting 10 samples in estimated 200.00 ms (40M iterations)
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg/ffi: Analyzing
+ffi_vedic_primitives/ayanamsha_mean_deg/ffi
+                        time:   [4.7421 ns 4.8208 ns 4.9049 ns]
+                        change: [-3.2359% -0.5419% +2.2168%] (p = 0.73 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg/rust
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg/rust: Collecting 10 samples in estimated 200.00 ms (31M iterations)
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg/rust: Analyzing
+ffi_vedic_primitives/ayanamsha_true_deg/rust
+                        time:   [3.7159 ns 4.3973 ns 5.0413 ns]
+                        change: [+4.8615% +19.819% +39.826%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg/ffi
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg/ffi: Collecting 10 samples in estimated 200.00 ms (39M iterations)
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg/ffi: Analyzing
+ffi_vedic_primitives/ayanamsha_true_deg/ffi
+                        time:   [5.0111 ns 5.0724 ns 5.1576 ns]
+                        change: [-0.0912% +1.6198% +3.5940%] (p = 0.14 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_vedic_primitives/ayanamsha_deg/rust
+Benchmarking ffi_vedic_primitives/ayanamsha_deg/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/ayanamsha_deg/rust: Collecting 10 samples in estimated 200.00 ms (62M iterations)
+Benchmarking ffi_vedic_primitives/ayanamsha_deg/rust: Analyzing
+ffi_vedic_primitives/ayanamsha_deg/rust
+                        time:   [3.1718 ns 3.2252 ns 3.2756 ns]
+                        change: [+1.1675% +6.1842% +12.958%] (p = 0.04 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_vedic_primitives/ayanamsha_deg/ffi
+Benchmarking ffi_vedic_primitives/ayanamsha_deg/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/ayanamsha_deg/ffi: Collecting 10 samples in estimated 200.00 ms (35M iterations)
+Benchmarking ffi_vedic_primitives/ayanamsha_deg/ffi: Analyzing
+ffi_vedic_primitives/ayanamsha_deg/ffi
+                        time:   [5.5422 ns 5.7507 ns 5.9669 ns]
+                        change: [+1.8587% +6.4369% +11.543%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_vedic_primitives/nutation_iau2000b/rust
+Benchmarking ffi_vedic_primitives/nutation_iau2000b/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nutation_iau2000b/rust: Collecting 10 samples in estimated 200.01 ms (131k iterations)
+Benchmarking ffi_vedic_primitives/nutation_iau2000b/rust: Analyzing
+ffi_vedic_primitives/nutation_iau2000b/rust
+                        time:   [1.5113 µs 1.5629 µs 1.6159 µs]
+                        change: [+4.0810% +6.7151% +9.8632%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_vedic_primitives/nutation_iau2000b/ffi
+Benchmarking ffi_vedic_primitives/nutation_iau2000b/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nutation_iau2000b/ffi: Collecting 10 samples in estimated 200.01 ms (125k iterations)
+Benchmarking ffi_vedic_primitives/nutation_iau2000b/ffi: Analyzing
+ffi_vedic_primitives/nutation_iau2000b/ffi
+                        time:   [1.5568 µs 1.6180 µs 1.6818 µs]
+                        change: [+5.0635% +11.117% +21.464%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/lunar_node_deg/rust
+Benchmarking ffi_vedic_primitives/lunar_node_deg/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/lunar_node_deg/rust: Collecting 10 samples in estimated 200.00 ms (1.4M iterations)
+Benchmarking ffi_vedic_primitives/lunar_node_deg/rust: Analyzing
+ffi_vedic_primitives/lunar_node_deg/rust
+                        time:   [143.63 ns 158.94 ns 183.05 ns]
+                        change: [+3.5611% +12.694% +25.788%] (p = 0.03 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/lunar_node_deg/ffi
+Benchmarking ffi_vedic_primitives/lunar_node_deg/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/lunar_node_deg/ffi: Collecting 10 samples in estimated 200.00 ms (1.4M iterations)
+Benchmarking ffi_vedic_primitives/lunar_node_deg/ffi: Analyzing
+ffi_vedic_primitives/lunar_node_deg/ffi
+                        time:   [142.42 ns 155.04 ns 168.80 ns]
+                        change: [+1.9123% +8.3475% +17.088%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_vedic_primitives/rashi_from_longitude/rust
+Benchmarking ffi_vedic_primitives/rashi_from_longitude/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/rashi_from_longitude/rust: Collecting 10 samples in estimated 200.00 ms (8.5M iterations)
+Benchmarking ffi_vedic_primitives/rashi_from_longitude/rust: Analyzing
+ffi_vedic_primitives/rashi_from_longitude/rust
+                        time:   [22.500 ns 22.635 ns 22.914 ns]
+                        change: [-1.4360% +10.554% +33.772%] (p = 0.61 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/rashi_from_longitude/ffi
+Benchmarking ffi_vedic_primitives/rashi_from_longitude/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/rashi_from_longitude/ffi: Collecting 10 samples in estimated 200.00 ms (7.7M iterations)
+Benchmarking ffi_vedic_primitives/rashi_from_longitude/ffi: Analyzing
+ffi_vedic_primitives/rashi_from_longitude/ffi
+                        time:   [24.344 ns 24.470 ns 24.757 ns]
+                        change: [-2.0930% -0.3677% +1.8627%] (p = 0.75 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_vedic_primitives/nakshatra_from_longitude/rust
+Benchmarking ffi_vedic_primitives/nakshatra_from_longitude/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nakshatra_from_longitude/rust: Collecting 10 samples in estimated 200.00 ms (12M iterations)
+Benchmarking ffi_vedic_primitives/nakshatra_from_longitude/rust: Analyzing
+ffi_vedic_primitives/nakshatra_from_longitude/rust
+                        time:   [15.302 ns 15.519 ns 15.833 ns]
+                        change: [-1.3837% -0.1859% +1.2162%] (p = 0.80 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/nakshatra_from_longitude/ffi
+Benchmarking ffi_vedic_primitives/nakshatra_from_longitude/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nakshatra_from_longitude/ffi: Collecting 10 samples in estimated 200.00 ms (10M iterations)
+Benchmarking ffi_vedic_primitives/nakshatra_from_longitude/ffi: Analyzing
+ffi_vedic_primitives/nakshatra_from_longitude/ffi
+                        time:   [18.536 ns 19.513 ns 20.678 ns]
+                        change: [-0.3326% +1.9756% +5.5277%] (p = 0.32 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/nakshatra28_from_longitude/rust
+Benchmarking ffi_vedic_primitives/nakshatra28_from_longitude/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nakshatra28_from_longitude/rust: Collecting 10 samples in estimated 200.00 ms (12M iterations)
+Benchmarking ffi_vedic_primitives/nakshatra28_from_longitude/rust: Analyzing
+ffi_vedic_primitives/nakshatra28_from_longitude/rust
+                        time:   [15.969 ns 16.905 ns 18.373 ns]
+                        change: [-0.5995% +3.4552% +9.4143%] (p = 0.22 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/nakshatra28_from_longitude/ffi
+Benchmarking ffi_vedic_primitives/nakshatra28_from_longitude/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nakshatra28_from_longitude/ffi: Collecting 10 samples in estimated 200.00 ms (10M iterations)
+Benchmarking ffi_vedic_primitives/nakshatra28_from_longitude/ffi: Analyzing
+ffi_vedic_primitives/nakshatra28_from_longitude/ffi
+                        time:   [19.176 ns 19.934 ns 21.522 ns]
+                        change: [+1.6894% +5.9254% +12.609%] (p = 0.04 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/deg_to_dms/rust
+Benchmarking ffi_vedic_primitives/deg_to_dms/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/deg_to_dms/rust: Collecting 10 samples in estimated 200.00 ms (8.5M iterations)
+Benchmarking ffi_vedic_primitives/deg_to_dms/rust: Analyzing
+ffi_vedic_primitives/deg_to_dms/rust
+                        time:   [22.546 ns 22.878 ns 23.270 ns]
+Benchmarking ffi_vedic_primitives/deg_to_dms/ffi
+Benchmarking ffi_vedic_primitives/deg_to_dms/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/deg_to_dms/ffi: Collecting 10 samples in estimated 200.00 ms (18M iterations)
+Benchmarking ffi_vedic_primitives/deg_to_dms/ffi: Analyzing
+ffi_vedic_primitives/deg_to_dms/ffi
+                        time:   [10.872 ns 11.411 ns 12.336 ns]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_vedic_primitives/rashi_from_tropical/rust
+Benchmarking ffi_vedic_primitives/rashi_from_tropical/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/rashi_from_tropical/rust: Collecting 10 samples in estimated 200.00 ms (5.3M iterations)
+Benchmarking ffi_vedic_primitives/rashi_from_tropical/rust: Analyzing
+ffi_vedic_primitives/rashi_from_tropical/rust
+                        time:   [37.212 ns 37.437 ns 37.832 ns]
+                        change: [+0.4321% +1.6321% +2.7552%] (p = 0.02 < 0.05)
+                        Change within noise threshold.
+Benchmarking ffi_vedic_primitives/rashi_from_tropical/ffi
+Benchmarking ffi_vedic_primitives/rashi_from_tropical/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/rashi_from_tropical/ffi: Collecting 10 samples in estimated 200.00 ms (5.0M iterations)
+Benchmarking ffi_vedic_primitives/rashi_from_tropical/ffi: Analyzing
+ffi_vedic_primitives/rashi_from_tropical/ffi
+                        time:   [38.477 ns 38.703 ns 39.196 ns]
+                        change: [+1.4250% +3.8142% +6.5964%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical/rust
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical/rust: Collecting 10 samples in estimated 200.00 ms (7.0M iterations)
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical/rust: Analyzing
+ffi_vedic_primitives/nakshatra_from_tropical/rust
+                        time:   [27.505 ns 27.708 ns 28.015 ns]
+                        change: [-8.5787% -3.5177% -0.2752%] (p = 0.17 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical/ffi
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical/ffi: Collecting 10 samples in estimated 200.00 ms (6.4M iterations)
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical/ffi: Analyzing
+ffi_vedic_primitives/nakshatra_from_tropical/ffi
+                        time:   [30.982 ns 31.146 ns 31.315 ns]
+                        change: [+0.3675% +1.8713% +3.5809%] (p = 0.03 < 0.05)
+                        Change within noise threshold.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical/rust
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical/rust: Collecting 10 samples in estimated 200.00 ms (7.4M iterations)
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical/rust: Analyzing
+ffi_vedic_primitives/nakshatra28_from_tropical/rust
+                        time:   [26.443 ns 26.623 ns 27.028 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical/ffi
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical/ffi: Collecting 10 samples in estimated 200.00 ms (7.1M iterations)
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical/ffi: Analyzing
+ffi_vedic_primitives/nakshatra28_from_tropical/ffi
+                        time:   [27.226 ns 27.321 ns 27.390 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg_utc/rust
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg_utc/rust: Collecting 10 samples in estimated 200.00 ms (64M iterations)
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg_utc/rust: Analyzing
+ffi_vedic_primitives/ayanamsha_mean_deg_utc/rust
+                        time:   [3.0252 ns 3.0481 ns 3.0655 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg_utc/ffi
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg_utc/ffi: Collecting 10 samples in estimated 200.00 ms (2.4M iterations)
+Benchmarking ffi_vedic_primitives/ayanamsha_mean_deg_utc/ffi: Analyzing
+ffi_vedic_primitives/ayanamsha_mean_deg_utc/ffi
+                        time:   [82.237 ns 82.507 ns 82.953 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg_utc/rust
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg_utc/rust: Collecting 10 samples in estimated 200.00 ms (59M iterations)
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg_utc/rust: Analyzing
+ffi_vedic_primitives/ayanamsha_true_deg_utc/rust
+                        time:   [3.2753 ns 3.2917 ns 3.3145 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg_utc/ffi
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg_utc/ffi: Collecting 10 samples in estimated 200.00 ms (2.4M iterations)
+Benchmarking ffi_vedic_primitives/ayanamsha_true_deg_utc/ffi: Analyzing
+ffi_vedic_primitives/ayanamsha_true_deg_utc/ffi
+                        time:   [82.350 ns 82.472 ns 82.560 ns]
+Benchmarking ffi_vedic_primitives/ayanamsha_deg_utc/rust
+Benchmarking ffi_vedic_primitives/ayanamsha_deg_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/ayanamsha_deg_utc/rust: Collecting 10 samples in estimated 200.00 ms (64M iterations)
+Benchmarking ffi_vedic_primitives/ayanamsha_deg_utc/rust: Analyzing
+ffi_vedic_primitives/ayanamsha_deg_utc/rust
+                        time:   [3.0743 ns 3.0846 ns 3.1114 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/ayanamsha_deg_utc/ffi
+Benchmarking ffi_vedic_primitives/ayanamsha_deg_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/ayanamsha_deg_utc/ffi: Collecting 10 samples in estimated 200.00 ms (2.4M iterations)
+Benchmarking ffi_vedic_primitives/ayanamsha_deg_utc/ffi: Analyzing
+ffi_vedic_primitives/ayanamsha_deg_utc/ffi
+                        time:   [82.231 ns 82.342 ns 82.495 ns]
+Benchmarking ffi_vedic_primitives/nutation_iau2000b_utc/rust
+Benchmarking ffi_vedic_primitives/nutation_iau2000b_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nutation_iau2000b_utc/rust: Collecting 10 samples in estimated 200.05 ms (137k iterations)
+Benchmarking ffi_vedic_primitives/nutation_iau2000b_utc/rust: Analyzing
+ffi_vedic_primitives/nutation_iau2000b_utc/rust
+                        time:   [1.4638 µs 1.4854 µs 1.5048 µs]
+Benchmarking ffi_vedic_primitives/nutation_iau2000b_utc/ffi
+Benchmarking ffi_vedic_primitives/nutation_iau2000b_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nutation_iau2000b_utc/ffi: Collecting 10 samples in estimated 200.05 ms (129k iterations)
+Benchmarking ffi_vedic_primitives/nutation_iau2000b_utc/ffi: Analyzing
+ffi_vedic_primitives/nutation_iau2000b_utc/ffi
+                        time:   [1.5314 µs 1.5446 µs 1.5539 µs]
+Benchmarking ffi_vedic_primitives/lunar_node_deg_utc/rust
+Benchmarking ffi_vedic_primitives/lunar_node_deg_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/lunar_node_deg_utc/rust: Collecting 10 samples in estimated 200.00 ms (1.5M iterations)
+Benchmarking ffi_vedic_primitives/lunar_node_deg_utc/rust: Analyzing
+ffi_vedic_primitives/lunar_node_deg_utc/rust
+                        time:   [132.36 ns 133.87 ns 134.87 ns]
+Benchmarking ffi_vedic_primitives/lunar_node_deg_utc/ffi
+Benchmarking ffi_vedic_primitives/lunar_node_deg_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/lunar_node_deg_utc/ffi: Collecting 10 samples in estimated 200.00 ms (903k iterations)
+Benchmarking ffi_vedic_primitives/lunar_node_deg_utc/ffi: Analyzing
+ffi_vedic_primitives/lunar_node_deg_utc/ffi
+                        time:   [212.86 ns 213.58 ns 214.87 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/rashi_from_tropical_utc/rust
+Benchmarking ffi_vedic_primitives/rashi_from_tropical_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/rashi_from_tropical_utc/rust: Collecting 10 samples in estimated 200.00 ms (5.3M iterations)
+Benchmarking ffi_vedic_primitives/rashi_from_tropical_utc/rust: Analyzing
+ffi_vedic_primitives/rashi_from_tropical_utc/rust
+                        time:   [37.362 ns 37.508 ns 37.789 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_vedic_primitives/rashi_from_tropical_utc/ffi
+Benchmarking ffi_vedic_primitives/rashi_from_tropical_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/rashi_from_tropical_utc/ffi: Collecting 10 samples in estimated 200.01 ms (1.6M iterations)
+Benchmarking ffi_vedic_primitives/rashi_from_tropical_utc/ffi: Analyzing
+ffi_vedic_primitives/rashi_from_tropical_utc/ffi
+                        time:   [118.86 ns 119.33 ns 120.12 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical_utc/rust
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical_utc/rust: Collecting 10 samples in estimated 200.00 ms (7.1M iterations)
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical_utc/rust: Analyzing
+ffi_vedic_primitives/nakshatra_from_tropical_utc/rust
+                        time:   [27.628 ns 27.971 ns 28.431 ns]
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical_utc/ffi
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical_utc/ffi: Collecting 10 samples in estimated 200.01 ms (1.7M iterations)
+Benchmarking ffi_vedic_primitives/nakshatra_from_tropical_utc/ffi: Analyzing
+ffi_vedic_primitives/nakshatra_from_tropical_utc/ffi
+                        time:   [113.78 ns 113.92 ns 114.07 ns]
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical_utc/rust
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical_utc/rust: Collecting 10 samples in estimated 200.00 ms (7.5M iterations)
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical_utc/rust: Analyzing
+ffi_vedic_primitives/nakshatra28_from_tropical_utc/rust
+                        time:   [26.575 ns 26.880 ns 27.093 ns]
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical_utc/ffi
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical_utc/ffi: Collecting 10 samples in estimated 200.00 ms (1.9M iterations)
+Benchmarking ffi_vedic_primitives/nakshatra28_from_tropical_utc/ffi: Analyzing
+ffi_vedic_primitives/nakshatra28_from_tropical_utc/ffi
+                        time:   [103.93 ns 104.16 ns 104.45 ns]
+
+Benchmarking ffi_classifier/tithi_from_elongation/rust
+Benchmarking ffi_classifier/tithi_from_elongation/rust: Warming up for 100.00 ms
+Benchmarking ffi_classifier/tithi_from_elongation/rust: Collecting 10 samples in estimated 200.00 ms (23M iterations)
+Benchmarking ffi_classifier/tithi_from_elongation/rust: Analyzing
+ffi_classifier/tithi_from_elongation/rust
+                        time:   [8.4962 ns 8.5843 ns 8.6598 ns]
+                        change: [-1.7601% -0.7350% +0.3273%] (p = 0.20 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_classifier/tithi_from_elongation/ffi
+Benchmarking ffi_classifier/tithi_from_elongation/ffi: Warming up for 100.00 ms
+Benchmarking ffi_classifier/tithi_from_elongation/ffi: Collecting 10 samples in estimated 200.00 ms (20M iterations)
+Benchmarking ffi_classifier/tithi_from_elongation/ffi: Analyzing
+ffi_classifier/tithi_from_elongation/ffi
+                        time:   [9.7318 ns 9.7850 ns 9.8329 ns]
+                        change: [-0.3813% +0.3081% +0.9947%] (p = 0.41 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_classifier/karana_from_elongation/rust
+Benchmarking ffi_classifier/karana_from_elongation/rust: Warming up for 100.00 ms
+Benchmarking ffi_classifier/karana_from_elongation/rust: Collecting 10 samples in estimated 200.00 ms (12M iterations)
+Benchmarking ffi_classifier/karana_from_elongation/rust: Analyzing
+ffi_classifier/karana_from_elongation/rust
+                        time:   [10.557 ns 10.883 ns 11.578 ns]
+                        change: [+1.9305% +6.8376% +14.197%] (p = 0.04 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_classifier/karana_from_elongation/ffi
+Benchmarking ffi_classifier/karana_from_elongation/ffi: Warming up for 100.00 ms
+Benchmarking ffi_classifier/karana_from_elongation/ffi: Collecting 10 samples in estimated 200.00 ms (18M iterations)
+Benchmarking ffi_classifier/karana_from_elongation/ffi: Analyzing
+ffi_classifier/karana_from_elongation/ffi
+                        time:   [11.173 ns 12.094 ns 13.150 ns]
+                        change: [+0.3510% +6.1455% +13.507%] (p = 0.10 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_classifier/yoga_from_sum/rust
+Benchmarking ffi_classifier/yoga_from_sum/rust: Warming up for 100.00 ms
+Benchmarking ffi_classifier/yoga_from_sum/rust: Collecting 10 samples in estimated 200.00 ms (26M iterations)
+Benchmarking ffi_classifier/yoga_from_sum/rust: Analyzing
+ffi_classifier/yoga_from_sum/rust
+                        time:   [7.3884 ns 7.6073 ns 8.1771 ns]
+                        change: [-4.5546% +0.8601% +7.2780%] (p = 0.83 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_classifier/yoga_from_sum/ffi
+Benchmarking ffi_classifier/yoga_from_sum/ffi: Warming up for 100.00 ms
+Benchmarking ffi_classifier/yoga_from_sum/ffi: Collecting 10 samples in estimated 200.00 ms (22M iterations)
+Benchmarking ffi_classifier/yoga_from_sum/ffi: Analyzing
+ffi_classifier/yoga_from_sum/ffi
+                        time:   [8.4222 ns 8.4770 ns 8.5404 ns]
+                        change: [-1.9647% -1.0552% -0.1091%] (p = 0.05 < 0.05)
+                        Change within noise threshold.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_classifier/vaar_from_jd/rust
+Benchmarking ffi_classifier/vaar_from_jd/rust: Warming up for 100.00 ms
+Benchmarking ffi_classifier/vaar_from_jd/rust: Collecting 10 samples in estimated 200.00 ms (43M iterations)
+Benchmarking ffi_classifier/vaar_from_jd/rust: Analyzing
+ffi_classifier/vaar_from_jd/rust
+                        time:   [4.5203 ns 4.7909 ns 5.1313 ns]
+                        change: [+1.3058% +5.2055% +10.267%] (p = 0.04 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_classifier/vaar_from_jd/ffi
+Benchmarking ffi_classifier/vaar_from_jd/ffi: Warming up for 100.00 ms
+Benchmarking ffi_classifier/vaar_from_jd/ffi: Collecting 10 samples in estimated 200.00 ms (38M iterations)
+Benchmarking ffi_classifier/vaar_from_jd/ffi: Analyzing
+ffi_classifier/vaar_from_jd/ffi
+                        time:   [4.9107 ns 5.0749 ns 5.3365 ns]
+                        change: [+2.1866% +4.5511% +7.4619%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_classifier/masa_from_rashi_index/rust
+Benchmarking ffi_classifier/masa_from_rashi_index/rust: Warming up for 100.00 ms
+Benchmarking ffi_classifier/masa_from_rashi_index/rust: Collecting 10 samples in estimated 200.00 ms (116M iterations)
+Benchmarking ffi_classifier/masa_from_rashi_index/rust: Analyzing
+ffi_classifier/masa_from_rashi_index/rust
+                        time:   [1.5877 ns 1.6534 ns 1.7438 ns]
+                        change: [-2.4846% +0.2174% +3.3420%] (p = 0.90 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_classifier/masa_from_rashi_index/ffi
+Benchmarking ffi_classifier/masa_from_rashi_index/ffi: Warming up for 100.00 ms
+Benchmarking ffi_classifier/masa_from_rashi_index/ffi: Collecting 10 samples in estimated 200.00 ms (72M iterations)
+Benchmarking ffi_classifier/masa_from_rashi_index/ffi: Analyzing
+ffi_classifier/masa_from_rashi_index/ffi
+                        time:   [2.7633 ns 2.8804 ns 3.1598 ns]
+                        change: [+1.9953% +8.2294% +19.529%] (p = 0.08 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_classifier/ayana_from_sidereal_longitude/rust
+Benchmarking ffi_classifier/ayana_from_sidereal_longitude/rust: Warming up for 100.00 ms
+Benchmarking ffi_classifier/ayana_from_sidereal_longitude/rust: Collecting 10 samples in estimated 200.00 ms (55M iterations)
+Benchmarking ffi_classifier/ayana_from_sidereal_longitude/rust: Analyzing
+ffi_classifier/ayana_from_sidereal_longitude/rust
+                        time:   [3.4891 ns 3.5504 ns 3.6992 ns]
+                        change: [-0.6917% +2.8247% +7.3321%] (p = 0.23 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_classifier/ayana_from_sidereal_longitude/ffi
+Benchmarking ffi_classifier/ayana_from_sidereal_longitude/ffi: Warming up for 100.00 ms
+Benchmarking ffi_classifier/ayana_from_sidereal_longitude/ffi: Collecting 10 samples in estimated 200.00 ms (42M iterations)
+Benchmarking ffi_classifier/ayana_from_sidereal_longitude/ffi: Analyzing
+ffi_classifier/ayana_from_sidereal_longitude/ffi
+                        time:   [4.4049 ns 4.4625 ns 4.4934 ns]
+                        change: [+2.6654% +3.6268% +4.3875%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_classifier/samvatsara_from_year/rust
+Benchmarking ffi_classifier/samvatsara_from_year/rust: Warming up for 100.00 ms
+Benchmarking ffi_classifier/samvatsara_from_year/rust: Collecting 10 samples in estimated 200.00 ms (88M iterations)
+Benchmarking ffi_classifier/samvatsara_from_year/rust: Analyzing
+ffi_classifier/samvatsara_from_year/rust
+                        time:   [2.0976 ns 2.1092 ns 2.1202 ns]
+                        change: [-16.794% -8.5754% -0.9508%] (p = 0.06 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_classifier/samvatsara_from_year/ffi
+Benchmarking ffi_classifier/samvatsara_from_year/ffi: Warming up for 100.00 ms
+Benchmarking ffi_classifier/samvatsara_from_year/ffi: Collecting 10 samples in estimated 200.00 ms (67M iterations)
+Benchmarking ffi_classifier/samvatsara_from_year/ffi: Analyzing
+ffi_classifier/samvatsara_from_year/ffi
+                        time:   [2.9329 ns 2.9485 ns 2.9637 ns]
+                        change: [-3.0047% -1.2923% +0.3342%] (p = 0.17 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) low mild
+  1 (10.00%) high mild
+Benchmarking ffi_classifier/nth_rashi_from/rust
+Benchmarking ffi_classifier/nth_rashi_from/rust: Warming up for 100.00 ms
+Benchmarking ffi_classifier/nth_rashi_from/rust: Collecting 10 samples in estimated 200.00 ms (155M iterations)
+Benchmarking ffi_classifier/nth_rashi_from/rust: Analyzing
+ffi_classifier/nth_rashi_from/rust
+                        time:   [1.2751 ns 1.2890 ns 1.2988 ns]
+                        change: [-3.7323% -1.2248% +1.0786%] (p = 0.38 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_classifier/nth_rashi_from/ffi
+Benchmarking ffi_classifier/nth_rashi_from/ffi: Warming up for 100.00 ms
+Benchmarking ffi_classifier/nth_rashi_from/ffi: Collecting 10 samples in estimated 200.00 ms (127M iterations)
+Benchmarking ffi_classifier/nth_rashi_from/ffi: Analyzing
+ffi_classifier/nth_rashi_from/ffi
+                        time:   [1.5350 ns 1.5650 ns 1.6230 ns]
+                        change: [-3.6398% -0.7679% +2.4531%] (p = 0.65 > 0.05)
+                        No change in performance detected.
+Found 3 outliers among 10 measurements (30.00%)
+  1 (10.00%) low severe
+  2 (20.00%) high severe
+Benchmarking ffi_classifier/rashi_lord_by_index/rust
+Benchmarking ffi_classifier/rashi_lord_by_index/rust: Warming up for 100.00 ms
+Benchmarking ffi_classifier/rashi_lord_by_index/rust: Collecting 10 samples in estimated 200.00 ms (138M iterations)
+Benchmarking ffi_classifier/rashi_lord_by_index/rust: Analyzing
+ffi_classifier/rashi_lord_by_index/rust
+                        time:   [1.4002 ns 1.4281 ns 1.4514 ns]
+                        change: [-15.126% -12.257% -9.8706%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_classifier/rashi_lord_by_index/ffi
+Benchmarking ffi_classifier/rashi_lord_by_index/ffi: Warming up for 100.00 ms
+Benchmarking ffi_classifier/rashi_lord_by_index/ffi: Collecting 10 samples in estimated 200.00 ms (71M iterations)
+Benchmarking ffi_classifier/rashi_lord_by_index/ffi: Analyzing
+ffi_classifier/rashi_lord_by_index/ffi
+                        time:   [2.6394 ns 2.6524 ns 2.6678 ns]
+                        change: [-2.8174% -1.4284% -0.2105%] (p = 0.05 > 0.05)
+                        No change in performance detected.
+
+Benchmarking ffi_ashtakavarga/calculate_bav/rust
+Benchmarking ffi_ashtakavarga/calculate_bav/rust: Warming up for 100.00 ms
+Benchmarking ffi_ashtakavarga/calculate_bav/rust: Collecting 10 samples in estimated 200.00 ms (2.0M iterations)
+Benchmarking ffi_ashtakavarga/calculate_bav/rust: Analyzing
+ffi_ashtakavarga/calculate_bav/rust
+                        time:   [101.78 ns 104.16 ns 110.54 ns]
+                        change: [+4.7746% +33.844% +77.401%] (p = 0.06 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_ashtakavarga/calculate_bav/ffi
+Benchmarking ffi_ashtakavarga/calculate_bav/ffi: Warming up for 100.00 ms
+Benchmarking ffi_ashtakavarga/calculate_bav/ffi: Collecting 10 samples in estimated 200.00 ms (1.9M iterations)
+Benchmarking ffi_ashtakavarga/calculate_bav/ffi: Analyzing
+ffi_ashtakavarga/calculate_bav/ffi
+                        time:   [101.10 ns 104.83 ns 109.98 ns]
+                        change: [-0.1086% +4.3086% +8.8298%] (p = 0.08 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+Benchmarking ffi_ashtakavarga/calculate_all_bav/rust
+Benchmarking ffi_ashtakavarga/calculate_all_bav/rust: Warming up for 100.00 ms
+Benchmarking ffi_ashtakavarga/calculate_all_bav/rust: Collecting 10 samples in estimated 200.01 ms (264k iterations)
+Benchmarking ffi_ashtakavarga/calculate_all_bav/rust: Analyzing
+ffi_ashtakavarga/calculate_all_bav/rust
+                        time:   [725.51 ns 745.78 ns 762.12 ns]
+                        change: [+2.4303% +4.9920% +7.9515%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_ashtakavarga/calculate_all_bav/ffi
+Benchmarking ffi_ashtakavarga/calculate_all_bav/ffi: Warming up for 100.00 ms
+Benchmarking ffi_ashtakavarga/calculate_all_bav/ffi: Collecting 10 samples in estimated 200.00 ms (267k iterations)
+Benchmarking ffi_ashtakavarga/calculate_all_bav/ffi: Analyzing
+ffi_ashtakavarga/calculate_all_bav/ffi
+                        time:   [725.62 ns 762.75 ns 799.56 ns]
+                        change: [+4.3194% +10.376% +17.066%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_ashtakavarga/calculate_sav/rust
+Benchmarking ffi_ashtakavarga/calculate_sav/rust: Warming up for 100.00 ms
+Benchmarking ffi_ashtakavarga/calculate_sav/rust: Collecting 10 samples in estimated 200.00 ms (12M iterations)
+Benchmarking ffi_ashtakavarga/calculate_sav/rust: Analyzing
+ffi_ashtakavarga/calculate_sav/rust
+                        time:   [15.807 ns 16.164 ns 16.652 ns]
+                        change: [+19.677% +22.865% +26.460%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_ashtakavarga/calculate_sav/ffi
+Benchmarking ffi_ashtakavarga/calculate_sav/ffi: Warming up for 100.00 ms
+Benchmarking ffi_ashtakavarga/calculate_sav/ffi: Collecting 10 samples in estimated 200.00 ms (9.3M iterations)
+Benchmarking ffi_ashtakavarga/calculate_sav/ffi: Analyzing
+ffi_ashtakavarga/calculate_sav/ffi
+                        time:   [18.516 ns 18.993 ns 19.316 ns]
+                        change: [+7.5862% +9.2927% +11.137%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_ashtakavarga/trikona_sodhana/rust
+Benchmarking ffi_ashtakavarga/trikona_sodhana/rust: Warming up for 100.00 ms
+Benchmarking ffi_ashtakavarga/trikona_sodhana/rust: Collecting 10 samples in estimated 200.00 ms (91M iterations)
+Benchmarking ffi_ashtakavarga/trikona_sodhana/rust: Analyzing
+ffi_ashtakavarga/trikona_sodhana/rust
+                        time:   [1.9234 ns 1.9800 ns 2.0253 ns]
+                        change: [-1.1873% +2.4862% +6.5306%] (p = 0.25 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_ashtakavarga/trikona_sodhana/ffi
+Benchmarking ffi_ashtakavarga/trikona_sodhana/ffi: Warming up for 100.00 ms
+Benchmarking ffi_ashtakavarga/trikona_sodhana/ffi: Collecting 10 samples in estimated 200.00 ms (64M iterations)
+Benchmarking ffi_ashtakavarga/trikona_sodhana/ffi: Analyzing
+ffi_ashtakavarga/trikona_sodhana/ffi
+                        time:   [3.0813 ns 3.1619 ns 3.2303 ns]
+                        change: [+3.1237% +5.2832% +7.5496%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_ashtakavarga/ekadhipatya_sodhana/rust
+Benchmarking ffi_ashtakavarga/ekadhipatya_sodhana/rust: Warming up for 100.00 ms
+Benchmarking ffi_ashtakavarga/ekadhipatya_sodhana/rust: Collecting 10 samples in estimated 200.00 ms (57M iterations)
+Benchmarking ffi_ashtakavarga/ekadhipatya_sodhana/rust: Analyzing
+ffi_ashtakavarga/ekadhipatya_sodhana/rust
+                        time:   [3.3754 ns 3.5704 ns 3.7574 ns]
+                        change: [+8.8383% +12.856% +17.097%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_ashtakavarga/ekadhipatya_sodhana/ffi
+Benchmarking ffi_ashtakavarga/ekadhipatya_sodhana/ffi: Warming up for 100.00 ms
+Benchmarking ffi_ashtakavarga/ekadhipatya_sodhana/ffi: Collecting 10 samples in estimated 200.00 ms (20M iterations)
+Benchmarking ffi_ashtakavarga/ekadhipatya_sodhana/ffi: Analyzing
+ffi_ashtakavarga/ekadhipatya_sodhana/ffi
+                        time:   [9.2044 ns 9.4282 ns 9.7094 ns]
+                        change: [+0.6031% +3.1576% +5.5828%] (p = 0.02 < 0.05)
+                        Change within noise threshold.
+
+Benchmarking ffi_drishti/graha_drishti/rust
+Benchmarking ffi_drishti/graha_drishti/rust: Warming up for 100.00 ms
+Benchmarking ffi_drishti/graha_drishti/rust: Collecting 10 samples in estimated 200.00 ms (24M iterations)
+Benchmarking ffi_drishti/graha_drishti/rust: Analyzing
+ffi_drishti/graha_drishti/rust
+                        time:   [7.9036 ns 8.4673 ns 9.1293 ns]
+                        change: [+6.7663% +14.555% +24.110%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_drishti/graha_drishti/ffi
+Benchmarking ffi_drishti/graha_drishti/ffi: Warming up for 100.00 ms
+Benchmarking ffi_drishti/graha_drishti/ffi: Collecting 10 samples in estimated 200.00 ms (14M iterations)
+Benchmarking ffi_drishti/graha_drishti/ffi: Analyzing
+ffi_drishti/graha_drishti/ffi
+                        time:   [13.933 ns 14.140 ns 14.333 ns]
+                        change: [-0.1096% +1.2015% +2.6144%] (p = 0.15 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_drishti/graha_drishti_matrix/rust
+Benchmarking ffi_drishti/graha_drishti_matrix/rust: Warming up for 100.00 ms
+Benchmarking ffi_drishti/graha_drishti_matrix/rust: Collecting 10 samples in estimated 200.01 ms (410k iterations)
+Benchmarking ffi_drishti/graha_drishti_matrix/rust: Analyzing
+ffi_drishti/graha_drishti_matrix/rust
+                        time:   [472.33 ns 508.21 ns 537.68 ns]
+                        change: [-0.2520% +3.6070% +8.4896%] (p = 0.15 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_drishti/graha_drishti_matrix/ffi
+Benchmarking ffi_drishti/graha_drishti_matrix/ffi: Warming up for 100.00 ms
+Benchmarking ffi_drishti/graha_drishti_matrix/ffi: Collecting 10 samples in estimated 200.02 ms (378k iterations)
+Benchmarking ffi_drishti/graha_drishti_matrix/ffi: Analyzing
+ffi_drishti/graha_drishti_matrix/ffi
+                        time:   [557.81 ns 568.32 ns 596.30 ns]
+                        change: [+10.844% +15.734% +20.860%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+
+Benchmarking ffi_ghatika_hora/ghatika_from_elapsed/rust
+Benchmarking ffi_ghatika_hora/ghatika_from_elapsed/rust: Warming up for 100.00 ms
+Benchmarking ffi_ghatika_hora/ghatika_from_elapsed/rust: Collecting 10 samples in estimated 200.00 ms (43M iterations)
+Benchmarking ffi_ghatika_hora/ghatika_from_elapsed/rust: Analyzing
+ffi_ghatika_hora/ghatika_from_elapsed/rust
+                        time:   [4.4129 ns 4.5395 ns 4.7309 ns]
+                        change: [-33.843% -29.007% -23.603%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_ghatika_hora/ghatika_from_elapsed/ffi
+Benchmarking ffi_ghatika_hora/ghatika_from_elapsed/ffi: Warming up for 100.00 ms
+Benchmarking ffi_ghatika_hora/ghatika_from_elapsed/ffi: Collecting 10 samples in estimated 200.00 ms (37M iterations)
+Benchmarking ffi_ghatika_hora/ghatika_from_elapsed/ffi: Analyzing
+ffi_ghatika_hora/ghatika_from_elapsed/ffi
+                        time:   [5.2290 ns 5.4692 ns 5.8735 ns]
+                        change: [+0.6327% +4.8728% +10.605%] (p = 0.08 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_ghatika_hora/ghatikas_since_sunrise/rust
+Benchmarking ffi_ghatika_hora/ghatikas_since_sunrise/rust: Warming up for 100.00 ms
+Benchmarking ffi_ghatika_hora/ghatikas_since_sunrise/rust: Collecting 10 samples in estimated 200.00 ms (112M iterations)
+Benchmarking ffi_ghatika_hora/ghatikas_since_sunrise/rust: Analyzing
+ffi_ghatika_hora/ghatikas_since_sunrise/rust
+                        time:   [1.7511 ns 1.7957 ns 1.8895 ns]
+                        change: [+1.0551% +5.7679% +12.198%] (p = 0.04 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_ghatika_hora/ghatikas_since_sunrise/ffi
+Benchmarking ffi_ghatika_hora/ghatikas_since_sunrise/ffi: Warming up for 100.00 ms
+Benchmarking ffi_ghatika_hora/ghatikas_since_sunrise/ffi: Collecting 10 samples in estimated 200.00 ms (109M iterations)
+Benchmarking ffi_ghatika_hora/ghatikas_since_sunrise/ffi: Analyzing
+ffi_ghatika_hora/ghatikas_since_sunrise/ffi
+                        time:   [2.8391 ns 2.9830 ns 3.2782 ns]
+                        change: [+63.065% +102.84% +154.71%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_ghatika_hora/hora_at/rust
+Benchmarking ffi_ghatika_hora/hora_at/rust: Warming up for 100.00 ms
+Benchmarking ffi_ghatika_hora/hora_at/rust: Collecting 10 samples in estimated 200.00 ms (79M iterations)
+Benchmarking ffi_ghatika_hora/hora_at/rust: Analyzing
+ffi_ghatika_hora/hora_at/rust
+                        time:   [2.3446 ns 2.3734 ns 2.4093 ns]
+                        change: [-0.6743% +0.4827% +1.7045%] (p = 0.46 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_ghatika_hora/hora_at/ffi
+Benchmarking ffi_ghatika_hora/hora_at/ffi: Warming up for 100.00 ms
+Benchmarking ffi_ghatika_hora/hora_at/ffi: Collecting 10 samples in estimated 200.00 ms (54M iterations)
+Benchmarking ffi_ghatika_hora/hora_at/ffi: Analyzing
+ffi_ghatika_hora/hora_at/ffi
+                        time:   [3.4434 ns 3.5279 ns 3.6016 ns]
+                        change: [+1.0234% +3.6074% +6.8540%] (p = 0.03 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+
+Benchmarking ffi_upagraha/time_upagraha_jd/rust
+Benchmarking ffi_upagraha/time_upagraha_jd/rust: Warming up for 100.00 ms
+Benchmarking ffi_upagraha/time_upagraha_jd/rust: Collecting 10 samples in estimated 200.00 ms (58M iterations)
+Benchmarking ffi_upagraha/time_upagraha_jd/rust: Analyzing
+ffi_upagraha/time_upagraha_jd/rust
+                        time:   [3.3899 ns 3.5758 ns 3.9623 ns]
+                        change: [-3.4481% +0.9156% +7.6282%] (p = 0.83 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_upagraha/time_upagraha_jd/ffi
+Benchmarking ffi_upagraha/time_upagraha_jd/ffi: Warming up for 100.00 ms
+Benchmarking ffi_upagraha/time_upagraha_jd/ffi: Collecting 10 samples in estimated 200.00 ms (41M iterations)
+Benchmarking ffi_upagraha/time_upagraha_jd/ffi: Analyzing
+ffi_upagraha/time_upagraha_jd/ffi
+                        time:   [6.4241 ns 6.4887 ns 6.5798 ns]
+                        change: [+23.349% +31.583% +36.810%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+
+Benchmarking ffi_search_sidereal/graha_sidereal_longitudes/rust
+Benchmarking ffi_search_sidereal/graha_sidereal_longitudes/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_sidereal/graha_sidereal_longitudes/rust: Collecting 20 samples in estimated 201.15 ms (32k iterations)
+Benchmarking ffi_search_sidereal/graha_sidereal_longitudes/rust: Analyzing
+ffi_search_sidereal/graha_sidereal_longitudes/rust
+                        time:   [5.9383 µs 5.9817 µs 6.0341 µs]
+                        change: [+0.2642% +1.8037% +4.2911%] (p = 0.08 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 20 measurements (5.00%)
+  1 (5.00%) high severe
+Benchmarking ffi_search_sidereal/graha_sidereal_longitudes/ffi
+Benchmarking ffi_search_sidereal/graha_sidereal_longitudes/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_sidereal/graha_sidereal_longitudes/ffi: Collecting 20 samples in estimated 201.09 ms (33k iterations)
+Benchmarking ffi_search_sidereal/graha_sidereal_longitudes/ffi: Analyzing
+ffi_search_sidereal/graha_sidereal_longitudes/ffi
+                        time:   [5.9626 µs 6.0704 µs 6.2216 µs]
+                        change: [+0.1583% +2.4540% +5.7048%] (p = 0.10 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 20 measurements (5.00%)
+  1 (5.00%) high severe
+Benchmarking ffi_search_sidereal/nakshatra_at/rust
+Benchmarking ffi_search_sidereal/nakshatra_at/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_sidereal/nakshatra_at/rust: Collecting 20 samples in estimated 209.76 ms (4200 iterations)
+Benchmarking ffi_search_sidereal/nakshatra_at/rust: Analyzing
+ffi_search_sidereal/nakshatra_at/rust
+                        time:   [49.384 µs 49.699 µs 50.119 µs]
+                        change: [-0.4366% +2.4409% +5.4804%] (p = 0.14 > 0.05)
+                        No change in performance detected.
+Found 3 outliers among 20 measurements (15.00%)
+  3 (15.00%) high severe
+Benchmarking ffi_search_sidereal/nakshatra_at/ffi
+Benchmarking ffi_search_sidereal/nakshatra_at/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_sidereal/nakshatra_at/ffi: Collecting 20 samples in estimated 211.62 ms (2940 iterations)
+Benchmarking ffi_search_sidereal/nakshatra_at/ffi: Analyzing
+ffi_search_sidereal/nakshatra_at/ffi
+                        time:   [78.134 µs 89.437 µs 101.70 µs]
+                        change: [+67.866% +85.302% +104.82%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 20 measurements (5.00%)
+  1 (5.00%) high mild
+
+Benchmarking ffi_search_conjunction_grahan/next_conjunction/rust
+Benchmarking ffi_search_conjunction_grahan/next_conjunction/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/next_conjunction/rust: Collecting 10 samples in estimated 205.67 ms (1595 iterations)
+Benchmarking ffi_search_conjunction_grahan/next_conjunction/rust: Analyzing
+ffi_search_conjunction_grahan/next_conjunction/rust
+                        time:   [123.75 µs 124.47 µs 125.31 µs]
+                        change: [-0.9048% -0.0192% +0.8222%] (p = 0.97 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_search_conjunction_grahan/next_conjunction/ffi
+Benchmarking ffi_search_conjunction_grahan/next_conjunction/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/next_conjunction/ffi: Collecting 10 samples in estimated 206.40 ms (1650 iterations)
+Benchmarking ffi_search_conjunction_grahan/next_conjunction/ffi: Analyzing
+ffi_search_conjunction_grahan/next_conjunction/ffi
+                        time:   [122.88 µs 123.57 µs 124.41 µs]
+                        change: [-4.1729% -1.5742% +0.8092%] (p = 0.28 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction/rust
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction/rust: Collecting 10 samples in estimated 200.47 ms (3300 iterations)
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction/rust: Analyzing
+ffi_search_conjunction_grahan/prev_conjunction/rust
+                        time:   [59.242 µs 59.675 µs 60.386 µs]
+                        change: [-4.3491% -1.1765% +2.3400%] (p = 0.52 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction/ffi
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction/ffi: Collecting 10 samples in estimated 200.79 ms (3245 iterations)
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction/ffi: Analyzing
+ffi_search_conjunction_grahan/prev_conjunction/ffi
+                        time:   [58.920 µs 59.272 µs 59.695 µs]
+                        change: [-1.6555% -0.5866% +0.3568%] (p = 0.32 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions/rust
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions/rust: Collecting 10 samples in estimated 204.56 ms (110 iterations)
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions/rust: Analyzing
+ffi_search_conjunction_grahan/search_conjunctions/rust
+                        time:   [1.8364 ms 1.8474 ms 1.8575 ms]
+                        change: [-2.2131% -1.0770% -0.0224%] (p = 0.09 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions/ffi
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions/ffi: Collecting 10 samples in estimated 209.67 ms (110 iterations)
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions/ffi: Analyzing
+ffi_search_conjunction_grahan/search_conjunctions/ffi
+                        time:   [1.8537 ms 1.8851 ms 1.9379 ms]
+                        change: [-27.174% -9.9726% +3.3352%] (p = 0.56 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan/rust
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan/rust: Collecting 10 samples in estimated 231.69 ms (385 iterations)
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan/rust: Analyzing
+ffi_search_conjunction_grahan/next_chandra_grahan/rust
+                        time:   [501.72 µs 513.15 µs 527.62 µs]
+                        change: [+0.3415% +3.3486% +6.2151%] (p = 0.04 < 0.05)
+                        Change within noise threshold.
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan/ffi
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan/ffi: Collecting 10 samples in estimated 218.23 ms (440 iterations)
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan/ffi: Analyzing
+ffi_search_conjunction_grahan/next_chandra_grahan/ffi
+                        time:   [488.71 µs 495.87 µs 504.55 µs]
+                        change: [-0.7088% +0.6274% +1.9396%] (p = 0.41 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan/rust
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan/rust: Collecting 10 samples in estimated 204.89 ms (220 iterations)
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan/rust: Analyzing
+ffi_search_conjunction_grahan/prev_chandra_grahan/rust
+                        time:   [910.78 µs 918.92 µs 929.01 µs]
+                        change: [-2.8757% -0.3262% +2.6093%] (p = 0.82 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan/ffi
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan/ffi: Collecting 10 samples in estimated 209.26 ms (220 iterations)
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan/ffi: Analyzing
+ffi_search_conjunction_grahan/prev_chandra_grahan/ffi
+                        time:   [907.67 µs 967.99 µs 1.0763 ms]
+                        change: [+1.6058% +5.9400% +12.788%] (p = 0.05 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan/rust
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan/rust: Collecting 10 samples in estimated 271.69 ms (110 iterations)
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan/rust: Analyzing
+ffi_search_conjunction_grahan/search_chandra_grahan/rust
+                        time:   [2.4341 ms 2.4605 ms 2.4805 ms]
+                        change: [+0.3944% +1.6329% +2.6778%] (p = 0.02 < 0.05)
+                        Change within noise threshold.
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan/ffi
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan/ffi: Collecting 10 samples in estimated 269.69 ms (110 iterations)
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan/ffi: Analyzing
+ffi_search_conjunction_grahan/search_chandra_grahan/ffi
+                        time:   [2.3996 ms 2.4130 ms 2.4363 ms]
+                        change: [-4.5511% -3.3526% -2.0808%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan/rust
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan/rust: Collecting 10 samples in estimated 213.19 ms (605 iterations)
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan/rust: Analyzing
+ffi_search_conjunction_grahan/next_surya_grahan/rust
+                        time:   [342.43 µs 343.61 µs 344.46 µs]
+                        change: [-0.9934% -0.2509% +0.3763%] (p = 0.53 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan/ffi
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan/ffi: Collecting 10 samples in estimated 215.27 ms (605 iterations)
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan/ffi: Analyzing
+ffi_search_conjunction_grahan/next_surya_grahan/ffi
+                        time:   [345.03 µs 349.49 µs 354.07 µs]
+                        change: [-1.7352% +0.8632% +2.9277%] (p = 0.54 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan/rust
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan/rust: Warming up for 100.00 ms
+
+Warning: Unable to complete 10 samples in 200.0ms. You may wish to increase target time to 218.1ms or enable flat sampling.
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan/rust: Collecting 10 samples in estimated 218.13 ms (55 iterations)
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan/rust: Analyzing
+ffi_search_conjunction_grahan/prev_surya_grahan/rust
+                        time:   [3.8723 ms 3.8902 ms 3.9073 ms]
+                        change: [-0.5317% +0.1604% +0.8777%] (p = 0.68 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan/ffi
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan/ffi: Warming up for 100.00 ms
+
+Warning: Unable to complete 10 samples in 200.0ms. You may wish to increase target time to 218.4ms or enable flat sampling.
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan/ffi: Collecting 10 samples in estimated 218.44 ms (55 iterations)
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan/ffi: Analyzing
+ffi_search_conjunction_grahan/prev_surya_grahan/ffi
+                        time:   [3.9055 ms 3.9208 ms 3.9395 ms]
+                        change: [-1.2394% +0.9842% +2.9778%] (p = 0.42 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan/rust
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan/rust: Collecting 10 samples in estimated 233.08 ms (110 iterations)
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan/rust: Analyzing
+ffi_search_conjunction_grahan/search_surya_grahan/rust
+                        time:   [2.0359 ms 2.1478 ms 2.3312 ms]
+                        change: [-1.3845% +5.7716% +14.699%] (p = 0.25 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan/ffi
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan/ffi: Collecting 10 samples in estimated 228.76 ms (110 iterations)
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan/ffi: Analyzing
+ffi_search_conjunction_grahan/search_surya_grahan/ffi
+                        time:   [2.0070 ms 2.0242 ms 2.0401 ms]
+                        change: [-4.5266% -2.4394% -0.4750%] (p = 0.04 < 0.05)
+                        Change within noise threshold.
+Benchmarking ffi_search_conjunction_grahan/next_conjunction_utc/rust
+Benchmarking ffi_search_conjunction_grahan/next_conjunction_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/next_conjunction_utc/rust: Collecting 10 samples in estimated 204.31 ms (2585 iterations)
+Benchmarking ffi_search_conjunction_grahan/next_conjunction_utc/rust: Analyzing
+ffi_search_conjunction_grahan/next_conjunction_utc/rust
+                        time:   [76.539 µs 77.035 µs 77.773 µs]
+                        change: [-0.6392% +0.7488% +2.7355%] (p = 0.49 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_search_conjunction_grahan/next_conjunction_utc/ffi
+Benchmarking ffi_search_conjunction_grahan/next_conjunction_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/next_conjunction_utc/ffi: Collecting 10 samples in estimated 204.08 ms (2585 iterations)
+Benchmarking ffi_search_conjunction_grahan/next_conjunction_utc/ffi: Analyzing
+ffi_search_conjunction_grahan/next_conjunction_utc/ffi
+                        time:   [77.017 µs 78.422 µs 80.897 µs]
+                        change: [-0.4238% +0.8468% +2.8407%] (p = 0.50 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction_utc/rust
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction_utc/rust: Collecting 10 samples in estimated 200.29 ms (1815 iterations)
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction_utc/rust: Analyzing
+ffi_search_conjunction_grahan/prev_conjunction_utc/rust
+                        time:   [106.96 µs 108.91 µs 110.78 µs]
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction_utc/ffi
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction_utc/ffi: Collecting 10 samples in estimated 205.44 ms (1870 iterations)
+Benchmarking ffi_search_conjunction_grahan/prev_conjunction_utc/ffi: Analyzing
+ffi_search_conjunction_grahan/prev_conjunction_utc/ffi
+                        time:   [106.70 µs 107.58 µs 108.48 µs]
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions_utc/rust
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions_utc/rust: Collecting 10 samples in estimated 290.85 ms (165 iterations)
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions_utc/rust: Analyzing
+ffi_search_conjunction_grahan/search_conjunctions_utc/rust
+                        time:   [1.7203 ms 1.7328 ms 1.7575 ms]
+                        change: [-10.614% -4.0522% +1.2286%] (p = 0.30 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions_utc/ffi
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions_utc/ffi: Collecting 10 samples in estimated 294.57 ms (165 iterations)
+Benchmarking ffi_search_conjunction_grahan/search_conjunctions_utc/ffi: Analyzing
+ffi_search_conjunction_grahan/search_conjunctions_utc/ffi
+                        time:   [1.7209 ms 1.7302 ms 1.7460 ms]
+                        change: [-3.6955% +0.0602% +4.3007%] (p = 0.98 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan_utc/rust
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan_utc/rust: Collecting 10 samples in estimated 209.63 ms (385 iterations)
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan_utc/rust: Analyzing
+ffi_search_conjunction_grahan/next_chandra_grahan_utc/rust
+                        time:   [528.04 µs 530.92 µs 534.40 µs]
+                        change: [-14.455% -5.6507% -0.0270%] (p = 0.24 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan_utc/ffi
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan_utc/ffi: Collecting 10 samples in estimated 208.21 ms (385 iterations)
+Benchmarking ffi_search_conjunction_grahan/next_chandra_grahan_utc/ffi: Analyzing
+ffi_search_conjunction_grahan/next_chandra_grahan_utc/ffi
+                        time:   [528.82 µs 537.94 µs 548.09 µs]
+                        change: [-2.9418% -1.3547% +0.5272%] (p = 0.16 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan_utc/rust
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan_utc/rust: Collecting 10 samples in estimated 231.90 ms (385 iterations)
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan_utc/rust: Analyzing
+ffi_search_conjunction_grahan/prev_chandra_grahan_utc/rust
+                        time:   [592.41 µs 597.74 µs 601.60 µs]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan_utc/ffi
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan_utc/ffi: Collecting 10 samples in estimated 210.86 ms (165 iterations)
+Benchmarking ffi_search_conjunction_grahan/prev_chandra_grahan_utc/ffi: Analyzing
+ffi_search_conjunction_grahan/prev_chandra_grahan_utc/ffi
+                        time:   [631.07 µs 653.39 µs 683.49 µs]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan_utc/rust
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan_utc/rust: Collecting 10 samples in estimated 292.48 ms (110 iterations)
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan_utc/rust: Analyzing
+ffi_search_conjunction_grahan/search_chandra_grahan_utc/rust
+                        time:   [2.1997 ms 2.2951 ms 2.3886 ms]
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan_utc/ffi
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan_utc/ffi: Collecting 10 samples in estimated 248.13 ms (110 iterations)
+Benchmarking ffi_search_conjunction_grahan/search_chandra_grahan_utc/ffi: Analyzing
+ffi_search_conjunction_grahan/search_chandra_grahan_utc/ffi
+                        time:   [2.1350 ms 2.1878 ms 2.2903 ms]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan_utc/rust
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan_utc/rust: Collecting 10 samples in estimated 205.97 ms (330 iterations)
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan_utc/rust: Analyzing
+ffi_search_conjunction_grahan/next_surya_grahan_utc/rust
+                        time:   [635.28 µs 658.81 µs 671.92 µs]
+                        change: [+4.6638% +10.043% +14.649%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan_utc/ffi
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan_utc/ffi: Collecting 10 samples in estimated 202.96 ms (330 iterations)
+Benchmarking ffi_search_conjunction_grahan/next_surya_grahan_utc/ffi: Analyzing
+ffi_search_conjunction_grahan/next_surya_grahan_utc/ffi
+                        time:   [597.69 µs 625.64 µs 658.34 µs]
+                        change: [+2.4635% +7.5563% +14.645%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan_utc/rust
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan_utc/rust: Collecting 10 samples in estimated 222.44 ms (440 iterations)
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan_utc/rust: Analyzing
+ffi_search_conjunction_grahan/prev_surya_grahan_utc/rust
+                        time:   [497.94 µs 521.37 µs 552.08 µs]
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan_utc/ffi
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan_utc/ffi: Collecting 10 samples in estimated 208.69 ms (385 iterations)
+Benchmarking ffi_search_conjunction_grahan/prev_surya_grahan_utc/ffi: Analyzing
+ffi_search_conjunction_grahan/prev_surya_grahan_utc/ffi
+                        time:   [491.54 µs 514.56 µs 528.00 µs]
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan_utc/rust
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan_utc/rust: Collecting 10 samples in estimated 240.47 ms (110 iterations)
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan_utc/rust: Analyzing
+ffi_search_conjunction_grahan/search_surya_grahan_utc/rust
+                        time:   [1.9456 ms 2.0151 ms 2.0972 ms]
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan_utc/ffi
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan_utc/ffi: Collecting 10 samples in estimated 255.58 ms (110 iterations)
+Benchmarking ffi_search_conjunction_grahan/search_surya_grahan_utc/ffi: Analyzing
+ffi_search_conjunction_grahan/search_surya_grahan_utc/ffi
+                        time:   [2.0221 ms 2.1132 ms 2.2389 ms]
+
+Benchmarking ffi_search_stationary/next_stationary/rust
+Benchmarking ffi_search_stationary/next_stationary/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/next_stationary/rust: Collecting 10 samples in estimated 200.13 ms (2420 iterations)
+Benchmarking ffi_search_stationary/next_stationary/rust: Analyzing
+ffi_search_stationary/next_stationary/rust
+                        time:   [80.077 µs 81.833 µs 84.993 µs]
+                        change: [+1.3892% +4.0572% +7.4354%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_search_stationary/next_stationary/ffi
+Benchmarking ffi_search_stationary/next_stationary/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/next_stationary/ffi: Collecting 10 samples in estimated 203.79 ms (2420 iterations)
+Benchmarking ffi_search_stationary/next_stationary/ffi: Analyzing
+ffi_search_stationary/next_stationary/ffi
+                        time:   [79.438 µs 81.368 µs 82.910 µs]
+                        change: [+2.4652% +7.6142% +16.277%] (p = 0.04 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_search_stationary/prev_stationary/rust
+Benchmarking ffi_search_stationary/prev_stationary/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/prev_stationary/rust: Collecting 10 samples in estimated 200.88 ms (3135 iterations)
+Benchmarking ffi_search_stationary/prev_stationary/rust: Analyzing
+ffi_search_stationary/prev_stationary/rust
+                        time:   [63.773 µs 64.743 µs 65.840 µs]
+                        change: [-18.630% -8.0332% +3.0850%] (p = 0.23 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_search_stationary/prev_stationary/ffi
+Benchmarking ffi_search_stationary/prev_stationary/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/prev_stationary/ffi: Collecting 10 samples in estimated 202.76 ms (3025 iterations)
+Benchmarking ffi_search_stationary/prev_stationary/ffi: Analyzing
+ffi_search_stationary/prev_stationary/ffi
+                        time:   [65.481 µs 67.494 µs 69.807 µs]
+                        change: [+4.4384% +7.3710% +10.426%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_search_stationary/search_stationary/rust
+Benchmarking ffi_search_stationary/search_stationary/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/search_stationary/rust: Collecting 10 samples in estimated 218.82 ms (385 iterations)
+Benchmarking ffi_search_stationary/search_stationary/rust: Analyzing
+ffi_search_stationary/search_stationary/rust
+                        time:   [609.15 µs 652.82 µs 721.51 µs]
+                        change: [+20.843% +39.116% +57.185%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_search_stationary/search_stationary/ffi
+Benchmarking ffi_search_stationary/search_stationary/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/search_stationary/ffi: Collecting 10 samples in estimated 214.72 ms (385 iterations)
+Benchmarking ffi_search_stationary/search_stationary/ffi: Analyzing
+ffi_search_stationary/search_stationary/ffi
+                        time:   [545.76 µs 565.66 µs 589.44 µs]
+                        change: [+3.2368% +7.3132% +11.797%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_search_stationary/next_max_speed/rust
+Benchmarking ffi_search_stationary/next_max_speed/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/next_max_speed/rust: Collecting 10 samples in estimated 203.12 ms (1870 iterations)
+Benchmarking ffi_search_stationary/next_max_speed/rust: Analyzing
+ffi_search_stationary/next_max_speed/rust
+                        time:   [108.46 µs 111.55 µs 115.59 µs]
+                        change: [+3.7788% +7.3213% +10.920%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_search_stationary/next_max_speed/ffi
+Benchmarking ffi_search_stationary/next_max_speed/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/next_max_speed/ffi: Collecting 10 samples in estimated 202.92 ms (1870 iterations)
+Benchmarking ffi_search_stationary/next_max_speed/ffi: Analyzing
+ffi_search_stationary/next_max_speed/ffi
+                        time:   [107.06 µs 115.70 µs 130.03 µs]
+                        change: [+4.4038% +13.768% +28.325%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_search_stationary/prev_max_speed/rust
+Benchmarking ffi_search_stationary/prev_max_speed/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/prev_max_speed/rust: Collecting 10 samples in estimated 200.44 ms (1375 iterations)
+Benchmarking ffi_search_stationary/prev_max_speed/rust: Analyzing
+ffi_search_stationary/prev_max_speed/rust
+                        time:   [142.96 µs 146.49 µs 155.38 µs]
+                        change: [-2.6807% +1.9875% +8.3891%] (p = 0.63 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_search_stationary/prev_max_speed/ffi
+Benchmarking ffi_search_stationary/prev_max_speed/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/prev_max_speed/ffi: Collecting 10 samples in estimated 201.84 ms (1320 iterations)
+Benchmarking ffi_search_stationary/prev_max_speed/ffi: Analyzing
+ffi_search_stationary/prev_max_speed/ffi
+                        time:   [141.74 µs 142.33 µs 143.48 µs]
+                        change: [+0.8922% +1.8912% +3.0806%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_search_stationary/search_max_speed/rust
+Benchmarking ffi_search_stationary/search_max_speed/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/search_max_speed/rust: Collecting 10 samples in estimated 257.44 ms (220 iterations)
+Benchmarking ffi_search_stationary/search_max_speed/rust: Analyzing
+ffi_search_stationary/search_max_speed/rust
+                        time:   [1.1111 ms 1.1675 ms 1.2238 ms]
+                        change: [-6.5231% -0.8917% +4.9177%] (p = 0.78 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_search_stationary/search_max_speed/ffi
+Benchmarking ffi_search_stationary/search_max_speed/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/search_max_speed/ffi: Collecting 10 samples in estimated 254.35 ms (220 iterations)
+Benchmarking ffi_search_stationary/search_max_speed/ffi: Analyzing
+ffi_search_stationary/search_max_speed/ffi
+                        time:   [1.0929 ms 1.1521 ms 1.2341 ms]
+                        change: [-0.6748% +2.8395% +7.7908%] (p = 0.24 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_search_stationary/next_stationary_utc/rust
+Benchmarking ffi_search_stationary/next_stationary_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/next_stationary_utc/rust: Collecting 10 samples in estimated 201.71 ms (6270 iterations)
+Benchmarking ffi_search_stationary/next_stationary_utc/rust: Analyzing
+ffi_search_stationary/next_stationary_utc/rust
+                        time:   [29.649 µs 32.251 µs 36.257 µs]
+                        change: [-0.3273% +7.9967% +20.215%] (p = 0.18 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_search_stationary/next_stationary_utc/ffi
+Benchmarking ffi_search_stationary/next_stationary_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/next_stationary_utc/ffi: Collecting 10 samples in estimated 201.62 ms (6105 iterations)
+Benchmarking ffi_search_stationary/next_stationary_utc/ffi: Analyzing
+ffi_search_stationary/next_stationary_utc/ffi
+                        time:   [29.516 µs 30.740 µs 32.643 µs]
+                        change: [-4.6336% +1.1813% +8.3632%] (p = 0.75 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_search_stationary/prev_stationary_utc/rust
+Benchmarking ffi_search_stationary/prev_stationary_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/prev_stationary_utc/rust: Collecting 10 samples in estimated 202.17 ms (4015 iterations)
+Benchmarking ffi_search_stationary/prev_stationary_utc/rust: Analyzing
+ffi_search_stationary/prev_stationary_utc/rust
+                        time:   [45.220 µs 47.184 µs 49.184 µs]
+Benchmarking ffi_search_stationary/prev_stationary_utc/ffi
+Benchmarking ffi_search_stationary/prev_stationary_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/prev_stationary_utc/ffi: Collecting 10 samples in estimated 200.51 ms (4070 iterations)
+Benchmarking ffi_search_stationary/prev_stationary_utc/ffi: Analyzing
+ffi_search_stationary/prev_stationary_utc/ffi
+                        time:   [50.865 µs 54.365 µs 61.029 µs]
+Benchmarking ffi_search_stationary/search_stationary_utc/rust
+Benchmarking ffi_search_stationary/search_stationary_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/search_stationary_utc/rust: Collecting 10 samples in estimated 221.29 ms (385 iterations)
+Benchmarking ffi_search_stationary/search_stationary_utc/rust: Analyzing
+ffi_search_stationary/search_stationary_utc/rust
+                        time:   [539.33 µs 548.79 µs 559.72 µs]
+                        change: [+2.4620% +4.8472% +7.7279%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_search_stationary/search_stationary_utc/ffi
+Benchmarking ffi_search_stationary/search_stationary_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/search_stationary_utc/ffi: Collecting 10 samples in estimated 228.48 ms (385 iterations)
+Benchmarking ffi_search_stationary/search_stationary_utc/ffi: Analyzing
+ffi_search_stationary/search_stationary_utc/ffi
+                        time:   [549.88 µs 579.42 µs 619.08 µs]
+                        change: [+4.7613% +10.264% +16.002%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_search_stationary/next_max_speed_utc/rust
+Benchmarking ffi_search_stationary/next_max_speed_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/next_max_speed_utc/rust: Collecting 10 samples in estimated 205.17 ms (1100 iterations)
+Benchmarking ffi_search_stationary/next_max_speed_utc/rust: Analyzing
+ffi_search_stationary/next_max_speed_utc/rust
+                        time:   [180.67 µs 189.85 µs 202.36 µs]
+                        change: [-0.1654% +5.3602% +11.414%] (p = 0.10 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_search_stationary/next_max_speed_utc/ffi
+Benchmarking ffi_search_stationary/next_max_speed_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/next_max_speed_utc/ffi: Collecting 10 samples in estimated 203.20 ms (1100 iterations)
+Benchmarking ffi_search_stationary/next_max_speed_utc/ffi: Analyzing
+ffi_search_stationary/next_max_speed_utc/ffi
+                        time:   [185.20 µs 188.56 µs 194.24 µs]
+                        change: [+0.9168% +4.3723% +8.9349%] (p = 0.03 < 0.05)
+                        Change within noise threshold.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) low mild
+  1 (10.00%) high severe
+Benchmarking ffi_search_stationary/prev_max_speed_utc/rust
+Benchmarking ffi_search_stationary/prev_max_speed_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/prev_max_speed_utc/rust: Collecting 10 samples in estimated 204.00 ms (2585 iterations)
+Benchmarking ffi_search_stationary/prev_max_speed_utc/rust: Analyzing
+ffi_search_stationary/prev_max_speed_utc/rust
+                        time:   [72.154 µs 73.945 µs 76.252 µs]
+Benchmarking ffi_search_stationary/prev_max_speed_utc/ffi
+Benchmarking ffi_search_stationary/prev_max_speed_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/prev_max_speed_utc/ffi: Collecting 10 samples in estimated 204.32 ms (2475 iterations)
+Benchmarking ffi_search_stationary/prev_max_speed_utc/ffi: Analyzing
+ffi_search_stationary/prev_max_speed_utc/ffi
+                        time:   [75.403 µs 78.364 µs 83.932 µs]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_search_stationary/search_max_speed_utc/rust
+Benchmarking ffi_search_stationary/search_max_speed_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/search_max_speed_utc/rust: Collecting 10 samples in estimated 245.65 ms (220 iterations)
+Benchmarking ffi_search_stationary/search_max_speed_utc/rust: Analyzing
+ffi_search_stationary/search_max_speed_utc/rust
+                        time:   [1.0711 ms 1.1838 ms 1.3508 ms]
+                        change: [+4.8351% +14.512% +27.130%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_search_stationary/search_max_speed_utc/ffi
+Benchmarking ffi_search_stationary/search_max_speed_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_search_stationary/search_max_speed_utc/ffi: Collecting 10 samples in estimated 228.04 ms (220 iterations)
+Benchmarking ffi_search_stationary/search_max_speed_utc/ffi: Analyzing
+ffi_search_stationary/search_max_speed_utc/ffi
+                        time:   [990.41 µs 1.0139 ms 1.0476 ms]
+                        change: [-7.1636% -2.0355% +2.9449%] (p = 0.48 > 0.05)
+                        No change in performance detected.
+
+Benchmarking ffi_lunar_sankranti/next_purnima/rust
+Benchmarking ffi_lunar_sankranti/next_purnima/rust: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/next_purnima/rust: Collecting 10 samples in estimated 201.68 ms (1430 iterations)
+Benchmarking ffi_lunar_sankranti/next_purnima/rust: Analyzing
+ffi_lunar_sankranti/next_purnima/rust
+                        time:   [132.37 µs 138.10 µs 146.05 µs]
+                        change: [+1.8850% +9.1961% +16.749%] (p = 0.03 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_lunar_sankranti/next_purnima/ffi
+Benchmarking ffi_lunar_sankranti/next_purnima/ffi: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/next_purnima/ffi: Collecting 10 samples in estimated 205.73 ms (1430 iterations)
+Benchmarking ffi_lunar_sankranti/next_purnima/ffi: Analyzing
+ffi_lunar_sankranti/next_purnima/ffi
+                        time:   [128.03 µs 130.92 µs 136.02 µs]
+                        change: [+2.7919% +7.1433% +13.348%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_lunar_sankranti/prev_purnima/rust
+Benchmarking ffi_lunar_sankranti/prev_purnima/rust: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/prev_purnima/rust: Collecting 10 samples in estimated 201.63 ms (3135 iterations)
+Benchmarking ffi_lunar_sankranti/prev_purnima/rust: Analyzing
+ffi_lunar_sankranti/prev_purnima/rust
+                        time:   [62.736 µs 63.816 µs 64.900 µs]
+                        change: [-2.1137% +2.4844% +6.6906%] (p = 0.31 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_lunar_sankranti/prev_purnima/ffi
+Benchmarking ffi_lunar_sankranti/prev_purnima/ffi: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/prev_purnima/ffi: Collecting 10 samples in estimated 200.58 ms (2365 iterations)
+Benchmarking ffi_lunar_sankranti/prev_purnima/ffi: Analyzing
+ffi_lunar_sankranti/prev_purnima/ffi
+                        time:   [81.973 µs 96.221 µs 122.50 µs]
+                        change: [+35.202% +56.046% +87.070%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_lunar_sankranti/search_purnimas/rust
+Benchmarking ffi_lunar_sankranti/search_purnimas/rust: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/search_purnimas/rust: Collecting 10 samples in estimated 296.70 ms (165 iterations)
+Benchmarking ffi_lunar_sankranti/search_purnimas/rust: Analyzing
+ffi_lunar_sankranti/search_purnimas/rust
+                        time:   [1.7586 ms 1.7845 ms 1.8420 ms]
+                        change: [+2.4858% +5.8837% +9.2041%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_lunar_sankranti/search_purnimas/ffi
+Benchmarking ffi_lunar_sankranti/search_purnimas/ffi: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/search_purnimas/ffi: Collecting 10 samples in estimated 203.18 ms (110 iterations)
+Benchmarking ffi_lunar_sankranti/search_purnimas/ffi: Analyzing
+ffi_lunar_sankranti/search_purnimas/ffi
+                        time:   [1.7945 ms 1.8849 ms 2.0309 ms]
+                        change: [-2.1896% +4.2143% +11.351%] (p = 0.26 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_lunar_sankranti/next_amavasya/rust
+Benchmarking ffi_lunar_sankranti/next_amavasya/rust: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/next_amavasya/rust: Collecting 10 samples in estimated 200.90 ms (2365 iterations)
+Benchmarking ffi_lunar_sankranti/next_amavasya/rust: Analyzing
+ffi_lunar_sankranti/next_amavasya/rust
+                        time:   [80.385 µs 82.282 µs 84.342 µs]
+                        change: [+7.6339% +10.017% +12.463%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_lunar_sankranti/next_amavasya/ffi
+Benchmarking ffi_lunar_sankranti/next_amavasya/ffi: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/next_amavasya/ffi: Collecting 10 samples in estimated 201.54 ms (2255 iterations)
+Benchmarking ffi_lunar_sankranti/next_amavasya/ffi: Analyzing
+ffi_lunar_sankranti/next_amavasya/ffi
+                        time:   [81.729 µs 89.190 µs 96.256 µs]
+                        change: [+3.4581% +9.9262% +16.939%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_lunar_sankranti/prev_amavasya/rust
+Benchmarking ffi_lunar_sankranti/prev_amavasya/rust: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/prev_amavasya/rust: Collecting 10 samples in estimated 205.17 ms (1650 iterations)
+Benchmarking ffi_lunar_sankranti/prev_amavasya/rust: Analyzing
+ffi_lunar_sankranti/prev_amavasya/rust
+                        time:   [114.61 µs 119.51 µs 124.73 µs]
+                        change: [+6.1779% +13.396% +22.074%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_lunar_sankranti/prev_amavasya/ffi
+Benchmarking ffi_lunar_sankranti/prev_amavasya/ffi: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/prev_amavasya/ffi: Collecting 10 samples in estimated 205.90 ms (1705 iterations)
+Benchmarking ffi_lunar_sankranti/prev_amavasya/ffi: Analyzing
+ffi_lunar_sankranti/prev_amavasya/ffi
+                        time:   [111.06 µs 113.70 µs 117.49 µs]
+                        change: [+7.6267% +11.733% +15.601%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_lunar_sankranti/search_amavasyas/rust
+Benchmarking ffi_lunar_sankranti/search_amavasyas/rust: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/search_amavasyas/rust: Collecting 10 samples in estimated 229.98 ms (110 iterations)
+Benchmarking ffi_lunar_sankranti/search_amavasyas/rust: Analyzing
+ffi_lunar_sankranti/search_amavasyas/rust
+                        time:   [1.8374 ms 1.9006 ms 2.0172 ms]
+                        change: [+6.2599% +14.129% +23.122%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_lunar_sankranti/search_amavasyas/ffi
+Benchmarking ffi_lunar_sankranti/search_amavasyas/ffi: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/search_amavasyas/ffi: Collecting 10 samples in estimated 205.72 ms (110 iterations)
+Benchmarking ffi_lunar_sankranti/search_amavasyas/ffi: Analyzing
+ffi_lunar_sankranti/search_amavasyas/ffi
+                        time:   [1.8171 ms 1.8657 ms 1.9339 ms]
+                        change: [+4.9679% +10.607% +17.721%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_lunar_sankranti/next_sankranti/rust
+Benchmarking ffi_lunar_sankranti/next_sankranti/rust: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/next_sankranti/rust: Collecting 10 samples in estimated 201.25 ms (7095 iterations)
+Benchmarking ffi_lunar_sankranti/next_sankranti/rust: Analyzing
+ffi_lunar_sankranti/next_sankranti/rust
+                        time:   [27.164 µs 27.930 µs 28.965 µs]
+                        change: [-11.122% +0.2588% +9.8616%] (p = 0.98 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_lunar_sankranti/next_sankranti/ffi
+Benchmarking ffi_lunar_sankranti/next_sankranti/ffi: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/next_sankranti/ffi: Collecting 10 samples in estimated 200.40 ms (6985 iterations)
+Benchmarking ffi_lunar_sankranti/next_sankranti/ffi: Analyzing
+ffi_lunar_sankranti/next_sankranti/ffi
+                        time:   [26.582 µs 28.815 µs 30.255 µs]
+                        change: [+7.3931% +11.790% +17.140%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_lunar_sankranti/prev_sankranti/rust
+Benchmarking ffi_lunar_sankranti/prev_sankranti/rust: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/prev_sankranti/rust: Collecting 10 samples in estimated 201.01 ms (6930 iterations)
+Benchmarking ffi_lunar_sankranti/prev_sankranti/rust: Analyzing
+ffi_lunar_sankranti/prev_sankranti/rust
+                        time:   [27.428 µs 30.075 µs 34.664 µs]
+                        change: [+10.483% +23.111% +40.308%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_lunar_sankranti/prev_sankranti/ffi
+Benchmarking ffi_lunar_sankranti/prev_sankranti/ffi: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/prev_sankranti/ffi: Collecting 10 samples in estimated 200.19 ms (6985 iterations)
+Benchmarking ffi_lunar_sankranti/prev_sankranti/ffi: Analyzing
+ffi_lunar_sankranti/prev_sankranti/ffi
+                        time:   [27.975 µs 29.088 µs 31.036 µs]
+                        change: [+7.8095% +14.632% +22.598%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+Benchmarking ffi_lunar_sankranti/search_sankrantis/rust
+Benchmarking ffi_lunar_sankranti/search_sankrantis/rust: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/search_sankrantis/rust: Collecting 10 samples in estimated 203.74 ms (550 iterations)
+Benchmarking ffi_lunar_sankranti/search_sankrantis/rust: Analyzing
+ffi_lunar_sankranti/search_sankrantis/rust
+                        time:   [350.09 µs 358.20 µs 367.10 µs]
+                        change: [+2.1979% +10.070% +21.627%] (p = 0.06 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_lunar_sankranti/search_sankrantis/ffi
+Benchmarking ffi_lunar_sankranti/search_sankrantis/ffi: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/search_sankrantis/ffi: Collecting 10 samples in estimated 202.98 ms (550 iterations)
+Benchmarking ffi_lunar_sankranti/search_sankrantis/ffi: Analyzing
+ffi_lunar_sankranti/search_sankrantis/ffi
+                        time:   [347.51 µs 353.54 µs 359.93 µs]
+                        change: [+2.1318% +4.6411% +7.3690%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_lunar_sankranti/next_specific_sankranti/rust
+Benchmarking ffi_lunar_sankranti/next_specific_sankranti/rust: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/next_specific_sankranti/rust: Collecting 10 samples in estimated 200.25 ms (1760 iterations)
+Benchmarking ffi_lunar_sankranti/next_specific_sankranti/rust: Analyzing
+ffi_lunar_sankranti/next_specific_sankranti/rust
+                        time:   [112.83 µs 117.31 µs 125.46 µs]
+                        change: [+5.0727% +13.950% +23.063%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_lunar_sankranti/next_specific_sankranti/ffi
+Benchmarking ffi_lunar_sankranti/next_specific_sankranti/ffi: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/next_specific_sankranti/ffi: Collecting 10 samples in estimated 205.41 ms (1760 iterations)
+Benchmarking ffi_lunar_sankranti/next_specific_sankranti/ffi: Analyzing
+ffi_lunar_sankranti/next_specific_sankranti/ffi
+                        time:   [110.30 µs 119.24 µs 140.81 µs]
+                        change: [+9.0424% +27.424% +53.837%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_lunar_sankranti/prev_specific_sankranti/rust
+Benchmarking ffi_lunar_sankranti/prev_specific_sankranti/rust: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/prev_specific_sankranti/rust: Collecting 10 samples in estimated 213.28 ms (825 iterations)
+Benchmarking ffi_lunar_sankranti/prev_specific_sankranti/rust: Analyzing
+ffi_lunar_sankranti/prev_specific_sankranti/rust
+                        time:   [230.25 µs 236.06 µs 242.89 µs]
+                        change: [+1.1353% +3.8970% +6.8323%] (p = 0.03 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+Benchmarking ffi_lunar_sankranti/prev_specific_sankranti/ffi
+Benchmarking ffi_lunar_sankranti/prev_specific_sankranti/ffi: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/prev_specific_sankranti/ffi: Collecting 10 samples in estimated 206.08 ms (825 iterations)
+Benchmarking ffi_lunar_sankranti/prev_specific_sankranti/ffi: Analyzing
+ffi_lunar_sankranti/prev_specific_sankranti/ffi
+                        time:   [232.13 µs 253.72 µs 273.23 µs]
+                        change: [-4.7802% +0.7940% +6.9658%] (p = 0.82 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_lunar_sankranti/masa_for_date/rust
+Benchmarking ffi_lunar_sankranti/masa_for_date/rust: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/masa_for_date/rust: Collecting 10 samples in estimated 210.78 ms (1045 iterations)
+Benchmarking ffi_lunar_sankranti/masa_for_date/rust: Analyzing
+ffi_lunar_sankranti/masa_for_date/rust
+                        time:   [198.87 µs 206.57 µs 213.95 µs]
+                        change: [+7.8097% +14.293% +21.688%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_lunar_sankranti/masa_for_date/ffi
+Benchmarking ffi_lunar_sankranti/masa_for_date/ffi: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/masa_for_date/ffi: Collecting 10 samples in estimated 210.48 ms (990 iterations)
+Benchmarking ffi_lunar_sankranti/masa_for_date/ffi: Analyzing
+ffi_lunar_sankranti/masa_for_date/ffi
+                        time:   [199.87 µs 207.06 µs 215.95 µs]
+                        change: [+4.5212% +8.1994% +12.600%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_lunar_sankranti/ayana_for_date/rust
+Benchmarking ffi_lunar_sankranti/ayana_for_date/rust: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/ayana_for_date/rust: Collecting 10 samples in estimated 204.50 ms (990 iterations)
+Benchmarking ffi_lunar_sankranti/ayana_for_date/rust: Analyzing
+ffi_lunar_sankranti/ayana_for_date/rust
+                        time:   [195.47 µs 206.44 µs 221.58 µs]
+                        change: [-3.9866% +3.0385% +11.733%] (p = 0.50 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_lunar_sankranti/ayana_for_date/ffi
+Benchmarking ffi_lunar_sankranti/ayana_for_date/ffi: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/ayana_for_date/ffi: Collecting 10 samples in estimated 203.61 ms (935 iterations)
+Benchmarking ffi_lunar_sankranti/ayana_for_date/ffi: Analyzing
+ffi_lunar_sankranti/ayana_for_date/ffi
+                        time:   [194.61 µs 200.51 µs 209.41 µs]
+                        change: [-0.4140% +6.1536% +17.063%] (p = 0.18 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_lunar_sankranti/varsha_for_date/rust
+Benchmarking ffi_lunar_sankranti/varsha_for_date/rust: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/varsha_for_date/rust: Collecting 10 samples in estimated 210.42 ms (495 iterations)
+Benchmarking ffi_lunar_sankranti/varsha_for_date/rust: Analyzing
+ffi_lunar_sankranti/varsha_for_date/rust
+                        time:   [380.54 µs 386.43 µs 391.81 µs]
+                        change: [+2.0889% +3.8614% +6.4534%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_lunar_sankranti/varsha_for_date/ffi
+Benchmarking ffi_lunar_sankranti/varsha_for_date/ffi: Warming up for 100.00 ms
+Benchmarking ffi_lunar_sankranti/varsha_for_date/ffi: Collecting 10 samples in estimated 210.29 ms (495 iterations)
+Benchmarking ffi_lunar_sankranti/varsha_for_date/ffi: Analyzing
+ffi_lunar_sankranti/varsha_for_date/ffi
+                        time:   [381.36 µs 390.25 µs 397.89 µs]
+                        change: [+2.7136% +5.4674% +9.4296%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+
+Benchmarking ffi_riseset_bhava/approximate_local_noon_jd/rust
+Benchmarking ffi_riseset_bhava/approximate_local_noon_jd/rust: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/approximate_local_noon_jd/rust: Collecting 10 samples in estimated 200.00 ms (211M iterations)
+Benchmarking ffi_riseset_bhava/approximate_local_noon_jd/rust: Analyzing
+ffi_riseset_bhava/approximate_local_noon_jd/rust
+                        time:   [939.27 ps 974.58 ps 1.0054 ns]
+Benchmarking ffi_riseset_bhava/approximate_local_noon_jd/ffi
+Benchmarking ffi_riseset_bhava/approximate_local_noon_jd/ffi: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/approximate_local_noon_jd/ffi: Collecting 10 samples in estimated 200.00 ms (132M iterations)
+Benchmarking ffi_riseset_bhava/approximate_local_noon_jd/ffi: Analyzing
+ffi_riseset_bhava/approximate_local_noon_jd/ffi
+                        time:   [1.5083 ns 1.5723 ns 1.6712 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_riseset_bhava/compute_rise_set/rust
+Benchmarking ffi_riseset_bhava/compute_rise_set/rust: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/compute_rise_set/rust: Collecting 10 samples in estimated 200.16 ms (62k iterations)
+Benchmarking ffi_riseset_bhava/compute_rise_set/rust: Analyzing
+ffi_riseset_bhava/compute_rise_set/rust
+                        time:   [2.9749 µs 3.0720 µs 3.1904 µs]
+                        change: [+1.0931% +3.4442% +6.2749%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_riseset_bhava/compute_rise_set/ffi
+Benchmarking ffi_riseset_bhava/compute_rise_set/ffi: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/compute_rise_set/ffi: Collecting 10 samples in estimated 200.17 ms (59k iterations)
+Benchmarking ffi_riseset_bhava/compute_rise_set/ffi: Analyzing
+ffi_riseset_bhava/compute_rise_set/ffi
+                        time:   [3.0104 µs 3.1477 µs 3.3404 µs]
+                        change: [+1.4324% +5.5298% +9.9937%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_riseset_bhava/riseset_result_to_utc/rust
+Benchmarking ffi_riseset_bhava/riseset_result_to_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/riseset_result_to_utc/rust: Collecting 10 samples in estimated 200.00 ms (1.3M iterations)
+Benchmarking ffi_riseset_bhava/riseset_result_to_utc/rust: Analyzing
+ffi_riseset_bhava/riseset_result_to_utc/rust
+                        time:   [148.15 ns 151.40 ns 156.29 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_riseset_bhava/riseset_result_to_utc/ffi
+Benchmarking ffi_riseset_bhava/riseset_result_to_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/riseset_result_to_utc/ffi: Collecting 10 samples in estimated 200.01 ms (1.3M iterations)
+Benchmarking ffi_riseset_bhava/riseset_result_to_utc/ffi: Analyzing
+ffi_riseset_bhava/riseset_result_to_utc/ffi
+                        time:   [153.07 ns 167.22 ns 179.66 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_riseset_bhava/compute_all_events/rust
+Benchmarking ffi_riseset_bhava/compute_all_events/rust: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/compute_all_events/rust: Collecting 10 samples in estimated 201.04 ms (5940 iterations)
+Benchmarking ffi_riseset_bhava/compute_all_events/rust: Analyzing
+ffi_riseset_bhava/compute_all_events/rust
+                        time:   [31.944 µs 32.810 µs 34.054 µs]
+                        change: [+6.1851% +11.259% +17.492%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+Benchmarking ffi_riseset_bhava/compute_all_events/ffi
+Benchmarking ffi_riseset_bhava/compute_all_events/ffi: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/compute_all_events/ffi: Collecting 10 samples in estimated 201.16 ms (6105 iterations)
+Benchmarking ffi_riseset_bhava/compute_all_events/ffi: Analyzing
+ffi_riseset_bhava/compute_all_events/ffi
+                        time:   [31.412 µs 32.405 µs 34.542 µs]
+                        change: [+4.1526% +9.1112% +17.335%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_riseset_bhava/compute_rise_set_utc/rust
+Benchmarking ffi_riseset_bhava/compute_rise_set_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/compute_rise_set_utc/rust: Collecting 10 samples in estimated 200.05 ms (49k iterations)
+Benchmarking ffi_riseset_bhava/compute_rise_set_utc/rust: Analyzing
+ffi_riseset_bhava/compute_rise_set_utc/rust
+                        time:   [4.0444 µs 4.1463 µs 4.2682 µs]
+                        change: [+2.5387% +12.400% +24.954%] (p = 0.06 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_riseset_bhava/compute_rise_set_utc/ffi
+Benchmarking ffi_riseset_bhava/compute_rise_set_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/compute_rise_set_utc/ffi: Collecting 10 samples in estimated 200.09 ms (47k iterations)
+Benchmarking ffi_riseset_bhava/compute_rise_set_utc/ffi: Analyzing
+ffi_riseset_bhava/compute_rise_set_utc/ffi
+                        time:   [4.2045 µs 4.2496 µs 4.3069 µs]
+                        change: [+1.7623% +3.8151% +5.8077%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_riseset_bhava/compute_all_events_utc/rust
+Benchmarking ffi_riseset_bhava/compute_all_events_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/compute_all_events_utc/rust: Collecting 10 samples in estimated 200.98 ms (6930 iterations)
+Benchmarking ffi_riseset_bhava/compute_all_events_utc/rust: Analyzing
+ffi_riseset_bhava/compute_all_events_utc/rust
+                        time:   [28.205 µs 28.949 µs 29.706 µs]
+                        change: [+3.2756% +6.5055% +10.433%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_riseset_bhava/compute_all_events_utc/ffi
+Benchmarking ffi_riseset_bhava/compute_all_events_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/compute_all_events_utc/ffi: Collecting 10 samples in estimated 200.86 ms (6600 iterations)
+Benchmarking ffi_riseset_bhava/compute_all_events_utc/ffi: Analyzing
+ffi_riseset_bhava/compute_all_events_utc/ffi
+                        time:   [29.400 µs 29.955 µs 30.435 µs]
+                        change: [+0.7410% +3.0694% +5.7263%] (p = 0.03 < 0.05)
+                        Change within noise threshold.
+Benchmarking ffi_riseset_bhava/compute_bhavas/rust
+Benchmarking ffi_riseset_bhava/compute_bhavas/rust: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/compute_bhavas/rust: Collecting 10 samples in estimated 200.01 ms (713k iterations)
+Benchmarking ffi_riseset_bhava/compute_bhavas/rust: Analyzing
+ffi_riseset_bhava/compute_bhavas/rust
+                        time:   [271.84 ns 274.68 ns 277.60 ns]
+                        change: [-3.5588% -1.8650% -0.1276%] (p = 0.05 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_riseset_bhava/compute_bhavas/ffi
+Benchmarking ffi_riseset_bhava/compute_bhavas/ffi: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/compute_bhavas/ffi: Collecting 10 samples in estimated 200.01 ms (688k iterations)
+Benchmarking ffi_riseset_bhava/compute_bhavas/ffi: Analyzing
+ffi_riseset_bhava/compute_bhavas/ffi
+                        time:   [282.63 ns 290.42 ns 295.78 ns]
+                        change: [-3.4073% -1.4683% +0.5762%] (p = 0.18 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_riseset_bhava/compute_bhavas_utc/rust
+Benchmarking ffi_riseset_bhava/compute_bhavas_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/compute_bhavas_utc/rust: Collecting 10 samples in estimated 200.01 ms (671k iterations)
+Benchmarking ffi_riseset_bhava/compute_bhavas_utc/rust: Analyzing
+ffi_riseset_bhava/compute_bhavas_utc/rust
+                        time:   [284.99 ns 290.22 ns 299.60 ns]
+                        change: [+2.1281% +10.435% +19.827%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_riseset_bhava/compute_bhavas_utc/ffi
+Benchmarking ffi_riseset_bhava/compute_bhavas_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/compute_bhavas_utc/ffi: Collecting 10 samples in estimated 200.01 ms (628k iterations)
+Benchmarking ffi_riseset_bhava/compute_bhavas_utc/ffi: Analyzing
+ffi_riseset_bhava/compute_bhavas_utc/ffi
+                        time:   [311.23 ns 313.83 ns 316.54 ns]
+                        change: [+1.8607% +5.3064% +9.4547%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_riseset_bhava/lagna_deg/rust
+Benchmarking ffi_riseset_bhava/lagna_deg/rust: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/lagna_deg/rust: Collecting 10 samples in estimated 200.00 ms (1.4M iterations)
+Benchmarking ffi_riseset_bhava/lagna_deg/rust: Analyzing
+ffi_riseset_bhava/lagna_deg/rust
+                        time:   [136.12 ns 137.80 ns 139.91 ns]
+                        change: [+0.0161% +1.9040% +3.7285%] (p = 0.10 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_riseset_bhava/lagna_deg/ffi
+Benchmarking ffi_riseset_bhava/lagna_deg/ffi: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/lagna_deg/ffi: Collecting 10 samples in estimated 200.01 ms (1.4M iterations)
+Benchmarking ffi_riseset_bhava/lagna_deg/ffi: Analyzing
+ffi_riseset_bhava/lagna_deg/ffi
+                        time:   [140.28 ns 142.77 ns 144.48 ns]
+                        change: [-0.0026% +1.6041% +3.3125%] (p = 0.08 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_riseset_bhava/mc_deg/rust
+Benchmarking ffi_riseset_bhava/mc_deg/rust: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/mc_deg/rust: Collecting 10 samples in estimated 200.01 ms (1.5M iterations)
+Benchmarking ffi_riseset_bhava/mc_deg/rust: Analyzing
+ffi_riseset_bhava/mc_deg/rust
+                        time:   [128.20 ns 129.65 ns 131.84 ns]
+                        change: [-0.8378% +0.4899% +1.9363%] (p = 0.51 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_riseset_bhava/mc_deg/ffi
+Benchmarking ffi_riseset_bhava/mc_deg/ffi: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/mc_deg/ffi: Collecting 10 samples in estimated 200.00 ms (1.5M iterations)
+Benchmarking ffi_riseset_bhava/mc_deg/ffi: Analyzing
+ffi_riseset_bhava/mc_deg/ffi
+                        time:   [132.17 ns 133.44 ns 135.04 ns]
+                        change: [+2.0512% +4.7701% +8.1842%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_riseset_bhava/ramc_deg/rust
+Benchmarking ffi_riseset_bhava/ramc_deg/rust: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/ramc_deg/rust: Collecting 10 samples in estimated 200.00 ms (2.2M iterations)
+Benchmarking ffi_riseset_bhava/ramc_deg/rust: Analyzing
+ffi_riseset_bhava/ramc_deg/rust
+                        time:   [90.231 ns 91.879 ns 94.466 ns]
+                        change: [+2.5170% +5.4084% +9.2580%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_riseset_bhava/ramc_deg/ffi
+Benchmarking ffi_riseset_bhava/ramc_deg/ffi: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/ramc_deg/ffi: Collecting 10 samples in estimated 200.00 ms (2.1M iterations)
+Benchmarking ffi_riseset_bhava/ramc_deg/ffi: Analyzing
+ffi_riseset_bhava/ramc_deg/ffi
+                        time:   [91.260 ns 92.533 ns 94.262 ns]
+                        change: [-1.0806% +0.4216% +2.0156%] (p = 0.64 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_riseset_bhava/lagna_deg_utc/rust
+Benchmarking ffi_riseset_bhava/lagna_deg_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/lagna_deg_utc/rust: Collecting 10 samples in estimated 200.00 ms (1.3M iterations)
+Benchmarking ffi_riseset_bhava/lagna_deg_utc/rust: Analyzing
+ffi_riseset_bhava/lagna_deg_utc/rust
+                        time:   [149.74 ns 152.71 ns 156.60 ns]
+                        change: [+6.1127% +7.7663% +9.8110%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_riseset_bhava/lagna_deg_utc/ffi
+Benchmarking ffi_riseset_bhava/lagna_deg_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/lagna_deg_utc/ffi: Collecting 10 samples in estimated 200.00 ms (1.2M iterations)
+Benchmarking ffi_riseset_bhava/lagna_deg_utc/ffi: Analyzing
+ffi_riseset_bhava/lagna_deg_utc/ffi
+                        time:   [162.81 ns 164.79 ns 167.43 ns]
+                        change: [-0.1946% +2.0420% +5.2478%] (p = 0.17 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_riseset_bhava/mc_deg_utc/rust
+Benchmarking ffi_riseset_bhava/mc_deg_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/mc_deg_utc/rust: Collecting 10 samples in estimated 200.01 ms (1.4M iterations)
+Benchmarking ffi_riseset_bhava/mc_deg_utc/rust: Analyzing
+ffi_riseset_bhava/mc_deg_utc/rust
+                        time:   [139.85 ns 142.62 ns 146.84 ns]
+                        change: [+2.8465% +5.1221% +7.3527%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_riseset_bhava/mc_deg_utc/ffi
+Benchmarking ffi_riseset_bhava/mc_deg_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/mc_deg_utc/ffi: Collecting 10 samples in estimated 200.00 ms (1.3M iterations)
+Benchmarking ffi_riseset_bhava/mc_deg_utc/ffi: Analyzing
+ffi_riseset_bhava/mc_deg_utc/ffi
+                        time:   [150.95 ns 152.91 ns 155.83 ns]
+                        change: [-0.1699% +1.4709% +3.4038%] (p = 0.15 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_riseset_bhava/ramc_deg_utc/rust
+Benchmarking ffi_riseset_bhava/ramc_deg_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/ramc_deg_utc/rust: Collecting 10 samples in estimated 200.01 ms (1.9M iterations)
+Benchmarking ffi_riseset_bhava/ramc_deg_utc/rust: Analyzing
+ffi_riseset_bhava/ramc_deg_utc/rust
+                        time:   [104.58 ns 105.71 ns 106.96 ns]
+                        change: [+2.2872% +5.0361% +7.6379%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_riseset_bhava/ramc_deg_utc/ffi
+Benchmarking ffi_riseset_bhava/ramc_deg_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_riseset_bhava/ramc_deg_utc/ffi: Collecting 10 samples in estimated 200.01 ms (1.7M iterations)
+Benchmarking ffi_riseset_bhava/ramc_deg_utc/ffi: Analyzing
+ffi_riseset_bhava/ramc_deg_utc/ffi
+                        time:   [117.34 ns 121.02 ns 123.89 ns]
+                        change: [+4.2256% +6.3450% +8.3001%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+
+Benchmarking ffi_panchang_runtime/elongation_at/rust
+Benchmarking ffi_panchang_runtime/elongation_at/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/elongation_at/rust: Collecting 10 samples in estimated 200.03 ms (120k iterations)
+Benchmarking ffi_panchang_runtime/elongation_at/rust: Analyzing
+ffi_panchang_runtime/elongation_at/rust
+                        time:   [1.6326 µs 1.6605 µs 1.6917 µs]
+                        change: [-2.9691% +1.2424% +6.1235%] (p = 0.63 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_panchang_runtime/elongation_at/ffi
+Benchmarking ffi_panchang_runtime/elongation_at/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/elongation_at/ffi: Collecting 10 samples in estimated 200.04 ms (117k iterations)
+Benchmarking ffi_panchang_runtime/elongation_at/ffi: Analyzing
+ffi_panchang_runtime/elongation_at/ffi
+                        time:   [1.6564 µs 1.6950 µs 1.7324 µs]
+                        change: [+2.4614% +4.9486% +7.2756%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_panchang_runtime/sidereal_sum_at/rust
+Benchmarking ffi_panchang_runtime/sidereal_sum_at/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/sidereal_sum_at/rust: Collecting 10 samples in estimated 200.07 ms (116k iterations)
+Benchmarking ffi_panchang_runtime/sidereal_sum_at/rust: Analyzing
+ffi_panchang_runtime/sidereal_sum_at/rust
+                        time:   [1.6299 µs 1.6445 µs 1.6613 µs]
+                        change: [-0.2629% +0.6718% +1.7989%] (p = 0.26 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_panchang_runtime/sidereal_sum_at/ffi
+Benchmarking ffi_panchang_runtime/sidereal_sum_at/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/sidereal_sum_at/ffi: Collecting 10 samples in estimated 200.03 ms (116k iterations)
+Benchmarking ffi_panchang_runtime/sidereal_sum_at/ffi: Analyzing
+ffi_panchang_runtime/sidereal_sum_at/ffi
+                        time:   [1.6763 µs 1.7482 µs 1.8584 µs]
+                        change: [+5.1008% +9.3201% +13.771%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_panchang_runtime/body_ecliptic_lon_lat/rust
+Benchmarking ffi_panchang_runtime/body_ecliptic_lon_lat/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/body_ecliptic_lon_lat/rust: Collecting 10 samples in estimated 200.00 ms (204k iterations)
+Benchmarking ffi_panchang_runtime/body_ecliptic_lon_lat/rust: Analyzing
+ffi_panchang_runtime/body_ecliptic_lon_lat/rust
+                        time:   [867.99 ns 881.20 ns 903.91 ns]
+                        change: [+3.0279% +7.2173% +14.003%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_panchang_runtime/body_ecliptic_lon_lat/ffi
+Benchmarking ffi_panchang_runtime/body_ecliptic_lon_lat/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/body_ecliptic_lon_lat/ffi: Collecting 10 samples in estimated 200.00 ms (226k iterations)
+Benchmarking ffi_panchang_runtime/body_ecliptic_lon_lat/ffi: Analyzing
+ffi_panchang_runtime/body_ecliptic_lon_lat/ffi
+                        time:   [858.12 ns 875.52 ns 903.62 ns]
+                        change: [-5.7367% -0.3733% +5.1717%] (p = 0.90 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_panchang_runtime/tithi_for_date/rust
+Benchmarking ffi_panchang_runtime/tithi_for_date/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/tithi_for_date/rust: Collecting 10 samples in estimated 200.95 ms (1925 iterations)
+Benchmarking ffi_panchang_runtime/tithi_for_date/rust: Analyzing
+ffi_panchang_runtime/tithi_for_date/rust
+                        time:   [96.033 µs 97.129 µs 99.134 µs]
+                        change: [+1.3000% +3.3921% +5.8592%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) low mild
+  1 (10.00%) high severe
+Benchmarking ffi_panchang_runtime/tithi_for_date/ffi
+Benchmarking ffi_panchang_runtime/tithi_for_date/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/tithi_for_date/ffi: Collecting 10 samples in estimated 200.86 ms (2090 iterations)
+Benchmarking ffi_panchang_runtime/tithi_for_date/ffi: Analyzing
+ffi_panchang_runtime/tithi_for_date/ffi
+                        time:   [94.969 µs 95.890 µs 97.483 µs]
+                        change: [+1.0314% +3.9790% +7.5282%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_panchang_runtime/karana_for_date/rust
+Benchmarking ffi_panchang_runtime/karana_for_date/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/karana_for_date/rust: Collecting 10 samples in estimated 202.48 ms (2145 iterations)
+Benchmarking ffi_panchang_runtime/karana_for_date/rust: Analyzing
+ffi_panchang_runtime/karana_for_date/rust
+                        time:   [92.504 µs 94.143 µs 97.284 µs]
+                        change: [+1.3193% +4.1229% +7.3298%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_panchang_runtime/karana_for_date/ffi
+Benchmarking ffi_panchang_runtime/karana_for_date/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/karana_for_date/ffi: Collecting 10 samples in estimated 201.29 ms (2145 iterations)
+Benchmarking ffi_panchang_runtime/karana_for_date/ffi: Analyzing
+ffi_panchang_runtime/karana_for_date/ffi
+                        time:   [91.106 µs 92.694 µs 94.648 µs]
+                        change: [-1.8633% -0.3377% +1.3167%] (p = 0.69 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_panchang_runtime/yoga_for_date/rust
+Benchmarking ffi_panchang_runtime/yoga_for_date/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/yoga_for_date/rust: Collecting 10 samples in estimated 203.12 ms (1925 iterations)
+Benchmarking ffi_panchang_runtime/yoga_for_date/rust: Analyzing
+ffi_panchang_runtime/yoga_for_date/rust
+                        time:   [96.639 µs 99.446 µs 102.03 µs]
+                        change: [-2.3246% +0.7229% +3.8675%] (p = 0.67 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_panchang_runtime/yoga_for_date/ffi
+Benchmarking ffi_panchang_runtime/yoga_for_date/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/yoga_for_date/ffi: Collecting 10 samples in estimated 201.23 ms (2035 iterations)
+Benchmarking ffi_panchang_runtime/yoga_for_date/ffi: Analyzing
+ffi_panchang_runtime/yoga_for_date/ffi
+                        time:   [96.101 µs 97.887 µs 101.08 µs]
+                        change: [+1.5825% +3.9829% +6.7569%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+Benchmarking ffi_panchang_runtime/nakshatra_for_date/rust
+Benchmarking ffi_panchang_runtime/nakshatra_for_date/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/nakshatra_for_date/rust: Collecting 10 samples in estimated 201.18 ms (3740 iterations)
+Benchmarking ffi_panchang_runtime/nakshatra_for_date/rust: Analyzing
+ffi_panchang_runtime/nakshatra_for_date/rust
+                        time:   [50.633 µs 51.363 µs 52.092 µs]
+                        change: [-1.9975% +0.6447% +3.1647%] (p = 0.66 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_panchang_runtime/nakshatra_for_date/ffi
+Benchmarking ffi_panchang_runtime/nakshatra_for_date/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/nakshatra_for_date/ffi: Collecting 10 samples in estimated 201.36 ms (3795 iterations)
+Benchmarking ffi_panchang_runtime/nakshatra_for_date/ffi: Analyzing
+ffi_panchang_runtime/nakshatra_for_date/ffi
+                        time:   [50.399 µs 50.889 µs 51.495 µs]
+                        change: [-0.9649% +0.6821% +2.4383%] (p = 0.47 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_panchang_runtime/vedic_day_sunrises/rust
+Benchmarking ffi_panchang_runtime/vedic_day_sunrises/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/vedic_day_sunrises/rust: Collecting 10 samples in estimated 200.02 ms (24k iterations)
+Benchmarking ffi_panchang_runtime/vedic_day_sunrises/rust: Analyzing
+ffi_panchang_runtime/vedic_day_sunrises/rust
+                        time:   [7.9569 µs 8.0800 µs 8.2527 µs]
+                        change: [+0.8527% +5.4160% +12.918%] (p = 0.10 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_panchang_runtime/vedic_day_sunrises/ffi
+Benchmarking ffi_panchang_runtime/vedic_day_sunrises/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/vedic_day_sunrises/ffi: Collecting 10 samples in estimated 200.41 ms (24k iterations)
+Benchmarking ffi_panchang_runtime/vedic_day_sunrises/ffi: Analyzing
+ffi_panchang_runtime/vedic_day_sunrises/ffi
+                        time:   [8.0401 µs 8.1308 µs 8.2973 µs]
+                        change: [-0.8385% +3.3053% +8.6160%] (p = 0.25 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_panchang_runtime/vaar_for_date/rust
+Benchmarking ffi_panchang_runtime/vaar_for_date/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/vaar_for_date/rust: Collecting 10 samples in estimated 200.02 ms (23k iterations)
+Benchmarking ffi_panchang_runtime/vaar_for_date/rust: Analyzing
+ffi_panchang_runtime/vaar_for_date/rust
+                        time:   [8.5703 µs 9.3566 µs 10.085 µs]
+                        change: [+1.2380% +7.2888% +13.834%] (p = 0.04 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_panchang_runtime/vaar_for_date/ffi
+Benchmarking ffi_panchang_runtime/vaar_for_date/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/vaar_for_date/ffi: Collecting 10 samples in estimated 200.48 ms (20k iterations)
+Benchmarking ffi_panchang_runtime/vaar_for_date/ffi: Analyzing
+ffi_panchang_runtime/vaar_for_date/ffi
+                        time:   [8.6383 µs 8.9596 µs 9.5714 µs]
+                        change: [+4.8613% +9.8975% +15.467%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_panchang_runtime/hora_for_date/rust
+Benchmarking ffi_panchang_runtime/hora_for_date/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/hora_for_date/rust: Collecting 10 samples in estimated 200.22 ms (23k iterations)
+Benchmarking ffi_panchang_runtime/hora_for_date/rust: Analyzing
+ffi_panchang_runtime/hora_for_date/rust
+                        time:   [8.5842 µs 8.8124 µs 9.0330 µs]
+                        change: [+3.9655% +6.0202% +8.1070%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_panchang_runtime/hora_for_date/ffi
+Benchmarking ffi_panchang_runtime/hora_for_date/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/hora_for_date/ffi: Collecting 10 samples in estimated 200.40 ms (22k iterations)
+Benchmarking ffi_panchang_runtime/hora_for_date/ffi: Analyzing
+ffi_panchang_runtime/hora_for_date/ffi
+                        time:   [8.8073 µs 9.2582 µs 9.8347 µs]
+                        change: [+6.9893% +13.250% +21.143%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_panchang_runtime/ghatika_for_date/rust
+Benchmarking ffi_panchang_runtime/ghatika_for_date/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/ghatika_for_date/rust: Collecting 10 samples in estimated 200.10 ms (22k iterations)
+Benchmarking ffi_panchang_runtime/ghatika_for_date/rust: Analyzing
+ffi_panchang_runtime/ghatika_for_date/rust
+                        time:   [8.5133 µs 8.9729 µs 9.7109 µs]
+                        change: [+6.1577% +10.471% +16.218%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_panchang_runtime/ghatika_for_date/ffi
+Benchmarking ffi_panchang_runtime/ghatika_for_date/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/ghatika_for_date/ffi: Collecting 10 samples in estimated 200.10 ms (22k iterations)
+Benchmarking ffi_panchang_runtime/ghatika_for_date/ffi: Analyzing
+ffi_panchang_runtime/ghatika_for_date/ffi
+                        time:   [8.4744 µs 8.6408 µs 8.9187 µs]
+                        change: [+0.6156% +8.9382% +23.465%] (p = 0.17 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_panchang_runtime/tithi_at/rust
+Benchmarking ffi_panchang_runtime/tithi_at/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/tithi_at/rust: Collecting 10 samples in estimated 205.25 ms (2090 iterations)
+Benchmarking ffi_panchang_runtime/tithi_at/rust: Analyzing
+ffi_panchang_runtime/tithi_at/rust
+                        time:   [93.350 µs 96.465 µs 100.50 µs]
+                        change: [+1.4836% +3.7972% +6.6932%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_panchang_runtime/tithi_at/ffi
+Benchmarking ffi_panchang_runtime/tithi_at/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/tithi_at/ffi: Collecting 10 samples in estimated 203.70 ms (2090 iterations)
+Benchmarking ffi_panchang_runtime/tithi_at/ffi: Analyzing
+ffi_panchang_runtime/tithi_at/ffi
+                        time:   [94.394 µs 95.881 µs 97.005 µs]
+                        change: [-0.0187% +1.8710% +3.7900%] (p = 0.09 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_panchang_runtime/karana_at/rust
+Benchmarking ffi_panchang_runtime/karana_at/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/karana_at/rust: Collecting 10 samples in estimated 205.17 ms (2090 iterations)
+Benchmarking ffi_panchang_runtime/karana_at/rust: Analyzing
+ffi_panchang_runtime/karana_at/rust
+                        time:   [100.32 µs 104.84 µs 111.05 µs]
+                        change: [+10.899% +17.131% +23.869%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_panchang_runtime/karana_at/ffi
+Benchmarking ffi_panchang_runtime/karana_at/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/karana_at/ffi: Collecting 10 samples in estimated 204.66 ms (2200 iterations)
+Benchmarking ffi_panchang_runtime/karana_at/ffi: Analyzing
+ffi_panchang_runtime/karana_at/ffi
+                        time:   [90.248 µs 92.339 µs 95.108 µs]
+                        change: [+0.3149% +2.8753% +5.3953%] (p = 0.05 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_panchang_runtime/yoga_at/rust
+Benchmarking ffi_panchang_runtime/yoga_at/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/yoga_at/rust: Collecting 10 samples in estimated 200.66 ms (1980 iterations)
+Benchmarking ffi_panchang_runtime/yoga_at/rust: Analyzing
+ffi_panchang_runtime/yoga_at/rust
+                        time:   [98.668 µs 102.59 µs 106.39 µs]
+                        change: [+5.6708% +8.6093% +11.453%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_panchang_runtime/yoga_at/ffi
+Benchmarking ffi_panchang_runtime/yoga_at/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/yoga_at/ffi: Collecting 10 samples in estimated 201.30 ms (1925 iterations)
+Benchmarking ffi_panchang_runtime/yoga_at/ffi: Analyzing
+ffi_panchang_runtime/yoga_at/ffi
+                        time:   [99.039 µs 101.00 µs 104.62 µs]
+                        change: [+4.0144% +7.5492% +12.152%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_panchang_runtime/vaar_from_sunrises/rust
+Benchmarking ffi_panchang_runtime/vaar_from_sunrises/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/vaar_from_sunrises/rust: Collecting 10 samples in estimated 200.02 ms (645k iterations)
+Benchmarking ffi_panchang_runtime/vaar_from_sunrises/rust: Analyzing
+ffi_panchang_runtime/vaar_from_sunrises/rust
+                        time:   [297.10 ns 308.04 ns 321.15 ns]
+                        change: [-0.5133% +1.6602% +4.3321%] (p = 0.25 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_panchang_runtime/vaar_from_sunrises/ffi
+Benchmarking ffi_panchang_runtime/vaar_from_sunrises/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/vaar_from_sunrises/ffi: Collecting 10 samples in estimated 200.01 ms (650k iterations)
+Benchmarking ffi_panchang_runtime/vaar_from_sunrises/ffi: Analyzing
+ffi_panchang_runtime/vaar_from_sunrises/ffi
+                        time:   [300.46 ns 303.85 ns 307.25 ns]
+                        change: [-2.1537% +0.0408% +2.0976%] (p = 0.97 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_panchang_runtime/hora_from_sunrises/rust
+Benchmarking ffi_panchang_runtime/hora_from_sunrises/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/hora_from_sunrises/rust: Collecting 10 samples in estimated 200.01 ms (609k iterations)
+Benchmarking ffi_panchang_runtime/hora_from_sunrises/rust: Analyzing
+ffi_panchang_runtime/hora_from_sunrises/rust
+                        time:   [320.88 ns 328.22 ns 342.76 ns]
+                        change: [+0.4111% +2.7845% +6.4669%] (p = 0.10 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_panchang_runtime/hora_from_sunrises/ffi
+Benchmarking ffi_panchang_runtime/hora_from_sunrises/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/hora_from_sunrises/ffi: Collecting 10 samples in estimated 200.00 ms (598k iterations)
+Benchmarking ffi_panchang_runtime/hora_from_sunrises/ffi: Analyzing
+ffi_panchang_runtime/hora_from_sunrises/ffi
+                        time:   [320.86 ns 326.99 ns 334.91 ns]
+                        change: [-5.0690% -1.3438% +2.2485%] (p = 0.54 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_panchang_runtime/ghatika_from_sunrises/rust
+Benchmarking ffi_panchang_runtime/ghatika_from_sunrises/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/ghatika_from_sunrises/rust: Collecting 10 samples in estimated 200.02 ms (609k iterations)
+Benchmarking ffi_panchang_runtime/ghatika_from_sunrises/rust: Analyzing
+ffi_panchang_runtime/ghatika_from_sunrises/rust
+                        time:   [320.27 ns 322.75 ns 325.07 ns]
+                        change: [+0.3411% +1.0834% +1.8656%] (p = 0.01 < 0.05)
+                        Change within noise threshold.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_panchang_runtime/ghatika_from_sunrises/ffi
+Benchmarking ffi_panchang_runtime/ghatika_from_sunrises/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/ghatika_from_sunrises/ffi: Collecting 10 samples in estimated 200.01 ms (575k iterations)
+Benchmarking ffi_panchang_runtime/ghatika_from_sunrises/ffi: Analyzing
+ffi_panchang_runtime/ghatika_from_sunrises/ffi
+                        time:   [324.22 ns 332.31 ns 339.90 ns]
+                        change: [-3.0534% +0.3189% +3.1760%] (p = 0.87 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_panchang_runtime/panchang_for_date/rust
+Benchmarking ffi_panchang_runtime/panchang_for_date/rust: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/panchang_for_date/rust: Collecting 10 samples in estimated 299.30 ms (165 iterations)
+Benchmarking ffi_panchang_runtime/panchang_for_date/rust: Analyzing
+ffi_panchang_runtime/panchang_for_date/rust
+                        time:   [1.9515 ms 2.0855 ms 2.1489 ms]
+                        change: [+61.693% +74.999% +87.756%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_panchang_runtime/panchang_for_date/ffi
+Benchmarking ffi_panchang_runtime/panchang_for_date/ffi: Warming up for 100.00 ms
+Benchmarking ffi_panchang_runtime/panchang_for_date/ffi: Collecting 10 samples in estimated 211.03 ms (165 iterations)
+Benchmarking ffi_panchang_runtime/panchang_for_date/ffi: Analyzing
+ffi_panchang_runtime/panchang_for_date/ffi
+                        time:   [1.1392 ms 1.1728 ms 1.2053 ms]
+                        change: [-2.4221% +2.0644% +6.1075%] (p = 0.39 > 0.05)
+                        No change in performance detected.
+
+Benchmarking ffi_orchestrators/calculate_ashtakavarga/rust
+Benchmarking ffi_orchestrators/calculate_ashtakavarga/rust: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/calculate_ashtakavarga/rust: Collecting 10 samples in estimated 200.02 ms (268k iterations)
+Benchmarking ffi_orchestrators/calculate_ashtakavarga/rust: Analyzing
+ffi_orchestrators/calculate_ashtakavarga/rust
+                        time:   [732.09 ns 773.39 ns 818.22 ns]
+                        change: [+3.1324% +7.0243% +12.007%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_orchestrators/calculate_ashtakavarga/ffi
+Benchmarking ffi_orchestrators/calculate_ashtakavarga/ffi: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/calculate_ashtakavarga/ffi: Collecting 10 samples in estimated 200.03 ms (259k iterations)
+Benchmarking ffi_orchestrators/calculate_ashtakavarga/ffi: Analyzing
+ffi_orchestrators/calculate_ashtakavarga/ffi
+                        time:   [730.48 ns 759.72 ns 786.49 ns]
+                        change: [+2.0751% +5.8024% +9.8902%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_orchestrators/ashtakavarga_for_date/rust
+Benchmarking ffi_orchestrators/ashtakavarga_for_date/rust: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/ashtakavarga_for_date/rust: Collecting 10 samples in estimated 200.14 ms (26k iterations)
+Benchmarking ffi_orchestrators/ashtakavarga_for_date/rust: Analyzing
+ffi_orchestrators/ashtakavarga_for_date/rust
+                        time:   [7.5554 µs 7.8591 µs 8.1882 µs]
+                        change: [+0.5346% +5.8448% +11.787%] (p = 0.06 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_orchestrators/ashtakavarga_for_date/ffi
+Benchmarking ffi_orchestrators/ashtakavarga_for_date/ffi: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/ashtakavarga_for_date/ffi: Collecting 10 samples in estimated 200.35 ms (26k iterations)
+Benchmarking ffi_orchestrators/ashtakavarga_for_date/ffi: Analyzing
+ffi_orchestrators/ashtakavarga_for_date/ffi
+                        time:   [7.4134 µs 7.7899 µs 8.1820 µs]
+                        change: [-5.9132% +0.3510% +5.5411%] (p = 0.92 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_orchestrators/graha_positions/rust
+Benchmarking ffi_orchestrators/graha_positions/rust: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/graha_positions/rust: Collecting 10 samples in estimated 200.01 ms (27k iterations)
+Benchmarking ffi_orchestrators/graha_positions/rust: Analyzing
+ffi_orchestrators/graha_positions/rust
+                        time:   [7.3285 µs 7.5326 µs 7.9008 µs]
+                        change: [+3.5344% +7.5629% +11.713%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_orchestrators/graha_positions/ffi
+Benchmarking ffi_orchestrators/graha_positions/ffi: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/graha_positions/ffi: Collecting 10 samples in estimated 200.23 ms (25k iterations)
+Benchmarking ffi_orchestrators/graha_positions/ffi: Analyzing
+ffi_orchestrators/graha_positions/ffi
+                        time:   [7.5212 µs 7.8117 µs 8.3834 µs]
+                        change: [+4.9784% +11.395% +18.119%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_orchestrators/core_bindus/rust
+Benchmarking ffi_orchestrators/core_bindus/rust: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/core_bindus/rust: Collecting 10 samples in estimated 200.14 ms (9625 iterations)
+Benchmarking ffi_orchestrators/core_bindus/rust: Analyzing
+ffi_orchestrators/core_bindus/rust
+                        time:   [21.627 µs 23.005 µs 25.202 µs]
+                        change: [+6.1298% +20.457% +37.365%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_orchestrators/core_bindus/ffi
+Benchmarking ffi_orchestrators/core_bindus/ffi: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/core_bindus/ffi: Collecting 10 samples in estimated 200.55 ms (9405 iterations)
+Benchmarking ffi_orchestrators/core_bindus/ffi: Analyzing
+ffi_orchestrators/core_bindus/ffi
+                        time:   [19.983 µs 20.779 µs 21.769 µs]
+                        change: [+1.2278% +3.9755% +7.0830%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_orchestrators/drishti/rust
+Benchmarking ffi_orchestrators/drishti/rust: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/drishti/rust: Collecting 10 samples in estimated 200.15 ms (26k iterations)
+Benchmarking ffi_orchestrators/drishti/rust: Analyzing
+ffi_orchestrators/drishti/rust
+                        time:   [8.0951 µs 8.8037 µs 10.347 µs]
+                        change: [+12.643% +30.665% +54.374%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_orchestrators/drishti/ffi
+Benchmarking ffi_orchestrators/drishti/ffi: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/drishti/ffi: Collecting 10 samples in estimated 200.40 ms (25k iterations)
+Benchmarking ffi_orchestrators/drishti/ffi: Analyzing
+ffi_orchestrators/drishti/ffi
+                        time:   [7.9307 µs 8.0453 µs 8.2376 µs]
+                        change: [+3.4859% +5.4065% +7.8498%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 3 outliers among 10 measurements (30.00%)
+  1 (10.00%) low mild
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_orchestrators/special_lagnas_for_date/rust
+Benchmarking ffi_orchestrators/special_lagnas_for_date/rust: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/special_lagnas_for_date/rust: Collecting 10 samples in estimated 200.20 ms (19k iterations)
+Benchmarking ffi_orchestrators/special_lagnas_for_date/rust: Analyzing
+ffi_orchestrators/special_lagnas_for_date/rust
+                        time:   [10.184 µs 10.631 µs 10.960 µs]
+                        change: [+1.7815% +4.8522% +7.7958%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_orchestrators/special_lagnas_for_date/ffi
+Benchmarking ffi_orchestrators/special_lagnas_for_date/ffi: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/special_lagnas_for_date/ffi: Collecting 10 samples in estimated 200.34 ms (18k iterations)
+Benchmarking ffi_orchestrators/special_lagnas_for_date/ffi: Analyzing
+ffi_orchestrators/special_lagnas_for_date/ffi
+                        time:   [10.162 µs 10.381 µs 10.592 µs]
+                        change: [+2.1633% +4.3835% +6.4297%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_orchestrators/arudha_padas_for_date/rust
+Benchmarking ffi_orchestrators/arudha_padas_for_date/rust: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/arudha_padas_for_date/rust: Collecting 10 samples in estimated 200.11 ms (27k iterations)
+Benchmarking ffi_orchestrators/arudha_padas_for_date/rust: Analyzing
+ffi_orchestrators/arudha_padas_for_date/rust
+                        time:   [6.7311 µs 7.1466 µs 7.8949 µs]
+                        change: [-1.2575% +4.1249% +11.103%] (p = 0.26 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_orchestrators/arudha_padas_for_date/ffi
+Benchmarking ffi_orchestrators/arudha_padas_for_date/ffi: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/arudha_padas_for_date/ffi: Collecting 10 samples in estimated 200.23 ms (28k iterations)
+Benchmarking ffi_orchestrators/arudha_padas_for_date/ffi: Analyzing
+ffi_orchestrators/arudha_padas_for_date/ffi
+                        time:   [7.2590 µs 9.2548 µs 13.187 µs]
+                        change: [+1.7549% +25.193% +65.251%] (p = 0.18 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_orchestrators/all_upagrahas_for_date/rust
+Benchmarking ffi_orchestrators/all_upagrahas_for_date/rust: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/all_upagrahas_for_date/rust: Collecting 10 samples in estimated 200.59 ms (11k iterations)
+Benchmarking ffi_orchestrators/all_upagrahas_for_date/rust: Analyzing
+ffi_orchestrators/all_upagrahas_for_date/rust
+                        time:   [14.386 µs 15.143 µs 16.461 µs]
+                        change: [+5.2055% +11.469% +19.106%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_orchestrators/all_upagrahas_for_date/ffi
+Benchmarking ffi_orchestrators/all_upagrahas_for_date/ffi: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/all_upagrahas_for_date/ffi: Collecting 10 samples in estimated 200.48 ms (13k iterations)
+Benchmarking ffi_orchestrators/all_upagrahas_for_date/ffi: Analyzing
+ffi_orchestrators/all_upagrahas_for_date/ffi
+                        time:   [14.287 µs 14.657 µs 15.186 µs]
+                        change: [+4.9236% +12.919% +24.318%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_orchestrators/sun_based_upagrahas/rust
+Benchmarking ffi_orchestrators/sun_based_upagrahas/rust: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/sun_based_upagrahas/rust: Collecting 10 samples in estimated 200.00 ms (89M iterations)
+Benchmarking ffi_orchestrators/sun_based_upagrahas/rust: Analyzing
+ffi_orchestrators/sun_based_upagrahas/rust
+                        time:   [2.1154 ns 2.3433 ns 2.5686 ns]
+                        change: [-5.4703% +0.3187% +6.4501%] (p = 0.93 > 0.05)
+                        No change in performance detected.
+Benchmarking ffi_orchestrators/sun_based_upagrahas/ffi
+Benchmarking ffi_orchestrators/sun_based_upagrahas/ffi: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/sun_based_upagrahas/ffi: Collecting 10 samples in estimated 200.00 ms (16M iterations)
+Benchmarking ffi_orchestrators/sun_based_upagrahas/ffi: Analyzing
+ffi_orchestrators/sun_based_upagrahas/ffi
+                        time:   [11.290 ns 11.964 ns 12.420 ns]
+                        change: [+3.1847% +6.7539% +11.336%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Benchmarking ffi_orchestrators/time_upagraha_jd_utc/rust
+Benchmarking ffi_orchestrators/time_upagraha_jd_utc/rust: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/time_upagraha_jd_utc/rust: Collecting 10 samples in estimated 200.36 ms (15k iterations)
+Benchmarking ffi_orchestrators/time_upagraha_jd_utc/rust: Analyzing
+ffi_orchestrators/time_upagraha_jd_utc/rust
+                        time:   [12.186 µs 12.360 µs 12.651 µs]
+                        change: [-0.3869% +2.9424% +7.7470%] (p = 0.20 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_orchestrators/time_upagraha_jd_utc/ffi
+Benchmarking ffi_orchestrators/time_upagraha_jd_utc/ffi: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/time_upagraha_jd_utc/ffi: Collecting 10 samples in estimated 200.63 ms (16k iterations)
+Benchmarking ffi_orchestrators/time_upagraha_jd_utc/ffi: Analyzing
+ffi_orchestrators/time_upagraha_jd_utc/ffi
+                        time:   [12.085 µs 12.365 µs 12.699 µs]
+                        change: [+1.7875% +5.3391% +10.047%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_orchestrators/all_sphutas/rust
+Benchmarking ffi_orchestrators/all_sphutas/rust: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/all_sphutas/rust: Collecting 10 samples in estimated 200.00 ms (2.2M iterations)
+Benchmarking ffi_orchestrators/all_sphutas/rust: Analyzing
+ffi_orchestrators/all_sphutas/rust
+                        time:   [87.376 ns 89.902 ns 92.200 ns]
+                        change: [+0.7880% +4.1603% +8.1388%] (p = 0.04 < 0.05)
+                        Change within noise threshold.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_orchestrators/all_sphutas/ffi
+Benchmarking ffi_orchestrators/all_sphutas/ffi: Warming up for 100.00 ms
+Benchmarking ffi_orchestrators/all_sphutas/ffi: Collecting 10 samples in estimated 200.00 ms (1.8M iterations)
+Benchmarking ffi_orchestrators/all_sphutas/ffi: Analyzing
+ffi_orchestrators/all_sphutas/ffi
+                        time:   [97.602 ns 101.39 ns 104.69 ns]
+                        change: [+2.5058% +5.9038% +9.0039%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+
+Benchmarking ffi_scalar_wrappers/arudha_pada/rust
+Benchmarking ffi_scalar_wrappers/arudha_pada/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/arudha_pada/rust: Collecting 10 samples in estimated 200.00 ms (30M iterations)
+Benchmarking ffi_scalar_wrappers/arudha_pada/rust: Analyzing
+ffi_scalar_wrappers/arudha_pada/rust
+                        time:   [6.3675 ns 6.6855 ns 7.1430 ns]
+Benchmarking ffi_scalar_wrappers/arudha_pada/ffi
+Benchmarking ffi_scalar_wrappers/arudha_pada/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/arudha_pada/ffi: Collecting 10 samples in estimated 200.00 ms (26M iterations)
+Benchmarking ffi_scalar_wrappers/arudha_pada/ffi: Analyzing
+ffi_scalar_wrappers/arudha_pada/ffi
+                        time:   [6.8305 ns 6.9915 ns 7.2501 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_scalar_wrappers/bhrigu_bindu/rust
+Benchmarking ffi_scalar_wrappers/bhrigu_bindu/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/bhrigu_bindu/rust: Collecting 10 samples in estimated 200.00 ms (45M iterations)
+Benchmarking ffi_scalar_wrappers/bhrigu_bindu/rust: Analyzing
+ffi_scalar_wrappers/bhrigu_bindu/rust
+                        time:   [4.2251 ns 4.3543 ns 4.4760 ns]
+Benchmarking ffi_scalar_wrappers/bhrigu_bindu/ffi
+Benchmarking ffi_scalar_wrappers/bhrigu_bindu/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/bhrigu_bindu/ffi: Collecting 10 samples in estimated 200.00 ms (31M iterations)
+Benchmarking ffi_scalar_wrappers/bhrigu_bindu/ffi: Analyzing
+ffi_scalar_wrappers/bhrigu_bindu/ffi
+                        time:   [5.0003 ns 5.1159 ns 5.2338 ns]
+Benchmarking ffi_scalar_wrappers/prana_sphuta/rust
+Benchmarking ffi_scalar_wrappers/prana_sphuta/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/prana_sphuta/rust: Collecting 10 samples in estimated 200.00 ms (76M iterations)
+Benchmarking ffi_scalar_wrappers/prana_sphuta/rust: Analyzing
+ffi_scalar_wrappers/prana_sphuta/rust
+                        time:   [2.3695 ns 2.4675 ns 2.5664 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_scalar_wrappers/prana_sphuta/ffi
+Benchmarking ffi_scalar_wrappers/prana_sphuta/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/prana_sphuta/ffi: Collecting 10 samples in estimated 200.00 ms (61M iterations)
+Benchmarking ffi_scalar_wrappers/prana_sphuta/ffi: Analyzing
+ffi_scalar_wrappers/prana_sphuta/ffi
+                        time:   [3.0897 ns 3.2693 ns 3.4584 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_scalar_wrappers/deha_sphuta/rust
+Benchmarking ffi_scalar_wrappers/deha_sphuta/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/deha_sphuta/rust: Collecting 10 samples in estimated 200.00 ms (16M iterations)
+Benchmarking ffi_scalar_wrappers/deha_sphuta/rust: Analyzing
+ffi_scalar_wrappers/deha_sphuta/rust
+                        time:   [12.160 ns 12.802 ns 14.194 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_scalar_wrappers/deha_sphuta/ffi
+Benchmarking ffi_scalar_wrappers/deha_sphuta/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/deha_sphuta/ffi: Collecting 10 samples in estimated 200.00 ms (16M iterations)
+Benchmarking ffi_scalar_wrappers/deha_sphuta/ffi: Analyzing
+ffi_scalar_wrappers/deha_sphuta/ffi
+                        time:   [11.934 ns 12.096 ns 12.338 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_scalar_wrappers/mrityu_sphuta/rust
+Benchmarking ffi_scalar_wrappers/mrityu_sphuta/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/mrityu_sphuta/rust: Collecting 10 samples in estimated 200.00 ms (15M iterations)
+Benchmarking ffi_scalar_wrappers/mrityu_sphuta/rust: Analyzing
+ffi_scalar_wrappers/mrityu_sphuta/rust
+                        time:   [12.360 ns 12.518 ns 12.789 ns]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_scalar_wrappers/mrityu_sphuta/ffi
+Benchmarking ffi_scalar_wrappers/mrityu_sphuta/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/mrityu_sphuta/ffi: Collecting 10 samples in estimated 200.00 ms (16M iterations)
+Benchmarking ffi_scalar_wrappers/mrityu_sphuta/ffi: Analyzing
+ffi_scalar_wrappers/mrityu_sphuta/ffi
+                        time:   [12.399 ns 12.823 ns 13.153 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_scalar_wrappers/tithi_sphuta/rust
+Benchmarking ffi_scalar_wrappers/tithi_sphuta/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/tithi_sphuta/rust: Collecting 10 samples in estimated 200.00 ms (44M iterations)
+Benchmarking ffi_scalar_wrappers/tithi_sphuta/rust: Analyzing
+ffi_scalar_wrappers/tithi_sphuta/rust
+                        time:   [4.4190 ns 4.5019 ns 4.6822 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_scalar_wrappers/tithi_sphuta/ffi
+Benchmarking ffi_scalar_wrappers/tithi_sphuta/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/tithi_sphuta/ffi: Collecting 10 samples in estimated 200.00 ms (37M iterations)
+Benchmarking ffi_scalar_wrappers/tithi_sphuta/ffi: Analyzing
+ffi_scalar_wrappers/tithi_sphuta/ffi
+                        time:   [5.2821 ns 5.4566 ns 5.6508 ns]
+Benchmarking ffi_scalar_wrappers/yoga_sphuta/rust
+Benchmarking ffi_scalar_wrappers/yoga_sphuta/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/yoga_sphuta/rust: Collecting 10 samples in estimated 200.00 ms (87M iterations)
+Benchmarking ffi_scalar_wrappers/yoga_sphuta/rust: Analyzing
+ffi_scalar_wrappers/yoga_sphuta/rust
+                        time:   [2.2995 ns 2.3744 ns 2.4348 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_scalar_wrappers/yoga_sphuta/ffi
+Benchmarking ffi_scalar_wrappers/yoga_sphuta/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/yoga_sphuta/ffi: Collecting 10 samples in estimated 200.00 ms (63M iterations)
+Benchmarking ffi_scalar_wrappers/yoga_sphuta/ffi: Analyzing
+ffi_scalar_wrappers/yoga_sphuta/ffi
+                        time:   [3.0207 ns 3.0811 ns 3.1148 ns]
+Benchmarking ffi_scalar_wrappers/yoga_sphuta_normalized/rust
+Benchmarking ffi_scalar_wrappers/yoga_sphuta_normalized/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/yoga_sphuta_normalized/rust: Collecting 10 samples in estimated 200.00 ms (13M iterations)
+Benchmarking ffi_scalar_wrappers/yoga_sphuta_normalized/rust: Analyzing
+ffi_scalar_wrappers/yoga_sphuta_normalized/rust
+                        time:   [15.435 ns 15.607 ns 15.907 ns]
+Benchmarking ffi_scalar_wrappers/yoga_sphuta_normalized/ffi
+Benchmarking ffi_scalar_wrappers/yoga_sphuta_normalized/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/yoga_sphuta_normalized/ffi: Collecting 10 samples in estimated 200.00 ms (13M iterations)
+Benchmarking ffi_scalar_wrappers/yoga_sphuta_normalized/ffi: Analyzing
+ffi_scalar_wrappers/yoga_sphuta_normalized/ffi
+                        time:   [15.356 ns 15.583 ns 15.785 ns]
+Benchmarking ffi_scalar_wrappers/rahu_tithi_sphuta/rust
+Benchmarking ffi_scalar_wrappers/rahu_tithi_sphuta/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/rahu_tithi_sphuta/rust: Collecting 10 samples in estimated 200.00 ms (44M iterations)
+Benchmarking ffi_scalar_wrappers/rahu_tithi_sphuta/rust: Analyzing
+ffi_scalar_wrappers/rahu_tithi_sphuta/rust
+                        time:   [4.4573 ns 4.5340 ns 4.6136 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_scalar_wrappers/rahu_tithi_sphuta/ffi
+Benchmarking ffi_scalar_wrappers/rahu_tithi_sphuta/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/rahu_tithi_sphuta/ffi: Collecting 10 samples in estimated 200.00 ms (37M iterations)
+Benchmarking ffi_scalar_wrappers/rahu_tithi_sphuta/ffi: Analyzing
+ffi_scalar_wrappers/rahu_tithi_sphuta/ffi
+                        time:   [5.1754 ns 5.2873 ns 5.3771 ns]
+Benchmarking ffi_scalar_wrappers/kshetra_sphuta/rust
+Benchmarking ffi_scalar_wrappers/kshetra_sphuta/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/kshetra_sphuta/rust: Collecting 10 samples in estimated 200.00 ms (15M iterations)
+Benchmarking ffi_scalar_wrappers/kshetra_sphuta/rust: Analyzing
+ffi_scalar_wrappers/kshetra_sphuta/rust
+                        time:   [13.326 ns 13.614 ns 13.845 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_scalar_wrappers/kshetra_sphuta/ffi
+Benchmarking ffi_scalar_wrappers/kshetra_sphuta/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/kshetra_sphuta/ffi: Collecting 10 samples in estimated 200.00 ms (14M iterations)
+Benchmarking ffi_scalar_wrappers/kshetra_sphuta/ffi: Analyzing
+ffi_scalar_wrappers/kshetra_sphuta/ffi
+                        time:   [13.578 ns 14.096 ns 15.067 ns]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+Benchmarking ffi_scalar_wrappers/beeja_sphuta/rust
+Benchmarking ffi_scalar_wrappers/beeja_sphuta/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/beeja_sphuta/rust: Collecting 10 samples in estimated 200.00 ms (16M iterations)
+Benchmarking ffi_scalar_wrappers/beeja_sphuta/rust: Analyzing
+ffi_scalar_wrappers/beeja_sphuta/rust
+                        time:   [11.672 ns 12.096 ns 12.653 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_scalar_wrappers/beeja_sphuta/ffi
+Benchmarking ffi_scalar_wrappers/beeja_sphuta/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/beeja_sphuta/ffi: Collecting 10 samples in estimated 200.00 ms (17M iterations)
+Benchmarking ffi_scalar_wrappers/beeja_sphuta/ffi: Analyzing
+ffi_scalar_wrappers/beeja_sphuta/ffi
+                        time:   [11.816 ns 12.201 ns 12.551 ns]
+Benchmarking ffi_scalar_wrappers/trisphuta/rust
+Benchmarking ffi_scalar_wrappers/trisphuta/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/trisphuta/rust: Collecting 10 samples in estimated 200.00 ms (81M iterations)
+Benchmarking ffi_scalar_wrappers/trisphuta/rust: Analyzing
+ffi_scalar_wrappers/trisphuta/rust
+                        time:   [2.3587 ns 2.4122 ns 2.4628 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_scalar_wrappers/trisphuta/ffi
+Benchmarking ffi_scalar_wrappers/trisphuta/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/trisphuta/ffi: Collecting 10 samples in estimated 200.00 ms (64M iterations)
+Benchmarking ffi_scalar_wrappers/trisphuta/ffi: Analyzing
+ffi_scalar_wrappers/trisphuta/ffi
+                        time:   [2.9697 ns 3.0065 ns 3.0453 ns]
+Benchmarking ffi_scalar_wrappers/chatussphuta/rust
+Benchmarking ffi_scalar_wrappers/chatussphuta/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/chatussphuta/rust: Collecting 10 samples in estimated 200.00 ms (85M iterations)
+Benchmarking ffi_scalar_wrappers/chatussphuta/rust: Analyzing
+ffi_scalar_wrappers/chatussphuta/rust
+                        time:   [2.2907 ns 2.3309 ns 2.3914 ns]
+Benchmarking ffi_scalar_wrappers/chatussphuta/ffi
+Benchmarking ffi_scalar_wrappers/chatussphuta/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/chatussphuta/ffi: Collecting 10 samples in estimated 200.00 ms (66M iterations)
+Benchmarking ffi_scalar_wrappers/chatussphuta/ffi: Analyzing
+ffi_scalar_wrappers/chatussphuta/ffi
+                        time:   [2.8398 ns 2.8769 ns 2.9309 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_scalar_wrappers/panchasphuta/rust
+Benchmarking ffi_scalar_wrappers/panchasphuta/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/panchasphuta/rust: Collecting 10 samples in estimated 200.00 ms (83M iterations)
+Benchmarking ffi_scalar_wrappers/panchasphuta/rust: Analyzing
+ffi_scalar_wrappers/panchasphuta/rust
+                        time:   [2.3285 ns 2.3942 ns 2.4995 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_scalar_wrappers/panchasphuta/ffi
+Benchmarking ffi_scalar_wrappers/panchasphuta/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/panchasphuta/ffi: Collecting 10 samples in estimated 200.00 ms (63M iterations)
+Benchmarking ffi_scalar_wrappers/panchasphuta/ffi: Analyzing
+ffi_scalar_wrappers/panchasphuta/ffi
+                        time:   [3.2306 ns 3.4003 ns 3.5274 ns]
+Benchmarking ffi_scalar_wrappers/sookshma_trisphuta/rust
+Benchmarking ffi_scalar_wrappers/sookshma_trisphuta/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/sookshma_trisphuta/rust: Collecting 10 samples in estimated 200.00 ms (59M iterations)
+Benchmarking ffi_scalar_wrappers/sookshma_trisphuta/rust: Analyzing
+ffi_scalar_wrappers/sookshma_trisphuta/rust
+                        time:   [3.2345 ns 3.3633 ns 3.5355 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_scalar_wrappers/sookshma_trisphuta/ffi
+Benchmarking ffi_scalar_wrappers/sookshma_trisphuta/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/sookshma_trisphuta/ffi: Collecting 10 samples in estimated 200.00 ms (54M iterations)
+Benchmarking ffi_scalar_wrappers/sookshma_trisphuta/ffi: Analyzing
+ffi_scalar_wrappers/sookshma_trisphuta/ffi
+                        time:   [3.5182 ns 3.7183 ns 3.8650 ns]
+Benchmarking ffi_scalar_wrappers/avayoga_sphuta/rust
+Benchmarking ffi_scalar_wrappers/avayoga_sphuta/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/avayoga_sphuta/rust: Collecting 10 samples in estimated 200.00 ms (49M iterations)
+Benchmarking ffi_scalar_wrappers/avayoga_sphuta/rust: Analyzing
+ffi_scalar_wrappers/avayoga_sphuta/rust
+                        time:   [4.1051 ns 4.2991 ns 4.4172 ns]
+Benchmarking ffi_scalar_wrappers/avayoga_sphuta/ffi
+Benchmarking ffi_scalar_wrappers/avayoga_sphuta/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/avayoga_sphuta/ffi: Collecting 10 samples in estimated 200.00 ms (43M iterations)
+Benchmarking ffi_scalar_wrappers/avayoga_sphuta/ffi: Analyzing
+ffi_scalar_wrappers/avayoga_sphuta/ffi
+                        time:   [4.5574 ns 4.6292 ns 4.7189 ns]
+Benchmarking ffi_scalar_wrappers/kunda/rust
+Benchmarking ffi_scalar_wrappers/kunda/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/kunda/rust: Collecting 10 samples in estimated 200.00 ms (82M iterations)
+Benchmarking ffi_scalar_wrappers/kunda/rust: Analyzing
+ffi_scalar_wrappers/kunda/rust
+                        time:   [2.3479 ns 2.4054 ns 2.4607 ns]
+Benchmarking ffi_scalar_wrappers/kunda/ffi
+Benchmarking ffi_scalar_wrappers/kunda/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/kunda/ffi: Collecting 10 samples in estimated 200.00 ms (61M iterations)
+Benchmarking ffi_scalar_wrappers/kunda/ffi: Analyzing
+ffi_scalar_wrappers/kunda/ffi
+                        time:   [3.0737 ns 3.1646 ns 3.2539 ns]
+Benchmarking ffi_scalar_wrappers/bhava_lagna/rust
+Benchmarking ffi_scalar_wrappers/bhava_lagna/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/bhava_lagna/rust: Collecting 10 samples in estimated 200.00 ms (81M iterations)
+Benchmarking ffi_scalar_wrappers/bhava_lagna/rust: Analyzing
+ffi_scalar_wrappers/bhava_lagna/rust
+                        time:   [2.3537 ns 2.4133 ns 2.4774 ns]
+Benchmarking ffi_scalar_wrappers/bhava_lagna/ffi
+Benchmarking ffi_scalar_wrappers/bhava_lagna/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/bhava_lagna/ffi: Collecting 10 samples in estimated 200.00 ms (61M iterations)
+Benchmarking ffi_scalar_wrappers/bhava_lagna/ffi: Analyzing
+ffi_scalar_wrappers/bhava_lagna/ffi
+                        time:   [2.9963 ns 3.0374 ns 3.1016 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_scalar_wrappers/hora_lagna/rust
+Benchmarking ffi_scalar_wrappers/hora_lagna/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/hora_lagna/rust: Collecting 10 samples in estimated 200.00 ms (17M iterations)
+Benchmarking ffi_scalar_wrappers/hora_lagna/rust: Analyzing
+ffi_scalar_wrappers/hora_lagna/rust
+                        time:   [11.805 ns 11.945 ns 12.126 ns]
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking ffi_scalar_wrappers/hora_lagna/ffi
+Benchmarking ffi_scalar_wrappers/hora_lagna/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/hora_lagna/ffi: Collecting 10 samples in estimated 200.00 ms (16M iterations)
+Benchmarking ffi_scalar_wrappers/hora_lagna/ffi: Analyzing
+ffi_scalar_wrappers/hora_lagna/ffi
+                        time:   [12.021 ns 12.205 ns 12.434 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_scalar_wrappers/ghati_lagna/rust
+Benchmarking ffi_scalar_wrappers/ghati_lagna/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/ghati_lagna/rust: Collecting 10 samples in estimated 200.00 ms (15M iterations)
+Benchmarking ffi_scalar_wrappers/ghati_lagna/rust: Analyzing
+ffi_scalar_wrappers/ghati_lagna/rust
+                        time:   [12.148 ns 12.241 ns 12.368 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_scalar_wrappers/ghati_lagna/ffi
+Benchmarking ffi_scalar_wrappers/ghati_lagna/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/ghati_lagna/ffi: Collecting 10 samples in estimated 200.00 ms (16M iterations)
+Benchmarking ffi_scalar_wrappers/ghati_lagna/ffi: Analyzing
+ffi_scalar_wrappers/ghati_lagna/ffi
+                        time:   [12.566 ns 12.786 ns 13.046 ns]
+Benchmarking ffi_scalar_wrappers/vighati_lagna/rust
+Benchmarking ffi_scalar_wrappers/vighati_lagna/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/vighati_lagna/rust: Collecting 10 samples in estimated 200.00 ms (83M iterations)
+Benchmarking ffi_scalar_wrappers/vighati_lagna/rust: Analyzing
+ffi_scalar_wrappers/vighati_lagna/rust
+                        time:   [2.3434 ns 2.3746 ns 2.4137 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_scalar_wrappers/vighati_lagna/ffi
+Benchmarking ffi_scalar_wrappers/vighati_lagna/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/vighati_lagna/ffi: Collecting 10 samples in estimated 200.00 ms (65M iterations)
+Benchmarking ffi_scalar_wrappers/vighati_lagna/ffi: Analyzing
+ffi_scalar_wrappers/vighati_lagna/ffi
+                        time:   [2.9976 ns 3.0477 ns 3.1138 ns]
+Benchmarking ffi_scalar_wrappers/varnada_lagna/rust
+Benchmarking ffi_scalar_wrappers/varnada_lagna/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/varnada_lagna/rust: Collecting 10 samples in estimated 200.00 ms (45M iterations)
+Benchmarking ffi_scalar_wrappers/varnada_lagna/rust: Analyzing
+ffi_scalar_wrappers/varnada_lagna/rust
+                        time:   [4.3096 ns 4.3887 ns 4.5298 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_scalar_wrappers/varnada_lagna/ffi
+Benchmarking ffi_scalar_wrappers/varnada_lagna/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/varnada_lagna/ffi: Collecting 10 samples in estimated 200.00 ms (38M iterations)
+Benchmarking ffi_scalar_wrappers/varnada_lagna/ffi: Analyzing
+ffi_scalar_wrappers/varnada_lagna/ffi
+                        time:   [4.9623 ns 5.0708 ns 5.1751 ns]
+Benchmarking ffi_scalar_wrappers/sree_lagna/rust
+Benchmarking ffi_scalar_wrappers/sree_lagna/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/sree_lagna/rust: Collecting 10 samples in estimated 200.00 ms (14M iterations)
+Benchmarking ffi_scalar_wrappers/sree_lagna/rust: Analyzing
+ffi_scalar_wrappers/sree_lagna/rust
+                        time:   [13.331 ns 13.557 ns 13.843 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking ffi_scalar_wrappers/sree_lagna/ffi
+Benchmarking ffi_scalar_wrappers/sree_lagna/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/sree_lagna/ffi: Collecting 10 samples in estimated 200.00 ms (14M iterations)
+Benchmarking ffi_scalar_wrappers/sree_lagna/ffi: Analyzing
+ffi_scalar_wrappers/sree_lagna/ffi
+                        time:   [13.743 ns 13.925 ns 14.128 ns]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+Benchmarking ffi_scalar_wrappers/pranapada_lagna/rust
+Benchmarking ffi_scalar_wrappers/pranapada_lagna/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/pranapada_lagna/rust: Collecting 10 samples in estimated 200.00 ms (6.4M iterations)
+Benchmarking ffi_scalar_wrappers/pranapada_lagna/rust: Analyzing
+ffi_scalar_wrappers/pranapada_lagna/rust
+                        time:   [29.862 ns 30.712 ns 31.619 ns]
+Benchmarking ffi_scalar_wrappers/pranapada_lagna/ffi
+Benchmarking ffi_scalar_wrappers/pranapada_lagna/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/pranapada_lagna/ffi: Collecting 10 samples in estimated 200.00 ms (6.6M iterations)
+Benchmarking ffi_scalar_wrappers/pranapada_lagna/ffi: Analyzing
+ffi_scalar_wrappers/pranapada_lagna/ffi
+                        time:   [30.272 ns 31.221 ns 32.170 ns]
+Benchmarking ffi_scalar_wrappers/indu_lagna/rust
+Benchmarking ffi_scalar_wrappers/indu_lagna/rust: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/indu_lagna/rust: Collecting 10 samples in estimated 200.00 ms (47M iterations)
+Benchmarking ffi_scalar_wrappers/indu_lagna/rust: Analyzing
+ffi_scalar_wrappers/indu_lagna/rust
+                        time:   [4.1693 ns 4.2957 ns 4.4186 ns]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking ffi_scalar_wrappers/indu_lagna/ffi
+Benchmarking ffi_scalar_wrappers/indu_lagna/ffi: Warming up for 100.00 ms
+Benchmarking ffi_scalar_wrappers/indu_lagna/ffi: Collecting 10 samples in estimated 200.00 ms (39M iterations)
+Benchmarking ffi_scalar_wrappers/indu_lagna/ffi: Analyzing
+ffi_scalar_wrappers/indu_lagna/ffi
+                        time:   [4.9323 ns 5.1949 ns 5.5116 ns]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+
