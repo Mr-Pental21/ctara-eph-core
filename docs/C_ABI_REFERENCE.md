@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 22`
+**ABI version:** `DHRUV_API_VERSION = 23`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -31,6 +31,7 @@ Complete reference for the `dhruv_ffi_c` C-compatible API surface.
    - [Surya Grahan](#surya-grahan)
    - [Stationary Point Search](#stationary-point-search)
    - [Max Speed Search](#max-speed-search)
+   - [RAMC](#ramc)
    - [Graha Sidereal Longitudes](#graha-sidereal-longitudes)
    - [Nakshatra At](#nakshatra-at)
 
@@ -807,6 +808,34 @@ Compute MC (Midheaven) ecliptic longitude in degrees. No engine needed.
 
 ---
 
+### RAMC
+
+```c
+DhruvStatus dhruv_ramc_deg(
+    const DhruvLskHandle*   lsk,
+    const DhruvEopHandle*   eop,
+    const DhruvGeoLocation* location,
+    double                  jd_utc,
+    double*                 out_deg
+);
+```
+
+Compute the RAMC (Right Ascension of the MC / Local Sidereal Time) in degrees. No engine needed.
+
+```c
+DhruvStatus dhruv_ramc_deg_utc(
+    const DhruvLskHandle*   lsk,
+    const DhruvEopHandle*   eop,
+    const DhruvGeoLocation* location,
+    const DhruvUtcTime*     utc,
+    double*                 out_deg
+);
+```
+
+UTC variant of `dhruv_ramc_deg`.
+
+---
+
 ### Conjunction / Aspect Search
 
 ```c
@@ -1141,5 +1170,7 @@ Determine the Moon's Nakshatra (27-scheme) from a pre-computed sidereal longitud
 | 48 | `dhruv_search_max_speed` | yes | | | |
 | 49 | `dhruv_graha_sidereal_longitudes` | yes | | | |
 | 50 | `dhruv_nakshatra_at` | yes | | | |
+| 51 | `dhruv_ramc_deg` | | yes | yes | |
+| 52 | `dhruv_ramc_deg_utc` | | yes | yes | |
 
-**Total exported symbols: 50 functions**
+**Total exported symbols: 52 functions**

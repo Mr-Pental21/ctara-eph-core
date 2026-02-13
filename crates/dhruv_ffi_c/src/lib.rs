@@ -33,7 +33,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 22;
+pub const DHRUV_API_VERSION: u32 = 23;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -1452,6 +1452,43 @@ pub unsafe extern "C" fn dhruv_mc_deg(
         match dhruv_vedic_base::mc_longitude_rad(lsk_ref, eop_ref, &geo, jd_utc) {
             Ok(rad) => {
                 // SAFETY: Pointer checked for null.
+                unsafe { *out_deg = rad.to_degrees() };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Compute the RAMC (Right Ascension of the MC / Local Sidereal Time) in degrees.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_ramc_deg(
+    lsk: *const DhruvLskHandle,
+    eop: *const DhruvEopHandle,
+    location: *const DhruvGeoLocation,
+    jd_utc: f64,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || eop.is_null() || location.is_null() || out_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        let lsk_ref = unsafe { &*lsk };
+        let eop_ref = unsafe { &*eop };
+        let loc_ref = unsafe { &*location };
+
+        let geo = GeoLocation::new(
+            loc_ref.latitude_deg,
+            loc_ref.longitude_deg,
+            loc_ref.altitude_m,
+        );
+
+        match dhruv_vedic_base::ramc_rad(lsk_ref, eop_ref, &geo, jd_utc) {
+            Ok(rad) => {
                 unsafe { *out_deg = rad.to_degrees() };
                 DhruvStatus::Ok
             }
@@ -4657,6 +4694,37 @@ pub unsafe extern "C" fn dhruv_mc_deg_utc(
     })
 }
 
+/// Compute the RAMC (Right Ascension of the MC / Local Sidereal Time) with UTC input.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_ramc_deg_utc(
+    lsk: *const DhruvLskHandle,
+    eop: *const DhruvEopHandle,
+    location: *const DhruvGeoLocation,
+    utc: *const DhruvUtcTime,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || eop.is_null() || location.is_null() || utc.is_null() || out_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let lsk_ref = unsafe { &*lsk };
+        let eop_ref = unsafe { &*eop };
+        let loc_ref = unsafe { &*location };
+        let geo = GeoLocation::new(loc_ref.latitude_deg, loc_ref.longitude_deg, loc_ref.altitude_m);
+        let jd_utc = ffi_utc_to_jd_utc(unsafe { &*utc });
+        match dhruv_vedic_base::ramc_rad(lsk_ref, eop_ref, &geo, jd_utc) {
+            Ok(rad) => {
+                unsafe { *out_deg = rad.to_degrees() };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
 // ---------------------------------------------------------------------------
 // Group C: Pure math _utc functions (8 functions)
 // ---------------------------------------------------------------------------
@@ -7534,6 +7602,15 @@ mod tests {
         assert_eq!(status, DhruvStatus::NullPointer);
     }
 
+    #[test]
+    fn ffi_ramc_deg_rejects_null() {
+        let mut out: f64 = 0.0;
+        let status = unsafe {
+            dhruv_ramc_deg(ptr::null(), ptr::null(), ptr::null(), 0.0, &mut out)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
     // --- Lunar node tests ---
 
     #[test]
@@ -7593,8 +7670,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_22() {
-        assert_eq!(dhruv_api_version(), 22);
+    fn ffi_api_version_is_23() {
+        assert_eq!(dhruv_api_version(), 23);
     }
 
     // --- Search error mapping ---
@@ -8613,6 +8690,15 @@ mod tests {
         let mut out: f64 = 0.0;
         let status = unsafe {
             dhruv_mc_deg_utc(ptr::null(), ptr::null(), ptr::null(), ptr::null(), &mut out)
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_ramc_deg_utc_rejects_null() {
+        let mut out: f64 = 0.0;
+        let status = unsafe {
+            dhruv_ramc_deg_utc(ptr::null(), ptr::null(), ptr::null(), ptr::null(), &mut out)
         };
         assert_eq!(status, DhruvStatus::NullPointer);
     }
