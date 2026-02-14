@@ -17,8 +17,9 @@ use dhruv_search::{
     prev_sankranti, prev_specific_sankranti, prev_stationary, prev_surya_grahan, search_amavasyas,
     search_chandra_grahan, search_conjunctions, search_max_speed, search_purnimas,
     search_sankrantis, search_stationary, search_surya_grahan, sidereal_sum_at,
-    special_lagnas_for_date, tithi_at, tithi_for_date, vaar_for_date, vaar_from_sunrises,
-    varsha_for_date, vedic_day_sunrises, yoga_at, yoga_for_date,
+    shadbala_for_date, shadbala_for_graha, special_lagnas_for_date, tithi_at, tithi_for_date,
+    vaar_for_date, vaar_from_sunrises, varsha_for_date, vedic_day_sunrises, vimsopaka_for_date,
+    vimsopaka_for_graha, yoga_at, yoga_for_date,
 };
 use dhruv_time::UtcTime;
 use dhruv_vedic_base::{
@@ -34,7 +35,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 30;
+pub const DHRUV_API_VERSION: u32 = 31;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -8550,6 +8551,80 @@ fn amsha_chart_to_ffi(chart: &dhruv_search::AmshaChart) -> DhruvAmshaChart {
     out
 }
 
+// ---------------------------------------------------------------------------
+// Shadbala & Vimsopaka FFI types
+// ---------------------------------------------------------------------------
+
+/// C-compatible Sthana Bala breakdown.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvSthanaBalaBreakdown {
+    pub uchcha: f64,
+    pub saptavargaja: f64,
+    pub ojhayugma: f64,
+    pub kendradi: f64,
+    pub drekkana: f64,
+    pub total: f64,
+}
+
+/// C-compatible Kala Bala breakdown.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvKalaBalaBreakdown {
+    pub nathonnatha: f64,
+    pub paksha: f64,
+    pub tribhaga: f64,
+    pub abda: f64,
+    pub masa: f64,
+    pub vara: f64,
+    pub hora: f64,
+    pub ayana: f64,
+    pub yuddha: f64,
+    pub total: f64,
+}
+
+/// C-compatible Shadbala entry for a single sapta graha.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvShadbalaEntry {
+    pub graha_index: u8,
+    pub sthana: DhruvSthanaBalaBreakdown,
+    pub dig: f64,
+    pub kala: DhruvKalaBalaBreakdown,
+    pub cheshta: f64,
+    pub naisargika: f64,
+    pub drik: f64,
+    pub total_shashtiamsas: f64,
+    pub total_rupas: f64,
+    pub required_strength: f64,
+    pub is_strong: u8,
+}
+
+/// C-compatible Shadbala result for all 7 sapta grahas.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvShadbalaResult {
+    pub entries: [DhruvShadbalaEntry; 7],
+}
+
+/// C-compatible Vimsopaka entry for a single graha.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvVimsopakaEntry {
+    pub graha_index: u8,
+    pub shadvarga: f64,
+    pub saptavarga: f64,
+    pub dashavarga: f64,
+    pub shodasavarga: f64,
+}
+
+/// C-compatible Vimsopaka result for all 9 navagrahas.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvVimsopakaResult {
+    pub entries: [DhruvVimsopakaEntry; 9],
+}
+
 /// C-compatible full kundali configuration.
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
@@ -8568,6 +8643,12 @@ pub struct DhruvFullKundaliConfig {
     pub include_special_lagnas: u8,
     /// Include amsha (divisional chart) section.
     pub include_amshas: u8,
+    /// Include shadbala section (sapta grahas only).
+    pub include_shadbala: u8,
+    /// Include vimsopaka bala section (navagraha).
+    pub include_vimsopaka: u8,
+    /// Node dignity policy for vimsopaka: 0=SignLordBased (default), 1=AlwaysSama.
+    pub node_dignity_policy: u32,
     /// Graha positions config.
     pub graha_positions_config: DhruvGrahaPositionsConfig,
     /// Bindus config.
@@ -8604,6 +8685,10 @@ pub struct DhruvFullKundaliResult {
     pub amshas_count: u8,
     /// Fixed-size array of amsha charts.
     pub amshas: [DhruvAmshaChart; DHRUV_MAX_AMSHA_REQUESTS],
+    pub shadbala_valid: u8,
+    pub shadbala: DhruvShadbalaResult,
+    pub vimsopaka_valid: u8,
+    pub vimsopaka: DhruvVimsopakaResult,
 }
 
 /// Compute a full kundali in one call, reusing shared intermediates.
@@ -8687,6 +8772,13 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
         include_upagrahas: cfg_c.include_upagrahas != 0,
         include_special_lagnas: cfg_c.include_special_lagnas != 0,
         include_amshas: cfg_c.include_amshas != 0,
+        include_shadbala: cfg_c.include_shadbala != 0,
+        include_vimsopaka: cfg_c.include_vimsopaka != 0,
+        node_dignity_policy: match cfg_c.node_dignity_policy {
+            0 => dhruv_vedic_base::NodeDignityPolicy::SignLordBased,
+            1 => dhruv_vedic_base::NodeDignityPolicy::AlwaysSama,
+            _ => return DhruvStatus::InvalidSearchConfig,
+        },
         graha_positions_config: dhruv_search::GrahaPositionsConfig {
             include_nakshatra: cfg_c.graha_positions_config.include_nakshatra != 0,
             include_lagna: cfg_c.graha_positions_config.include_lagna != 0,
@@ -8819,6 +8911,58 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
                 out.amshas_count = count as u8;
                 for i in 0..count {
                     out.amshas[i] = amsha_chart_to_ffi(&am.charts[i]);
+                }
+            }
+
+            if let Some(ref sb) = result.shadbala {
+                out.shadbala_valid = 1;
+                for i in 0..7 {
+                    let e = &sb.entries[i];
+                    out.shadbala.entries[i] = DhruvShadbalaEntry {
+                        graha_index: e.graha.index(),
+                        sthana: DhruvSthanaBalaBreakdown {
+                            uchcha: e.sthana.uchcha,
+                            saptavargaja: e.sthana.saptavargaja,
+                            ojhayugma: e.sthana.ojhayugma,
+                            kendradi: e.sthana.kendradi,
+                            drekkana: e.sthana.drekkana,
+                            total: e.sthana.total,
+                        },
+                        dig: e.dig,
+                        kala: DhruvKalaBalaBreakdown {
+                            nathonnatha: e.kala.nathonnatha,
+                            paksha: e.kala.paksha,
+                            tribhaga: e.kala.tribhaga,
+                            abda: e.kala.abda,
+                            masa: e.kala.masa,
+                            vara: e.kala.vara,
+                            hora: e.kala.hora,
+                            ayana: e.kala.ayana,
+                            yuddha: e.kala.yuddha,
+                            total: e.kala.total,
+                        },
+                        cheshta: e.cheshta,
+                        naisargika: e.naisargika,
+                        drik: e.drik,
+                        total_shashtiamsas: e.total_shashtiamsas,
+                        total_rupas: e.total_rupas,
+                        required_strength: e.required_strength,
+                        is_strong: e.is_strong as u8,
+                    };
+                }
+            }
+
+            if let Some(ref vm) = result.vimsopaka {
+                out.vimsopaka_valid = 1;
+                for i in 0..9 {
+                    let e = &vm.entries[i];
+                    out.vimsopaka.entries[i] = DhruvVimsopakaEntry {
+                        graha_index: e.graha.index(),
+                        shadvarga: e.shadvarga,
+                        saptavarga: e.saptavarga,
+                        dashavarga: e.dashavarga,
+                        shodasavarga: e.shodasavarga,
+                    };
                 }
             }
 
@@ -9050,6 +9194,184 @@ pub unsafe extern "C" fn dhruv_amsha_chart_for_date(
         Ok(result) => {
             if let Some(chart) = result.charts.first() {
                 unsafe { *out = amsha_chart_to_ffi(chart) };
+            }
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Shadbala & Vimsopaka FFI functions (date-based)
+// ---------------------------------------------------------------------------
+
+/// Compute Shadbala for all 7 sapta grahas at a given date and location.
+///
+/// # Safety
+/// All pointers must be valid. `out` must point to a valid `DhruvShadbalaResult`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_shadbala_for_date(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    bhava_config: *const DhruvBhavaConfig,
+    riseset_config: *const DhruvRiseSetConfig,
+    ayanamsha_system: u32,
+    use_nutation: u8,
+    out: *mut DhruvShadbalaResult,
+) -> DhruvStatus {
+    if engine.is_null()
+        || eop.is_null()
+        || utc.is_null()
+        || location.is_null()
+        || bhava_config.is_null()
+        || riseset_config.is_null()
+        || out.is_null()
+    {
+        return DhruvStatus::NullPointer;
+    }
+
+    let engine = unsafe { &*engine };
+    let eop = unsafe { &*eop };
+    let utc_c = unsafe { &*utc };
+    let loc_c = unsafe { &*location };
+    let bhava_cfg_c = unsafe { &*bhava_config };
+    let rs_c = unsafe { &*riseset_config };
+
+    let utc_time = UtcTime {
+        year: utc_c.year,
+        month: utc_c.month,
+        day: utc_c.day,
+        hour: utc_c.hour,
+        minute: utc_c.minute,
+        second: utc_c.second,
+    };
+    let location = GeoLocation::new(loc_c.latitude_deg, loc_c.longitude_deg, loc_c.altitude_m);
+
+    let system = match ayanamsha_system_from_code(ayanamsha_system as i32) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidQuery,
+    };
+    let rust_bhava_config = match bhava_config_from_ffi(bhava_cfg_c) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+    let sun_limb = match sun_limb_from_code(rs_c.sun_limb) {
+        Some(l) => l,
+        None => return DhruvStatus::InvalidQuery,
+    };
+    let rs_config = RiseSetConfig {
+        use_refraction: rs_c.use_refraction != 0,
+        sun_limb,
+        altitude_correction: rs_c.altitude_correction != 0,
+    };
+    let aya_config = SankrantiConfig::new(system, use_nutation != 0);
+
+    match shadbala_for_date(
+        engine, eop, &utc_time, &location, &rust_bhava_config, &rs_config, &aya_config,
+    ) {
+        Ok(result) => {
+            let out = unsafe { &mut *out };
+            for i in 0..7 {
+                let e = &result.entries[i];
+                out.entries[i] = DhruvShadbalaEntry {
+                    graha_index: e.graha.index(),
+                    sthana: DhruvSthanaBalaBreakdown {
+                        uchcha: e.sthana.uchcha,
+                        saptavargaja: e.sthana.saptavargaja,
+                        ojhayugma: e.sthana.ojhayugma,
+                        kendradi: e.sthana.kendradi,
+                        drekkana: e.sthana.drekkana,
+                        total: e.sthana.total,
+                    },
+                    dig: e.dig,
+                    kala: DhruvKalaBalaBreakdown {
+                        nathonnatha: e.kala.nathonnatha,
+                        paksha: e.kala.paksha,
+                        tribhaga: e.kala.tribhaga,
+                        abda: e.kala.abda,
+                        masa: e.kala.masa,
+                        vara: e.kala.vara,
+                        hora: e.kala.hora,
+                        ayana: e.kala.ayana,
+                        yuddha: e.kala.yuddha,
+                        total: e.kala.total,
+                    },
+                    cheshta: e.cheshta,
+                    naisargika: e.naisargika,
+                    drik: e.drik,
+                    total_shashtiamsas: e.total_shashtiamsas,
+                    total_rupas: e.total_rupas,
+                    required_strength: e.required_strength,
+                    is_strong: e.is_strong as u8,
+                };
+            }
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
+/// Compute Vimsopaka Bala for all 9 navagrahas at a given date and location.
+///
+/// `node_dignity_policy`: 0=SignLordBased, 1=AlwaysSama.
+///
+/// # Safety
+/// All pointers must be valid. `out` must point to a valid `DhruvVimsopakaResult`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_vimsopaka_for_date(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    ayanamsha_system: u32,
+    use_nutation: u8,
+    node_dignity_policy: u32,
+    out: *mut DhruvVimsopakaResult,
+) -> DhruvStatus {
+    if engine.is_null() || eop.is_null() || utc.is_null() || location.is_null() || out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+
+    let engine = unsafe { &*engine };
+    let eop = unsafe { &*eop };
+    let utc_c = unsafe { &*utc };
+    let loc_c = unsafe { &*location };
+
+    let utc_time = UtcTime {
+        year: utc_c.year,
+        month: utc_c.month,
+        day: utc_c.day,
+        hour: utc_c.hour,
+        minute: utc_c.minute,
+        second: utc_c.second,
+    };
+    let location = GeoLocation::new(loc_c.latitude_deg, loc_c.longitude_deg, loc_c.altitude_m);
+
+    let system = match ayanamsha_system_from_code(ayanamsha_system as i32) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidQuery,
+    };
+    let policy = match node_dignity_policy {
+        0 => dhruv_vedic_base::NodeDignityPolicy::SignLordBased,
+        1 => dhruv_vedic_base::NodeDignityPolicy::AlwaysSama,
+        _ => return DhruvStatus::InvalidSearchConfig,
+    };
+    let aya_config = SankrantiConfig::new(system, use_nutation != 0);
+
+    match vimsopaka_for_date(engine, eop, &utc_time, &location, &aya_config, policy) {
+        Ok(result) => {
+            let out = unsafe { &mut *out };
+            for i in 0..9 {
+                let e = &result.entries[i];
+                out.entries[i] = DhruvVimsopakaEntry {
+                    graha_index: e.graha.index(),
+                    shadvarga: e.shadvarga,
+                    saptavarga: e.saptavarga,
+                    dashavarga: e.dashavarga,
+                    shodasavarga: e.shodasavarga,
+                };
             }
             DhruvStatus::Ok
         }
@@ -9603,8 +9925,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_30() {
-        assert_eq!(dhruv_api_version(), 30);
+    fn ffi_api_version_is_31() {
+        assert_eq!(dhruv_api_version(), 31);
     }
 
     // --- Search error mapping ---
@@ -11707,6 +12029,9 @@ mod tests {
             include_upagrahas: 1,
             include_special_lagnas: 1,
             include_amshas: 0,
+            include_shadbala: 0,
+            include_vimsopaka: 0,
+            node_dignity_policy: 0,
             graha_positions_config: DhruvGrahaPositionsConfig {
                 include_nakshatra: 0,
                 include_lagna: 1,
@@ -11764,6 +12089,9 @@ mod tests {
             include_upagrahas: 1,
             include_special_lagnas: 1,
             include_amshas: 0,
+            include_shadbala: 0,
+            include_vimsopaka: 0,
+            node_dignity_policy: 0,
             graha_positions_config: DhruvGrahaPositionsConfig {
                 include_nakshatra: 0,
                 include_lagna: 1,

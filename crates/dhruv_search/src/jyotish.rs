@@ -4,7 +4,8 @@
 //! Vedic calculation modules. Queries all 9 graha positions at a given
 //! epoch and converts to sidereal longitudes.
 
-use dhruv_core::{Body, Engine};
+use dhruv_core::{Body, Engine, Frame, Observer, Query};
+use dhruv_frames::{OBLIQUITY_J2000_RAD, cartesian_state_to_spherical_state};
 use dhruv_time::{EopKernel, UtcTime};
 use dhruv_vedic_base::arudha::all_arudha_padas;
 use dhruv_vedic_base::riseset::compute_rise_set;
@@ -14,12 +15,17 @@ use dhruv_vedic_base::upagraha::TIME_BASED_UPAGRAHAS;
 use dhruv_vedic_base::vaar::vaar_from_jd;
 use dhruv_vedic_base::{
     ALL_GRAHAS, Amsha, AmshaRequest, AmshaVariation, AllSpecialLagnas, AllUpagrahas, ArudhaResult,
-    AshtakavargaResult, AyanamshaSystem, BhavaConfig, BhavaResult, DrishtiEntry, Graha, LunarNode,
-    NodeMode, Upagraha, amsha_longitude, ayanamsha_deg, bhrigu_bindu,
+    AshtakavargaResult, AyanamshaSystem, BhavaConfig, BhavaResult, DrishtiEntry, Graha,
+    KalaBalaInputs, LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS,
+    ShadbalaInputs, Upagraha, amsha_longitude, all_shadbalas_from_inputs,
+    all_shadvarga_vimsopaka, all_saptavarga_vimsopaka, all_dashavarga_vimsopaka,
+    all_shodasavarga_vimsopaka, ayanamsha_deg, bhrigu_bindu,
     calculate_ashtakavarga, compute_bhavas, ghati_lagna, ghatikas_since_sunrise,
-    graha_drishti, graha_drishti_matrix, hora_lagna, jd_tdb_to_centuries, lagna_longitude_rad,
-    lunar_node_deg, nakshatra_from_longitude, normalize_360, nth_rashi_from, pranapada_lagna,
-    rashi_from_longitude, rashi_lord_by_index, sree_lagna, sun_based_upagrahas, time_upagraha_jd,
+    graha_drishti, graha_drishti_matrix, hora_lord as graha_hora_lord, hora_lagna,
+    jd_tdb_to_centuries, lagna_longitude_rad, lunar_node_deg, masa_lord as graha_masa_lord,
+    nakshatra_from_longitude, normalize_360, nth_rashi_from, pranapada_lagna,
+    rashi_from_longitude, rashi_lord_by_index, samvatsara_lord as graha_samvatsara_lord,
+    sree_lagna, sun_based_upagrahas, time_upagraha_jd, vaar_lord as graha_vaar_lord,
 };
 
 use crate::conjunction::body_ecliptic_lon_lat;
@@ -27,9 +33,10 @@ use crate::error::SearchError;
 use crate::jyotish_types::{
     AmshaChart, AmshaChartScope, AmshaEntry, AmshaResult, AmshaSelectionConfig, BindusConfig,
     BindusResult, DrishtiConfig, DrishtiResult, FullKundaliConfig, FullKundaliResult, GrahaEntry,
-    GrahaLongitudes, GrahaPositions, GrahaPositionsConfig, MAX_AMSHA_REQUESTS,
+    GrahaLongitudes, GrahaPositions, GrahaPositionsConfig, MAX_AMSHA_REQUESTS, ShadbalaEntry,
+    ShadbalaResult, VimsopakaEntry, VimsopakaResult,
 };
-use crate::panchang::vedic_day_sunrises;
+use crate::panchang::{hora_from_sunrises, masa_for_date, varsha_for_date, vedic_day_sunrises};
 use crate::sankranti_types::SankrantiConfig;
 
 /// Map a Graha to its dhruv_core::Body for engine queries.
@@ -59,6 +66,10 @@ struct JyotishContext {
     bhava_result: Option<BhavaResult>,
     sunrise_pair: Option<(f64, f64)>,
     sunset_jd: Option<f64>,
+    /// Ecliptic longitude speeds (deg/day) for sapta grahas (indices 0-6).
+    graha_speeds: Option<[f64; 7]>,
+    /// Ecliptic declinations (deg) for sapta grahas (indices 0-6).
+    graha_declinations: Option<[f64; 7]>,
 }
 
 impl JyotishContext {
@@ -76,6 +87,8 @@ impl JyotishContext {
             bhava_result: None,
             sunrise_pair: None,
             sunset_jd: None,
+            graha_speeds: None,
+            graha_declinations: None,
         }
     }
 
@@ -183,6 +196,64 @@ impl JyotishContext {
         self.sunset_jd = Some(jd);
         Ok(jd)
     }
+
+    /// Get ecliptic longitude speeds (deg/day) for sapta grahas, computing on first call.
+    fn graha_speeds(&mut self, engine: &Engine) -> Result<[f64; 7], SearchError> {
+        if let Some(speeds) = self.graha_speeds {
+            return Ok(speeds);
+        }
+        let speeds = query_sapta_graha_speeds(engine, self.jd_tdb)?;
+        self.graha_speeds = Some(speeds);
+        Ok(speeds)
+    }
+
+    /// Get ecliptic declinations (deg) for sapta grahas, computing on first call.
+    fn graha_declinations(&mut self, engine: &Engine) -> Result<[f64; 7], SearchError> {
+        if let Some(decls) = self.graha_declinations {
+            return Ok(decls);
+        }
+        let decls = query_sapta_graha_declinations(engine, self.jd_tdb)?;
+        self.graha_declinations = Some(decls);
+        Ok(decls)
+    }
+}
+
+/// Query ecliptic longitude speed (deg/day) for all 7 sapta grahas.
+fn query_sapta_graha_speeds(engine: &Engine, jd_tdb: f64) -> Result<[f64; 7], SearchError> {
+    let mut speeds = [0.0f64; 7];
+    for graha in SAPTA_GRAHAS {
+        let body = graha_to_body(graha).expect("sapta graha has body");
+        let query = Query {
+            target: body,
+            observer: Observer::Body(Body::Earth),
+            frame: Frame::EclipticJ2000,
+            epoch_tdb_jd: jd_tdb,
+        };
+        let state = engine.query(query)?;
+        let sph = cartesian_state_to_spherical_state(&state.position_km, &state.velocity_km_s);
+        speeds[graha.index() as usize] = sph.lon_speed;
+    }
+    Ok(speeds)
+}
+
+/// Query ecliptic declination (deg) for all 7 sapta grahas.
+///
+/// Declination = arcsin(sin(lat)*cos(eps) + cos(lat)*sin(eps)*sin(lon))
+/// where lon, lat are ecliptic coordinates and eps is the obliquity.
+fn query_sapta_graha_declinations(engine: &Engine, jd_tdb: f64) -> Result<[f64; 7], SearchError> {
+    let eps = OBLIQUITY_J2000_RAD;
+    let sin_eps = eps.sin();
+    let cos_eps = eps.cos();
+    let mut decls = [0.0f64; 7];
+    for graha in SAPTA_GRAHAS {
+        let body = graha_to_body(graha).expect("sapta graha has body");
+        let (lon_deg, lat_deg) = body_ecliptic_lon_lat(engine, body, jd_tdb)?;
+        let lon_rad = lon_deg.to_radians();
+        let lat_rad = lat_deg.to_radians();
+        let sin_dec = lat_rad.sin() * cos_eps + lat_rad.cos() * sin_eps * lon_rad.sin();
+        decls[graha.index() as usize] = sin_dec.clamp(-1.0, 1.0).asin().to_degrees();
+    }
+    Ok(decls)
 }
 
 /// Query all 9 graha sidereal longitudes at a given TDB epoch.
@@ -975,6 +1046,22 @@ pub fn full_kundali_for_date(
         None
     };
 
+    let shadbala = if config.include_shadbala {
+        Some(shadbala_for_date_with_ctx(
+            engine, eop, utc, location, bhava_config, riseset_config, aya_config, &mut ctx,
+        )?)
+    } else {
+        None
+    };
+
+    let vimsopaka = if config.include_vimsopaka {
+        Some(vimsopaka_for_date_with_ctx(
+            engine, eop, location, aya_config, config.node_dignity_policy, &mut ctx,
+        )?)
+    } else {
+        None
+    };
+
     Ok(FullKundaliResult {
         graha_positions,
         bindus,
@@ -983,6 +1070,8 @@ pub fn full_kundali_for_date(
         upagrahas,
         special_lagnas,
         amshas,
+        shadbala,
+        vimsopaka,
     })
 }
 
@@ -1009,6 +1098,286 @@ fn utc_to_jd_utc(utc: &UtcTime) -> f64 {
 fn normalize(deg: f64) -> f64 {
     let r = deg % 360.0;
     if r < 0.0 { r + 360.0 } else { r }
+}
+
+// ---------------------------------------------------------------------------
+// Shadbala & Vimsopaka orchestration
+// ---------------------------------------------------------------------------
+
+/// Compute Shadbala for all 7 sapta grahas at a given date and location.
+pub fn shadbala_for_date(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    bhava_config: &BhavaConfig,
+    riseset_config: &RiseSetConfig,
+    aya_config: &SankrantiConfig,
+) -> Result<ShadbalaResult, SearchError> {
+    let mut ctx = JyotishContext::new(engine, utc, aya_config);
+    shadbala_for_date_with_ctx(
+        engine, eop, utc, location, bhava_config, riseset_config, aya_config, &mut ctx,
+    )
+}
+
+fn shadbala_for_date_with_ctx(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    bhava_config: &BhavaConfig,
+    riseset_config: &RiseSetConfig,
+    aya_config: &SankrantiConfig,
+    ctx: &mut JyotishContext,
+) -> Result<ShadbalaResult, SearchError> {
+    let inputs = assemble_shadbala_inputs(
+        engine, eop, utc, location, bhava_config, riseset_config, aya_config, ctx,
+    )?;
+    let breakdowns = all_shadbalas_from_inputs(&inputs);
+    let mut entries = [ShadbalaEntry::from_breakdown(Graha::Surya, &breakdowns[0]); 7];
+    for (i, graha) in SAPTA_GRAHAS.iter().enumerate() {
+        entries[i] = ShadbalaEntry::from_breakdown(*graha, &breakdowns[i]);
+    }
+    Ok(ShadbalaResult { entries })
+}
+
+/// Compute Shadbala for a single sapta graha. Returns error for Rahu/Ketu.
+pub fn shadbala_for_graha(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    bhava_config: &BhavaConfig,
+    riseset_config: &RiseSetConfig,
+    aya_config: &SankrantiConfig,
+    graha: Graha,
+) -> Result<ShadbalaEntry, SearchError> {
+    if graha.index() >= 7 {
+        return Err(SearchError::InvalidConfig(
+            "shadbala is defined for sapta grahas only (Sun..Saturn)",
+        ));
+    }
+    let result = shadbala_for_date(
+        engine, eop, utc, location, bhava_config, riseset_config, aya_config,
+    )?;
+    Ok(result.entries[graha.index() as usize])
+}
+
+/// Compute Vimsopaka Bala for all 9 navagrahas at a given date and location.
+pub fn vimsopaka_for_date(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    aya_config: &SankrantiConfig,
+    node_policy: NodeDignityPolicy,
+) -> Result<VimsopakaResult, SearchError> {
+    let mut ctx = JyotishContext::new(engine, utc, aya_config);
+    vimsopaka_for_date_with_ctx(engine, eop, location, aya_config, node_policy, &mut ctx)
+}
+
+fn vimsopaka_for_date_with_ctx(
+    engine: &Engine,
+    eop: &EopKernel,
+    location: &GeoLocation,
+    aya_config: &SankrantiConfig,
+    node_policy: NodeDignityPolicy,
+    ctx: &mut JyotishContext,
+) -> Result<VimsopakaResult, SearchError> {
+    let graha_lons = *ctx.graha_lons(engine, aya_config)?;
+    let lons9 = graha_lons.longitudes;
+
+    let shad = all_shadvarga_vimsopaka(&lons9, node_policy);
+    let sapt = all_saptavarga_vimsopaka(&lons9, node_policy);
+    let dash = all_dashavarga_vimsopaka(&lons9, node_policy);
+    let shod = all_shodasavarga_vimsopaka(&lons9, node_policy);
+
+    let mut entries = [VimsopakaEntry {
+        graha: Graha::Surya,
+        shadvarga: 0.0,
+        saptavarga: 0.0,
+        dashavarga: 0.0,
+        shodasavarga: 0.0,
+    }; 9];
+    for (i, graha) in ALL_GRAHAS.iter().enumerate() {
+        entries[i] = VimsopakaEntry {
+            graha: *graha,
+            shadvarga: shad[i].score,
+            saptavarga: sapt[i].score,
+            dashavarga: dash[i].score,
+            shodasavarga: shod[i].score,
+        };
+    }
+    // Suppress unused variable warnings — eop and location are part of the
+    // context-sharing pattern even though vimsopaka only needs graha longitudes.
+    let _ = (eop, location);
+    Ok(VimsopakaResult { entries })
+}
+
+/// Compute Vimsopaka Bala for a single graha. Accepts all 9 navagrahas.
+pub fn vimsopaka_for_graha(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    aya_config: &SankrantiConfig,
+    node_policy: NodeDignityPolicy,
+    graha: Graha,
+) -> Result<VimsopakaEntry, SearchError> {
+    let result = vimsopaka_for_date(engine, eop, utc, location, aya_config, node_policy)?;
+    Ok(result.entries[graha.index() as usize])
+}
+
+/// Assemble ShadbalaInputs from engine queries and context.
+fn assemble_shadbala_inputs(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    bhava_config: &BhavaConfig,
+    riseset_config: &RiseSetConfig,
+    aya_config: &SankrantiConfig,
+    ctx: &mut JyotishContext,
+) -> Result<ShadbalaInputs, SearchError> {
+    // 1. Sidereal longitudes (all 9, needed for drik bala)
+    let graha_lons = *ctx.graha_lons(engine, aya_config)?;
+    let sidereal_lons = graha_lons.longitudes;
+    let aya = ctx.ayanamsha;
+
+    // 2. Bhava numbers for sapta grahas
+    let bhava_result = *ctx.bhava_result(engine, eop, location, bhava_config)?;
+    let mut bhava_numbers = [0u8; 7];
+    for graha in SAPTA_GRAHAS {
+        let idx = graha.index() as usize;
+        let tropical_lon = normalize(sidereal_lons[idx] + aya);
+        bhava_numbers[idx] = find_bhava_number(tropical_lon, &bhava_result);
+    }
+
+    // 3. Speeds (deg/day) for sapta grahas
+    let speeds = ctx.graha_speeds(engine)?;
+
+    // 4. Varga rashi indices: 7 vargas × 7 grahas for saptavargaja bala
+    let varga_rashi_indices = assemble_varga_rashi_indices(&sidereal_lons);
+
+    // 5. Kala Bala inputs
+    let (jd_sunrise, jd_next_sunrise) =
+        ctx.sunrise_pair(engine, eop, utc, location, riseset_config)?;
+    let jd_sunset = ctx.sunset_jd(engine, eop, location, riseset_config)?;
+
+    let is_daytime = ctx.jd_tdb >= jd_sunrise && ctx.jd_tdb < jd_sunset;
+
+    // Day/night fraction: position within the day or night portion (0-1)
+    let day_night_fraction = if is_daytime {
+        let day_len = jd_sunset - jd_sunrise;
+        if day_len > 0.0 {
+            ((ctx.jd_tdb - jd_sunrise) / day_len).clamp(0.0, 1.0)
+        } else {
+            0.5
+        }
+    } else {
+        let night_len = jd_next_sunrise - jd_sunset;
+        if night_len > 0.0 {
+            let elapsed = if ctx.jd_tdb >= jd_sunset {
+                ctx.jd_tdb - jd_sunset
+            } else {
+                // Before sunset but after previous sunrise — shouldn't happen
+                // if is_daytime is false, but handle gracefully
+                0.0
+            };
+            (elapsed / night_len).clamp(0.0, 1.0)
+        } else {
+            0.5
+        }
+    };
+
+    // Moon-Sun elongation for paksha/nathonnatha
+    let sun_sid = sidereal_lons[Graha::Surya.index() as usize];
+    let moon_sid = sidereal_lons[Graha::Chandra.index() as usize];
+    let moon_sun_elongation = normalize(moon_sid - sun_sid);
+
+    // Lord resolution
+    let (year_lord, month_lord, weekday_lord, hora_lord_graha) =
+        resolve_kala_lords(engine, eop, utc, location, riseset_config, aya_config, ctx)?;
+
+    // Declinations for sapta grahas
+    let graha_declinations = ctx.graha_declinations(engine)?;
+
+    Ok(ShadbalaInputs {
+        sidereal_lons,
+        bhava_numbers,
+        speeds,
+        kala: KalaBalaInputs {
+            is_daytime,
+            day_night_fraction,
+            moon_sun_elongation,
+            year_lord,
+            month_lord,
+            weekday_lord,
+            hora_lord: hora_lord_graha,
+            graha_declinations,
+            sidereal_lons: {
+                let mut s7 = [0.0f64; 7];
+                s7.copy_from_slice(&sidereal_lons[..7]);
+                s7
+            },
+        },
+        varga_rashi_indices,
+    })
+}
+
+/// Compute varga rashi indices for the 7 saptavargaja vargas × 7 sapta grahas.
+///
+/// The 7 vargas are: D1, D2, D3, D7, D9, D12, D30.
+/// For each varga, compute amsha_longitude for each sapta graha and derive rashi index.
+fn assemble_varga_rashi_indices(sidereal_lons: &[f64; 9]) -> [[u8; 7]; 7] {
+    const SAPTAVARGAJA_AMSHAS: [Amsha; 7] = [
+        Amsha::D1,
+        Amsha::D2,
+        Amsha::D3,
+        Amsha::D7,
+        Amsha::D9,
+        Amsha::D12,
+        Amsha::D30,
+    ];
+    let mut result = [[0u8; 7]; 7];
+    for (vi, amsha) in SAPTAVARGAJA_AMSHAS.iter().enumerate() {
+        for gi in 0..7 {
+            let varga_lon = amsha_longitude(sidereal_lons[gi], *amsha, None);
+            result[vi][gi] = ((varga_lon / 30.0).floor() as u8).min(11);
+        }
+    }
+    result
+}
+
+/// Resolve the four Kala Bala lords: year, month, weekday, hora.
+fn resolve_kala_lords(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    riseset_config: &RiseSetConfig,
+    aya_config: &SankrantiConfig,
+    ctx: &mut JyotishContext,
+) -> Result<(Graha, Graha, Graha, Graha), SearchError> {
+    // Year lord: samvatsara → graha_samvatsara_lord
+    let varsha = varsha_for_date(engine, utc, aya_config)?;
+    let year_lord = graha_samvatsara_lord(varsha.samvatsara);
+
+    // Month lord: masa → graha_masa_lord
+    let masa = masa_for_date(engine, utc, aya_config)?;
+    let month_lord = graha_masa_lord(masa.masa);
+
+    // Weekday lord
+    let (jd_sunrise, jd_next_sunrise) =
+        ctx.sunrise_pair(engine, eop, utc, location, riseset_config)?;
+    let vaar = vaar_from_jd(jd_sunrise);
+    let weekday_lord = graha_vaar_lord(vaar);
+
+    // Hora lord
+    let hora_info = hora_from_sunrises(ctx.jd_tdb, jd_sunrise, jd_next_sunrise, engine.lsk());
+    let hora_lord_graha = graha_hora_lord(vaar, hora_info.hora_index);
+
+    Ok((year_lord, month_lord, weekday_lord, hora_lord_graha))
 }
 
 // ---------------------------------------------------------------------------

@@ -2,7 +2,8 @@
 
 use dhruv_vedic_base::{
     Amsha, AmshaVariation, AllSpecialLagnas, AllUpagrahas, AshtakavargaResult, Dms, DrishtiEntry,
-    Graha, GrahaDrishtiMatrix, Nakshatra, Rashi,
+    Graha, GrahaDrishtiMatrix, KalaBalaBreakdown, Nakshatra, NodeDignityPolicy, Rashi,
+    ShadbalaBreakdown, SthanaBalaBreakdown,
 };
 
 /// Sidereal longitudes of all 9 grahas.
@@ -264,6 +265,66 @@ impl Default for AmshaSelectionConfig {
 }
 
 // ---------------------------------------------------------------------------
+// Shadbala & Vimsopaka types
+// ---------------------------------------------------------------------------
+
+/// Shadbala entry for a single sapta graha.
+#[derive(Debug, Clone, Copy)]
+pub struct ShadbalaEntry {
+    pub graha: Graha,
+    pub sthana: SthanaBalaBreakdown,
+    pub dig: f64,
+    pub kala: KalaBalaBreakdown,
+    pub cheshta: f64,
+    pub naisargika: f64,
+    pub drik: f64,
+    pub total_shashtiamsas: f64,
+    pub total_rupas: f64,
+    pub required_strength: f64,
+    pub is_strong: bool,
+}
+
+impl ShadbalaEntry {
+    pub fn from_breakdown(graha: Graha, b: &ShadbalaBreakdown) -> Self {
+        Self {
+            graha,
+            sthana: b.sthana,
+            dig: b.dig,
+            kala: b.kala,
+            cheshta: b.cheshta,
+            naisargika: b.naisargika,
+            drik: b.drik,
+            total_shashtiamsas: b.total_shashtiamsas,
+            total_rupas: b.total_rupas,
+            required_strength: b.required_strength,
+            is_strong: b.is_strong,
+        }
+    }
+}
+
+/// Shadbala result for all 7 sapta grahas.
+#[derive(Debug, Clone, Copy)]
+pub struct ShadbalaResult {
+    pub entries: [ShadbalaEntry; 7],
+}
+
+/// Vimsopaka entry for a single graha.
+#[derive(Debug, Clone, Copy)]
+pub struct VimsopakaEntry {
+    pub graha: Graha,
+    pub shadvarga: f64,
+    pub saptavarga: f64,
+    pub dashavarga: f64,
+    pub shodasavarga: f64,
+}
+
+/// Vimsopaka result for all 9 navagrahas.
+#[derive(Debug, Clone, Copy)]
+pub struct VimsopakaResult {
+    pub entries: [VimsopakaEntry; 9],
+}
+
+// ---------------------------------------------------------------------------
 // Full kundali config/result
 // ---------------------------------------------------------------------------
 
@@ -284,6 +345,12 @@ pub struct FullKundaliConfig {
     pub include_special_lagnas: bool,
     /// Include amsha (divisional chart) section.
     pub include_amshas: bool,
+    /// Include shadbala section (sapta grahas only).
+    pub include_shadbala: bool,
+    /// Include vimsopaka bala section (navagraha).
+    pub include_vimsopaka: bool,
+    /// Node dignity policy for vimsopaka.
+    pub node_dignity_policy: NodeDignityPolicy,
     /// Config passed to graha positions computation.
     pub graha_positions_config: GrahaPositionsConfig,
     /// Config passed to bindus computation.
@@ -306,6 +373,9 @@ impl Default for FullKundaliConfig {
             include_upagrahas: true,
             include_special_lagnas: true,
             include_amshas: false,
+            include_shadbala: false,
+            include_vimsopaka: false,
+            node_dignity_policy: NodeDignityPolicy::default(),
             graha_positions_config: GrahaPositionsConfig::default(),
             bindus_config: BindusConfig::default(),
             drishti_config: DrishtiConfig::default(),
@@ -332,4 +402,8 @@ pub struct FullKundaliResult {
     pub special_lagnas: Option<AllSpecialLagnas>,
     /// Present when `FullKundaliConfig::include_amshas` is true.
     pub amshas: Option<AmshaResult>,
+    /// Present when `FullKundaliConfig::include_shadbala` is true.
+    pub shadbala: Option<ShadbalaResult>,
+    /// Present when `FullKundaliConfig::include_vimsopaka` is true.
+    pub vimsopaka: Option<VimsopakaResult>,
 }

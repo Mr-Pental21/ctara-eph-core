@@ -693,6 +693,82 @@ pub fn amsha_charts(
     )?)
 }
 
+// ---------------------------------------------------------------------------
+// Shadbala / Vimsopaka
+// ---------------------------------------------------------------------------
+
+/// Compute Shadbala (six-fold planetary strength) for all 7 sapta grahas.
+pub fn shadbala(
+    date: UtcDate,
+    eop: &EopKernel,
+    location: &GeoLocation,
+    system: AyanamshaSystem,
+    use_nutation: bool,
+) -> Result<dhruv_search::ShadbalaResult, DhruvError> {
+    let eng = engine()?;
+    let utc: UtcTime = date.into();
+    let bhava_config = dhruv_vedic_base::BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = SankrantiConfig::new(system, use_nutation);
+    Ok(dhruv_search::shadbala_for_date(
+        eng, eop, &utc, location, &bhava_config, &rs_config, &aya_config,
+    )?)
+}
+
+/// Compute Shadbala for a single graha (sapta grahas only; rejects Rahu/Ketu).
+pub fn shadbala_for_graha(
+    date: UtcDate,
+    eop: &EopKernel,
+    location: &GeoLocation,
+    system: AyanamshaSystem,
+    use_nutation: bool,
+    graha: dhruv_vedic_base::Graha,
+) -> Result<dhruv_search::ShadbalaEntry, DhruvError> {
+    let eng = engine()?;
+    let utc: UtcTime = date.into();
+    let bhava_config = dhruv_vedic_base::BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = SankrantiConfig::new(system, use_nutation);
+    Ok(dhruv_search::shadbala_for_graha(
+        eng, eop, &utc, location, &bhava_config, &rs_config, &aya_config, graha,
+    )?)
+}
+
+/// Compute Vimsopaka Bala for all 9 navagrahas.
+pub fn vimsopaka(
+    date: UtcDate,
+    eop: &EopKernel,
+    location: &GeoLocation,
+    system: AyanamshaSystem,
+    use_nutation: bool,
+    node_policy: dhruv_vedic_base::NodeDignityPolicy,
+) -> Result<dhruv_search::VimsopakaResult, DhruvError> {
+    let eng = engine()?;
+    let utc: UtcTime = date.into();
+    let aya_config = SankrantiConfig::new(system, use_nutation);
+    Ok(dhruv_search::vimsopaka_for_date(
+        eng, eop, &utc, location, &aya_config, node_policy,
+    )?)
+}
+
+/// Compute Vimsopaka Bala for a single graha (all 9 including Rahu/Ketu).
+pub fn vimsopaka_for_graha(
+    date: UtcDate,
+    eop: &EopKernel,
+    location: &GeoLocation,
+    system: AyanamshaSystem,
+    use_nutation: bool,
+    node_policy: dhruv_vedic_base::NodeDignityPolicy,
+    graha: dhruv_vedic_base::Graha,
+) -> Result<dhruv_search::VimsopakaEntry, DhruvError> {
+    let eng = engine()?;
+    let utc: UtcTime = date.into();
+    let aya_config = SankrantiConfig::new(system, use_nutation);
+    Ok(dhruv_search::vimsopaka_for_graha(
+        eng, eop, &utc, location, &aya_config, node_policy, graha,
+    )?)
+}
+
 /// Compute all 11 upagrahas for a given date and location.
 pub fn upagrahas(
     date: UtcDate,

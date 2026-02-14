@@ -11,10 +11,10 @@ use dhruv_time::{EopKernel, UtcTime, calendar_to_jd};
 use dhruv_vedic_base::BhavaConfig;
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig, RiseSetResult};
 use dhruv_vedic_base::{
-    ALL_GRAHAS, AyanamshaSystem, Graha, LunarNode, NodeMode, Rashi, ayanamsha_deg, deg_to_dms,
-    jd_tdb_to_centuries, nakshatra_from_longitude, nakshatra_from_tropical,
-    nakshatra28_from_longitude, nakshatra28_from_tropical, rashi_from_longitude,
-    rashi_from_tropical,
+    ALL_GRAHAS, AyanamshaSystem, Graha, LunarNode, NodeDignityPolicy, NodeMode, Rashi,
+    SAPTA_GRAHAS, ayanamsha_deg, deg_to_dms, jd_tdb_to_centuries, nakshatra_from_longitude,
+    nakshatra_from_tropical, nakshatra28_from_longitude, nakshatra28_from_tropical,
+    rashi_from_longitude, rashi_from_tropical,
 };
 
 #[derive(Parser)]
@@ -1477,6 +1477,75 @@ enum Commands {
         #[arg(long)]
         longitudes: String,
     },
+    /// Compute Shadbala (six-fold planetary strength) for a date and location
+    Shadbala {
+        /// UTC datetime (YYYY-MM-DDThh:mm:ssZ)
+        #[arg(long)]
+        date: String,
+        /// Latitude in degrees (north positive)
+        #[arg(long)]
+        lat: f64,
+        /// Longitude in degrees (east positive)
+        #[arg(long)]
+        lon: f64,
+        /// Altitude in meters (default 0)
+        #[arg(long, default_value = "0")]
+        alt: f64,
+        /// Ayanamsha system code (0-19, default 0=Lahiri)
+        #[arg(long, default_value = "0")]
+        ayanamsha: i32,
+        /// Apply nutation correction
+        #[arg(long)]
+        nutation: bool,
+        /// Optional graha filter (Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn)
+        #[arg(long)]
+        graha: Option<String>,
+        /// Path to SPK kernel
+        #[arg(long)]
+        bsp: PathBuf,
+        /// Path to leap second kernel
+        #[arg(long)]
+        lsk: PathBuf,
+        /// Path to IERS EOP file (finals2000A.all)
+        #[arg(long)]
+        eop: PathBuf,
+    },
+    /// Compute Vimsopaka Bala (20-point varga dignity strength) for a date and location
+    Vimsopaka {
+        /// UTC datetime (YYYY-MM-DDThh:mm:ssZ)
+        #[arg(long)]
+        date: String,
+        /// Latitude in degrees (north positive)
+        #[arg(long)]
+        lat: f64,
+        /// Longitude in degrees (east positive)
+        #[arg(long)]
+        lon: f64,
+        /// Altitude in meters (default 0)
+        #[arg(long, default_value = "0")]
+        alt: f64,
+        /// Ayanamsha system code (0-19, default 0=Lahiri)
+        #[arg(long, default_value = "0")]
+        ayanamsha: i32,
+        /// Apply nutation correction
+        #[arg(long)]
+        nutation: bool,
+        /// Optional graha filter (Sun..Ketu)
+        #[arg(long)]
+        graha: Option<String>,
+        /// Node dignity policy: sign-lord (default) or sama
+        #[arg(long, default_value = "sign-lord")]
+        node_policy: String,
+        /// Path to SPK kernel
+        #[arg(long)]
+        bsp: PathBuf,
+        /// Path to leap second kernel
+        #[arg(long)]
+        lsk: PathBuf,
+        /// Path to IERS EOP file (finals2000A.all)
+        #[arg(long)]
+        eop: PathBuf,
+    },
     /// Transform a sidereal longitude through amsha (divisional chart) mappings
     Amsha {
         /// Sidereal longitude in degrees
@@ -1535,6 +1604,37 @@ fn load_eop(path: &PathBuf) -> EopKernel {
         eprintln!("Failed to load EOP: {e}");
         std::process::exit(1);
     })
+}
+
+fn parse_graha_name(s: &str) -> Graha {
+    match s.to_lowercase().as_str() {
+        "sun" | "surya" => Graha::Surya,
+        "moon" | "chandra" => Graha::Chandra,
+        "mars" | "mangal" => Graha::Mangal,
+        "mercury" | "buddh" => Graha::Buddh,
+        "jupiter" | "guru" => Graha::Guru,
+        "venus" | "shukra" => Graha::Shukra,
+        "saturn" | "shani" => Graha::Shani,
+        "rahu" => Graha::Rahu,
+        "ketu" => Graha::Ketu,
+        _ => {
+            eprintln!("Invalid graha name: {s}");
+            eprintln!("Valid: Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, Rahu, Ketu");
+            std::process::exit(1);
+        }
+    }
+}
+
+fn parse_node_policy(s: &str) -> NodeDignityPolicy {
+    match s.to_lowercase().as_str() {
+        "sign-lord" | "signlord" => NodeDignityPolicy::SignLordBased,
+        "sama" | "always-sama" => NodeDignityPolicy::AlwaysSama,
+        _ => {
+            eprintln!("Invalid node policy: {s}");
+            eprintln!("Valid: sign-lord (default), sama");
+            std::process::exit(1);
+        }
+    }
 }
 
 fn require_body(code: i32) -> Body {
@@ -4673,6 +4773,156 @@ fn main() {
                 println!();
             }
         }
+        Commands::Shadbala {
+            date,
+            lat,
+            lon,
+            alt,
+            ayanamsha,
+            nutation,
+            graha,
+            bsp,
+            lsk,
+            eop,
+        } => {
+            let system = require_aya_system(ayanamsha);
+            let utc = parse_utc(&date).unwrap_or_else(|e| {
+                eprintln!("{e}");
+                std::process::exit(1);
+            });
+            let engine = load_engine(&bsp, &lsk);
+            let eop_kernel = load_eop(&eop);
+            let location = GeoLocation::new(lat, lon, alt);
+            let bhava_config = BhavaConfig::default();
+            let rs_config = RiseSetConfig::default();
+            let aya_config = SankrantiConfig::new(system, nutation);
+
+            let graha_names = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
+
+            if let Some(name) = graha {
+                let g = parse_graha_name(&name);
+                let entry = dhruv_search::shadbala_for_graha(
+                    &engine, &eop_kernel, &utc, &location, &bhava_config, &rs_config, &aya_config, g,
+                )
+                .unwrap_or_else(|e| {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                });
+                println!("Shadbala for {} on {}\n", g.english_name(), date);
+                print_shadbala_entry(&entry);
+            } else {
+                let result = dhruv_search::shadbala_for_date(
+                    &engine, &eop_kernel, &utc, &location, &bhava_config, &rs_config, &aya_config,
+                )
+                .unwrap_or_else(|e| {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                });
+
+                println!("Shadbala for {} at {:.4}°N, {:.4}°E\n", date, lat, lon);
+                println!(
+                    "{:<8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>6}",
+                    "Graha", "Sthana", "Dig", "Kala", "Cheshta", "Nais", "Drik", "Total", "Reqd", "Strong"
+                );
+                println!("{}", "-".repeat(88));
+                for (i, entry) in result.entries.iter().enumerate() {
+                    println!(
+                        "{:<8} {:>8.2} {:>8.2} {:>8.2} {:>8.2} {:>8.2} {:>8.2} {:>8.2} {:>8.2} {:>6}",
+                        graha_names[i],
+                        entry.sthana.total,
+                        entry.dig,
+                        entry.kala.total,
+                        entry.cheshta,
+                        entry.naisargika,
+                        entry.drik,
+                        entry.total_shashtiamsas,
+                        entry.required_strength,
+                        if entry.is_strong { "Yes" } else { "No" },
+                    );
+                }
+            }
+        }
+        Commands::Vimsopaka {
+            date,
+            lat,
+            lon,
+            alt,
+            ayanamsha,
+            nutation,
+            graha,
+            node_policy,
+            bsp,
+            lsk,
+            eop,
+        } => {
+            let system = require_aya_system(ayanamsha);
+            let utc = parse_utc(&date).unwrap_or_else(|e| {
+                eprintln!("{e}");
+                std::process::exit(1);
+            });
+            let engine = load_engine(&bsp, &lsk);
+            let eop_kernel = load_eop(&eop);
+            let location = GeoLocation::new(lat, lon, alt);
+            let aya_config = SankrantiConfig::new(system, nutation);
+            let policy = parse_node_policy(&node_policy);
+
+            let graha_names = [
+                "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu",
+            ];
+
+            if let Some(name) = graha {
+                let g = parse_graha_name(&name);
+                let entry = dhruv_search::vimsopaka_for_graha(
+                    &engine, &eop_kernel, &utc, &location, &aya_config, policy, g,
+                )
+                .unwrap_or_else(|e| {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                });
+                println!("Vimsopaka for {} on {}\n", g.english_name(), date);
+                println!(
+                    "  Shadvarga:     {:>6.2}/20",
+                    entry.shadvarga
+                );
+                println!(
+                    "  Saptavarga:    {:>6.2}/20",
+                    entry.saptavarga
+                );
+                println!(
+                    "  Dashavarga:    {:>6.2}/20",
+                    entry.dashavarga
+                );
+                println!(
+                    "  Shodasavarga:  {:>6.2}/20",
+                    entry.shodasavarga
+                );
+            } else {
+                let result = dhruv_search::vimsopaka_for_date(
+                    &engine, &eop_kernel, &utc, &location, &aya_config, policy,
+                )
+                .unwrap_or_else(|e| {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                });
+
+                println!("Vimsopaka Bala for {} at {:.4}°N, {:.4}°E\n", date, lat, lon);
+                println!(
+                    "{:<8} {:>10} {:>10} {:>10} {:>12}",
+                    "Graha", "Shadvarga", "Saptavarga", "Dashavarga", "Shodasavarga"
+                );
+                println!("{}", "-".repeat(58));
+                for (i, entry) in result.entries.iter().enumerate() {
+                    println!(
+                        "{:<8} {:>10.2} {:>10.2} {:>10.2} {:>12.2}",
+                        graha_names[i],
+                        entry.shadvarga,
+                        entry.saptavarga,
+                        entry.dashavarga,
+                        entry.shodasavarga,
+                    );
+                }
+            }
+        }
         Commands::Amsha { lon, amsha } => {
             let requests = parse_amsha_specs(&amsha);
             for req in &requests {
@@ -4799,6 +5049,36 @@ fn print_stationary_event(label: &str, ev: &dhruv_search::stationary_types::Stat
     println!(
         "  Longitude: {:.4}°  Latitude: {:.4}°",
         ev.longitude_deg, ev.latitude_deg
+    );
+}
+
+fn print_shadbala_entry(entry: &dhruv_search::ShadbalaEntry) {
+    println!("  Sthana Bala:     {:>8.2}", entry.sthana.total);
+    println!("    Uchcha:        {:>8.2}", entry.sthana.uchcha);
+    println!("    Saptavargaja:  {:>8.2}", entry.sthana.saptavargaja);
+    println!("    Ojhayugma:     {:>8.2}", entry.sthana.ojhayugma);
+    println!("    Kendradi:      {:>8.2}", entry.sthana.kendradi);
+    println!("    Drekkana:      {:>8.2}", entry.sthana.drekkana);
+    println!("  Dig Bala:        {:>8.2}", entry.dig);
+    println!("  Kala Bala:       {:>8.2}", entry.kala.total);
+    println!("    Nathonnatha:   {:>8.2}", entry.kala.nathonnatha);
+    println!("    Paksha:        {:>8.2}", entry.kala.paksha);
+    println!("    Tribhaga:      {:>8.2}", entry.kala.tribhaga);
+    println!("    Abda:          {:>8.2}", entry.kala.abda);
+    println!("    Masa:          {:>8.2}", entry.kala.masa);
+    println!("    Vara:          {:>8.2}", entry.kala.vara);
+    println!("    Hora:          {:>8.2}", entry.kala.hora);
+    println!("    Ayana:         {:>8.2}", entry.kala.ayana);
+    println!("    Yuddha:        {:>8.2}", entry.kala.yuddha);
+    println!("  Cheshta Bala:    {:>8.2}", entry.cheshta);
+    println!("  Naisargika Bala: {:>8.2}", entry.naisargika);
+    println!("  Drik Bala:       {:>8.2}", entry.drik);
+    println!("  ─────────────────────────");
+    println!("  Total:           {:>8.2} shashtiamsas ({:.2} rupas)", entry.total_shashtiamsas, entry.total_rupas);
+    println!("  Required:        {:>8.2}", entry.required_strength);
+    println!(
+        "  Strong:          {}",
+        if entry.is_strong { "Yes" } else { "No" }
     );
 }
 

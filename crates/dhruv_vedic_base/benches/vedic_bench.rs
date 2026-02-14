@@ -1,9 +1,13 @@
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use dhruv_vedic_base::{
-    Amsha, AmshaRequest, AyanamshaSystem, LunarNode, NodeMode, SHODASHAVARGA, amsha_longitude,
-    amsha_longitudes, ayanamsha_deg, lunar_node_deg, nakshatra_from_tropical, rashi_from_tropical,
-    tithi_from_elongation, yoga_from_sum,
+    Amsha, AmshaRequest, AyanamshaSystem, Graha, LunarNode, NodeDignityPolicy, NodeMode,
+    SHODASHAVARGA, amsha_longitude, amsha_longitudes, ayanamsha_deg, lunar_node_deg,
+    nakshatra_from_tropical, rashi_from_tropical, tithi_from_elongation, yoga_from_sum,
 };
+use dhruv_vedic_base::shadbala::{
+    KalaBalaInputs, ShadbalaInputs, all_shadbalas_from_inputs, shadbala_from_inputs,
+};
+use dhruv_vedic_base::vimsopaka::{SHODASAVARGA as SHODASAVARGA_WEIGHTS, all_vimsopaka_balas};
 
 fn ayanamsha_bench(c: &mut Criterion) {
     let t = 0.24;
@@ -78,11 +82,65 @@ fn amsha_bench(c: &mut Criterion) {
     group.finish();
 }
 
+fn shadbala_bench(c: &mut Criterion) {
+    let sidereal_lons = [280.0, 120.0, 15.0, 170.0, 220.0, 350.0, 195.0, 90.0, 270.0];
+    let bhava_numbers = [10u8, 4, 1, 7, 1, 4, 7];
+    let speeds = [1.0, 13.0, 0.5, 1.5, 0.12, 1.2, 0.08];
+    let kala = KalaBalaInputs {
+        is_daytime: true,
+        day_night_fraction: 0.5,
+        moon_sun_elongation: 120.0,
+        year_lord: Graha::Surya,
+        month_lord: Graha::Mangal,
+        weekday_lord: Graha::Shukra,
+        hora_lord: Graha::Buddh,
+        graha_declinations: [23.0, 5.0, -15.0, 10.0, -20.0, 8.0, -3.0],
+        sidereal_lons: [280.0, 120.0, 15.0, 170.0, 220.0, 350.0, 195.0],
+    };
+    let varga_rashi = [[9, 4, 0, 5, 7, 11, 6]; 7];
+    let inputs = ShadbalaInputs {
+        sidereal_lons,
+        bhava_numbers,
+        speeds,
+        kala,
+        varga_rashi_indices: varga_rashi,
+    };
+
+    let mut group = c.benchmark_group("shadbala");
+    group.bench_function("shadbala_single", |b| {
+        b.iter(|| shadbala_from_inputs(black_box(Graha::Surya), black_box(&inputs)))
+    });
+    group.bench_function("shadbala_all", |b| {
+        b.iter(|| all_shadbalas_from_inputs(black_box(&inputs)))
+    });
+    group.finish();
+}
+
+fn vimsopaka_bench(c: &mut Criterion) {
+    let sidereal_lons = [280.0, 120.0, 15.0, 170.0, 220.0, 350.0, 195.0, 90.0, 270.0];
+    let policy = NodeDignityPolicy::SignLordBased;
+
+    let mut group = c.benchmark_group("vimsopaka");
+    let weights: &[_] = &SHODASAVARGA_WEIGHTS;
+    group.bench_function("vimsopaka_shodasavarga_9", |b| {
+        b.iter(|| {
+            all_vimsopaka_balas(
+                black_box(&sidereal_lons),
+                black_box(weights),
+                black_box(policy),
+            )
+        })
+    });
+    group.finish();
+}
+
 criterion_group!(
     benches,
     ayanamsha_bench,
     zodiac_bench,
     panchang_primitives_bench,
-    amsha_bench
+    amsha_bench,
+    shadbala_bench,
+    vimsopaka_bench
 );
 criterion_main!(benches);
