@@ -22,10 +22,10 @@ This repository is clean-room and permissive-license only.
 - Keep updates compatible with CI license enforcement.
 - For major subsystem work, maintain clean-room documentation from template.
 
-## Core/Pro Separation
+## Open Source Scope
 
-- `ctara-dhruv-core` must not depend on `ctara-dhruv-pro`.
-- Do not leak proprietary logic into core through flags, generated code, or shared files.
+- `ctara-dhruv-core` is the primary open-source project scope.
+- Do not add proprietary-only logic through flags, generated code, or shared files.
 
 ## Dependency Rules
 

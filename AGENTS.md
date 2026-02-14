@@ -30,10 +30,10 @@ Scope: this file governs AI agent behavior in `ctara-dhruv-core`.
 - AI-generated code is authored code and must satisfy all policy constraints.
 - Never prompt tools/models to replicate denylisted implementations.
 
-## Core Boundary Rule
+## Open Source Boundary Rule
 
-- `ctara-dhruv-core` must not depend on `ctara-dhruv-pro`.
-- Do not introduce proprietary behavior through feature flags, shared files, generated artifacts, or build-time hooks.
+- This repository is fully open source.
+- Do not introduce proprietary-only behavior through feature flags, shared files, generated artifacts, or build-time hooks.
 
 ## Required Workflow For Agent Changes
 
@@ -48,7 +48,7 @@ Scope: this file governs AI agent behavior in `ctara-dhruv-core`.
 - Stop and ask for human approval if:
   - source/license status is ambiguous,
   - requested approach requires denylisted/source-available reference code,
-  - a change risks violating core/pro separation.
+  - a change risks violating open-source licensing or provenance policy.
 
 ## Testing
 

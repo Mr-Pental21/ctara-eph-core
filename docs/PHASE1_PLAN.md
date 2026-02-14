@@ -364,7 +364,7 @@ Ecliptic longitude/latitude extraction is needed by nearly every downstream feat
 - **House systems**: ecliptic longitude of Ascendant/MC
 - **Vedic charts**: all planetary positions expressed in sidereal ecliptic longitude
 
-Putting frame math in a standalone crate ensures `dhruv_core`, `dhruv_vedic_base`, and `dhruv_pro` all share the same rotation/conversion code without circular dependencies.
+Putting frame math in a standalone crate ensures `dhruv_core`, `dhruv_vedic_base`, and future downstream crates all share the same rotation/conversion code without circular dependencies.
 
 ### Module Structure
 

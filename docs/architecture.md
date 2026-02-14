@@ -14,7 +14,7 @@
 - `crates/dhruv_cli`: diagnostics and developer tooling.
 
 ## Architectural Constraints
-- No dependency on `ctara-dhruv-pro`.
+- No proprietary dependencies or closed-source coupling.
 - No denylisted-source derivation.
 - Deterministic outputs under documented numeric tolerances.
 - Thread-safe query execution.
@@ -22,5 +22,5 @@
 ## Next Design Deliverables
 1. Define canonical time representation and conversion API in `dhruv_time`.
 2. Define engine query contract and error model in `dhruv_core`.
-3. Define extension traits that pro can implement without core/pro coupling.
+3. Define extension traits that downstream crates can implement without tight coupling.
 4. Define C ABI ownership and error semantics in `dhruv_ffi_c`.

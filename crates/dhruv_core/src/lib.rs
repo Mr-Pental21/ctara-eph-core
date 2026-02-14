@@ -230,7 +230,7 @@ pub enum DerivedValue {
 
 /// Extension seam that downstream crates can implement without tight coupling.
 ///
-/// This is the primary mechanism for `dhruv_vedic_base` and `dhruv_pro` to add
+/// This is the primary mechanism for `dhruv_vedic_base` and downstream crates to add
 /// derived quantities (ayanamsha, lunar nodes, etc.) without modifying core.
 pub trait DerivedComputation: Send + Sync {
     fn name(&self) -> &'static str;

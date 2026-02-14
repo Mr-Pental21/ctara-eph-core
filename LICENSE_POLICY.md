@@ -61,10 +61,10 @@ This project accepts only permissively licensed code and original implementation
 - AI-generated code is treated as authored code and must comply with this policy.
 - Contributors must not ask AI systems to study, summarize, or replicate denylisted/source-available codebases.
 
-## Core / Pro Separation Rule
+## Open Source Distribution Rule
 
-- `ctara-dhruv-core` must not depend on `ctara-dhruv-pro`.
-- Proprietary logic must not be introduced into core via shared files, feature flags, conditional compilation, build scripts, or generated artifacts.
+- `ctara-dhruv-core` is distributed as open source.
+- Proprietary-only logic must not be introduced via shared files, feature flags, conditional compilation, build scripts, or generated artifacts.
 
 ## Provenance Record
 
