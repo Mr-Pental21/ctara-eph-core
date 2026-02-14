@@ -17,6 +17,8 @@
 
 pub mod amsha;
 pub mod arudha;
+pub mod avastha;
+pub mod combustion;
 pub mod ashtakavarga;
 pub mod ayana_type;
 pub mod ayanamsha;
@@ -53,6 +55,16 @@ pub use amsha::{
     amsha_rashi_infos, rashi_element, rashi_position_to_longitude,
 };
 pub use arudha::{ALL_ARUDHA_PADAS, ArudhaPada, ArudhaResult, all_arudha_padas, arudha_pada};
+pub use avastha::{
+    ALL_NAME_GROUPS, AllGrahaAvasthas, AvasthaInputs, BaladiAvastha, DeeptadiAvastha,
+    GrahaAvasthas, JagradadiAvastha, LajjitadiAvastha, LajjitadiInputs, NAME_GROUP_ANKAS,
+    NameGroup, SayanadiAvastha, SayanadiInputs, SayanadiResult, SayanadiSubState, all_avasthas,
+    all_baladi_avasthas, all_deeptadi_avasthas, all_jagradadi_avasthas, all_lajjitadi_avasthas,
+    all_sayanadi_avasthas, baladi_avastha, deeptadi_avastha, jagradadi_avastha, lajjitadi_avastha,
+    lost_planetary_war, navamsa_number, sayanadi_all_sub_states, sayanadi_avastha,
+    sayanadi_sub_state,
+};
+pub use combustion::{all_combustion_status, combustion_threshold, is_combust};
 pub use ashtakavarga::{
     AshtakavargaResult, BAV_TOTALS, BhinnaAshtakavarga, SAV_TOTAL, SarvaAshtakavarga,
     calculate_all_bav, calculate_ashtakavarga, calculate_bav, calculate_sav, ekadhipatya_sodhana,

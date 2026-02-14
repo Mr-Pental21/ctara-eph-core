@@ -174,12 +174,50 @@ fn vimsopaka_for_date_bench(c: &mut Criterion) {
     group.finish();
 }
 
+fn avastha_for_date_bench(c: &mut Criterion) {
+    let engine = match load_engine() {
+        Some(v) => v,
+        None => return,
+    };
+    let base = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../kernels/data");
+    let eop_path = base.join("finals2000A.all");
+    let eop = match EopKernel::load(Path::new(&eop_path)) {
+        Ok(k) => k,
+        Err(_) => return,
+    };
+    let utc = UtcTime::new(2024, 1, 15, 6, 30, 0.0);
+    let location = GeoLocation::new(28.6139, 77.2090, 0.0);
+    let bhava_config = BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = SankrantiConfig::default_lahiri();
+
+    let mut group = c.benchmark_group("search_avastha");
+    group.sample_size(10);
+    group.bench_function("avastha_for_date", |b| {
+        b.iter(|| {
+            dhruv_search::avastha_for_date(
+                black_box(&engine),
+                black_box(&eop),
+                black_box(&location),
+                black_box(&utc),
+                black_box(&bhava_config),
+                black_box(&rs_config),
+                black_box(&aya_config),
+                black_box(NodeDignityPolicy::SignLordBased),
+            )
+            .expect("should succeed")
+        })
+    });
+    group.finish();
+}
+
 criterion_group!(
     benches,
     lunar_phase_bench,
     sankranti_bench,
     amsha_charts_bench,
     shadbala_for_date_bench,
-    vimsopaka_for_date_bench
+    vimsopaka_for_date_bench,
+    avastha_for_date_bench
 );
 criterion_main!(benches);

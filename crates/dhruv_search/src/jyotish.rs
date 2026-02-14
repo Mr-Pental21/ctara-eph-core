@@ -14,18 +14,20 @@ use dhruv_vedic_base::special_lagna::all_special_lagnas;
 use dhruv_vedic_base::upagraha::TIME_BASED_UPAGRAHAS;
 use dhruv_vedic_base::vaar::vaar_from_jd;
 use dhruv_vedic_base::{
-    ALL_GRAHAS, Amsha, AmshaRequest, AmshaVariation, AllSpecialLagnas, AllUpagrahas, ArudhaResult,
-    AshtakavargaResult, AyanamshaSystem, BhavaConfig, BhavaResult, DrishtiEntry, Graha,
-    KalaBalaInputs, LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS,
-    ShadbalaInputs, Upagraha, amsha_longitude, all_shadbalas_from_inputs,
+    ALL_GRAHAS, AllGrahaAvasthas, Amsha, AmshaRequest, AmshaVariation, AllSpecialLagnas,
+    AllUpagrahas, ArudhaResult, AshtakavargaResult, AvasthaInputs, AyanamshaSystem, BhavaConfig,
+    BhavaResult, Dignity, DrishtiEntry, Graha, GrahaAvasthas, KalaBalaInputs, LajjitadiInputs,
+    LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS, SayanadiInputs, ShadbalaInputs,
+    Upagraha, all_avasthas, all_combustion_status, amsha_longitude, all_shadbalas_from_inputs,
     all_shadvarga_vimsopaka, all_saptavarga_vimsopaka, all_dashavarga_vimsopaka,
     all_shodasavarga_vimsopaka, ayanamsha_deg, bhrigu_bindu,
-    calculate_ashtakavarga, compute_bhavas, ghati_lagna, ghatikas_since_sunrise,
-    graha_drishti, graha_drishti_matrix, hora_lord as graha_hora_lord, hora_lagna,
-    jd_tdb_to_centuries, lagna_longitude_rad, lunar_node_deg, masa_lord as graha_masa_lord,
-    nakshatra_from_longitude, normalize_360, nth_rashi_from, pranapada_lagna,
-    rashi_from_longitude, rashi_lord_by_index, samvatsara_lord as graha_samvatsara_lord,
-    sree_lagna, sun_based_upagrahas, time_upagraha_jd, vaar_lord as graha_vaar_lord,
+    calculate_ashtakavarga, compute_bhavas, dignity_in_rashi_with_positions, ghati_lagna,
+    ghatikas_since_sunrise, graha_drishti, graha_drishti_matrix, hora_lord as graha_hora_lord,
+    hora_lagna, jd_tdb_to_centuries, lagna_longitude_rad, lost_planetary_war, lunar_node_deg,
+    masa_lord as graha_masa_lord, nakshatra_from_longitude, navamsa_number, node_dignity_in_rashi,
+    normalize_360, nth_rashi_from, pranapada_lagna, rashi_from_longitude, rashi_lord_by_index,
+    samvatsara_lord as graha_samvatsara_lord, sree_lagna, sun_based_upagrahas,
+    time_upagraha_jd, vaar_lord as graha_vaar_lord,
 };
 
 use crate::conjunction::body_ecliptic_lon_lat;
@@ -1062,6 +1064,15 @@ pub fn full_kundali_for_date(
         None
     };
 
+    let avastha = if config.include_avastha {
+        Some(avastha_for_date_with_ctx(
+            engine, eop, location, utc, bhava_config, riseset_config, aya_config,
+            config.node_dignity_policy, &mut ctx,
+        )?)
+    } else {
+        None
+    };
+
     Ok(FullKundaliResult {
         graha_positions,
         bindus,
@@ -1072,6 +1083,7 @@ pub fn full_kundali_for_date(
         amshas,
         shadbala,
         vimsopaka,
+        avastha,
     })
 }
 
@@ -1378,6 +1390,183 @@ fn resolve_kala_lords(
     let hora_lord_graha = graha_hora_lord(vaar, hora_info.hora_index);
 
     Ok((year_lord, month_lord, weekday_lord, hora_lord_graha))
+}
+
+// ---------------------------------------------------------------------------
+// Avastha orchestration
+// ---------------------------------------------------------------------------
+
+/// Compute avasthas for all 9 grahas at a given UTC date and location.
+pub fn avastha_for_date(
+    engine: &Engine,
+    eop: &EopKernel,
+    location: &GeoLocation,
+    utc: &UtcTime,
+    bhava_config: &BhavaConfig,
+    riseset_config: &RiseSetConfig,
+    aya_config: &SankrantiConfig,
+    node_policy: NodeDignityPolicy,
+) -> Result<AllGrahaAvasthas, SearchError> {
+    let mut ctx = JyotishContext::new(engine, utc, aya_config);
+    avastha_for_date_with_ctx(
+        engine, eop, location, utc, bhava_config, riseset_config, aya_config, node_policy,
+        &mut ctx,
+    )
+}
+
+fn avastha_for_date_with_ctx(
+    engine: &Engine,
+    eop: &EopKernel,
+    location: &GeoLocation,
+    utc: &UtcTime,
+    bhava_config: &BhavaConfig,
+    riseset_config: &RiseSetConfig,
+    aya_config: &SankrantiConfig,
+    node_policy: NodeDignityPolicy,
+    ctx: &mut JyotishContext,
+) -> Result<AllGrahaAvasthas, SearchError> {
+    let inputs = assemble_avastha_inputs(
+        engine, eop, utc, location, bhava_config, riseset_config, aya_config, node_policy, ctx,
+    )?;
+    Ok(all_avasthas(&inputs))
+}
+
+/// Compute avasthas for a single graha.
+pub fn avastha_for_graha(
+    engine: &Engine,
+    eop: &EopKernel,
+    location: &GeoLocation,
+    utc: &UtcTime,
+    bhava_config: &BhavaConfig,
+    riseset_config: &RiseSetConfig,
+    aya_config: &SankrantiConfig,
+    node_policy: NodeDignityPolicy,
+    graha: Graha,
+) -> Result<GrahaAvasthas, SearchError> {
+    let result = avastha_for_date(
+        engine, eop, location, utc, bhava_config, riseset_config, aya_config, node_policy,
+    )?;
+    Ok(result.entries[graha.index() as usize])
+}
+
+/// Assemble AvasthaInputs from engine queries and JyotishContext cache.
+fn assemble_avastha_inputs(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    bhava_config: &BhavaConfig,
+    riseset_config: &RiseSetConfig,
+    aya_config: &SankrantiConfig,
+    node_policy: NodeDignityPolicy,
+    ctx: &mut JyotishContext,
+) -> Result<AvasthaInputs, SearchError> {
+    let aya = ctx.ayanamsha;
+
+    // 1. Graha longitudes & rashi indices
+    let graha_lons = *ctx.graha_lons(engine, aya_config)?;
+    let sidereal_lons = graha_lons.longitudes;
+    let rashi_indices = graha_lons.all_rashi_indices();
+
+    // 2. Bhava numbers for all 9 grahas
+    let bhava_result = *ctx.bhava_result(engine, eop, location, bhava_config)?;
+    let mut bhava_numbers = [0u8; 9];
+    for graha in ALL_GRAHAS {
+        let idx = graha.index() as usize;
+        let tropical_lon = normalize(sidereal_lons[idx] + aya);
+        bhava_numbers[idx] = find_bhava_number(tropical_lon, &bhava_result);
+    }
+
+    // 3. Speeds → retrograde detection (sapta grahas only; Rahu/Ketu always false)
+    let speeds = ctx.graha_speeds(engine)?;
+    let mut is_retrograde = [false; 9];
+    for i in 0..7 {
+        is_retrograde[i] = speeds[i] < 0.0;
+    }
+
+    // 4. Declinations for war detection
+    let declinations = ctx.graha_declinations(engine)?;
+
+    // 5. Dignities: sapta grahas via compound friendship, Rahu/Ketu via node policy
+    let mut sapta_rashi_indices = [0u8; 7];
+    sapta_rashi_indices.copy_from_slice(&rashi_indices[..7]);
+    let mut dignities = [Dignity::Sama; 9];
+    for graha in SAPTA_GRAHAS {
+        let idx = graha.index() as usize;
+        dignities[idx] = dignity_in_rashi_with_positions(
+            graha,
+            sidereal_lons[idx],
+            rashi_indices[idx],
+            &sapta_rashi_indices,
+        );
+    }
+    // Rahu/Ketu via node_dignity_in_rashi
+    for &graha in &[Graha::Rahu, Graha::Ketu] {
+        let idx = graha.index() as usize;
+        dignities[idx] = node_dignity_in_rashi(graha, rashi_indices[idx], &rashi_indices, node_policy);
+    }
+
+    // 6. Combustion
+    let is_combust = all_combustion_status(&sidereal_lons, &is_retrograde);
+
+    // 7. War detection (indices 2-6 only)
+    let mut lost_war = [false; 9];
+    let mut sapta_lons = [0.0f64; 7];
+    sapta_lons.copy_from_slice(&sidereal_lons[..7]);
+    for i in 2..=6 {
+        lost_war[i] = lost_planetary_war(i, &sapta_lons, &declinations);
+    }
+
+    // 8. Drishti matrix
+    let drishti_matrix = graha_drishti_matrix(&sidereal_lons);
+
+    // 9. Nakshatra indices from sidereal longitudes
+    let mut nakshatra_indices = [0u8; 9];
+    for i in 0..9 {
+        nakshatra_indices[i] = ((sidereal_lons[i] / (360.0 / 27.0)).floor() as u8).min(26);
+    }
+
+    // 10. Navamsa numbers
+    let mut navamsa_numbers = [0u8; 9];
+    for i in 0..9 {
+        navamsa_numbers[i] = navamsa_number(sidereal_lons[i]);
+    }
+
+    // 11. Janma nakshatra = Moon's nakshatra index
+    let janma_nakshatra = nakshatra_indices[Graha::Chandra.index() as usize];
+
+    // 12. Birth ghatikas (explicit floor)
+    let (jd_sunrise, jd_next_sunrise) =
+        ctx.sunrise_pair(engine, eop, utc, location, riseset_config)?;
+    let ghatikas_f = ghatikas_since_sunrise(ctx.jd_tdb, jd_sunrise, jd_next_sunrise);
+    let birth_ghatikas = ghatikas_f.floor() as u16;
+
+    // 13. Lagna rashi number (1-12)
+    let lagna_sid = ctx.lagna_sid(engine, eop, location)?;
+    let lagna_rashi_number = ((lagna_sid / 30.0).floor() as u8).min(11) + 1;
+
+    Ok(AvasthaInputs {
+        sidereal_lons,
+        rashi_indices,
+        bhava_numbers,
+        dignities,
+        is_combust,
+        is_retrograde,
+        lost_war,
+        lajjitadi: LajjitadiInputs {
+            rashi_indices,
+            bhava_numbers,
+            dignities,
+            drishti_matrix,
+        },
+        sayanadi: SayanadiInputs {
+            nakshatra_indices,
+            navamsa_numbers,
+            janma_nakshatra,
+            birth_ghatikas,
+            lagna_rashi_number,
+        },
+    })
 }
 
 // ---------------------------------------------------------------------------

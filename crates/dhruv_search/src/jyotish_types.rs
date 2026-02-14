@@ -1,9 +1,9 @@
 //! Types for Vedic jyotish orchestration (graha longitudes, etc.).
 
 use dhruv_vedic_base::{
-    Amsha, AmshaVariation, AllSpecialLagnas, AllUpagrahas, AshtakavargaResult, Dms, DrishtiEntry,
-    Graha, GrahaDrishtiMatrix, KalaBalaBreakdown, Nakshatra, NodeDignityPolicy, Rashi,
-    ShadbalaBreakdown, SthanaBalaBreakdown,
+    AllGrahaAvasthas, Amsha, AmshaVariation, AllSpecialLagnas, AllUpagrahas, AshtakavargaResult,
+    Dms, DrishtiEntry, Graha, GrahaDrishtiMatrix, KalaBalaBreakdown, Nakshatra,
+    NodeDignityPolicy, Rashi, ShadbalaBreakdown, SthanaBalaBreakdown,
 };
 
 /// Sidereal longitudes of all 9 grahas.
@@ -349,7 +349,9 @@ pub struct FullKundaliConfig {
     pub include_shadbala: bool,
     /// Include vimsopaka bala section (navagraha).
     pub include_vimsopaka: bool,
-    /// Node dignity policy for vimsopaka.
+    /// Include avastha (planetary state) section.
+    pub include_avastha: bool,
+    /// Node dignity policy for vimsopaka and avastha.
     pub node_dignity_policy: NodeDignityPolicy,
     /// Config passed to graha positions computation.
     pub graha_positions_config: GrahaPositionsConfig,
@@ -375,6 +377,7 @@ impl Default for FullKundaliConfig {
             include_amshas: false,
             include_shadbala: false,
             include_vimsopaka: false,
+            include_avastha: false,
             node_dignity_policy: NodeDignityPolicy::default(),
             graha_positions_config: GrahaPositionsConfig::default(),
             bindus_config: BindusConfig::default(),
@@ -406,4 +409,6 @@ pub struct FullKundaliResult {
     pub shadbala: Option<ShadbalaResult>,
     /// Present when `FullKundaliConfig::include_vimsopaka` is true.
     pub vimsopaka: Option<VimsopakaResult>,
+    /// Present when `FullKundaliConfig::include_avastha` is true.
+    pub avastha: Option<AllGrahaAvasthas>,
 }

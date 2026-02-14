@@ -31,7 +31,7 @@ pub mod global;
 // Primary re-exports — users should only need `use dhruv_rs::*`
 pub use convenience::{
     all_rise_set_events, amsha_charts, approximate_local_noon_jd, arudha_pada, arudha_padas,
-    ashtakavarga, avayoga_sphuta, ayana, ayana_from_sidereal_longitude, ayanamsha, beeja_sphuta,
+    ashtakavarga, avastha, avastha_for_graha, avayoga_sphuta, ayana, ayana_from_sidereal_longitude, ayanamsha, beeja_sphuta,
     bhava_lagna, bhavas, bhrigu_bindu, body_ecliptic_lon_lat, calculate_all_bav,
     calculate_ashtakavarga, calculate_bav, calculate_sav, chatussphuta, core_bindus, deha_sphuta,
     drishti, ekadhipatya_sodhana, elongation_at, full_kundali, ghati_lagna, ghatika,
@@ -68,8 +68,10 @@ pub use dhruv_search::{
 pub use dhruv_vedic_base::riseset_types::GeoLocation;
 pub use dhruv_vedic_base::riseset_types::{RiseSetConfig, RiseSetEvent, RiseSetResult, SunLimb};
 pub use dhruv_vedic_base::{
-    AllSpecialLagnas, AllUpagrahas, ArudhaPada, ArudhaResult, AshtakavargaResult,
-    BhinnaAshtakavarga, Graha, SarvaAshtakavarga, SpecialLagna, Sphuta, SphutalInputs, Upagraha,
+    AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, ArudhaPada, ArudhaResult, AshtakavargaResult,
+    BaladiAvastha, BhinnaAshtakavarga, DeeptadiAvastha, Graha, GrahaAvasthas, JagradadiAvastha,
+    LajjitadiAvastha, SarvaAshtakavarga, SayanadiAvastha, SayanadiResult, SayanadiSubState,
+    SpecialLagna, Sphuta, SphutalInputs, Upagraha,
 };
 pub use dhruv_vedic_base::{
     Ayana as AyanaKind, AyanamshaSystem, Dms, GhatikaPosition, Hora as HoraLord,

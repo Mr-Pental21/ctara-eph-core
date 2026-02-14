@@ -134,6 +134,55 @@ fn vimsopaka_bench(c: &mut Criterion) {
     group.finish();
 }
 
+fn avastha_bench(c: &mut Criterion) {
+    use dhruv_vedic_base::avastha::{
+        AvasthaInputs, LajjitadiInputs, SayanadiInputs, all_avasthas,
+    };
+    use dhruv_vedic_base::{Dignity, GrahaDrishtiMatrix, graha_drishti_matrix};
+
+    let sidereal_lons = [15.0, 120.0, 200.0, 300.0, 50.0, 160.0, 270.0, 335.0, 155.0];
+    let rashi_indices = [0u8, 3, 6, 9, 1, 5, 8, 11, 5];
+    let bhava_numbers = [1u8, 4, 7, 10, 2, 6, 9, 12, 5];
+    let dignities = [
+        Dignity::OwnSign, Dignity::Mitra, Dignity::Exalted, Dignity::Sama,
+        Dignity::Debilitated, Dignity::Shatru, Dignity::Moolatrikone,
+        Dignity::Sama, Dignity::Sama,
+    ];
+    let is_combust = [false; 9];
+    let is_retrograde = [false, false, true, false, false, false, false, false, false];
+    let lost_war = [false; 9];
+    let drishti_matrix = graha_drishti_matrix(&sidereal_lons);
+
+    let inputs = AvasthaInputs {
+        sidereal_lons,
+        rashi_indices,
+        bhava_numbers,
+        dignities,
+        is_combust,
+        is_retrograde,
+        lost_war,
+        lajjitadi: LajjitadiInputs {
+            rashi_indices,
+            bhava_numbers,
+            dignities,
+            drishti_matrix,
+        },
+        sayanadi: SayanadiInputs {
+            nakshatra_indices: [1, 8, 14, 22, 3, 11, 20, 24, 11],
+            navamsa_numbers: [2, 5, 7, 1, 4, 9, 3, 6, 8],
+            janma_nakshatra: 8,
+            birth_ghatikas: 25,
+            lagna_rashi_number: 1,
+        },
+    };
+
+    let mut group = c.benchmark_group("avastha");
+    group.bench_function("all_avasthas_9", |b| {
+        b.iter(|| all_avasthas(black_box(&inputs)))
+    });
+    group.finish();
+}
+
 criterion_group!(
     benches,
     ayanamsha_bench,
@@ -141,6 +190,7 @@ criterion_group!(
     panchang_primitives_bench,
     amsha_bench,
     shadbala_bench,
-    vimsopaka_bench
+    vimsopaka_bench,
+    avastha_bench
 );
 criterion_main!(benches);

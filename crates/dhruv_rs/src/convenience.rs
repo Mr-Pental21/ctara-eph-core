@@ -769,6 +769,45 @@ pub fn vimsopaka_for_graha(
     )?)
 }
 
+/// Compute all 5 avastha categories for all 9 grahas.
+pub fn avastha(
+    date: UtcDate,
+    eop: &EopKernel,
+    location: &GeoLocation,
+    system: AyanamshaSystem,
+    use_nutation: bool,
+    node_policy: dhruv_vedic_base::NodeDignityPolicy,
+) -> Result<dhruv_vedic_base::AllGrahaAvasthas, DhruvError> {
+    let eng = engine()?;
+    let utc: UtcTime = date.into();
+    let bhava_config = dhruv_vedic_base::BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = SankrantiConfig::new(system, use_nutation);
+    Ok(dhruv_search::avastha_for_date(
+        eng, eop, location, &utc, &bhava_config, &rs_config, &aya_config, node_policy,
+    )?)
+}
+
+/// Compute avasthas for a single graha.
+pub fn avastha_for_graha(
+    date: UtcDate,
+    eop: &EopKernel,
+    location: &GeoLocation,
+    system: AyanamshaSystem,
+    use_nutation: bool,
+    node_policy: dhruv_vedic_base::NodeDignityPolicy,
+    graha: dhruv_vedic_base::Graha,
+) -> Result<dhruv_vedic_base::GrahaAvasthas, DhruvError> {
+    let eng = engine()?;
+    let utc: UtcTime = date.into();
+    let bhava_config = dhruv_vedic_base::BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = SankrantiConfig::new(system, use_nutation);
+    Ok(dhruv_search::avastha_for_graha(
+        eng, eop, location, &utc, &bhava_config, &rs_config, &aya_config, node_policy, graha,
+    )?)
+}
+
 /// Compute all 11 upagrahas for a given date and location.
 pub fn upagrahas(
     date: UtcDate,

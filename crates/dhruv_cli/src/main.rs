@@ -12,7 +12,7 @@ use dhruv_vedic_base::BhavaConfig;
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig, RiseSetResult};
 use dhruv_vedic_base::{
     ALL_GRAHAS, AyanamshaSystem, Graha, LunarNode, NodeDignityPolicy, NodeMode, Rashi,
-    SAPTA_GRAHAS, ayanamsha_deg, deg_to_dms, jd_tdb_to_centuries, nakshatra_from_longitude,
+    ayanamsha_deg, deg_to_dms, jd_tdb_to_centuries, nakshatra_from_longitude,
     nakshatra_from_tropical, nakshatra28_from_longitude, nakshatra28_from_tropical,
     rashi_from_longitude, rashi_from_tropical,
 };
@@ -1554,6 +1554,42 @@ enum Commands {
         /// Comma-separated amsha specs: D<n>[:variation], e.g. D9,D10,D2:cancer-leo-only
         #[arg(long)]
         amsha: String,
+    },
+    /// Compute Graha Avasthas (planetary states) for a date and location
+    Avastha {
+        /// UTC datetime (YYYY-MM-DDThh:mm:ssZ)
+        #[arg(long)]
+        date: String,
+        /// Latitude in degrees (north positive)
+        #[arg(long)]
+        lat: f64,
+        /// Longitude in degrees (east positive)
+        #[arg(long)]
+        lon: f64,
+        /// Altitude in meters (default 0)
+        #[arg(long, default_value = "0")]
+        alt: f64,
+        /// Ayanamsha system code (0-19, default 0=Lahiri)
+        #[arg(long, default_value = "0")]
+        ayanamsha: i32,
+        /// Apply nutation correction
+        #[arg(long)]
+        nutation: bool,
+        /// Optional graha filter (Sun..Ketu)
+        #[arg(long)]
+        graha: Option<String>,
+        /// Node dignity policy: sign-lord (default) or sama
+        #[arg(long, default_value = "sign-lord")]
+        node_policy: String,
+        /// Path to SPK kernel
+        #[arg(long)]
+        bsp: PathBuf,
+        /// Path to leap second kernel
+        #[arg(long)]
+        lsk: PathBuf,
+        /// Path to IERS EOP file (finals2000A.all)
+        #[arg(long)]
+        eop: PathBuf,
     },
 }
 
@@ -4945,6 +4981,77 @@ fn main() {
                 );
             }
         }
+        Commands::Avastha {
+            date,
+            lat,
+            lon,
+            alt,
+            ayanamsha,
+            nutation,
+            graha,
+            node_policy,
+            bsp,
+            lsk,
+            eop,
+        } => {
+            let system = require_aya_system(ayanamsha);
+            let utc = parse_utc(&date).unwrap_or_else(|e| {
+                eprintln!("{e}");
+                std::process::exit(1);
+            });
+            let engine = load_engine(&bsp, &lsk);
+            let eop_kernel = load_eop(&eop);
+            let location = GeoLocation::new(lat, lon, alt);
+            let bhava_config = BhavaConfig::default();
+            let rs_config = RiseSetConfig::default();
+            let aya_config = SankrantiConfig::new(system, nutation);
+            let policy = parse_node_policy(&node_policy);
+
+            let graha_names = [
+                "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu",
+            ];
+
+            if let Some(name) = graha {
+                let g = parse_graha_name(&name);
+                let entry = dhruv_search::avastha_for_graha(
+                    &engine, &eop_kernel, &location, &utc, &bhava_config, &rs_config, &aya_config,
+                    policy, g,
+                )
+                .unwrap_or_else(|e| {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                });
+                println!("Avasthas for {} on {}\n", g.english_name(), date);
+                print_graha_avastha(&entry);
+            } else {
+                let result = dhruv_search::avastha_for_date(
+                    &engine, &eop_kernel, &location, &utc, &bhava_config, &rs_config, &aya_config,
+                    policy,
+                )
+                .unwrap_or_else(|e| {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                });
+
+                println!("Graha Avasthas for {} at {:.4}°N, {:.4}°E\n", date, lat, lon);
+                println!(
+                    "{:<8} {:>10} {:>10} {:>10} {:>10} {:>12}",
+                    "Graha", "Baladi", "Jagradadi", "Deeptadi", "Lajjitadi", "Sayanadi"
+                );
+                println!("{}", "-".repeat(68));
+                for (i, entry) in result.entries.iter().enumerate() {
+                    println!(
+                        "{:<8} {:>10} {:>10} {:>10} {:>10} {:>12}",
+                        graha_names[i],
+                        entry.baladi.name(),
+                        entry.jagradadi.name(),
+                        entry.deeptadi.name(),
+                        entry.lajjitadi.name(),
+                        entry.sayanadi.avastha.name(),
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -5080,6 +5187,18 @@ fn print_shadbala_entry(entry: &dhruv_search::ShadbalaEntry) {
         "  Strong:          {}",
         if entry.is_strong { "Yes" } else { "No" }
     );
+}
+
+fn print_graha_avastha(entry: &dhruv_vedic_base::GrahaAvasthas) {
+    println!("  Baladi:     {} (strength {:.2})", entry.baladi.name(), entry.baladi.strength_factor());
+    println!("  Jagradadi:  {} (strength {:.2})", entry.jagradadi.name(), entry.jagradadi.strength_factor());
+    println!("  Deeptadi:   {} (strength {:.2})", entry.deeptadi.name(), entry.deeptadi.strength_factor());
+    println!("  Lajjitadi:  {} (strength {:.2})", entry.lajjitadi.name(), entry.lajjitadi.strength_factor());
+    println!("  Sayanadi:   {}", entry.sayanadi.avastha.name());
+    let group_names = ["Ka", "Cha", "Ta(r)", "Ta(d)", "Pa"];
+    for (i, ss) in entry.sayanadi.sub_states.iter().enumerate() {
+        println!("    {}-varga:  {} (strength {:.2})", group_names[i], ss.name(), ss.strength_factor());
+    }
 }
 
 fn print_max_speed_event(label: &str, ev: &dhruv_search::stationary_types::MaxSpeedEvent) {

@@ -17,9 +17,9 @@ use dhruv_search::{
     prev_sankranti, prev_specific_sankranti, prev_stationary, prev_surya_grahan, search_amavasyas,
     search_chandra_grahan, search_conjunctions, search_max_speed, search_purnimas,
     search_sankrantis, search_stationary, search_surya_grahan, sidereal_sum_at,
-    shadbala_for_date, shadbala_for_graha, special_lagnas_for_date, tithi_at, tithi_for_date,
+    avastha_for_date, shadbala_for_date, special_lagnas_for_date, tithi_at, tithi_for_date,
     vaar_for_date, vaar_from_sunrises, varsha_for_date, vedic_day_sunrises, vimsopaka_for_date,
-    vimsopaka_for_graha, yoga_at, yoga_for_date,
+    yoga_at, yoga_for_date,
 };
 use dhruv_time::UtcTime;
 use dhruv_vedic_base::{
@@ -35,7 +35,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 31;
+pub const DHRUV_API_VERSION: u32 = 32;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -8625,6 +8625,43 @@ pub struct DhruvVimsopakaResult {
     pub entries: [DhruvVimsopakaEntry; 9],
 }
 
+// ---------------------------------------------------------------------------
+// Avastha (Planetary State) FFI types
+// ---------------------------------------------------------------------------
+
+/// C-compatible Sayanadi result for a single graha.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvSayanadiResult {
+    /// SayanadiAvastha index (0-11).
+    pub avastha: u8,
+    /// SayanadiSubState index per name-group (Ka/Cha/Ta-retroflex/Ta-dental/Pa).
+    pub sub_states: [u8; 5],
+}
+
+/// C-compatible avasthas for a single graha.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvGrahaAvasthas {
+    /// BaladiAvastha index (0-4).
+    pub baladi: u8,
+    /// JagradadiAvastha index (0-2).
+    pub jagradadi: u8,
+    /// DeeptadiAvastha index (0-8).
+    pub deeptadi: u8,
+    /// LajjitadiAvastha index (0-5).
+    pub lajjitadi: u8,
+    /// Sayanadi result with primary + 5 sub-states.
+    pub sayanadi: DhruvSayanadiResult,
+}
+
+/// C-compatible avasthas for all 9 grahas.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvAllGrahaAvasthas {
+    pub entries: [DhruvGrahaAvasthas; 9],
+}
+
 /// C-compatible full kundali configuration.
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
@@ -8647,7 +8684,9 @@ pub struct DhruvFullKundaliConfig {
     pub include_shadbala: u8,
     /// Include vimsopaka bala section (navagraha).
     pub include_vimsopaka: u8,
-    /// Node dignity policy for vimsopaka: 0=SignLordBased (default), 1=AlwaysSama.
+    /// Include avastha (planetary state) section.
+    pub include_avastha: u8,
+    /// Node dignity policy for vimsopaka/avastha: 0=SignLordBased (default), 1=AlwaysSama.
     pub node_dignity_policy: u32,
     /// Graha positions config.
     pub graha_positions_config: DhruvGrahaPositionsConfig,
@@ -8689,6 +8728,8 @@ pub struct DhruvFullKundaliResult {
     pub shadbala: DhruvShadbalaResult,
     pub vimsopaka_valid: u8,
     pub vimsopaka: DhruvVimsopakaResult,
+    pub avastha_valid: u8,
+    pub avastha: DhruvAllGrahaAvasthas,
 }
 
 /// Compute a full kundali in one call, reusing shared intermediates.
@@ -8774,6 +8815,7 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
         include_amshas: cfg_c.include_amshas != 0,
         include_shadbala: cfg_c.include_shadbala != 0,
         include_vimsopaka: cfg_c.include_vimsopaka != 0,
+        include_avastha: cfg_c.include_avastha != 0,
         node_dignity_policy: match cfg_c.node_dignity_policy {
             0 => dhruv_vedic_base::NodeDignityPolicy::SignLordBased,
             1 => dhruv_vedic_base::NodeDignityPolicy::AlwaysSama,
@@ -8962,6 +9004,29 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
                         saptavarga: e.saptavarga,
                         dashavarga: e.dashavarga,
                         shodasavarga: e.shodasavarga,
+                    };
+                }
+            }
+
+            if let Some(ref av) = result.avastha {
+                out.avastha_valid = 1;
+                for i in 0..9 {
+                    let e = &av.entries[i];
+                    out.avastha.entries[i] = DhruvGrahaAvasthas {
+                        baladi: e.baladi.index(),
+                        jagradadi: e.jagradadi.index(),
+                        deeptadi: e.deeptadi.index(),
+                        lajjitadi: e.lajjitadi.index(),
+                        sayanadi: DhruvSayanadiResult {
+                            avastha: e.sayanadi.avastha.index(),
+                            sub_states: [
+                                e.sayanadi.sub_states[0].index(),
+                                e.sayanadi.sub_states[1].index(),
+                                e.sayanadi.sub_states[2].index(),
+                                e.sayanadi.sub_states[3].index(),
+                                e.sayanadi.sub_states[4].index(),
+                            ],
+                        },
                     };
                 }
             }
@@ -9371,6 +9436,118 @@ pub unsafe extern "C" fn dhruv_vimsopaka_for_date(
                     saptavarga: e.saptavarga,
                     dashavarga: e.dashavarga,
                     shodasavarga: e.shodasavarga,
+                };
+            }
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Avastha FFI functions (date-based)
+// ---------------------------------------------------------------------------
+
+/// Compute all 5 avastha categories for all 9 grahas at a given date and location.
+///
+/// `node_dignity_policy`: 0=SignLordBased, 1=AlwaysSama.
+///
+/// # Safety
+/// All pointers must be valid. `out` must point to a valid `DhruvAllGrahaAvasthas`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_avastha_for_date(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    bhava_config: *const DhruvBhavaConfig,
+    riseset_config: *const DhruvRiseSetConfig,
+    ayanamsha_system: u32,
+    use_nutation: u8,
+    node_dignity_policy: u32,
+    out: *mut DhruvAllGrahaAvasthas,
+) -> DhruvStatus {
+    if engine.is_null()
+        || eop.is_null()
+        || utc.is_null()
+        || location.is_null()
+        || bhava_config.is_null()
+        || riseset_config.is_null()
+        || out.is_null()
+    {
+        return DhruvStatus::NullPointer;
+    }
+
+    let engine = unsafe { &*engine };
+    let eop = unsafe { &*eop };
+    let utc_c = unsafe { &*utc };
+    let loc_c = unsafe { &*location };
+    let bhava_cfg_c = unsafe { &*bhava_config };
+    let rs_c = unsafe { &*riseset_config };
+
+    let utc_time = UtcTime {
+        year: utc_c.year,
+        month: utc_c.month,
+        day: utc_c.day,
+        hour: utc_c.hour,
+        minute: utc_c.minute,
+        second: utc_c.second,
+    };
+    let location = GeoLocation::new(loc_c.latitude_deg, loc_c.longitude_deg, loc_c.altitude_m);
+
+    let system = match ayanamsha_system_from_code(ayanamsha_system as i32) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidQuery,
+    };
+    let rust_bhava_config = match bhava_config_from_ffi(bhava_cfg_c) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+    let sun_limb = match sun_limb_from_code(rs_c.sun_limb) {
+        Some(l) => l,
+        None => return DhruvStatus::InvalidQuery,
+    };
+    let rs_config = RiseSetConfig {
+        use_refraction: rs_c.use_refraction != 0,
+        sun_limb,
+        altitude_correction: rs_c.altitude_correction != 0,
+    };
+    let policy = match node_dignity_policy {
+        0 => dhruv_vedic_base::NodeDignityPolicy::SignLordBased,
+        1 => dhruv_vedic_base::NodeDignityPolicy::AlwaysSama,
+        _ => return DhruvStatus::InvalidSearchConfig,
+    };
+    let aya_config = SankrantiConfig::new(system, use_nutation != 0);
+
+    match avastha_for_date(
+        engine,
+        eop,
+        &location,
+        &utc_time,
+        &rust_bhava_config,
+        &rs_config,
+        &aya_config,
+        policy,
+    ) {
+        Ok(result) => {
+            let out = unsafe { &mut *out };
+            for i in 0..9 {
+                let e = &result.entries[i];
+                out.entries[i] = DhruvGrahaAvasthas {
+                    baladi: e.baladi.index(),
+                    jagradadi: e.jagradadi.index(),
+                    deeptadi: e.deeptadi.index(),
+                    lajjitadi: e.lajjitadi.index(),
+                    sayanadi: DhruvSayanadiResult {
+                        avastha: e.sayanadi.avastha.index(),
+                        sub_states: [
+                            e.sayanadi.sub_states[0].index(),
+                            e.sayanadi.sub_states[1].index(),
+                            e.sayanadi.sub_states[2].index(),
+                            e.sayanadi.sub_states[3].index(),
+                            e.sayanadi.sub_states[4].index(),
+                        ],
+                    },
                 };
             }
             DhruvStatus::Ok
@@ -9925,8 +10102,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_31() {
-        assert_eq!(dhruv_api_version(), 31);
+    fn ffi_api_version_is_32() {
+        assert_eq!(dhruv_api_version(), 32);
     }
 
     // --- Search error mapping ---
@@ -12031,6 +12208,7 @@ mod tests {
             include_amshas: 0,
             include_shadbala: 0,
             include_vimsopaka: 0,
+            include_avastha: 0,
             node_dignity_policy: 0,
             graha_positions_config: DhruvGrahaPositionsConfig {
                 include_nakshatra: 0,
@@ -12091,6 +12269,7 @@ mod tests {
             include_amshas: 0,
             include_shadbala: 0,
             include_vimsopaka: 0,
+            include_avastha: 0,
             node_dignity_policy: 0,
             graha_positions_config: DhruvGrahaPositionsConfig {
                 include_nakshatra: 0,
