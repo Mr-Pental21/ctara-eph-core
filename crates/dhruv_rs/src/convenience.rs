@@ -665,6 +665,34 @@ pub fn full_kundali(
     )?)
 }
 
+/// Compute amsha (divisional) charts for a given date and location.
+pub fn amsha_charts(
+    date: UtcDate,
+    eop: &EopKernel,
+    location: &GeoLocation,
+    system: AyanamshaSystem,
+    use_nutation: bool,
+    requests: &[dhruv_vedic_base::AmshaRequest],
+    scope: &dhruv_search::AmshaChartScope,
+) -> Result<dhruv_search::AmshaResult, DhruvError> {
+    let eng = engine()?;
+    let utc: UtcTime = date.into();
+    let bhava_config = dhruv_vedic_base::BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = SankrantiConfig::new(system, use_nutation);
+    Ok(dhruv_search::amsha_charts_for_date(
+        eng,
+        eop,
+        &utc,
+        location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        requests,
+        scope,
+    )?)
+}
+
 /// Compute all 11 upagrahas for a given date and location.
 pub fn upagrahas(
     date: UtcDate,

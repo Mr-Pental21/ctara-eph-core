@@ -7,14 +7,14 @@ use dhruv_core::{Body, Engine, EngineConfig, EngineError, Frame, Observer, Query
 use dhruv_search::{
     ChandraGrahan, ChandraGrahanType, ConjunctionConfig, ConjunctionEvent, GrahanConfig,
     LunarPhase, MaxSpeedEvent, MaxSpeedType, SankrantiConfig, SearchError, StationType,
-    StationaryConfig, StationaryEvent, SuryaGrahan, SuryaGrahanType, ayana_for_date,
-    body_ecliptic_lon_lat, elongation_at, full_kundali_for_date, ghatika_for_date,
-    ghatika_from_sunrises, graha_sidereal_longitudes, hora_for_date, hora_from_sunrises, karana_at,
-    karana_for_date, masa_for_date, nakshatra_at, nakshatra_for_date, next_amavasya,
-    next_chandra_grahan, next_conjunction, next_max_speed, next_purnima, next_sankranti,
-    next_specific_sankranti, next_stationary, next_surya_grahan, panchang_for_date, prev_amavasya,
-    prev_chandra_grahan, prev_conjunction, prev_max_speed, prev_purnima, prev_sankranti,
-    prev_specific_sankranti, prev_stationary, prev_surya_grahan, search_amavasyas,
+    StationaryConfig, StationaryEvent, SuryaGrahan, SuryaGrahanType, amsha_charts_for_date,
+    ayana_for_date, body_ecliptic_lon_lat, elongation_at, full_kundali_for_date,
+    ghatika_for_date, ghatika_from_sunrises, graha_sidereal_longitudes, hora_for_date,
+    hora_from_sunrises, karana_at, karana_for_date, masa_for_date, nakshatra_at, nakshatra_for_date,
+    next_amavasya, next_chandra_grahan, next_conjunction, next_max_speed, next_purnima,
+    next_sankranti, next_specific_sankranti, next_stationary, next_surya_grahan, panchang_for_date,
+    prev_amavasya, prev_chandra_grahan, prev_conjunction, prev_max_speed, prev_purnima,
+    prev_sankranti, prev_specific_sankranti, prev_stationary, prev_surya_grahan, search_amavasyas,
     search_chandra_grahan, search_conjunctions, search_max_speed, search_purnimas,
     search_sankrantis, search_stationary, search_surya_grahan, sidereal_sum_at,
     special_lagnas_for_date, tithi_at, tithi_for_date, vaar_for_date, vaar_from_sunrises,
@@ -22,8 +22,9 @@ use dhruv_search::{
 };
 use dhruv_time::UtcTime;
 use dhruv_vedic_base::{
-    AyanamshaSystem, BhavaConfig, BhavaReferenceMode, BhavaStartingPoint, BhavaSystem, GeoLocation,
-    LunarNode, NodeMode, RiseSetConfig, RiseSetEvent, RiseSetResult, SunLimb, VedicError,
+    Amsha, AmshaRequest, AmshaVariation, AyanamshaSystem, BhavaConfig, BhavaReferenceMode,
+    BhavaStartingPoint, BhavaSystem, GeoLocation, LunarNode, NodeMode, RiseSetConfig, RiseSetEvent,
+    RiseSetResult, SunLimb, VedicError, amsha_longitude, amsha_rashi_info,
     approximate_local_noon_jd, ayana_from_sidereal_longitude, ayanamsha_deg, ayanamsha_mean_deg,
     ayanamsha_true_deg, compute_all_events, compute_bhavas, compute_rise_set, deg_to_dms,
     jd_tdb_to_centuries, karana_from_elongation, lunar_node_deg, masa_from_rashi_index,
@@ -33,7 +34,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 29;
+pub const DHRUV_API_VERSION: u32 = 30;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -8386,6 +8387,169 @@ pub unsafe extern "C" fn dhruv_drishti(
     }
 }
 
+// ---------------------------------------------------------------------------
+// Amsha (Divisional Chart) FFI types
+// ---------------------------------------------------------------------------
+
+/// C-compatible amsha entry (position in a divisional chart).
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvAmshaEntry {
+    /// Sidereal longitude in [0, 360).
+    pub sidereal_longitude: f64,
+    /// 0-based rashi index (0-11).
+    pub rashi_index: u8,
+    /// Degrees component of DMS within rashi.
+    pub dms_degrees: u16,
+    /// Minutes component of DMS within rashi.
+    pub dms_minutes: u8,
+    /// Seconds component of DMS within rashi.
+    pub dms_seconds: f64,
+    /// Decimal degrees within rashi [0, 30).
+    pub degrees_in_rashi: f64,
+}
+
+impl DhruvAmshaEntry {
+    fn zeroed() -> Self {
+        Self {
+            sidereal_longitude: 0.0,
+            rashi_index: 0,
+            dms_degrees: 0,
+            dms_minutes: 0,
+            dms_seconds: 0.0,
+            degrees_in_rashi: 0.0,
+        }
+    }
+}
+
+/// C-compatible amsha chart scope flags.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvAmshaChartScope {
+    pub include_bhava_cusps: u8,
+    pub include_arudha_padas: u8,
+    pub include_upagrahas: u8,
+    pub include_sphutas: u8,
+    pub include_special_lagnas: u8,
+}
+
+/// C-compatible amsha selection config for FullKundali.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvAmshaSelectionConfig {
+    /// Number of valid entries (0..=40).
+    pub count: u8,
+    /// D-numbers (1..144), 0=unused.
+    pub codes: [u16; 40],
+    /// Variation codes: 0=default, 1=HoraCancerLeoOnly.
+    pub variations: [u8; 40],
+}
+
+/// C-compatible single amsha chart result.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvAmshaChart {
+    /// D-number of this chart.
+    pub amsha_code: u16,
+    /// Variation code (0=default, 1=HoraCancerLeoOnly).
+    pub variation_code: u8,
+    /// 9 Vedic grahas.
+    pub grahas: [DhruvAmshaEntry; 9],
+    /// Lagna entry.
+    pub lagna: DhruvAmshaEntry,
+    /// Whether bhava cusps are populated.
+    pub bhava_cusps_valid: u8,
+    pub bhava_cusps: [DhruvAmshaEntry; 12],
+    /// Whether arudha padas are populated.
+    pub arudha_padas_valid: u8,
+    pub arudha_padas: [DhruvAmshaEntry; 12],
+    /// Whether upagrahas are populated.
+    pub upagrahas_valid: u8,
+    pub upagrahas: [DhruvAmshaEntry; 11],
+    /// Whether sphutas are populated.
+    pub sphutas_valid: u8,
+    pub sphutas: [DhruvAmshaEntry; 16],
+    /// Whether special lagnas are populated.
+    pub special_lagnas_valid: u8,
+    pub special_lagnas: [DhruvAmshaEntry; 8],
+}
+
+impl DhruvAmshaChart {
+    fn zeroed() -> Self {
+        Self {
+            amsha_code: 0,
+            variation_code: 0,
+            grahas: [DhruvAmshaEntry::zeroed(); 9],
+            lagna: DhruvAmshaEntry::zeroed(),
+            bhava_cusps_valid: 0,
+            bhava_cusps: [DhruvAmshaEntry::zeroed(); 12],
+            arudha_padas_valid: 0,
+            arudha_padas: [DhruvAmshaEntry::zeroed(); 12],
+            upagrahas_valid: 0,
+            upagrahas: [DhruvAmshaEntry::zeroed(); 11],
+            sphutas_valid: 0,
+            sphutas: [DhruvAmshaEntry::zeroed(); 16],
+            special_lagnas_valid: 0,
+            special_lagnas: [DhruvAmshaEntry::zeroed(); 8],
+        }
+    }
+}
+
+fn amsha_entry_to_ffi(entry: &dhruv_search::AmshaEntry) -> DhruvAmshaEntry {
+    DhruvAmshaEntry {
+        sidereal_longitude: entry.sidereal_longitude,
+        rashi_index: entry.rashi_index,
+        dms_degrees: entry.dms.degrees,
+        dms_minutes: entry.dms.minutes,
+        dms_seconds: entry.dms.seconds,
+        degrees_in_rashi: entry.degrees_in_rashi,
+    }
+}
+
+fn amsha_chart_to_ffi(chart: &dhruv_search::AmshaChart) -> DhruvAmshaChart {
+    let mut out = DhruvAmshaChart::zeroed();
+    out.amsha_code = chart.amsha.code();
+    out.variation_code = match chart.variation {
+        AmshaVariation::TraditionalParashari => 0,
+        AmshaVariation::HoraCancerLeoOnly => 1,
+    };
+    for i in 0..9 {
+        out.grahas[i] = amsha_entry_to_ffi(&chart.grahas[i]);
+    }
+    out.lagna = amsha_entry_to_ffi(&chart.lagna);
+    if let Some(ref cusps) = chart.bhava_cusps {
+        out.bhava_cusps_valid = 1;
+        for i in 0..12 {
+            out.bhava_cusps[i] = amsha_entry_to_ffi(&cusps[i]);
+        }
+    }
+    if let Some(ref padas) = chart.arudha_padas {
+        out.arudha_padas_valid = 1;
+        for i in 0..12 {
+            out.arudha_padas[i] = amsha_entry_to_ffi(&padas[i]);
+        }
+    }
+    if let Some(ref upa) = chart.upagrahas {
+        out.upagrahas_valid = 1;
+        for i in 0..11 {
+            out.upagrahas[i] = amsha_entry_to_ffi(&upa[i]);
+        }
+    }
+    if let Some(ref sph) = chart.sphutas {
+        out.sphutas_valid = 1;
+        for i in 0..16 {
+            out.sphutas[i] = amsha_entry_to_ffi(&sph[i]);
+        }
+    }
+    if let Some(ref sl) = chart.special_lagnas {
+        out.special_lagnas_valid = 1;
+        for i in 0..8 {
+            out.special_lagnas[i] = amsha_entry_to_ffi(&sl[i]);
+        }
+    }
+    out
+}
+
 /// C-compatible full kundali configuration.
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
@@ -8402,17 +8566,26 @@ pub struct DhruvFullKundaliConfig {
     pub include_upagrahas: u8,
     /// Include special lagnas section.
     pub include_special_lagnas: u8,
+    /// Include amsha (divisional chart) section.
+    pub include_amshas: u8,
     /// Graha positions config.
     pub graha_positions_config: DhruvGrahaPositionsConfig,
     /// Bindus config.
     pub bindus_config: DhruvBindusConfig,
     /// Drishti config.
     pub drishti_config: DhruvDrishtiConfig,
+    /// Scope flags for amsha charts.
+    pub amsha_scope: DhruvAmshaChartScope,
+    /// Which amshas to compute.
+    pub amsha_selection: DhruvAmshaSelectionConfig,
 }
+
+/// Maximum number of amsha charts in a single FFI batch.
+pub const DHRUV_MAX_AMSHA_REQUESTS: usize = 40;
 
 /// C-compatible full kundali result.
 #[repr(C)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct DhruvFullKundaliResult {
     pub graha_positions_valid: u8,
     pub graha_positions: DhruvGrahaPositions,
@@ -8426,6 +8599,11 @@ pub struct DhruvFullKundaliResult {
     pub upagrahas: DhruvAllUpagrahas,
     pub special_lagnas_valid: u8,
     pub special_lagnas: DhruvSpecialLagnas,
+    pub amshas_valid: u8,
+    /// Number of populated amsha charts (0..=DHRUV_MAX_AMSHA_REQUESTS).
+    pub amshas_count: u8,
+    /// Fixed-size array of amsha charts.
+    pub amshas: [DhruvAmshaChart; DHRUV_MAX_AMSHA_REQUESTS],
 }
 
 /// Compute a full kundali in one call, reusing shared intermediates.
@@ -8495,6 +8673,12 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
     };
     let aya_config = SankrantiConfig::new(system, use_nutation != 0);
 
+    let amsha_sel = dhruv_search::AmshaSelectionConfig {
+        count: cfg_c.amsha_selection.count,
+        codes: cfg_c.amsha_selection.codes,
+        variations: cfg_c.amsha_selection.variations,
+    };
+
     let rust_config = dhruv_search::FullKundaliConfig {
         include_graha_positions: cfg_c.include_graha_positions != 0,
         include_bindus: cfg_c.include_bindus != 0,
@@ -8502,6 +8686,7 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
         include_ashtakavarga: cfg_c.include_ashtakavarga != 0,
         include_upagrahas: cfg_c.include_upagrahas != 0,
         include_special_lagnas: cfg_c.include_special_lagnas != 0,
+        include_amshas: cfg_c.include_amshas != 0,
         graha_positions_config: dhruv_search::GrahaPositionsConfig {
             include_nakshatra: cfg_c.graha_positions_config.include_nakshatra != 0,
             include_lagna: cfg_c.graha_positions_config.include_lagna != 0,
@@ -8517,6 +8702,14 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
             include_lagna: cfg_c.drishti_config.include_lagna != 0,
             include_bindus: cfg_c.drishti_config.include_bindus != 0,
         },
+        amsha_scope: dhruv_search::AmshaChartScope {
+            include_bhava_cusps: cfg_c.amsha_scope.include_bhava_cusps != 0,
+            include_arudha_padas: cfg_c.amsha_scope.include_arudha_padas != 0,
+            include_upagrahas: cfg_c.amsha_scope.include_upagrahas != 0,
+            include_sphutas: cfg_c.amsha_scope.include_sphutas != 0,
+            include_special_lagnas: cfg_c.amsha_scope.include_special_lagnas != 0,
+        },
+        amsha_selection: amsha_sel,
     };
 
     match full_kundali_for_date(
@@ -8620,6 +8813,244 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
                 out.special_lagnas.indu_lagna = s.indu_lagna;
             }
 
+            if let Some(ref am) = result.amshas {
+                out.amshas_valid = 1;
+                let count = am.charts.len().min(DHRUV_MAX_AMSHA_REQUESTS);
+                out.amshas_count = count as u8;
+                for i in 0..count {
+                    out.amshas[i] = amsha_chart_to_ffi(&am.charts[i]);
+                }
+            }
+
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Amsha (Divisional Chart) FFI functions
+// ---------------------------------------------------------------------------
+
+/// Transform a sidereal longitude through an amsha division.
+///
+/// # Safety
+/// `out` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_amsha_longitude(
+    sidereal_lon: f64,
+    amsha_code: u16,
+    variation_code: u8,
+    out: *mut f64,
+) -> DhruvStatus {
+    if out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let amsha = match Amsha::from_code(amsha_code) {
+        Some(a) => a,
+        None => return DhruvStatus::InvalidSearchConfig,
+    };
+    let variation = match AmshaVariation::from_code(variation_code) {
+        Some(v) => v,
+        None => return DhruvStatus::InvalidSearchConfig,
+    };
+    if !variation.is_applicable_to(amsha) {
+        return DhruvStatus::InvalidSearchConfig;
+    }
+    let result = amsha_longitude(sidereal_lon, amsha, Some(variation));
+    unsafe { *out = result };
+    DhruvStatus::Ok
+}
+
+/// Transform a sidereal longitude through an amsha division, returning full rashi info.
+///
+/// # Safety
+/// `out` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_amsha_rashi_info(
+    sidereal_lon: f64,
+    amsha_code: u16,
+    variation_code: u8,
+    out: *mut DhruvRashiInfo,
+) -> DhruvStatus {
+    if out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let amsha = match Amsha::from_code(amsha_code) {
+        Some(a) => a,
+        None => return DhruvStatus::InvalidSearchConfig,
+    };
+    let variation = match AmshaVariation::from_code(variation_code) {
+        Some(v) => v,
+        None => return DhruvStatus::InvalidSearchConfig,
+    };
+    if !variation.is_applicable_to(amsha) {
+        return DhruvStatus::InvalidSearchConfig;
+    }
+    let info = amsha_rashi_info(sidereal_lon, amsha, Some(variation));
+    unsafe {
+        *out = DhruvRashiInfo {
+            rashi_index: info.rashi_index,
+            dms: DhruvDms {
+                degrees: info.dms.degrees,
+                minutes: info.dms.minutes,
+                seconds: info.dms.seconds,
+            },
+            degrees_in_rashi: info.degrees_in_rashi,
+        };
+    }
+    DhruvStatus::Ok
+}
+
+/// Transform one longitude through multiple amshas.
+///
+/// `variation_codes` may be null (all default). `amsha_codes` and `out` must
+/// be non-null when `count > 0`.
+///
+/// # Safety
+/// `amsha_codes` must point to `count` u16 values. `variation_codes` (if
+/// non-null) must point to `count` u8 values. `out` must point to `count` f64s.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_amsha_longitudes(
+    sidereal_lon: f64,
+    amsha_codes: *const u16,
+    variation_codes: *const u8,
+    count: u32,
+    out: *mut f64,
+) -> DhruvStatus {
+    if count == 0 {
+        return DhruvStatus::Ok;
+    }
+    if amsha_codes.is_null() || out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let codes = unsafe { std::slice::from_raw_parts(amsha_codes, count as usize) };
+    let out_slice = unsafe { std::slice::from_raw_parts_mut(out, count as usize) };
+    for i in 0..count as usize {
+        let amsha = match Amsha::from_code(codes[i]) {
+            Some(a) => a,
+            None => return DhruvStatus::InvalidSearchConfig,
+        };
+        let variation = if variation_codes.is_null() {
+            AmshaVariation::TraditionalParashari
+        } else {
+            let vc = unsafe { *variation_codes.add(i) };
+            match AmshaVariation::from_code(vc) {
+                Some(v) => v,
+                None => return DhruvStatus::InvalidSearchConfig,
+            }
+        };
+        if !variation.is_applicable_to(amsha) {
+            return DhruvStatus::InvalidSearchConfig;
+        }
+        out_slice[i] = amsha_longitude(sidereal_lon, amsha, Some(variation));
+    }
+    DhruvStatus::Ok
+}
+
+/// Compute an amsha chart for a single amsha at a given date/location.
+///
+/// # Safety
+/// All pointer parameters must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_amsha_chart_for_date(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    bhava_config: *const DhruvBhavaConfig,
+    riseset_config: *const DhruvRiseSetConfig,
+    ayanamsha_system: u32,
+    use_nutation: u8,
+    amsha_code: u16,
+    variation_code: u8,
+    scope: *const DhruvAmshaChartScope,
+    out: *mut DhruvAmshaChart,
+) -> DhruvStatus {
+    if engine.is_null()
+        || eop.is_null()
+        || utc.is_null()
+        || location.is_null()
+        || bhava_config.is_null()
+        || riseset_config.is_null()
+        || scope.is_null()
+        || out.is_null()
+    {
+        return DhruvStatus::NullPointer;
+    }
+
+    let amsha = match Amsha::from_code(amsha_code) {
+        Some(a) => a,
+        None => return DhruvStatus::InvalidSearchConfig,
+    };
+    let variation = match AmshaVariation::from_code(variation_code) {
+        Some(v) => v,
+        None => return DhruvStatus::InvalidSearchConfig,
+    };
+    if !variation.is_applicable_to(amsha) {
+        return DhruvStatus::InvalidSearchConfig;
+    }
+
+    let engine = unsafe { &*engine };
+    let eop = unsafe { &*eop };
+    let utc_c = unsafe { &*utc };
+    let loc_c = unsafe { &*location };
+    let bhava_cfg_c = unsafe { &*bhava_config };
+    let rs_c = unsafe { &*riseset_config };
+    let scope_c = unsafe { &*scope };
+
+    let utc_time = UtcTime {
+        year: utc_c.year,
+        month: utc_c.month,
+        day: utc_c.day,
+        hour: utc_c.hour,
+        minute: utc_c.minute,
+        second: utc_c.second,
+    };
+    let location = GeoLocation::new(loc_c.latitude_deg, loc_c.longitude_deg, loc_c.altitude_m);
+    let system = match ayanamsha_system_from_code(ayanamsha_system as i32) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidQuery,
+    };
+    let rust_bhava_config = match bhava_config_from_ffi(bhava_cfg_c) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+    let sun_limb = match sun_limb_from_code(rs_c.sun_limb) {
+        Some(l) => l,
+        None => return DhruvStatus::InvalidQuery,
+    };
+    let rs_config = RiseSetConfig {
+        use_refraction: rs_c.use_refraction != 0,
+        sun_limb,
+        altitude_correction: rs_c.altitude_correction != 0,
+    };
+    let aya_config = SankrantiConfig::new(system, use_nutation != 0);
+
+    let requests = [AmshaRequest::with_variation(amsha, variation)];
+    let rust_scope = dhruv_search::AmshaChartScope {
+        include_bhava_cusps: scope_c.include_bhava_cusps != 0,
+        include_arudha_padas: scope_c.include_arudha_padas != 0,
+        include_upagrahas: scope_c.include_upagrahas != 0,
+        include_sphutas: scope_c.include_sphutas != 0,
+        include_special_lagnas: scope_c.include_special_lagnas != 0,
+    };
+
+    match amsha_charts_for_date(
+        engine,
+        eop,
+        &utc_time,
+        &location,
+        &rust_bhava_config,
+        &rs_config,
+        &aya_config,
+        &requests,
+        &rust_scope,
+    ) {
+        Ok(result) => {
+            if let Some(chart) = result.charts.first() {
+                unsafe { *out = amsha_chart_to_ffi(chart) };
+            }
             DhruvStatus::Ok
         }
         Err(e) => DhruvStatus::from(&e),
@@ -9172,8 +9603,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_29() {
-        assert_eq!(dhruv_api_version(), 29);
+    fn ffi_api_version_is_30() {
+        assert_eq!(dhruv_api_version(), 30);
     }
 
     // --- Search error mapping ---
@@ -11275,6 +11706,7 @@ mod tests {
             include_ashtakavarga: 1,
             include_upagrahas: 1,
             include_special_lagnas: 1,
+            include_amshas: 0,
             graha_positions_config: DhruvGrahaPositionsConfig {
                 include_nakshatra: 0,
                 include_lagna: 1,
@@ -11289,6 +11721,18 @@ mod tests {
                 include_bhava: 0,
                 include_lagna: 0,
                 include_bindus: 1,
+            },
+            amsha_scope: DhruvAmshaChartScope {
+                include_bhava_cusps: 0,
+                include_arudha_padas: 0,
+                include_upagrahas: 0,
+                include_sphutas: 0,
+                include_special_lagnas: 0,
+            },
+            amsha_selection: DhruvAmshaSelectionConfig {
+                count: 0,
+                codes: [0; 40],
+                variations: [0; 40],
             },
         };
         let bhava_cfg = dhruv_bhava_config_default();
@@ -11319,6 +11763,7 @@ mod tests {
             include_ashtakavarga: 1,
             include_upagrahas: 1,
             include_special_lagnas: 1,
+            include_amshas: 0,
             graha_positions_config: DhruvGrahaPositionsConfig {
                 include_nakshatra: 0,
                 include_lagna: 1,
@@ -11333,6 +11778,18 @@ mod tests {
                 include_bhava: 0,
                 include_lagna: 0,
                 include_bindus: 1,
+            },
+            amsha_scope: DhruvAmshaChartScope {
+                include_bhava_cusps: 0,
+                include_arudha_padas: 0,
+                include_upagrahas: 0,
+                include_sphutas: 0,
+                include_special_lagnas: 0,
+            },
+            amsha_selection: DhruvAmshaSelectionConfig {
+                count: 0,
+                codes: [0; 40],
+                variations: [0; 40],
             },
         };
         let bhava_cfg = dhruv_bhava_config_default();
@@ -11535,6 +11992,104 @@ mod tests {
         // index 6 is invalid (only 0-5 allowed), but null engine is checked first
         let s = unsafe {
             dhruv_time_upagraha_jd_utc(ptr::null(), ptr::null(), &utc, &loc, &rs_cfg, 6, &mut out)
+        };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    // --- Amsha FFI tests ---
+
+    #[test]
+    fn ffi_amsha_longitude_d9() {
+        let mut out: f64 = 0.0;
+        let s = unsafe { dhruv_amsha_longitude(45.0, 9, 0, &mut out) };
+        assert_eq!(s, DhruvStatus::Ok);
+        assert!(out >= 0.0 && out < 360.0);
+    }
+
+    #[test]
+    fn ffi_amsha_longitude_null_out() {
+        let s = unsafe { dhruv_amsha_longitude(45.0, 9, 0, ptr::null_mut()) };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_amsha_longitude_invalid_code() {
+        let mut out: f64 = 0.0;
+        let s = unsafe { dhruv_amsha_longitude(45.0, 999, 0, &mut out) };
+        assert_eq!(s, DhruvStatus::InvalidSearchConfig);
+    }
+
+    #[test]
+    fn ffi_amsha_longitude_invalid_variation() {
+        let mut out: f64 = 0.0;
+        // HoraCancerLeoOnly (1) on D9 should fail
+        let s = unsafe { dhruv_amsha_longitude(45.0, 9, 1, &mut out) };
+        assert_eq!(s, DhruvStatus::InvalidSearchConfig);
+    }
+
+    #[test]
+    fn ffi_amsha_rashi_info_d9() {
+        let mut out = DhruvRashiInfo {
+            rashi_index: 0,
+            dms: DhruvDms { degrees: 0, minutes: 0, seconds: 0.0 },
+            degrees_in_rashi: 0.0,
+        };
+        let s = unsafe { dhruv_amsha_rashi_info(45.0, 9, 0, &mut out) };
+        assert_eq!(s, DhruvStatus::Ok);
+        assert!(out.rashi_index < 12);
+        assert!(out.degrees_in_rashi >= 0.0 && out.degrees_in_rashi < 30.0);
+    }
+
+    #[test]
+    fn ffi_amsha_longitudes_batch() {
+        let codes: [u16; 3] = [1, 9, 10];
+        let mut out = [0.0f64; 3];
+        let s = unsafe {
+            dhruv_amsha_longitudes(45.0, codes.as_ptr(), ptr::null(), 3, out.as_mut_ptr())
+        };
+        assert_eq!(s, DhruvStatus::Ok);
+        for v in &out {
+            assert!(*v >= 0.0 && *v < 360.0);
+        }
+        // D1 identity
+        assert!((out[0] - 45.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn ffi_amsha_longitudes_zero_count() {
+        let s = unsafe {
+            dhruv_amsha_longitudes(45.0, ptr::null(), ptr::null(), 0, ptr::null_mut())
+        };
+        assert_eq!(s, DhruvStatus::Ok);
+    }
+
+    #[test]
+    fn ffi_amsha_longitudes_null_codes() {
+        let mut out = [0.0f64; 1];
+        let s = unsafe {
+            dhruv_amsha_longitudes(45.0, ptr::null(), ptr::null(), 1, out.as_mut_ptr())
+        };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_amsha_chart_null_engine() {
+        let utc = DhruvUtcTime { year: 2024, month: 1, day: 15, hour: 12, minute: 0, second: 0.0 };
+        let loc = DhruvGeoLocation { latitude_deg: 28.6, longitude_deg: 77.2, altitude_m: 0.0 };
+        let bhava = DhruvBhavaConfig { system: 0, starting_point: 0, custom_start_deg: 0.0, reference_mode: 0 };
+        let rs = DhruvRiseSetConfig { use_refraction: 1, sun_limb: 0, altitude_correction: 0 };
+        let scope = DhruvAmshaChartScope {
+            include_bhava_cusps: 0,
+            include_arudha_padas: 0,
+            include_upagrahas: 0,
+            include_sphutas: 0,
+            include_special_lagnas: 0,
+        };
+        let mut out = DhruvAmshaChart::zeroed();
+        let s = unsafe {
+            dhruv_amsha_chart_for_date(
+                ptr::null(), ptr::null(), &utc, &loc, &bhava, &rs, 1, 1, 9, 0, &scope, &mut out,
+            )
         };
         assert_eq!(s, DhruvStatus::NullPointer);
     }

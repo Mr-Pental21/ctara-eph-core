@@ -1477,6 +1477,15 @@ enum Commands {
         #[arg(long)]
         longitudes: String,
     },
+    /// Transform a sidereal longitude through amsha (divisional chart) mappings
+    Amsha {
+        /// Sidereal longitude in degrees
+        #[arg(long)]
+        lon: f64,
+        /// Comma-separated amsha specs: D<n>[:variation], e.g. D9,D10,D2:cancer-leo-only
+        #[arg(long)]
+        amsha: String,
+    },
 }
 
 fn aya_system_from_code(code: i32) -> Option<AyanamshaSystem> {
@@ -4664,7 +4673,79 @@ fn main() {
                 println!();
             }
         }
+        Commands::Amsha { lon, amsha } => {
+            let requests = parse_amsha_specs(&amsha);
+            for req in &requests {
+                let variation = req.effective_variation();
+                let info = dhruv_vedic_base::amsha_rashi_info(lon, req.amsha, Some(variation));
+                let rashi = dhruv_vedic_base::ALL_RASHIS[info.rashi_index as usize];
+                let var_label = match variation {
+                    dhruv_vedic_base::AmshaVariation::TraditionalParashari => "",
+                    dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly => " (cancer-leo-only)",
+                };
+                println!(
+                    "{}{}: {:?} {:02}°{:02}'{:05.2}\"  ({:.3}°)",
+                    req.amsha.name(),
+                    var_label,
+                    rashi,
+                    info.dms.degrees,
+                    info.dms.minutes,
+                    info.dms.seconds,
+                    info.rashi_index as f64 * 30.0 + info.degrees_in_rashi,
+                );
+            }
+        }
     }
+}
+
+fn parse_amsha_specs(s: &str) -> Vec<dhruv_vedic_base::AmshaRequest> {
+    s.split(',')
+        .map(|spec| {
+            let spec = spec.trim();
+            let (amsha_part, var_part) = match spec.find(':') {
+                Some(idx) => (&spec[..idx], Some(&spec[idx + 1..])),
+                None => (spec, None),
+            };
+            // Parse D-number
+            let d_str = amsha_part.strip_prefix('D').or_else(|| amsha_part.strip_prefix('d'));
+            let code: u16 = match d_str {
+                Some(num) => num.parse().unwrap_or_else(|_| {
+                    eprintln!("Invalid amsha number: {amsha_part}");
+                    std::process::exit(1);
+                }),
+                None => {
+                    eprintln!("Amsha must start with D (e.g. D9): {amsha_part}");
+                    std::process::exit(1);
+                }
+            };
+            let amsha = match dhruv_vedic_base::Amsha::from_code(code) {
+                Some(a) => a,
+                None => {
+                    eprintln!("Unknown amsha code: D{code}");
+                    std::process::exit(1);
+                }
+            };
+            let variation = match var_part {
+                None | Some("default") => None,
+                Some("cancer-leo-only") => {
+                    let v = dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly;
+                    if !v.is_applicable_to(amsha) {
+                        eprintln!("Variation 'cancer-leo-only' not applicable to D{code}");
+                        std::process::exit(1);
+                    }
+                    Some(v)
+                }
+                Some(other) => {
+                    eprintln!("Unknown variation: {other}  (valid: default, cancer-leo-only)");
+                    std::process::exit(1);
+                }
+            };
+            match variation {
+                Some(v) => dhruv_vedic_base::AmshaRequest::with_variation(amsha, v),
+                None => dhruv_vedic_base::AmshaRequest::new(amsha),
+            }
+        })
+        .collect()
 }
 
 fn print_conjunction_event(label: &str, ev: &ConjunctionEvent) {

@@ -128,6 +128,11 @@ pub struct RashiInfo {
     pub degrees_in_rashi: f64,
 }
 
+/// Convert DMS back to decimal degrees.
+pub fn dms_to_deg(dms: &Dms) -> f64 {
+    dms.degrees as f64 + dms.minutes as f64 / 60.0 + dms.seconds / 3600.0
+}
+
 /// Convert decimal degrees to degrees-minutes-seconds.
 ///
 /// Handles negative input by taking absolute value.

@@ -1,8 +1,8 @@
 //! Types for Vedic jyotish orchestration (graha longitudes, etc.).
 
 use dhruv_vedic_base::{
-    AllSpecialLagnas, AllUpagrahas, AshtakavargaResult, DrishtiEntry, Graha, GrahaDrishtiMatrix,
-    Nakshatra, Rashi,
+    Amsha, AmshaVariation, AllSpecialLagnas, AllUpagrahas, AshtakavargaResult, Dms, DrishtiEntry,
+    Graha, GrahaDrishtiMatrix, Nakshatra, Rashi,
 };
 
 /// Sidereal longitudes of all 9 grahas.
@@ -177,6 +177,96 @@ pub struct DrishtiResult {
     pub graha_to_bindus: [[DrishtiEntry; 19]; 9],
 }
 
+// ---------------------------------------------------------------------------
+// Amsha (divisional chart) types
+// ---------------------------------------------------------------------------
+
+/// Maximum number of amsha requests in a single batch.
+pub const MAX_AMSHA_REQUESTS: usize = 40;
+
+/// Single entity's position in an amsha chart.
+#[derive(Debug, Clone, Copy)]
+pub struct AmshaEntry {
+    /// Sidereal longitude in [0, 360).
+    pub sidereal_longitude: f64,
+    /// Rashi of the amsha position.
+    pub rashi: Rashi,
+    /// 0-based rashi index (0-11).
+    pub rashi_index: u8,
+    /// Degrees/minutes/seconds within rashi.
+    pub dms: Dms,
+    /// Decimal degrees within rashi [0, 30).
+    pub degrees_in_rashi: f64,
+}
+
+/// Scope flags: which entity groups to include in amsha charts.
+/// Grahas (9) + Lagna (1) always included.
+#[derive(Debug, Clone, Copy)]
+pub struct AmshaChartScope {
+    pub include_bhava_cusps: bool,
+    pub include_arudha_padas: bool,
+    pub include_upagrahas: bool,
+    pub include_sphutas: bool,
+    pub include_special_lagnas: bool,
+}
+
+impl Default for AmshaChartScope {
+    fn default() -> Self {
+        Self {
+            include_bhava_cusps: false,
+            include_arudha_padas: false,
+            include_upagrahas: false,
+            include_sphutas: false,
+            include_special_lagnas: false,
+        }
+    }
+}
+
+/// All entity positions in one amsha chart.
+#[derive(Debug, Clone)]
+pub struct AmshaChart {
+    pub amsha: Amsha,
+    pub variation: AmshaVariation,
+    pub grahas: [AmshaEntry; 9],
+    pub lagna: AmshaEntry,
+    pub bhava_cusps: Option<[AmshaEntry; 12]>,
+    pub arudha_padas: Option<[AmshaEntry; 12]>,
+    pub upagrahas: Option<[AmshaEntry; 11]>,
+    pub sphutas: Option<[AmshaEntry; 16]>,
+    pub special_lagnas: Option<[AmshaEntry; 8]>,
+}
+
+/// Collection of amsha charts.
+#[derive(Debug, Clone)]
+pub struct AmshaResult {
+    pub charts: Vec<AmshaChart>,
+}
+
+/// Fixed-size amsha selection for FullKundaliConfig (Copy-compatible).
+#[derive(Debug, Clone, Copy)]
+pub struct AmshaSelectionConfig {
+    /// Number of valid entries (0..=MAX_AMSHA_REQUESTS).
+    pub count: u8,
+    /// D-numbers (1..144), 0=unused.
+    pub codes: [u16; MAX_AMSHA_REQUESTS],
+    /// Variation codes: 0=default, 1=HoraCancerLeoOnly.
+    pub variations: [u8; MAX_AMSHA_REQUESTS],
+}
+
+impl Default for AmshaSelectionConfig {
+    fn default() -> Self {
+        Self {
+            count: 0,
+            codes: [0; MAX_AMSHA_REQUESTS],
+            variations: [0; MAX_AMSHA_REQUESTS],
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Full kundali config/result
+// ---------------------------------------------------------------------------
+
 /// Configuration for one-shot full kundali computation.
 #[derive(Debug, Clone, Copy)]
 pub struct FullKundaliConfig {
@@ -192,12 +282,18 @@ pub struct FullKundaliConfig {
     pub include_upagrahas: bool,
     /// Include special lagnas section.
     pub include_special_lagnas: bool,
+    /// Include amsha (divisional chart) section.
+    pub include_amshas: bool,
     /// Config passed to graha positions computation.
     pub graha_positions_config: GrahaPositionsConfig,
     /// Config passed to bindus computation.
     pub bindus_config: BindusConfig,
     /// Config passed to drishti computation.
     pub drishti_config: DrishtiConfig,
+    /// Scope flags for amsha charts.
+    pub amsha_scope: AmshaChartScope,
+    /// Which amshas to compute.
+    pub amsha_selection: AmshaSelectionConfig,
 }
 
 impl Default for FullKundaliConfig {
@@ -209,9 +305,12 @@ impl Default for FullKundaliConfig {
             include_ashtakavarga: true,
             include_upagrahas: true,
             include_special_lagnas: true,
+            include_amshas: false,
             graha_positions_config: GrahaPositionsConfig::default(),
             bindus_config: BindusConfig::default(),
             drishti_config: DrishtiConfig::default(),
+            amsha_scope: AmshaChartScope::default(),
+            amsha_selection: AmshaSelectionConfig::default(),
         }
     }
 }
@@ -231,4 +330,6 @@ pub struct FullKundaliResult {
     pub upagrahas: Option<AllUpagrahas>,
     /// Present when `FullKundaliConfig::include_special_lagnas` is true.
     pub special_lagnas: Option<AllSpecialLagnas>,
+    /// Present when `FullKundaliConfig::include_amshas` is true.
+    pub amshas: Option<AmshaResult>,
 }

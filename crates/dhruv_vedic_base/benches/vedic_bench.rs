@@ -1,7 +1,8 @@
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use dhruv_vedic_base::{
-    AyanamshaSystem, LunarNode, NodeMode, ayanamsha_deg, lunar_node_deg, nakshatra_from_tropical,
-    rashi_from_tropical, tithi_from_elongation, yoga_from_sum,
+    Amsha, AmshaRequest, AyanamshaSystem, LunarNode, NodeMode, SHODASHAVARGA, amsha_longitude,
+    amsha_longitudes, ayanamsha_deg, lunar_node_deg, nakshatra_from_tropical, rashi_from_tropical,
+    tithi_from_elongation, yoga_from_sum,
 };
 
 fn ayanamsha_bench(c: &mut Criterion) {
@@ -63,10 +64,25 @@ fn panchang_primitives_bench(c: &mut Criterion) {
     group.finish();
 }
 
+fn amsha_bench(c: &mut Criterion) {
+    let lon = 123.456;
+
+    let mut group = c.benchmark_group("amsha");
+    group.bench_function("amsha_longitude_d9", |b| {
+        b.iter(|| amsha_longitude(black_box(lon), Amsha::D9, None))
+    });
+    let requests: Vec<AmshaRequest> = SHODASHAVARGA.iter().map(|&a| AmshaRequest::new(a)).collect();
+    group.bench_function("amsha_longitudes_shodashavarga", |b| {
+        b.iter(|| amsha_longitudes(black_box(lon), black_box(&requests)))
+    });
+    group.finish();
+}
+
 criterion_group!(
     benches,
     ayanamsha_bench,
     zodiac_bench,
-    panchang_primitives_bench
+    panchang_primitives_bench,
+    amsha_bench
 );
 criterion_main!(benches);

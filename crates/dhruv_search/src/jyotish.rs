@@ -13,9 +13,10 @@ use dhruv_vedic_base::special_lagna::all_special_lagnas;
 use dhruv_vedic_base::upagraha::TIME_BASED_UPAGRAHAS;
 use dhruv_vedic_base::vaar::vaar_from_jd;
 use dhruv_vedic_base::{
-    ALL_GRAHAS, AllSpecialLagnas, AllUpagrahas, ArudhaResult, AshtakavargaResult, AyanamshaSystem,
-    BhavaConfig, BhavaResult, DrishtiEntry, Graha, LunarNode, NodeMode, Upagraha, ayanamsha_deg,
-    bhrigu_bindu, calculate_ashtakavarga, compute_bhavas, ghati_lagna, ghatikas_since_sunrise,
+    ALL_GRAHAS, Amsha, AmshaRequest, AmshaVariation, AllSpecialLagnas, AllUpagrahas, ArudhaResult,
+    AshtakavargaResult, AyanamshaSystem, BhavaConfig, BhavaResult, DrishtiEntry, Graha, LunarNode,
+    NodeMode, Upagraha, amsha_longitude, ayanamsha_deg, bhrigu_bindu,
+    calculate_ashtakavarga, compute_bhavas, ghati_lagna, ghatikas_since_sunrise,
     graha_drishti, graha_drishti_matrix, hora_lagna, jd_tdb_to_centuries, lagna_longitude_rad,
     lunar_node_deg, nakshatra_from_longitude, normalize_360, nth_rashi_from, pranapada_lagna,
     rashi_from_longitude, rashi_lord_by_index, sree_lagna, sun_based_upagrahas, time_upagraha_jd,
@@ -24,8 +25,9 @@ use dhruv_vedic_base::{
 use crate::conjunction::body_ecliptic_lon_lat;
 use crate::error::SearchError;
 use crate::jyotish_types::{
-    BindusConfig, BindusResult, DrishtiConfig, DrishtiResult, FullKundaliConfig, FullKundaliResult,
-    GrahaEntry, GrahaLongitudes, GrahaPositions, GrahaPositionsConfig,
+    AmshaChart, AmshaChartScope, AmshaEntry, AmshaResult, AmshaSelectionConfig, BindusConfig,
+    BindusResult, DrishtiConfig, DrishtiResult, FullKundaliConfig, FullKundaliResult, GrahaEntry,
+    GrahaLongitudes, GrahaPositions, GrahaPositionsConfig, MAX_AMSHA_REQUESTS,
 };
 use crate::panchang::vedic_day_sunrises;
 use crate::sankranti_types::SankrantiConfig;
@@ -964,6 +966,15 @@ pub fn full_kundali_for_date(
         None
     };
 
+    // Amsha charts: computed if requested, after all D1 positions are resolved.
+    let amshas = if config.include_amshas {
+        Some(amsha_charts_from_kundali_with_ctx(
+            config, &graha_positions, &bindus, &upagrahas, &special_lagnas, &mut ctx,
+        )?)
+    } else {
+        None
+    };
+
     Ok(FullKundaliResult {
         graha_positions,
         bindus,
@@ -971,6 +982,7 @@ pub fn full_kundali_for_date(
         ashtakavarga,
         upagrahas,
         special_lagnas,
+        amshas,
     })
 }
 
@@ -997,6 +1009,514 @@ fn utc_to_jd_utc(utc: &UtcTime) -> f64 {
 fn normalize(deg: f64) -> f64 {
     let r = deg % 360.0;
     if r < 0.0 { r + 360.0 } else { r }
+}
+
+// ---------------------------------------------------------------------------
+// Amsha (divisional chart) orchestration
+// ---------------------------------------------------------------------------
+
+/// Convert a sidereal longitude to an AmshaEntry.
+fn make_amsha_entry(sidereal_lon: f64) -> AmshaEntry {
+    let info = rashi_from_longitude(sidereal_lon);
+    AmshaEntry {
+        sidereal_longitude: sidereal_lon,
+        rashi: info.rashi,
+        rashi_index: info.rashi_index,
+        dms: info.dms,
+        degrees_in_rashi: info.degrees_in_rashi,
+    }
+}
+
+/// Transform a sidereal longitude through an amsha and return an AmshaEntry.
+fn transform_to_amsha_entry(
+    sidereal_lon: f64,
+    amsha: Amsha,
+    variation: Option<AmshaVariation>,
+) -> AmshaEntry {
+    let amsha_lon = amsha_longitude(sidereal_lon, amsha, variation);
+    make_amsha_entry(amsha_lon)
+}
+
+/// Validate an AmshaRequest slice.
+fn validate_amsha_requests(requests: &[AmshaRequest]) -> Result<(), SearchError> {
+    if requests.len() > MAX_AMSHA_REQUESTS {
+        return Err(SearchError::InvalidConfig("amsha count exceeds maximum"));
+    }
+    for req in requests {
+        let v = req.effective_variation();
+        if !v.is_applicable_to(req.amsha) {
+            return Err(SearchError::InvalidConfig(
+                "variation not applicable to amsha",
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Convert AmshaSelectionConfig to a Vec of AmshaRequest.
+fn selection_to_requests(
+    sel: &AmshaSelectionConfig,
+) -> Result<Vec<AmshaRequest>, SearchError> {
+    if sel.count as usize > MAX_AMSHA_REQUESTS {
+        return Err(SearchError::InvalidConfig("amsha count exceeds maximum"));
+    }
+    let mut requests = Vec::with_capacity(sel.count as usize);
+    for i in 0..sel.count as usize {
+        let amsha = Amsha::from_code(sel.codes[i]).ok_or_else(|| {
+            SearchError::InvalidConfig("unknown amsha code")
+        })?;
+        let variation = if sel.variations[i] == 0 {
+            None
+        } else {
+            let v = AmshaVariation::from_code(sel.variations[i]).ok_or_else(|| {
+                SearchError::InvalidConfig("unknown variation code")
+            })?;
+            if !v.is_applicable_to(amsha) {
+                return Err(SearchError::InvalidConfig(
+                    "variation not applicable to amsha",
+                ));
+            }
+            Some(v)
+        };
+        requests.push(AmshaRequest { amsha, variation });
+    }
+    Ok(requests)
+}
+
+/// Build an AmshaChart for one amsha request given pre-computed D1 longitudes.
+fn build_amsha_chart(
+    req: &AmshaRequest,
+    graha_lons: &[f64; 9],
+    lagna_sid: f64,
+    scope: &AmshaChartScope,
+    bhava_cusps_sid: Option<&[f64; 12]>,
+    arudha_lons: Option<&[f64; 12]>,
+    upagraha_lons: Option<&[f64; 11]>,
+    sphuta_lons: Option<&[f64; 16]>,
+    special_lagna_lons: Option<&[f64; 8]>,
+) -> AmshaChart {
+    let amsha = req.amsha;
+    let variation = req.variation;
+    let effective_variation = req.effective_variation();
+
+    let mut grahas = [make_amsha_entry(0.0); 9];
+    for i in 0..9 {
+        grahas[i] = transform_to_amsha_entry(graha_lons[i], amsha, variation);
+    }
+
+    let lagna = transform_to_amsha_entry(lagna_sid, amsha, variation);
+
+    let bhava_cusps = if scope.include_bhava_cusps {
+        bhava_cusps_sid.map(|cusps| {
+            let mut entries = [make_amsha_entry(0.0); 12];
+            for i in 0..12 {
+                entries[i] = transform_to_amsha_entry(cusps[i], amsha, variation);
+            }
+            entries
+        })
+    } else {
+        None
+    };
+
+    let arudha_padas = if scope.include_arudha_padas {
+        arudha_lons.map(|lons| {
+            let mut entries = [make_amsha_entry(0.0); 12];
+            for i in 0..12 {
+                entries[i] = transform_to_amsha_entry(lons[i], amsha, variation);
+            }
+            entries
+        })
+    } else {
+        None
+    };
+
+    let upagrahas = if scope.include_upagrahas {
+        upagraha_lons.map(|lons| {
+            let mut entries = [make_amsha_entry(0.0); 11];
+            for i in 0..11 {
+                entries[i] = transform_to_amsha_entry(lons[i], amsha, variation);
+            }
+            entries
+        })
+    } else {
+        None
+    };
+
+    let sphutas = if scope.include_sphutas {
+        sphuta_lons.map(|lons| {
+            let mut entries = [make_amsha_entry(0.0); 16];
+            for i in 0..16 {
+                entries[i] = transform_to_amsha_entry(lons[i], amsha, variation);
+            }
+            entries
+        })
+    } else {
+        None
+    };
+
+    let special_lagnas = if scope.include_special_lagnas {
+        special_lagna_lons.map(|lons| {
+            let mut entries = [make_amsha_entry(0.0); 8];
+            for i in 0..8 {
+                entries[i] = transform_to_amsha_entry(lons[i], amsha, variation);
+            }
+            entries
+        })
+    } else {
+        None
+    };
+
+    AmshaChart {
+        amsha,
+        variation: effective_variation,
+        grahas,
+        lagna,
+        bhava_cusps,
+        arudha_padas,
+        upagrahas,
+        sphutas,
+        special_lagnas,
+    }
+}
+
+/// Compute amsha charts for all entities at a given date.
+pub fn amsha_charts_for_date(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    bhava_config: &BhavaConfig,
+    riseset_config: &RiseSetConfig,
+    aya_config: &SankrantiConfig,
+    requests: &[AmshaRequest],
+    scope: &AmshaChartScope,
+) -> Result<AmshaResult, SearchError> {
+    validate_amsha_requests(requests)?;
+    let mut ctx = JyotishContext::new(engine, utc, aya_config);
+
+    // Get D1 graha longitudes
+    let graha_lons = *ctx.graha_lons(engine, aya_config)?;
+    let lagna_sid = ctx.lagna_sid(engine, eop, location)?;
+    let aya = ctx.ayanamsha;
+
+    // Bhava cusps (sidereal)
+    let bhava_cusps_sid = if scope.include_bhava_cusps {
+        let bhava_result = ctx.bhava_result(engine, eop, location, bhava_config)?;
+        let mut cusps = [0.0f64; 12];
+        for i in 0..12 {
+            cusps[i] = normalize(bhava_result.bhavas[i].cusp_deg - aya);
+        }
+        Some(cusps)
+    } else {
+        None
+    };
+
+    // Arudha padas
+    let arudha_lons = if scope.include_arudha_padas {
+        let bhava_result = ctx.bhava_result(engine, eop, location, bhava_config)?;
+        let mut cusp_sid = [0.0f64; 12];
+        for i in 0..12 {
+            cusp_sid[i] = normalize(bhava_result.bhavas[i].cusp_deg - aya);
+        }
+        let mut lord_lons = [0.0f64; 12];
+        for i in 0..12 {
+            let cusp_rashi_idx = (cusp_sid[i] / 30.0) as u8;
+            let lord = rashi_lord_by_index(cusp_rashi_idx).unwrap_or(Graha::Surya);
+            lord_lons[i] = graha_lons.longitude(lord);
+        }
+        let raw = all_arudha_padas(&cusp_sid, &lord_lons);
+        let mut lons = [0.0f64; 12];
+        for i in 0..12 {
+            lons[i] = raw[i].longitude_deg;
+        }
+        Some(lons)
+    } else {
+        None
+    };
+
+    // Upagrahas
+    let upagraha_lons = if scope.include_upagrahas {
+        let upa = all_upagrahas_for_date_with_ctx(
+            engine, eop, utc, location, riseset_config, aya_config, &mut ctx,
+        )?;
+        Some(all_upagraha_lons(&upa))
+    } else {
+        None
+    };
+
+    // Sphutas
+    let sphuta_lons = if scope.include_sphutas {
+        let gl = *ctx.graha_lons(engine, aya_config)?;
+        let sun_sid = gl.longitude(Graha::Surya);
+        let moon_sid = gl.longitude(Graha::Chandra);
+        let rahu_sid = gl.longitude(Graha::Rahu);
+        let mars_sid = gl.longitude(Graha::Mangal);
+        let jupiter_sid = gl.longitude(Graha::Guru);
+        let venus_sid = gl.longitude(Graha::Shukra);
+        let lagna_sid_v = ctx.lagna_sid(engine, eop, location)?;
+
+        let (jd_sunrise, jd_next_sunrise) =
+            ctx.sunrise_pair(engine, eop, utc, location, riseset_config)?;
+        let jd_sunset = ctx.sunset_jd(engine, eop, location, riseset_config)?;
+        let is_day = ctx.jd_tdb >= jd_sunrise && ctx.jd_tdb < jd_sunset;
+        let weekday = vaar_from_jd(jd_sunrise).index();
+
+        let gulika_jd = time_upagraha_jd(
+            Upagraha::Gulika, weekday, is_day, jd_sunrise, jd_sunset, jd_next_sunrise,
+        );
+        let gulika_rad = lagna_longitude_rad(engine.lsk(), eop, location, gulika_jd)?;
+        let gulika_sid = normalize_360(gulika_rad.to_degrees() - aya);
+
+        // 8th lord: lord of the rashi containing the 8th cusp (lagna + 210 deg approx)
+        let eighth_cusp_sid = normalize(lagna_sid_v + 210.0);
+        let eighth_rashi_idx = (eighth_cusp_sid / 30.0).floor().min(11.0) as u8;
+        let eighth_lord = rashi_lord_by_index(eighth_rashi_idx).unwrap_or(Graha::Surya);
+        let eighth_lord_lon = gl.longitude(eighth_lord);
+
+        let inputs = dhruv_vedic_base::SphutalInputs {
+            sun: sun_sid,
+            moon: moon_sid,
+            mars: mars_sid,
+            jupiter: jupiter_sid,
+            venus: venus_sid,
+            rahu: rahu_sid,
+            lagna: lagna_sid_v,
+            eighth_lord: eighth_lord_lon,
+            gulika: gulika_sid,
+        };
+        let all = dhruv_vedic_base::all_sphutas(&inputs);
+        let mut lons = [0.0f64; 16];
+        for (i, (_sphuta, lon)) in all.iter().enumerate() {
+            lons[i] = *lon;
+        }
+        Some(lons)
+    } else {
+        None
+    };
+
+    // Special lagnas
+    let special_lagna_lons = if scope.include_special_lagnas {
+        let sl = special_lagnas_for_date_with_ctx(
+            engine, eop, utc, location, riseset_config, aya_config, &mut ctx,
+        )?;
+        Some(all_special_lagna_lons(&sl))
+    } else {
+        None
+    };
+
+    let charts = requests
+        .iter()
+        .map(|req| {
+            build_amsha_chart(
+                req,
+                &graha_lons.longitudes,
+                lagna_sid,
+                scope,
+                bhava_cusps_sid.as_ref(),
+                arudha_lons.as_ref(),
+                upagraha_lons.as_ref(),
+                sphuta_lons.as_ref(),
+                special_lagna_lons.as_ref(),
+            )
+        })
+        .collect();
+
+    Ok(AmshaResult { charts })
+}
+
+/// Pure-math transform: compute amsha charts from pre-computed D1 kundali data.
+///
+/// Requires graha_positions (with lagna) to be present.
+/// If scope.include_bhava_cusps is true, bhava_cusps_sid must be Some.
+pub fn amsha_charts_from_kundali(
+    kundali: &FullKundaliResult,
+    bhava_cusps_sid: Option<&[f64; 12]>,
+    requests: &[AmshaRequest],
+    scope: &AmshaChartScope,
+) -> Result<AmshaResult, SearchError> {
+    validate_amsha_requests(requests)?;
+
+    let gp = kundali
+        .graha_positions
+        .as_ref()
+        .ok_or(SearchError::InvalidConfig(
+            "graha_positions required for amsha charts",
+        ))?;
+
+    let lagna_sid = gp.lagna.sidereal_longitude;
+
+    if scope.include_bhava_cusps && bhava_cusps_sid.is_none() {
+        return Err(SearchError::InvalidConfig(
+            "bhava_cusps_sid required when include_bhava_cusps is true",
+        ));
+    }
+
+    // Extract arudha padas if available
+    let arudha_lons = if scope.include_arudha_padas {
+        kundali.bindus.as_ref().map(|b| {
+            let mut lons = [0.0f64; 12];
+            for i in 0..12 {
+                lons[i] = b.arudha_padas[i].sidereal_longitude;
+            }
+            lons
+        })
+    } else {
+        None
+    };
+
+    // Extract upagrahas if available
+    let upagraha_lons = if scope.include_upagrahas {
+        kundali.upagrahas.as_ref().map(|u| all_upagraha_lons(u))
+    } else {
+        None
+    };
+
+    // Extract special lagnas if available
+    let special_lagna_lons = if scope.include_special_lagnas {
+        kundali
+            .special_lagnas
+            .as_ref()
+            .map(|s| all_special_lagna_lons(s))
+    } else {
+        None
+    };
+
+    // Sphutas: not available from FullKundaliResult directly
+    let sphuta_lons: Option<[f64; 16]> = None;
+
+    let charts = requests
+        .iter()
+        .map(|req| {
+            build_amsha_chart(
+                req,
+                &gp.grahas.map(|g| g.sidereal_longitude),
+                lagna_sid,
+                scope,
+                bhava_cusps_sid,
+                arudha_lons.as_ref(),
+                upagraha_lons.as_ref(),
+                sphuta_lons.as_ref(),
+                special_lagna_lons.as_ref(),
+            )
+        })
+        .collect();
+
+    Ok(AmshaResult { charts })
+}
+
+/// Internal: compute amsha charts from within full_kundali_for_date.
+fn amsha_charts_from_kundali_with_ctx(
+    config: &FullKundaliConfig,
+    graha_positions: &Option<GrahaPositions>,
+    bindus: &Option<BindusResult>,
+    upagrahas: &Option<AllUpagrahas>,
+    special_lagnas: &Option<AllSpecialLagnas>,
+    ctx: &mut JyotishContext,
+) -> Result<AmshaResult, SearchError> {
+    let requests = selection_to_requests(&config.amsha_selection)?;
+    validate_amsha_requests(&requests)?;
+
+    let gp = graha_positions
+        .as_ref()
+        .ok_or(SearchError::InvalidConfig(
+            "graha_positions required for amsha charts",
+        ))?;
+
+    let lagna_sid = gp.lagna.sidereal_longitude;
+    let scope = &config.amsha_scope;
+
+    // Bhava cusps (sidereal) from context
+    let bhava_cusps_sid = if scope.include_bhava_cusps {
+        if let Some(ref bhava_result) = ctx.bhava_result {
+            let mut cusps = [0.0f64; 12];
+            for i in 0..12 {
+                cusps[i] = normalize(bhava_result.bhavas[i].cusp_deg - ctx.ayanamsha);
+            }
+            Some(cusps)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let arudha_lons = if scope.include_arudha_padas {
+        bindus.as_ref().map(|b| {
+            let mut lons = [0.0f64; 12];
+            for i in 0..12 {
+                lons[i] = b.arudha_padas[i].sidereal_longitude;
+            }
+            lons
+        })
+    } else {
+        None
+    };
+
+    let upagraha_lons = if scope.include_upagrahas {
+        upagrahas.as_ref().map(|u| all_upagraha_lons(u))
+    } else {
+        None
+    };
+
+    let special_lagna_lons = if scope.include_special_lagnas {
+        special_lagnas
+            .as_ref()
+            .map(|s| all_special_lagna_lons(s))
+    } else {
+        None
+    };
+
+    let sphuta_lons: Option<[f64; 16]> = None;
+
+    let charts = requests
+        .iter()
+        .map(|req| {
+            build_amsha_chart(
+                req,
+                &gp.grahas.map(|g| g.sidereal_longitude),
+                lagna_sid,
+                scope,
+                bhava_cusps_sid.as_ref(),
+                arudha_lons.as_ref(),
+                upagraha_lons.as_ref(),
+                sphuta_lons.as_ref(),
+                special_lagna_lons.as_ref(),
+            )
+        })
+        .collect();
+
+    Ok(AmshaResult { charts })
+}
+
+/// Extract all 11 upagraha longitudes into a fixed array.
+fn all_upagraha_lons(u: &AllUpagrahas) -> [f64; 11] {
+    [
+        u.gulika,
+        u.maandi,
+        u.kaala,
+        u.mrityu,
+        u.artha_prahara,
+        u.yama_ghantaka,
+        u.dhooma,
+        u.vyatipata,
+        u.parivesha,
+        u.indra_chapa,
+        u.upaketu,
+    ]
+}
+
+/// Extract all 8 special lagna longitudes into a fixed array.
+fn all_special_lagna_lons(s: &AllSpecialLagnas) -> [f64; 8] {
+    [
+        s.bhava_lagna,
+        s.hora_lagna,
+        s.ghati_lagna,
+        s.vighati_lagna,
+        s.varnada_lagna,
+        s.sree_lagna,
+        s.pranapada_lagna,
+        s.indu_lagna,
+    ]
 }
 
 #[cfg(test)]

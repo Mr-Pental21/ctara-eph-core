@@ -15,6 +15,7 @@
 //! All implementations are clean-room, derived from IAU standards
 //! and public astronomical formulas.
 
+pub mod amsha;
 pub mod arudha;
 pub mod ashtakavarga;
 pub mod ayana_type;
@@ -43,6 +44,11 @@ pub mod util;
 pub mod vaar;
 pub mod yoga;
 
+pub use amsha::{
+    ALL_AMSHAS, Amsha, AmshaRequest, AmshaVariation, RashiElement, SHODASHAVARGA,
+    amsha_from_rashi_position, amsha_longitude, amsha_longitudes, amsha_rashi_info,
+    amsha_rashi_infos, rashi_element, rashi_position_to_longitude,
+};
 pub use arudha::{ALL_ARUDHA_PADAS, ArudhaPada, ArudhaResult, all_arudha_padas, arudha_pada};
 pub use ashtakavarga::{
     AshtakavargaResult, BAV_TOTALS, BhinnaAshtakavarga, SAV_TOTAL, SarvaAshtakavarga,
@@ -81,7 +87,8 @@ pub use nakshatra::{
     nakshatra28_from_longitude, nakshatra28_from_tropical,
 };
 pub use rashi::{
-    ALL_RASHIS, Dms, Rashi, RashiInfo, deg_to_dms, rashi_from_longitude, rashi_from_tropical,
+    ALL_RASHIS, Dms, Rashi, RashiInfo, deg_to_dms, dms_to_deg, rashi_from_longitude,
+    rashi_from_tropical,
 };
 pub use riseset::{approximate_local_noon_jd, compute_all_events, compute_rise_set};
 pub use riseset_types::{GeoLocation, RiseSetConfig, RiseSetEvent, RiseSetResult, SunLimb};
