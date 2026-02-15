@@ -15,8 +15,8 @@ use super::nakshatra_data::NakshatraDashaConfig;
 use super::query::find_active_period;
 use super::subperiod::generate_children;
 use super::types::{
-    DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot,
-    MAX_DASHA_LEVEL, MAX_PERIODS_PER_LEVEL,
+    DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot, MAX_DASHA_LEVEL,
+    MAX_PERIODS_PER_LEVEL,
 };
 use super::variation::{DashaVariationConfig, SubPeriodMethod};
 
@@ -91,9 +91,9 @@ pub fn nakshatra_child_period(
 ) -> Option<DashaPeriod> {
     let child_level = parent.level.child_level()?;
     let children = nakshatra_children(parent, config, method);
-    children.into_iter().find(|c| {
-        c.entity == child_entity && c.level == child_level
-    })
+    children
+        .into_iter()
+        .find(|c| c.entity == child_entity && c.level == child_level)
 }
 
 // ── Tier 2: All children of one parent ───────────────────────────────
@@ -109,7 +109,14 @@ pub fn nakshatra_children(
         None => return Vec::new(),
     };
     let seq = config.entity_sequence();
-    generate_children(parent, &seq, config.total_period_days, child_level, 0, method)
+    generate_children(
+        parent,
+        &seq,
+        config.total_period_days,
+        child_level,
+        0,
+        method,
+    )
 }
 
 // ── Tier 3: Complete level from parent level ─────────────────────────
@@ -300,7 +307,8 @@ mod tests {
     fn vimshottari_children_count() {
         let cfg = vimshottari_config();
         let periods = nakshatra_level0(2451545.0, 0.0, &cfg);
-        let children = nakshatra_children(&periods[0], &cfg, SubPeriodMethod::ProportionalFromParent);
+        let children =
+            nakshatra_children(&periods[0], &cfg, SubPeriodMethod::ProportionalFromParent);
         assert_eq!(children.len(), 9);
         // First child should be same entity as parent (Ketu)
         assert_eq!(children[0].entity, DashaEntity::Graha(Graha::Ketu));

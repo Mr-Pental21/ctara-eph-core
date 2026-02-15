@@ -7,24 +7,18 @@
 
 use dhruv_core::Engine;
 use dhruv_time::{EopKernel, UtcTime};
+use dhruv_vedic_base::BhavaConfig;
 use dhruv_vedic_base::dasha::{
     BirthPeriod, DashaHierarchy, DashaSnapshot, DashaSystem, DashaVariationConfig,
-    RashiDashaInputs,
-    nakshatra_config_for_system, nakshatra_hierarchy, nakshatra_snapshot,
+    RashiDashaInputs, chakra_hierarchy, chakra_snapshot, chara_hierarchy, chara_snapshot,
+    driga_hierarchy, driga_snapshot, karaka_kendradi_graha_hierarchy,
+    karaka_kendradi_graha_snapshot, karaka_kendradi_hierarchy, karaka_kendradi_snapshot,
+    kendradi_hierarchy, kendradi_snapshot, mandooka_hierarchy, mandooka_snapshot,
+    nakshatra_config_for_system, nakshatra_hierarchy, nakshatra_snapshot, shoola_hierarchy,
+    shoola_snapshot, sthira_hierarchy, sthira_snapshot, yogardha_hierarchy, yogardha_snapshot,
     yogini_config, yogini_hierarchy, yogini_snapshot,
-    chara_hierarchy, chara_snapshot,
-    sthira_hierarchy, sthira_snapshot,
-    yogardha_hierarchy, yogardha_snapshot,
-    driga_hierarchy, driga_snapshot,
-    shoola_hierarchy, shoola_snapshot,
-    mandooka_hierarchy, mandooka_snapshot,
-    chakra_hierarchy, chakra_snapshot,
-    kendradi_hierarchy, kendradi_snapshot,
-    karaka_kendradi_hierarchy, karaka_kendradi_snapshot,
-    karaka_kendradi_graha_hierarchy, karaka_kendradi_graha_snapshot,
 };
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
-use dhruv_vedic_base::BhavaConfig;
 
 use crate::error::SearchError;
 use crate::jyotish::graha_sidereal_longitudes;
@@ -167,15 +161,16 @@ fn dispatch_hierarchy(
         }
         DashaSystem::KarakaKendradi => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            karaka_kendradi_hierarchy(birth_jd, ri, max_level, variation)
-                .map_err(SearchError::from)
+            karaka_kendradi_hierarchy(birth_jd, ri, max_level, variation).map_err(SearchError::from)
         }
         DashaSystem::KarakaKendradiGraha => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
             karaka_kendradi_graha_hierarchy(birth_jd, ri, max_level, variation)
                 .map_err(SearchError::from)
         }
-        _ => Err(SearchError::InvalidConfig("dasha system not yet implemented")),
+        _ => Err(SearchError::InvalidConfig(
+            "dasha system not yet implemented",
+        )),
     }
 }
 
@@ -192,7 +187,12 @@ fn dispatch_snapshot(
     // Try nakshatra-based systems first (10 systems)
     if let Some(cfg) = nakshatra_config_for_system(system) {
         return Ok(nakshatra_snapshot(
-            birth_jd, moon_sid_lon, &cfg, query_jd, max_level, variation,
+            birth_jd,
+            moon_sid_lon,
+            &cfg,
+            query_jd,
+            max_level,
+            variation,
         ));
     }
 
@@ -200,7 +200,12 @@ fn dispatch_snapshot(
         DashaSystem::Yogini => {
             let cfg = yogini_config();
             Ok(yogini_snapshot(
-                birth_jd, moon_sid_lon, &cfg, query_jd, max_level, variation,
+                birth_jd,
+                moon_sid_lon,
+                &cfg,
+                query_jd,
+                max_level,
+                variation,
             ))
         }
         // Rashi-based systems
@@ -210,11 +215,15 @@ fn dispatch_snapshot(
         }
         DashaSystem::Sthira => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            Ok(sthira_snapshot(birth_jd, ri, query_jd, max_level, variation))
+            Ok(sthira_snapshot(
+                birth_jd, ri, query_jd, max_level, variation,
+            ))
         }
         DashaSystem::Yogardha => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            Ok(yogardha_snapshot(birth_jd, ri, query_jd, max_level, variation))
+            Ok(yogardha_snapshot(
+                birth_jd, ri, query_jd, max_level, variation,
+            ))
         }
         DashaSystem::Driga => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
@@ -222,29 +231,48 @@ fn dispatch_snapshot(
         }
         DashaSystem::Shoola => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            Ok(shoola_snapshot(birth_jd, ri, query_jd, max_level, variation))
+            Ok(shoola_snapshot(
+                birth_jd, ri, query_jd, max_level, variation,
+            ))
         }
         DashaSystem::Mandooka => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            Ok(mandooka_snapshot(birth_jd, ri, query_jd, max_level, variation))
+            Ok(mandooka_snapshot(
+                birth_jd, ri, query_jd, max_level, variation,
+            ))
         }
         DashaSystem::Chakra => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            Ok(chakra_snapshot(birth_jd, ri, BirthPeriod::Day, query_jd, max_level, variation))
+            Ok(chakra_snapshot(
+                birth_jd,
+                ri,
+                BirthPeriod::Day,
+                query_jd,
+                max_level,
+                variation,
+            ))
         }
         DashaSystem::Kendradi => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            Ok(kendradi_snapshot(birth_jd, ri, query_jd, max_level, variation))
+            Ok(kendradi_snapshot(
+                birth_jd, ri, query_jd, max_level, variation,
+            ))
         }
         DashaSystem::KarakaKendradi => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            Ok(karaka_kendradi_snapshot(birth_jd, ri, query_jd, max_level, variation))
+            Ok(karaka_kendradi_snapshot(
+                birth_jd, ri, query_jd, max_level, variation,
+            ))
         }
         DashaSystem::KarakaKendradiGraha => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            Ok(karaka_kendradi_graha_snapshot(birth_jd, ri, query_jd, max_level, variation))
+            Ok(karaka_kendradi_graha_snapshot(
+                birth_jd, ri, query_jd, max_level, variation,
+            ))
         }
-        _ => Err(SearchError::InvalidConfig("dasha system not yet implemented")),
+        _ => Err(SearchError::InvalidConfig(
+            "dasha system not yet implemented",
+        )),
     }
 }
 
@@ -265,12 +293,21 @@ pub fn dasha_hierarchy_for_birth(
     let moon_sid_lon = moon_sidereal_lon(engine, eop, birth_utc, aya_config)?;
 
     let rashi_inputs = if is_rashi_system(system) {
-        Some(assemble_rashi_inputs(engine, eop, birth_utc, location, aya_config)?)
+        Some(assemble_rashi_inputs(
+            engine, eop, birth_utc, location, aya_config,
+        )?)
     } else {
         None
     };
 
-    dispatch_hierarchy(system, birth_jd, moon_sid_lon, rashi_inputs.as_ref(), max_level, variation)
+    dispatch_hierarchy(
+        system,
+        birth_jd,
+        moon_sid_lon,
+        rashi_inputs.as_ref(),
+        max_level,
+        variation,
+    )
 }
 
 /// Find active periods at a specific time.
@@ -294,12 +331,22 @@ pub fn dasha_snapshot_at(
     let moon_sid_lon = moon_sidereal_lon(engine, eop, birth_utc, aya_config)?;
 
     let rashi_inputs = if is_rashi_system(system) {
-        Some(assemble_rashi_inputs(engine, eop, birth_utc, location, aya_config)?)
+        Some(assemble_rashi_inputs(
+            engine, eop, birth_utc, location, aya_config,
+        )?)
     } else {
         None
     };
 
-    dispatch_snapshot(system, birth_jd, moon_sid_lon, rashi_inputs.as_ref(), query_jd, max_level, variation)
+    dispatch_snapshot(
+        system,
+        birth_jd,
+        moon_sid_lon,
+        rashi_inputs.as_ref(),
+        query_jd,
+        max_level,
+        variation,
+    )
 }
 
 /// Context-sharing variant for full_kundali_for_date integration.
@@ -314,7 +361,14 @@ pub fn dasha_hierarchy_with_moon(
     max_level: u8,
     variation: &DashaVariationConfig,
 ) -> Result<DashaHierarchy, SearchError> {
-    dispatch_hierarchy(system, birth_jd, moon_sid_lon, rashi_inputs, max_level, variation)
+    dispatch_hierarchy(
+        system,
+        birth_jd,
+        moon_sid_lon,
+        rashi_inputs,
+        max_level,
+        variation,
+    )
 }
 
 /// Context-sharing snapshot variant.
@@ -327,5 +381,13 @@ pub fn dasha_snapshot_with_moon(
     max_level: u8,
     variation: &DashaVariationConfig,
 ) -> Result<DashaSnapshot, SearchError> {
-    dispatch_snapshot(system, birth_jd, moon_sid_lon, rashi_inputs, query_jd, max_level, variation)
+    dispatch_snapshot(
+        system,
+        birth_jd,
+        moon_sid_lon,
+        rashi_inputs,
+        query_jd,
+        max_level,
+        variation,
+    )
 }

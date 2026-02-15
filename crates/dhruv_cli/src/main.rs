@@ -4872,12 +4872,21 @@ fn main() {
             let rs_config = RiseSetConfig::default();
             let aya_config = SankrantiConfig::new(system, nutation);
 
-            let graha_names = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
+            let graha_names = [
+                "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn",
+            ];
 
             if let Some(name) = graha {
                 let g = parse_graha_name(&name);
                 let entry = dhruv_search::shadbala_for_graha(
-                    &engine, &eop_kernel, &utc, &location, &bhava_config, &rs_config, &aya_config, g,
+                    &engine,
+                    &eop_kernel,
+                    &utc,
+                    &location,
+                    &bhava_config,
+                    &rs_config,
+                    &aya_config,
+                    g,
                 )
                 .unwrap_or_else(|e| {
                     eprintln!("Error: {e}");
@@ -4887,7 +4896,13 @@ fn main() {
                 print_shadbala_entry(&entry);
             } else {
                 let result = dhruv_search::shadbala_for_date(
-                    &engine, &eop_kernel, &utc, &location, &bhava_config, &rs_config, &aya_config,
+                    &engine,
+                    &eop_kernel,
+                    &utc,
+                    &location,
+                    &bhava_config,
+                    &rs_config,
+                    &aya_config,
                 )
                 .unwrap_or_else(|e| {
                     eprintln!("Error: {e}");
@@ -4897,7 +4912,16 @@ fn main() {
                 println!("Shadbala for {} at {:.4}°N, {:.4}°E\n", date, lat, lon);
                 println!(
                     "{:<8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>6}",
-                    "Graha", "Sthana", "Dig", "Kala", "Cheshta", "Nais", "Drik", "Total", "Reqd", "Strong"
+                    "Graha",
+                    "Sthana",
+                    "Dig",
+                    "Kala",
+                    "Cheshta",
+                    "Nais",
+                    "Drik",
+                    "Total",
+                    "Reqd",
+                    "Strong"
                 );
                 println!("{}", "-".repeat(88));
                 for (i, entry) in result.entries.iter().enumerate() {
@@ -4948,39 +4972,41 @@ fn main() {
             if let Some(name) = graha {
                 let g = parse_graha_name(&name);
                 let entry = dhruv_search::vimsopaka_for_graha(
-                    &engine, &eop_kernel, &utc, &location, &aya_config, policy, g,
+                    &engine,
+                    &eop_kernel,
+                    &utc,
+                    &location,
+                    &aya_config,
+                    policy,
+                    g,
                 )
                 .unwrap_or_else(|e| {
                     eprintln!("Error: {e}");
                     std::process::exit(1);
                 });
                 println!("Vimsopaka for {} on {}\n", g.english_name(), date);
-                println!(
-                    "  Shadvarga:     {:>6.2}/20",
-                    entry.shadvarga
-                );
-                println!(
-                    "  Saptavarga:    {:>6.2}/20",
-                    entry.saptavarga
-                );
-                println!(
-                    "  Dashavarga:    {:>6.2}/20",
-                    entry.dashavarga
-                );
-                println!(
-                    "  Shodasavarga:  {:>6.2}/20",
-                    entry.shodasavarga
-                );
+                println!("  Shadvarga:     {:>6.2}/20", entry.shadvarga);
+                println!("  Saptavarga:    {:>6.2}/20", entry.saptavarga);
+                println!("  Dashavarga:    {:>6.2}/20", entry.dashavarga);
+                println!("  Shodasavarga:  {:>6.2}/20", entry.shodasavarga);
             } else {
                 let result = dhruv_search::vimsopaka_for_date(
-                    &engine, &eop_kernel, &utc, &location, &aya_config, policy,
+                    &engine,
+                    &eop_kernel,
+                    &utc,
+                    &location,
+                    &aya_config,
+                    policy,
                 )
                 .unwrap_or_else(|e| {
                     eprintln!("Error: {e}");
                     std::process::exit(1);
                 });
 
-                println!("Vimsopaka Bala for {} at {:.4}°N, {:.4}°E\n", date, lat, lon);
+                println!(
+                    "Vimsopaka Bala for {} at {:.4}°N, {:.4}°E\n",
+                    date, lat, lon
+                );
                 println!(
                     "{:<8} {:>10} {:>10} {:>10} {:>12}",
                     "Graha", "Shadvarga", "Saptavarga", "Dashavarga", "Shodasavarga"
@@ -5053,8 +5079,15 @@ fn main() {
             if let Some(name) = graha {
                 let g = parse_graha_name(&name);
                 let entry = dhruv_search::avastha_for_graha(
-                    &engine, &eop_kernel, &location, &utc, &bhava_config, &rs_config, &aya_config,
-                    policy, g,
+                    &engine,
+                    &eop_kernel,
+                    &location,
+                    &utc,
+                    &bhava_config,
+                    &rs_config,
+                    &aya_config,
+                    policy,
+                    g,
                 )
                 .unwrap_or_else(|e| {
                     eprintln!("Error: {e}");
@@ -5064,7 +5097,13 @@ fn main() {
                 print_graha_avastha(&entry);
             } else {
                 let result = dhruv_search::avastha_for_date(
-                    &engine, &eop_kernel, &location, &utc, &bhava_config, &rs_config, &aya_config,
+                    &engine,
+                    &eop_kernel,
+                    &location,
+                    &utc,
+                    &bhava_config,
+                    &rs_config,
+                    &aya_config,
                     policy,
                 )
                 .unwrap_or_else(|e| {
@@ -5072,7 +5111,10 @@ fn main() {
                     std::process::exit(1);
                 });
 
-                println!("Graha Avasthas for {} at {:.4}°N, {:.4}°E\n", date, lat, lon);
+                println!(
+                    "Graha Avasthas for {} at {:.4}°N, {:.4}°E\n",
+                    date, lat, lon
+                );
                 println!(
                     "{:<8} {:>10} {:>10} {:>10} {:>10} {:>12}",
                     "Graha", "Baladi", "Jagradadi", "Deeptadi", "Lajjitadi", "Sayanadi"
@@ -5126,9 +5168,17 @@ fn main() {
                     std::process::exit(1);
                 });
                 let snapshot = dhruv_search::dasha_snapshot_at(
-                    &engine, &eop_kernel, &birth_utc, &query_utc, &location,
-                    dasha_system, clamped_level, &bhava_config, &rs_config,
-                    &aya_config, &variation,
+                    &engine,
+                    &eop_kernel,
+                    &birth_utc,
+                    &query_utc,
+                    &location,
+                    dasha_system,
+                    clamped_level,
+                    &bhava_config,
+                    &rs_config,
+                    &aya_config,
+                    &variation,
                 )
                 .unwrap_or_else(|e| {
                     eprintln!("Error: {e}");
@@ -5136,7 +5186,9 @@ fn main() {
                 });
                 println!(
                     "Dasha Snapshot ({}) at {} for birth {}\n",
-                    dasha_system.name(), q_date, birth_date
+                    dasha_system.name(),
+                    q_date,
+                    birth_date
                 );
                 for period in &snapshot.periods {
                     let indent = "  ".repeat(period.level as usize);
@@ -5152,9 +5204,16 @@ fn main() {
                 }
             } else {
                 let hierarchy = dhruv_search::dasha_hierarchy_for_birth(
-                    &engine, &eop_kernel, &birth_utc, &location,
-                    dasha_system, clamped_level, &bhava_config, &rs_config,
-                    &aya_config, &variation,
+                    &engine,
+                    &eop_kernel,
+                    &birth_utc,
+                    &location,
+                    dasha_system,
+                    clamped_level,
+                    &bhava_config,
+                    &rs_config,
+                    &aya_config,
+                    &variation,
                 )
                 .unwrap_or_else(|e| {
                     eprintln!("Error: {e}");
@@ -5162,13 +5221,20 @@ fn main() {
                 });
                 println!(
                     "Dasha Hierarchy ({}) for birth {} ({} levels)\n",
-                    dasha_system.name(), birth_date, hierarchy.levels.len()
+                    dasha_system.name(),
+                    birth_date,
+                    hierarchy.levels.len()
                 );
                 for (lvl_idx, level) in hierarchy.levels.iter().enumerate() {
                     let level_name = dhruv_vedic_base::dasha::DashaLevel::from_u8(lvl_idx as u8)
                         .map(|l| l.name())
                         .unwrap_or("Unknown");
-                    println!("Level {} ({}) — {} periods:", lvl_idx, level_name, level.len());
+                    println!(
+                        "Level {} ({}) — {} periods:",
+                        lvl_idx,
+                        level_name,
+                        level.len()
+                    );
                     let display_count = level.len().min(50);
                     for period in &level[..display_count] {
                         let indent = "  ".repeat(lvl_idx + 1);
@@ -5246,7 +5312,9 @@ fn parse_amsha_specs(s: &str) -> Vec<dhruv_vedic_base::AmshaRequest> {
                 None => (spec, None),
             };
             // Parse D-number
-            let d_str = amsha_part.strip_prefix('D').or_else(|| amsha_part.strip_prefix('d'));
+            let d_str = amsha_part
+                .strip_prefix('D')
+                .or_else(|| amsha_part.strip_prefix('d'));
             let code: u16 = match d_str {
                 Some(num) => num.parse().unwrap_or_else(|_| {
                     eprintln!("Invalid amsha number: {amsha_part}");
@@ -5363,7 +5431,10 @@ fn print_shadbala_entry(entry: &dhruv_search::ShadbalaEntry) {
     println!("  Naisargika Bala: {:>8.2}", entry.naisargika);
     println!("  Drik Bala:       {:>8.2}", entry.drik);
     println!("  ─────────────────────────");
-    println!("  Total:           {:>8.2} shashtiamsas ({:.2} rupas)", entry.total_shashtiamsas, entry.total_rupas);
+    println!(
+        "  Total:           {:>8.2} shashtiamsas ({:.2} rupas)",
+        entry.total_shashtiamsas, entry.total_rupas
+    );
     println!("  Required:        {:>8.2}", entry.required_strength);
     println!(
         "  Strong:          {}",
@@ -5372,14 +5443,35 @@ fn print_shadbala_entry(entry: &dhruv_search::ShadbalaEntry) {
 }
 
 fn print_graha_avastha(entry: &dhruv_vedic_base::GrahaAvasthas) {
-    println!("  Baladi:     {} (strength {:.2})", entry.baladi.name(), entry.baladi.strength_factor());
-    println!("  Jagradadi:  {} (strength {:.2})", entry.jagradadi.name(), entry.jagradadi.strength_factor());
-    println!("  Deeptadi:   {} (strength {:.2})", entry.deeptadi.name(), entry.deeptadi.strength_factor());
-    println!("  Lajjitadi:  {} (strength {:.2})", entry.lajjitadi.name(), entry.lajjitadi.strength_factor());
+    println!(
+        "  Baladi:     {} (strength {:.2})",
+        entry.baladi.name(),
+        entry.baladi.strength_factor()
+    );
+    println!(
+        "  Jagradadi:  {} (strength {:.2})",
+        entry.jagradadi.name(),
+        entry.jagradadi.strength_factor()
+    );
+    println!(
+        "  Deeptadi:   {} (strength {:.2})",
+        entry.deeptadi.name(),
+        entry.deeptadi.strength_factor()
+    );
+    println!(
+        "  Lajjitadi:  {} (strength {:.2})",
+        entry.lajjitadi.name(),
+        entry.lajjitadi.strength_factor()
+    );
     println!("  Sayanadi:   {}", entry.sayanadi.avastha.name());
     let group_names = ["Ka", "Cha", "Ta(r)", "Ta(d)", "Pa"];
     for (i, ss) in entry.sayanadi.sub_states.iter().enumerate() {
-        println!("    {}-varga:  {} (strength {:.2})", group_names[i], ss.name(), ss.strength_factor());
+        println!(
+            "    {}-varga:  {} (strength {:.2})",
+            group_names[i],
+            ss.name(),
+            ss.strength_factor()
+        );
     }
 }
 

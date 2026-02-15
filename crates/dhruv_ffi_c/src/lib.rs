@@ -8,19 +8,18 @@ use dhruv_search::{
     ChandraGrahan, ChandraGrahanType, ConjunctionConfig, ConjunctionEvent, GrahanConfig,
     LunarPhase, MaxSpeedEvent, MaxSpeedType, SankrantiConfig, SearchError, StationType,
     StationaryConfig, StationaryEvent, SuryaGrahan, SuryaGrahanType, amsha_charts_for_date,
-    ayana_for_date, body_ecliptic_lon_lat, dasha_hierarchy_for_birth, dasha_snapshot_at,
-    elongation_at, full_kundali_for_date,
-    ghatika_for_date, ghatika_from_sunrises, graha_sidereal_longitudes, hora_for_date,
-    hora_from_sunrises, karana_at, karana_for_date, masa_for_date, nakshatra_at, nakshatra_for_date,
-    next_amavasya, next_chandra_grahan, next_conjunction, next_max_speed, next_purnima,
-    next_sankranti, next_specific_sankranti, next_stationary, next_surya_grahan, panchang_for_date,
-    prev_amavasya, prev_chandra_grahan, prev_conjunction, prev_max_speed, prev_purnima,
-    prev_sankranti, prev_specific_sankranti, prev_stationary, prev_surya_grahan, search_amavasyas,
+    avastha_for_date, ayana_for_date, body_ecliptic_lon_lat, dasha_hierarchy_for_birth,
+    dasha_snapshot_at, elongation_at, full_kundali_for_date, ghatika_for_date,
+    ghatika_from_sunrises, graha_sidereal_longitudes, hora_for_date, hora_from_sunrises, karana_at,
+    karana_for_date, masa_for_date, nakshatra_at, nakshatra_for_date, next_amavasya,
+    next_chandra_grahan, next_conjunction, next_max_speed, next_purnima, next_sankranti,
+    next_specific_sankranti, next_stationary, next_surya_grahan, panchang_for_date, prev_amavasya,
+    prev_chandra_grahan, prev_conjunction, prev_max_speed, prev_purnima, prev_sankranti,
+    prev_specific_sankranti, prev_stationary, prev_surya_grahan, search_amavasyas,
     search_chandra_grahan, search_conjunctions, search_max_speed, search_purnimas,
-    search_sankrantis, search_stationary, search_surya_grahan, sidereal_sum_at,
-    avastha_for_date, shadbala_for_date, special_lagnas_for_date, tithi_at, tithi_for_date,
-    vaar_for_date, vaar_from_sunrises, varsha_for_date, vedic_day_sunrises, vimsopaka_for_date,
-    yoga_at, yoga_for_date,
+    search_sankrantis, search_stationary, search_surya_grahan, shadbala_for_date, sidereal_sum_at,
+    special_lagnas_for_date, tithi_at, tithi_for_date, vaar_for_date, vaar_from_sunrises,
+    varsha_for_date, vedic_day_sunrises, vimsopaka_for_date, yoga_at, yoga_for_date,
 };
 use dhruv_time::UtcTime;
 use dhruv_vedic_base::{
@@ -9339,7 +9338,13 @@ pub unsafe extern "C" fn dhruv_shadbala_for_date(
     let aya_config = SankrantiConfig::new(system, use_nutation != 0);
 
     match shadbala_for_date(
-        engine, eop, &utc_time, &location, &rust_bhava_config, &rs_config, &aya_config,
+        engine,
+        eop,
+        &utc_time,
+        &location,
+        &rust_bhava_config,
+        &rs_config,
+        &aya_config,
     ) {
         Ok(result) => {
             let out = unsafe { &mut *out };
@@ -9720,8 +9725,7 @@ pub unsafe extern "C" fn dhruv_dasha_hierarchy_level_count(
     if handle.is_null() || out.is_null() {
         return DhruvStatus::NullPointer;
     }
-    let hierarchy =
-        unsafe { &*(handle as *const dhruv_vedic_base::dasha::DashaHierarchy) };
+    let hierarchy = unsafe { &*(handle as *const dhruv_vedic_base::dasha::DashaHierarchy) };
     unsafe { *out = hierarchy.levels.len() as u8 };
     DhruvStatus::Ok
 }
@@ -9739,8 +9743,7 @@ pub unsafe extern "C" fn dhruv_dasha_hierarchy_period_count(
     if handle.is_null() || out.is_null() {
         return DhruvStatus::NullPointer;
     }
-    let hierarchy =
-        unsafe { &*(handle as *const dhruv_vedic_base::dasha::DashaHierarchy) };
+    let hierarchy = unsafe { &*(handle as *const dhruv_vedic_base::dasha::DashaHierarchy) };
     let lvl = level as usize;
     if lvl >= hierarchy.levels.len() {
         return DhruvStatus::InvalidInput;
@@ -9763,8 +9766,7 @@ pub unsafe extern "C" fn dhruv_dasha_hierarchy_period_at(
     if handle.is_null() || out.is_null() {
         return DhruvStatus::NullPointer;
     }
-    let hierarchy =
-        unsafe { &*(handle as *const dhruv_vedic_base::dasha::DashaHierarchy) };
+    let hierarchy = unsafe { &*(handle as *const dhruv_vedic_base::dasha::DashaHierarchy) };
     let lvl = level as usize;
     if lvl >= hierarchy.levels.len() {
         return DhruvStatus::InvalidInput;
@@ -9785,9 +9787,7 @@ pub unsafe extern "C" fn dhruv_dasha_hierarchy_period_at(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_dasha_hierarchy_free(handle: DhruvDashaHierarchyHandle) {
     if !handle.is_null() {
-        let _ = unsafe {
-            Box::from_raw(handle as *mut dhruv_vedic_base::dasha::DashaHierarchy)
-        };
+        let _ = unsafe { Box::from_raw(handle as *mut dhruv_vedic_base::dasha::DashaHierarchy) };
     }
 }
 
@@ -12900,7 +12900,11 @@ mod tests {
     fn ffi_amsha_rashi_info_d9() {
         let mut out = DhruvRashiInfo {
             rashi_index: 0,
-            dms: DhruvDms { degrees: 0, minutes: 0, seconds: 0.0 },
+            dms: DhruvDms {
+                degrees: 0,
+                minutes: 0,
+                seconds: 0.0,
+            },
             degrees_in_rashi: 0.0,
         };
         let s = unsafe { dhruv_amsha_rashi_info(45.0, 9, 0, &mut out) };
@@ -12926,27 +12930,45 @@ mod tests {
 
     #[test]
     fn ffi_amsha_longitudes_zero_count() {
-        let s = unsafe {
-            dhruv_amsha_longitudes(45.0, ptr::null(), ptr::null(), 0, ptr::null_mut())
-        };
+        let s =
+            unsafe { dhruv_amsha_longitudes(45.0, ptr::null(), ptr::null(), 0, ptr::null_mut()) };
         assert_eq!(s, DhruvStatus::Ok);
     }
 
     #[test]
     fn ffi_amsha_longitudes_null_codes() {
         let mut out = [0.0f64; 1];
-        let s = unsafe {
-            dhruv_amsha_longitudes(45.0, ptr::null(), ptr::null(), 1, out.as_mut_ptr())
-        };
+        let s =
+            unsafe { dhruv_amsha_longitudes(45.0, ptr::null(), ptr::null(), 1, out.as_mut_ptr()) };
         assert_eq!(s, DhruvStatus::NullPointer);
     }
 
     #[test]
     fn ffi_amsha_chart_null_engine() {
-        let utc = DhruvUtcTime { year: 2024, month: 1, day: 15, hour: 12, minute: 0, second: 0.0 };
-        let loc = DhruvGeoLocation { latitude_deg: 28.6, longitude_deg: 77.2, altitude_m: 0.0 };
-        let bhava = DhruvBhavaConfig { system: 0, starting_point: 0, custom_start_deg: 0.0, reference_mode: 0 };
-        let rs = DhruvRiseSetConfig { use_refraction: 1, sun_limb: 0, altitude_correction: 0 };
+        let utc = DhruvUtcTime {
+            year: 2024,
+            month: 1,
+            day: 15,
+            hour: 12,
+            minute: 0,
+            second: 0.0,
+        };
+        let loc = DhruvGeoLocation {
+            latitude_deg: 28.6,
+            longitude_deg: 77.2,
+            altitude_m: 0.0,
+        };
+        let bhava = DhruvBhavaConfig {
+            system: 0,
+            starting_point: 0,
+            custom_start_deg: 0.0,
+            reference_mode: 0,
+        };
+        let rs = DhruvRiseSetConfig {
+            use_refraction: 1,
+            sun_limb: 0,
+            altitude_correction: 0,
+        };
         let scope = DhruvAmshaChartScope {
             include_bhava_cusps: 0,
             include_arudha_padas: 0,
@@ -12957,7 +12979,18 @@ mod tests {
         let mut out = DhruvAmshaChart::zeroed();
         let s = unsafe {
             dhruv_amsha_chart_for_date(
-                ptr::null(), ptr::null(), &utc, &loc, &bhava, &rs, 1, 1, 9, 0, &scope, &mut out,
+                ptr::null(),
+                ptr::null(),
+                &utc,
+                &loc,
+                &bhava,
+                &rs,
+                1,
+                1,
+                9,
+                0,
+                &scope,
+                &mut out,
             )
         };
         assert_eq!(s, DhruvStatus::NullPointer);

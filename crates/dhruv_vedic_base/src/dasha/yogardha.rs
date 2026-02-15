@@ -12,8 +12,7 @@ use super::rashi_strength::{RashiDashaInputs, stronger_rashi};
 use super::rashi_util::is_odd_sign;
 use super::sthira::sthira_period_years;
 use super::types::{
-    DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot, DashaSystem,
-    DAYS_PER_YEAR,
+    DAYS_PER_YEAR, DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot, DashaSystem,
 };
 use super::variation::{DashaVariationConfig, SubPeriodMethod};
 use crate::error::VedicError;
@@ -57,7 +56,11 @@ pub fn yogardha_level0(birth_jd: f64, inputs: &RashiDashaInputs) -> Vec<DashaPer
         };
 
         let full_period_days = yogardha_period_years(rashi, inputs) * DAYS_PER_YEAR;
-        let duration = if i == 0 { balance_days } else { full_period_days };
+        let duration = if i == 0 {
+            balance_days
+        } else {
+            full_period_days
+        };
 
         let end = cursor + duration;
         periods.push(DashaPeriod {

@@ -41,12 +41,7 @@ pub fn combustion_threshold(graha: Graha, is_retrograde: bool) -> Option<f64> {
 /// Uses angular distance on the ecliptic circle. A graha at exactly the
 /// threshold distance is **not** combust (strict less-than).
 /// Returns `false` for Sun, Rahu, and Ketu.
-pub fn is_combust(
-    graha: Graha,
-    graha_sid_lon: f64,
-    sun_sid_lon: f64,
-    is_retrograde: bool,
-) -> bool {
+pub fn is_combust(graha: Graha, graha_sid_lon: f64, sun_sid_lon: f64, is_retrograde: bool) -> bool {
     let threshold = match combustion_threshold(graha, is_retrograde) {
         Some(t) => t,
         None => return false,

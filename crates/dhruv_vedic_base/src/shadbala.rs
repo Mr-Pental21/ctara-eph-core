@@ -101,11 +101,7 @@ pub fn all_uchcha_balas(sidereal_lons: &[f64; 7]) -> [f64; 7] {
 ///
 /// `varga_rashi` is a 7x7 array: `varga_rashi[varga][graha]` = rashi index in that varga.
 /// Uses per-varga rashi positions for compound friendship, NOT D1 reuse.
-pub fn saptavargaja_bala(
-    graha: Graha,
-    sid_lon: f64,
-    varga_rashi: &[[u8; 7]; 7],
-) -> f64 {
+pub fn saptavargaja_bala(graha: Graha, sid_lon: f64, varga_rashi: &[[u8; 7]; 7]) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
     }
@@ -113,22 +109,15 @@ pub fn saptavargaja_bala(
     let mut total = 0.0;
     for varga_idx in 0..7 {
         let rashi_idx = varga_rashi[varga_idx][gi];
-        let dignity = dignity_in_rashi_with_positions(
-            graha,
-            sid_lon,
-            rashi_idx,
-            &varga_rashi[varga_idx],
-        );
+        let dignity =
+            dignity_in_rashi_with_positions(graha, sid_lon, rashi_idx, &varga_rashi[varga_idx]);
         total += saptavargaja_dignity_points(dignity);
     }
     total
 }
 
 /// Saptavargaja bala for all 7 sapta grahas.
-pub fn all_saptavargaja_balas(
-    sidereal_lons: &[f64; 7],
-    varga_rashi: &[[u8; 7]; 7],
-) -> [f64; 7] {
+pub fn all_saptavargaja_balas(sidereal_lons: &[f64; 7], varga_rashi: &[[u8; 7]; 7]) -> [f64; 7] {
     let mut result = [0.0; 7];
     for (i, g) in SAPTA_GRAHAS.iter().enumerate() {
         result[i] = saptavargaja_bala(*g, sidereal_lons[i], varga_rashi);
@@ -155,17 +144,29 @@ pub fn ojhayugma_bala(graha: Graha, sidereal_lon: f64) -> f64 {
     let mut score = 0.0;
     match gender {
         GrahaGender::Male => {
-            if rashi_odd { score += 15.0; }
-            if navamsa_odd { score += 15.0; }
+            if rashi_odd {
+                score += 15.0;
+            }
+            if navamsa_odd {
+                score += 15.0;
+            }
         }
         GrahaGender::Female => {
-            if !rashi_odd { score += 15.0; }
-            if !navamsa_odd { score += 15.0; }
+            if !rashi_odd {
+                score += 15.0;
+            }
+            if !navamsa_odd {
+                score += 15.0;
+            }
         }
         GrahaGender::Neuter => {
             // Mercury/Saturn: same rule as male (odd = strong) per common BPHS reading
-            if rashi_odd { score += 15.0; }
-            if navamsa_odd { score += 15.0; }
+            if rashi_odd {
+                score += 15.0;
+            }
+            if navamsa_odd {
+                score += 15.0;
+            }
         }
     }
     score
@@ -426,7 +427,11 @@ pub fn all_tribhaga_balas(is_daytime: bool, fraction: f64) -> [f64; 7] {
 
 /// Abda (year lord) Bala: 15 if graha is the year lord.
 pub fn abda_bala(graha: Graha, year_lord: Graha) -> f64 {
-    if is_sapta_graha(graha) && graha == year_lord { 15.0 } else { 0.0 }
+    if is_sapta_graha(graha) && graha == year_lord {
+        15.0
+    } else {
+        0.0
+    }
 }
 
 /// Abda bala for all 7.
@@ -440,7 +445,11 @@ pub fn all_abda_balas(year_lord: Graha) -> [f64; 7] {
 
 /// Masa (month lord) Bala: 30 if graha is the month lord.
 pub fn masa_bala(graha: Graha, month_lord: Graha) -> f64 {
-    if is_sapta_graha(graha) && graha == month_lord { 30.0 } else { 0.0 }
+    if is_sapta_graha(graha) && graha == month_lord {
+        30.0
+    } else {
+        0.0
+    }
 }
 
 /// Masa bala for all 7.
@@ -454,7 +463,11 @@ pub fn all_masa_balas(month_lord: Graha) -> [f64; 7] {
 
 /// Vara (weekday lord) Bala: 45 if graha is the weekday lord.
 pub fn vara_bala(graha: Graha, weekday_lord: Graha) -> f64 {
-    if is_sapta_graha(graha) && graha == weekday_lord { 45.0 } else { 0.0 }
+    if is_sapta_graha(graha) && graha == weekday_lord {
+        45.0
+    } else {
+        0.0
+    }
 }
 
 /// Vara bala for all 7.
@@ -468,7 +481,11 @@ pub fn all_vara_balas(weekday_lord: Graha) -> [f64; 7] {
 
 /// Hora (planetary hour lord) Bala: 60 if graha is the hora lord.
 pub fn hora_bala(graha: Graha, hora_lord: Graha) -> f64 {
-    if is_sapta_graha(graha) && graha == hora_lord { 60.0 } else { 0.0 }
+    if is_sapta_graha(graha) && graha == hora_lord {
+        60.0
+    } else {
+        0.0
+    }
 }
 
 /// Hora bala for all 7.
@@ -517,11 +534,7 @@ pub fn all_ayana_balas(declinations: &[f64; 7], moon_sun_elong: f64) -> [f64; 7]
 /// Yuddha (planetary war) Bala: when two planets are within 1 deg longitude.
 /// Winner (northernmost declination) gets +60, loser gets -60.
 /// Only Mars, Mercury, Jupiter, Venus, Saturn participate. Sun/Moon exempt.
-pub fn yuddha_bala(
-    graha: Graha,
-    sidereal_lons: &[f64; 7],
-    declinations: &[f64; 7],
-) -> f64 {
+pub fn yuddha_bala(graha: Graha, sidereal_lons: &[f64; 7], declinations: &[f64; 7]) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
     }
@@ -800,7 +813,11 @@ pub fn shadbala_from_inputs(graha: Graha, inputs: &ShadbalaInputs) -> ShadbalaBr
     let kala_result = kala_bala(graha, &inputs.kala);
     let cheshta = cheshta_bala(graha, inputs.speeds[gi]);
     let nais = naisargika_bala(graha);
-    let drik = drik_bala(graha, &inputs.sidereal_lons, inputs.kala.moon_sun_elongation);
+    let drik = drik_bala(
+        graha,
+        &inputs.sidereal_lons,
+        inputs.kala.moon_sun_elongation,
+    );
 
     let total = sthana_result.total + dig + kala_result.total + cheshta + nais + drik;
     let rupas = total / 60.0;

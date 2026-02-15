@@ -56,10 +56,16 @@ impl NakshatraDashaConfig {
         let gi = self.starting_graha_idx(nakshatra_index) as usize;
         let full_period = self.periods_days[gi];
         if self.divide_period_by_nakshatra_count {
-            let count = self.nakshatra_to_graha_idx.iter()
+            let count = self
+                .nakshatra_to_graha_idx
+                .iter()
                 .filter(|&&idx| idx as usize == gi)
                 .count();
-            if count > 0 { full_period / count as f64 } else { full_period }
+            if count > 0 {
+                full_period / count as f64
+            } else {
+                full_period
+            }
         } else {
             full_period
         }
@@ -72,8 +78,15 @@ impl NakshatraDashaConfig {
 
 /// Vimshottari graha sequence: Ketu, Shukra, Surya, Chandra, Mangal, Rahu, Guru, Shani, Buddh.
 const VIMSHOTTARI_GRAHAS: [Graha; 9] = [
-    Graha::Ketu, Graha::Shukra, Graha::Surya, Graha::Chandra,
-    Graha::Mangal, Graha::Rahu, Graha::Guru, Graha::Shani, Graha::Buddh,
+    Graha::Ketu,
+    Graha::Shukra,
+    Graha::Surya,
+    Graha::Chandra,
+    Graha::Mangal,
+    Graha::Rahu,
+    Graha::Guru,
+    Graha::Shani,
+    Graha::Buddh,
 ];
 
 /// Vimshottari periods in years.
@@ -81,14 +94,17 @@ const VIMSHOTTARI_YEARS: [f64; 9] = [7.0, 20.0, 6.0, 10.0, 7.0, 18.0, 16.0, 19.0
 
 /// Nakshatra-to-graha mapping for Vimshottari (every 3rd nakshatra shares a graha).
 const VIMSHOTTARI_NAK_MAP: [u8; 27] = [
-    0, 1, 2, 3, 4, 5, 6, 7, 8,  // Ashwini..Ashlesha
-    0, 1, 2, 3, 4, 5, 6, 7, 8,  // Magha..Jyeshtha
-    0, 1, 2, 3, 4, 5, 6, 7, 8,  // Mula..Revati
+    0, 1, 2, 3, 4, 5, 6, 7, 8, // Ashwini..Ashlesha
+    0, 1, 2, 3, 4, 5, 6, 7, 8, // Magha..Jyeshtha
+    0, 1, 2, 3, 4, 5, 6, 7, 8, // Mula..Revati
 ];
 
 /// Create the Vimshottari dasha configuration.
 pub fn vimshottari_config() -> NakshatraDashaConfig {
-    let periods_days: Vec<f64> = VIMSHOTTARI_YEARS.iter().map(|&y| y * DAYS_PER_YEAR).collect();
+    let periods_days: Vec<f64> = VIMSHOTTARI_YEARS
+        .iter()
+        .map(|&y| y * DAYS_PER_YEAR)
+        .collect();
     let total = periods_days.iter().sum();
     NakshatraDashaConfig {
         system: DashaSystem::Vimshottari,
@@ -109,8 +125,14 @@ pub fn vimshottari_config() -> NakshatraDashaConfig {
 // ---------------------------------------------------------------------------
 
 const ASHTOTTARI_GRAHAS: [Graha; 8] = [
-    Graha::Surya, Graha::Chandra, Graha::Mangal, Graha::Buddh,
-    Graha::Shani, Graha::Guru, Graha::Rahu, Graha::Shukra,
+    Graha::Surya,
+    Graha::Chandra,
+    Graha::Mangal,
+    Graha::Buddh,
+    Graha::Shani,
+    Graha::Guru,
+    Graha::Rahu,
+    Graha::Shukra,
 ];
 
 const ASHTOTTARI_YEARS: [f64; 8] = [6.0, 15.0, 8.0, 17.0, 10.0, 19.0, 12.0, 21.0];
@@ -121,7 +143,10 @@ const ASHTOTTARI_NAK_MAP: [u8; 27] = [
 ];
 
 pub fn ashtottari_config() -> NakshatraDashaConfig {
-    let periods_days: Vec<f64> = ASHTOTTARI_YEARS.iter().map(|&y| y * DAYS_PER_YEAR).collect();
+    let periods_days: Vec<f64> = ASHTOTTARI_YEARS
+        .iter()
+        .map(|&y| y * DAYS_PER_YEAR)
+        .collect();
     let total = periods_days.iter().sum();
     NakshatraDashaConfig {
         system: DashaSystem::Ashtottari,
@@ -142,8 +167,14 @@ pub fn ashtottari_config() -> NakshatraDashaConfig {
 // ---------------------------------------------------------------------------
 
 const SHODSOTTARI_GRAHAS: [Graha; 8] = [
-    Graha::Surya, Graha::Mangal, Graha::Guru, Graha::Shani,
-    Graha::Ketu, Graha::Chandra, Graha::Buddh, Graha::Shukra,
+    Graha::Surya,
+    Graha::Mangal,
+    Graha::Guru,
+    Graha::Shani,
+    Graha::Ketu,
+    Graha::Chandra,
+    Graha::Buddh,
+    Graha::Shukra,
 ];
 
 const SHODSOTTARI_YEARS: [f64; 8] = [11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0];
@@ -153,7 +184,10 @@ const SHODSOTTARI_NAK_MAP: [u8; 27] = [
 ];
 
 pub fn shodsottari_config() -> NakshatraDashaConfig {
-    let periods_days: Vec<f64> = SHODSOTTARI_YEARS.iter().map(|&y| y * DAYS_PER_YEAR).collect();
+    let periods_days: Vec<f64> = SHODSOTTARI_YEARS
+        .iter()
+        .map(|&y| y * DAYS_PER_YEAR)
+        .collect();
     let total = periods_days.iter().sum();
     NakshatraDashaConfig {
         system: DashaSystem::Shodsottari,
@@ -174,8 +208,14 @@ pub fn shodsottari_config() -> NakshatraDashaConfig {
 // ---------------------------------------------------------------------------
 
 const DWADASHOTTARI_GRAHAS: [Graha; 8] = [
-    Graha::Surya, Graha::Guru, Graha::Ketu, Graha::Buddh,
-    Graha::Rahu, Graha::Mangal, Graha::Shani, Graha::Chandra,
+    Graha::Surya,
+    Graha::Guru,
+    Graha::Ketu,
+    Graha::Buddh,
+    Graha::Rahu,
+    Graha::Mangal,
+    Graha::Shani,
+    Graha::Chandra,
 ];
 
 const DWADASHOTTARI_YEARS: [f64; 8] = [7.0, 9.0, 11.0, 13.0, 15.0, 17.0, 19.0, 21.0];
@@ -185,7 +225,10 @@ const DWADASHOTTARI_NAK_MAP: [u8; 27] = [
 ];
 
 pub fn dwadashottari_config() -> NakshatraDashaConfig {
-    let periods_days: Vec<f64> = DWADASHOTTARI_YEARS.iter().map(|&y| y * DAYS_PER_YEAR).collect();
+    let periods_days: Vec<f64> = DWADASHOTTARI_YEARS
+        .iter()
+        .map(|&y| y * DAYS_PER_YEAR)
+        .collect();
     let total = periods_days.iter().sum();
     NakshatraDashaConfig {
         system: DashaSystem::Dwadashottari,
@@ -206,8 +249,13 @@ pub fn dwadashottari_config() -> NakshatraDashaConfig {
 // ---------------------------------------------------------------------------
 
 const PANCHOTTARI_GRAHAS: [Graha; 7] = [
-    Graha::Surya, Graha::Buddh, Graha::Shani, Graha::Mangal,
-    Graha::Shukra, Graha::Chandra, Graha::Guru,
+    Graha::Surya,
+    Graha::Buddh,
+    Graha::Shani,
+    Graha::Mangal,
+    Graha::Shukra,
+    Graha::Chandra,
+    Graha::Guru,
 ];
 
 const PANCHOTTARI_YEARS: [f64; 7] = [12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0];
@@ -217,7 +265,10 @@ const PANCHOTTARI_NAK_MAP: [u8; 27] = [
 ];
 
 pub fn panchottari_config() -> NakshatraDashaConfig {
-    let periods_days: Vec<f64> = PANCHOTTARI_YEARS.iter().map(|&y| y * DAYS_PER_YEAR).collect();
+    let periods_days: Vec<f64> = PANCHOTTARI_YEARS
+        .iter()
+        .map(|&y| y * DAYS_PER_YEAR)
+        .collect();
     let total = periods_days.iter().sum();
     NakshatraDashaConfig {
         system: DashaSystem::Panchottari,
@@ -238,8 +289,13 @@ pub fn panchottari_config() -> NakshatraDashaConfig {
 // ---------------------------------------------------------------------------
 
 const SHATABDIKA_GRAHAS: [Graha; 7] = [
-    Graha::Surya, Graha::Chandra, Graha::Shukra, Graha::Buddh,
-    Graha::Guru, Graha::Mangal, Graha::Shani,
+    Graha::Surya,
+    Graha::Chandra,
+    Graha::Shukra,
+    Graha::Buddh,
+    Graha::Guru,
+    Graha::Mangal,
+    Graha::Shani,
 ];
 
 const SHATABDIKA_YEARS: [f64; 7] = [5.0, 5.0, 10.0, 10.0, 20.0, 20.0, 30.0];
@@ -249,7 +305,10 @@ const SHATABDIKA_NAK_MAP: [u8; 27] = [
 ];
 
 pub fn shatabdika_config() -> NakshatraDashaConfig {
-    let periods_days: Vec<f64> = SHATABDIKA_YEARS.iter().map(|&y| y * DAYS_PER_YEAR).collect();
+    let periods_days: Vec<f64> = SHATABDIKA_YEARS
+        .iter()
+        .map(|&y| y * DAYS_PER_YEAR)
+        .collect();
     let total = periods_days.iter().sum();
     NakshatraDashaConfig {
         system: DashaSystem::Shatabdika,
@@ -270,8 +329,13 @@ pub fn shatabdika_config() -> NakshatraDashaConfig {
 // ---------------------------------------------------------------------------
 
 const CHATURASHITI_GRAHAS: [Graha; 7] = [
-    Graha::Surya, Graha::Chandra, Graha::Mangal, Graha::Buddh,
-    Graha::Guru, Graha::Shukra, Graha::Shani,
+    Graha::Surya,
+    Graha::Chandra,
+    Graha::Mangal,
+    Graha::Buddh,
+    Graha::Guru,
+    Graha::Shukra,
+    Graha::Shani,
 ];
 
 const CHATURASHITI_YEARS: [f64; 7] = [12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0];
@@ -281,7 +345,10 @@ const CHATURASHITI_NAK_MAP: [u8; 27] = [
 ];
 
 pub fn chaturashiti_config() -> NakshatraDashaConfig {
-    let periods_days: Vec<f64> = CHATURASHITI_YEARS.iter().map(|&y| y * DAYS_PER_YEAR).collect();
+    let periods_days: Vec<f64> = CHATURASHITI_YEARS
+        .iter()
+        .map(|&y| y * DAYS_PER_YEAR)
+        .collect();
     let total = periods_days.iter().sum();
     NakshatraDashaConfig {
         system: DashaSystem::Chaturashiti,
@@ -302,8 +369,14 @@ pub fn chaturashiti_config() -> NakshatraDashaConfig {
 // ---------------------------------------------------------------------------
 
 const DWISAPTATI_GRAHAS: [Graha; 8] = [
-    Graha::Surya, Graha::Chandra, Graha::Mangal, Graha::Buddh,
-    Graha::Guru, Graha::Shukra, Graha::Shani, Graha::Rahu,
+    Graha::Surya,
+    Graha::Chandra,
+    Graha::Mangal,
+    Graha::Buddh,
+    Graha::Guru,
+    Graha::Shukra,
+    Graha::Shani,
+    Graha::Rahu,
 ];
 
 const DWISAPTATI_YEARS: [f64; 8] = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0];
@@ -313,7 +386,10 @@ const DWISAPTATI_NAK_MAP: [u8; 27] = [
 ];
 
 pub fn dwisaptati_config() -> NakshatraDashaConfig {
-    let periods_days: Vec<f64> = DWISAPTATI_YEARS.iter().map(|&y| y * DAYS_PER_YEAR).collect();
+    let periods_days: Vec<f64> = DWISAPTATI_YEARS
+        .iter()
+        .map(|&y| y * DAYS_PER_YEAR)
+        .collect();
     let total = periods_days.iter().sum();
     NakshatraDashaConfig {
         system: DashaSystem::DwisaptatiSama,
@@ -335,8 +411,14 @@ pub fn dwisaptati_config() -> NakshatraDashaConfig {
 // ---------------------------------------------------------------------------
 
 const SHASHTIHAYANI_GRAHAS: [Graha; 8] = [
-    Graha::Guru, Graha::Surya, Graha::Mangal, Graha::Chandra,
-    Graha::Buddh, Graha::Shukra, Graha::Shani, Graha::Rahu,
+    Graha::Guru,
+    Graha::Surya,
+    Graha::Mangal,
+    Graha::Chandra,
+    Graha::Buddh,
+    Graha::Shukra,
+    Graha::Shani,
+    Graha::Rahu,
 ];
 
 const SHASHTIHAYANI_YEARS: [f64; 8] = [10.0, 10.0, 10.0, 6.0, 6.0, 6.0, 6.0, 6.0];
@@ -346,7 +428,10 @@ const SHASHTIHAYANI_NAK_MAP: [u8; 27] = [
 ];
 
 pub fn shashtihayani_config() -> NakshatraDashaConfig {
-    let periods_days: Vec<f64> = SHASHTIHAYANI_YEARS.iter().map(|&y| y * DAYS_PER_YEAR).collect();
+    let periods_days: Vec<f64> = SHASHTIHAYANI_YEARS
+        .iter()
+        .map(|&y| y * DAYS_PER_YEAR)
+        .collect();
     let total = periods_days.iter().sum();
     NakshatraDashaConfig {
         system: DashaSystem::Shashtihayani,
@@ -368,8 +453,14 @@ pub fn shashtihayani_config() -> NakshatraDashaConfig {
 // ---------------------------------------------------------------------------
 
 const SHAT_TRIMSHA_GRAHAS: [Graha; 8] = [
-    Graha::Chandra, Graha::Surya, Graha::Guru, Graha::Mangal,
-    Graha::Buddh, Graha::Shani, Graha::Shukra, Graha::Rahu,
+    Graha::Chandra,
+    Graha::Surya,
+    Graha::Guru,
+    Graha::Mangal,
+    Graha::Buddh,
+    Graha::Shani,
+    Graha::Shukra,
+    Graha::Rahu,
 ];
 
 const SHAT_TRIMSHA_YEARS: [f64; 8] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
@@ -379,7 +470,10 @@ const SHAT_TRIMSHA_NAK_MAP: [u8; 27] = [
 ];
 
 pub fn shat_trimsha_config() -> NakshatraDashaConfig {
-    let periods_days: Vec<f64> = SHAT_TRIMSHA_YEARS.iter().map(|&y| y * DAYS_PER_YEAR).collect();
+    let periods_days: Vec<f64> = SHAT_TRIMSHA_YEARS
+        .iter()
+        .map(|&y| y * DAYS_PER_YEAR)
+        .collect();
     let total = periods_days.iter().sum();
     NakshatraDashaConfig {
         system: DashaSystem::ShatTrimshaSama,
@@ -426,7 +520,9 @@ mod tests {
         assert!(
             (total_years - expected_years).abs() < 1e-10,
             "{}: expected {}y total, got {}",
-            cfg.system.name(), expected_years, total_years
+            cfg.system.name(),
+            expected_years,
+            total_years
         );
         assert_eq!(cfg.graha_sequence.len(), expected_grahas);
         assert_eq!(cfg.periods_days.len(), expected_grahas);
@@ -435,7 +531,10 @@ mod tests {
             assert!(
                 (gi as usize) < expected_grahas,
                 "{}: nakshatra {} maps to graha index {}, but only {} grahas",
-                cfg.system.name(), i, gi, expected_grahas
+                cfg.system.name(),
+                i,
+                gi,
+                expected_grahas
             );
         }
     }
@@ -541,11 +640,16 @@ mod tests {
     #[test]
     fn all_nakshatra_systems_lookup() {
         let systems = [
-            DashaSystem::Vimshottari, DashaSystem::Ashtottari,
-            DashaSystem::Shodsottari, DashaSystem::Dwadashottari,
-            DashaSystem::Panchottari, DashaSystem::Shatabdika,
-            DashaSystem::Chaturashiti, DashaSystem::DwisaptatiSama,
-            DashaSystem::Shashtihayani, DashaSystem::ShatTrimshaSama,
+            DashaSystem::Vimshottari,
+            DashaSystem::Ashtottari,
+            DashaSystem::Shodsottari,
+            DashaSystem::Dwadashottari,
+            DashaSystem::Panchottari,
+            DashaSystem::Shatabdika,
+            DashaSystem::Chaturashiti,
+            DashaSystem::DwisaptatiSama,
+            DashaSystem::Shashtihayani,
+            DashaSystem::ShatTrimshaSama,
         ];
         for sys in systems {
             assert!(

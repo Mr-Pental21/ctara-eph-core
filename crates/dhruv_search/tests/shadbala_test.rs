@@ -59,7 +59,13 @@ fn shadbala_all_seven_valid() {
     let aya_config = default_aya_config();
 
     let result = shadbala_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
     )
     .expect("shadbala_for_date should succeed");
 
@@ -72,11 +78,17 @@ fn shadbala_all_seven_valid() {
         // Sub-bala ranges: sthana total should be positive
         assert!(entry.sthana.total >= 0.0, "sthana >= 0 for graha {i}");
         // Dig bala in [0, 60]
-        assert!(entry.dig >= 0.0 && entry.dig <= 60.0, "dig in range for graha {i}");
+        assert!(
+            entry.dig >= 0.0 && entry.dig <= 60.0,
+            "dig in range for graha {i}"
+        );
         // Kala bala: total can be wide but should be finite
         assert!(entry.kala.total.is_finite(), "kala finite for graha {i}");
         // Cheshta bala in [0, 60]
-        assert!(entry.cheshta >= 0.0 && entry.cheshta <= 60.0, "cheshta in range for graha {i}");
+        assert!(
+            entry.cheshta >= 0.0 && entry.cheshta <= 60.0,
+            "cheshta in range for graha {i}"
+        );
     }
 }
 
@@ -91,7 +103,13 @@ fn shadbala_naisargika_matches_constants() {
     let aya_config = default_aya_config();
 
     let result = shadbala_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
     )
     .expect("shadbala_for_date should succeed");
 
@@ -117,14 +135,27 @@ fn shadbala_single_graha_matches_all() {
     let aya_config = default_aya_config();
 
     let all = shadbala_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
     )
     .expect("shadbala_for_date should succeed");
 
     for i in 0..7 {
         let graha = dhruv_vedic_base::SAPTA_GRAHAS[i];
         let single = shadbala_for_graha(
-            &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, graha,
+            &engine,
+            &eop,
+            &utc,
+            &location,
+            &bhava_config,
+            &rs_config,
+            &aya_config,
+            graha,
         )
         .expect("shadbala_for_graha should succeed");
         assert!(
@@ -145,7 +176,14 @@ fn shadbala_rejects_rahu() {
     let aya_config = default_aya_config();
 
     let result = shadbala_for_graha(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, Graha::Rahu,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        Graha::Rahu,
     );
     assert!(result.is_err(), "shadbala should reject Rahu");
 }
@@ -161,7 +199,14 @@ fn shadbala_rejects_ketu() {
     let aya_config = default_aya_config();
 
     let result = shadbala_for_graha(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, Graha::Ketu,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        Graha::Ketu,
     );
     assert!(result.is_err(), "shadbala should reject Ketu");
 }
@@ -181,10 +226,22 @@ fn vimsopaka_all_nine_valid() {
     for (i, entry) in result.entries.iter().enumerate() {
         assert_eq!(entry.graha.index() as usize, i, "graha ordering");
         // All scores in [0, 20]
-        assert!(entry.shadvarga >= 0.0 && entry.shadvarga <= 20.0, "shadvarga in [0,20] for graha {i}");
-        assert!(entry.saptavarga >= 0.0 && entry.saptavarga <= 20.0, "saptavarga in [0,20] for graha {i}");
-        assert!(entry.dashavarga >= 0.0 && entry.dashavarga <= 20.0, "dashavarga in [0,20] for graha {i}");
-        assert!(entry.shodasavarga >= 0.0 && entry.shodasavarga <= 20.0, "shodasavarga in [0,20] for graha {i}");
+        assert!(
+            entry.shadvarga >= 0.0 && entry.shadvarga <= 20.0,
+            "shadvarga in [0,20] for graha {i}"
+        );
+        assert!(
+            entry.saptavarga >= 0.0 && entry.saptavarga <= 20.0,
+            "saptavarga in [0,20] for graha {i}"
+        );
+        assert!(
+            entry.dashavarga >= 0.0 && entry.dashavarga <= 20.0,
+            "dashavarga in [0,20] for graha {i}"
+        );
+        assert!(
+            entry.shodasavarga >= 0.0 && entry.shodasavarga <= 20.0,
+            "shodasavarga in [0,20] for graha {i}"
+        );
     }
 }
 
@@ -197,8 +254,13 @@ fn vimsopaka_rahu_valid() {
     let aya_config = default_aya_config();
 
     let result = vimsopaka_for_graha(
-        &engine, &eop, &utc, &location, &aya_config,
-        NodeDignityPolicy::SignLordBased, Graha::Rahu,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &aya_config,
+        NodeDignityPolicy::SignLordBased,
+        Graha::Rahu,
     )
     .expect("vimsopaka should accept Rahu");
     assert!(result.shadvarga >= 0.0 && result.shadvarga <= 20.0);
@@ -218,10 +280,9 @@ fn vimsopaka_single_graha_matches_all() {
 
     for i in 0..9 {
         let graha = dhruv_vedic_base::ALL_GRAHAS[i];
-        let single = vimsopaka_for_graha(
-            &engine, &eop, &utc, &location, &aya_config, policy, graha,
-        )
-        .expect("vimsopaka_for_graha should succeed");
+        let single =
+            vimsopaka_for_graha(&engine, &eop, &utc, &location, &aya_config, policy, graha)
+                .expect("vimsopaka_for_graha should succeed");
         assert!(
             (single.shodasavarga - all.entries[i].shodasavarga).abs() < 0.01,
             "single vs all mismatch for graha {i}"
@@ -238,7 +299,12 @@ fn vimsopaka_always_sama_policy() {
     let aya_config = default_aya_config();
 
     let result = vimsopaka_for_date(
-        &engine, &eop, &utc, &location, &aya_config, NodeDignityPolicy::AlwaysSama,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &aya_config,
+        NodeDignityPolicy::AlwaysSama,
     )
     .expect("vimsopaka_for_date should succeed");
 
@@ -279,7 +345,14 @@ fn full_kundali_with_shadbala_vimsopaka() {
     };
 
     let result = dhruv_search::full_kundali_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("full_kundali_for_date should succeed");
 

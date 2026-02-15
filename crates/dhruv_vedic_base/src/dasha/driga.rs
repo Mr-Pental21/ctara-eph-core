@@ -11,8 +11,7 @@ use super::rashi_dasha::{rashi_hierarchy, rashi_snapshot};
 use super::rashi_strength::RashiDashaInputs;
 use super::rashi_util::{SignType, is_odd_sign, sign_type};
 use super::types::{
-    DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot, DashaSystem,
-    DAYS_PER_YEAR,
+    DAYS_PER_YEAR, DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot, DashaSystem,
 };
 use super::variation::{DashaVariationConfig, SubPeriodMethod};
 use crate::error::VedicError;
@@ -94,7 +93,11 @@ pub fn driga_level0(birth_jd: f64, inputs: &RashiDashaInputs) -> Vec<DashaPeriod
 
     for (i, &rashi) in sequence.iter().enumerate() {
         let full_period_days = driga_period_years(rashi) * DAYS_PER_YEAR;
-        let duration = if i == 0 { balance_days } else { full_period_days };
+        let duration = if i == 0 {
+            balance_days
+        } else {
+            full_period_days
+        };
 
         let end = cursor + duration;
         periods.push(DashaPeriod {

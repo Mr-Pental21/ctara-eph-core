@@ -6,9 +6,7 @@ use std::path::Path;
 
 use dhruv_core::{Engine, EngineConfig};
 use dhruv_search::sankranti_types::SankrantiConfig;
-use dhruv_search::{
-    FullKundaliConfig, GrahaPositionsConfig, avastha_for_date, avastha_for_graha,
-};
+use dhruv_search::{FullKundaliConfig, GrahaPositionsConfig, avastha_for_date, avastha_for_graha};
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
 use dhruv_vedic_base::{BhavaConfig, Graha, NodeDignityPolicy};
 
@@ -58,7 +56,13 @@ fn avastha_all_nine_valid() {
     let aya_config = default_aya_config();
 
     let result = avastha_for_date(
-        &engine, &eop, &location, &utc, &bhava_config, &rs_config, &aya_config,
+        &engine,
+        &eop,
+        &location,
+        &utc,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
         NodeDignityPolicy::SignLordBased,
     )
     .expect("avastha_for_date should succeed");
@@ -66,18 +70,36 @@ fn avastha_all_nine_valid() {
     for (i, entry) in result.entries.iter().enumerate() {
         // All strength factors should be in [0, 1]
         let bf = entry.baladi.strength_factor();
-        assert!(bf >= 0.0 && bf <= 1.0, "baladi strength for graha {i}: {bf}");
+        assert!(
+            bf >= 0.0 && bf <= 1.0,
+            "baladi strength for graha {i}: {bf}"
+        );
         let jf = entry.jagradadi.strength_factor();
-        assert!(jf >= 0.0 && jf <= 1.0, "jagradadi strength for graha {i}: {jf}");
+        assert!(
+            jf >= 0.0 && jf <= 1.0,
+            "jagradadi strength for graha {i}: {jf}"
+        );
         let df = entry.deeptadi.strength_factor();
-        assert!(df >= 0.0 && df <= 1.0, "deeptadi strength for graha {i}: {df}");
+        assert!(
+            df >= 0.0 && df <= 1.0,
+            "deeptadi strength for graha {i}: {df}"
+        );
         let lf = entry.lajjitadi.strength_factor();
-        assert!(lf >= 0.0 && lf <= 1.0, "lajjitadi strength for graha {i}: {lf}");
+        assert!(
+            lf >= 0.0 && lf <= 1.0,
+            "lajjitadi strength for graha {i}: {lf}"
+        );
         // Sayanadi: index 0-11
-        assert!(entry.sayanadi.avastha.index() < 12, "sayanadi index for graha {i}");
+        assert!(
+            entry.sayanadi.avastha.index() < 12,
+            "sayanadi index for graha {i}"
+        );
         // Sub-states: 5 entries, each index 0-2
         for (j, ss) in entry.sayanadi.sub_states.iter().enumerate() {
-            assert!(ss.index() < 3, "sayanadi sub_state[{j}] index for graha {i}");
+            assert!(
+                ss.index() < 3,
+                "sayanadi sub_state[{j}] index for graha {i}"
+            );
         }
     }
 }
@@ -94,26 +116,56 @@ fn avastha_single_graha_matches_all() {
     let policy = NodeDignityPolicy::SignLordBased;
 
     let all = avastha_for_date(
-        &engine, &eop, &location, &utc, &bhava_config, &rs_config, &aya_config, policy,
+        &engine,
+        &eop,
+        &location,
+        &utc,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        policy,
     )
     .expect("avastha_for_date should succeed");
 
     for i in 0..9 {
         let graha = dhruv_vedic_base::ALL_GRAHAS[i];
         let single = avastha_for_graha(
-            &engine, &eop, &location, &utc, &bhava_config, &rs_config, &aya_config, policy, graha,
+            &engine,
+            &eop,
+            &location,
+            &utc,
+            &bhava_config,
+            &rs_config,
+            &aya_config,
+            policy,
+            graha,
         )
         .expect("avastha_for_graha should succeed");
-        assert_eq!(single.baladi.index(), all.entries[i].baladi.index(),
-            "baladi mismatch for graha {i}");
-        assert_eq!(single.jagradadi.index(), all.entries[i].jagradadi.index(),
-            "jagradadi mismatch for graha {i}");
-        assert_eq!(single.deeptadi.index(), all.entries[i].deeptadi.index(),
-            "deeptadi mismatch for graha {i}");
-        assert_eq!(single.lajjitadi.index(), all.entries[i].lajjitadi.index(),
-            "lajjitadi mismatch for graha {i}");
-        assert_eq!(single.sayanadi.avastha.index(), all.entries[i].sayanadi.avastha.index(),
-            "sayanadi mismatch for graha {i}");
+        assert_eq!(
+            single.baladi.index(),
+            all.entries[i].baladi.index(),
+            "baladi mismatch for graha {i}"
+        );
+        assert_eq!(
+            single.jagradadi.index(),
+            all.entries[i].jagradadi.index(),
+            "jagradadi mismatch for graha {i}"
+        );
+        assert_eq!(
+            single.deeptadi.index(),
+            all.entries[i].deeptadi.index(),
+            "deeptadi mismatch for graha {i}"
+        );
+        assert_eq!(
+            single.lajjitadi.index(),
+            all.entries[i].lajjitadi.index(),
+            "lajjitadi mismatch for graha {i}"
+        );
+        assert_eq!(
+            single.sayanadi.avastha.index(),
+            all.entries[i].sayanadi.avastha.index(),
+            "sayanadi mismatch for graha {i}"
+        );
     }
 }
 
@@ -128,13 +180,25 @@ fn avastha_both_node_policies() {
     let aya_config = default_aya_config();
 
     let sign_lord = avastha_for_date(
-        &engine, &eop, &location, &utc, &bhava_config, &rs_config, &aya_config,
+        &engine,
+        &eop,
+        &location,
+        &utc,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
         NodeDignityPolicy::SignLordBased,
     )
     .expect("SignLordBased should succeed");
 
     let always_sama = avastha_for_date(
-        &engine, &eop, &location, &utc, &bhava_config, &rs_config, &aya_config,
+        &engine,
+        &eop,
+        &location,
+        &utc,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
         NodeDignityPolicy::AlwaysSama,
     )
     .expect("AlwaysSama should succeed");
@@ -175,7 +239,14 @@ fn full_kundali_with_avastha() {
     };
 
     let result = dhruv_search::full_kundali_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("full_kundali_for_date should succeed");
 

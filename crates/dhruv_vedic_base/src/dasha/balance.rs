@@ -12,10 +12,7 @@ use crate::util::normalize_360;
 /// - `nakshatra_index`: 0-based index (0=Ashwini..26=Revati) of the Moon's nakshatra
 /// - `balance_days`: remaining days in the starting graha's period
 /// - `elapsed_fraction`: fraction of nakshatra already traversed [0, 1)
-pub fn nakshatra_birth_balance(
-    moon_sidereal_lon: f64,
-    entry_period_days: f64,
-) -> (u8, f64, f64) {
+pub fn nakshatra_birth_balance(moon_sidereal_lon: f64, entry_period_days: f64) -> (u8, f64, f64) {
     let lon = normalize_360(moon_sidereal_lon);
     let nak_idx = (lon / NAKSHATRA_SPAN_27).floor() as u8;
     let nak_idx = nak_idx.min(26);
@@ -33,10 +30,7 @@ pub fn nakshatra_birth_balance(
 ///
 /// The lagna's position within its rashi determines how much of the first
 /// mahadasha period has elapsed.
-pub fn rashi_birth_balance(
-    lagna_sidereal_lon: f64,
-    entry_period_days: f64,
-) -> (f64, f64) {
+pub fn rashi_birth_balance(lagna_sidereal_lon: f64, entry_period_days: f64) -> (f64, f64) {
     let lon = normalize_360(lagna_sidereal_lon);
     let rashi_idx = (lon / 30.0).floor() as u8;
     let rashi_idx = rashi_idx.min(11);

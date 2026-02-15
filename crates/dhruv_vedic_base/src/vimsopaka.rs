@@ -31,57 +31,174 @@ pub struct VargaWeight {
 
 /// Shadvarga: 6 vargas, weights sum to 20.
 pub const SHADVARGA: [VargaWeight; 6] = [
-    VargaWeight { amsha: Amsha::D1, weight: 6.0 },
-    VargaWeight { amsha: Amsha::D2, weight: 2.0 },
-    VargaWeight { amsha: Amsha::D3, weight: 4.0 },
-    VargaWeight { amsha: Amsha::D9, weight: 5.0 },
-    VargaWeight { amsha: Amsha::D12, weight: 2.0 },
-    VargaWeight { amsha: Amsha::D30, weight: 1.0 },
+    VargaWeight {
+        amsha: Amsha::D1,
+        weight: 6.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D2,
+        weight: 2.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D3,
+        weight: 4.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D9,
+        weight: 5.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D12,
+        weight: 2.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D30,
+        weight: 1.0,
+    },
 ];
 
 /// Saptavarga: 7 vargas, weights sum to 20.
 pub const SAPTAVARGA: [VargaWeight; 7] = [
-    VargaWeight { amsha: Amsha::D1, weight: 5.0 },
-    VargaWeight { amsha: Amsha::D2, weight: 2.0 },
-    VargaWeight { amsha: Amsha::D3, weight: 3.0 },
-    VargaWeight { amsha: Amsha::D7, weight: 2.5 },
-    VargaWeight { amsha: Amsha::D9, weight: 4.5 },
-    VargaWeight { amsha: Amsha::D12, weight: 2.0 },
-    VargaWeight { amsha: Amsha::D30, weight: 1.0 },
+    VargaWeight {
+        amsha: Amsha::D1,
+        weight: 5.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D2,
+        weight: 2.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D3,
+        weight: 3.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D7,
+        weight: 2.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D9,
+        weight: 4.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D12,
+        weight: 2.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D30,
+        weight: 1.0,
+    },
 ];
 
 /// Dashavarga: 10 vargas, weights sum to 20.
 pub const DASHAVARGA: [VargaWeight; 10] = [
-    VargaWeight { amsha: Amsha::D1, weight: 3.0 },
-    VargaWeight { amsha: Amsha::D2, weight: 1.5 },
-    VargaWeight { amsha: Amsha::D3, weight: 1.5 },
-    VargaWeight { amsha: Amsha::D7, weight: 1.5 },
-    VargaWeight { amsha: Amsha::D9, weight: 3.0 },
-    VargaWeight { amsha: Amsha::D10, weight: 1.5 },
-    VargaWeight { amsha: Amsha::D12, weight: 1.5 },
-    VargaWeight { amsha: Amsha::D16, weight: 2.0 },
-    VargaWeight { amsha: Amsha::D30, weight: 1.0 },
-    VargaWeight { amsha: Amsha::D60, weight: 3.5 },
+    VargaWeight {
+        amsha: Amsha::D1,
+        weight: 3.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D2,
+        weight: 1.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D3,
+        weight: 1.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D7,
+        weight: 1.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D9,
+        weight: 3.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D10,
+        weight: 1.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D12,
+        weight: 1.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D16,
+        weight: 2.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D30,
+        weight: 1.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D60,
+        weight: 3.5,
+    },
 ];
 
 /// Shodasavarga: 16 vargas, weights sum to 20.
 pub const SHODASAVARGA: [VargaWeight; 16] = [
-    VargaWeight { amsha: Amsha::D1, weight: 3.5 },
-    VargaWeight { amsha: Amsha::D2, weight: 1.0 },
-    VargaWeight { amsha: Amsha::D3, weight: 1.0 },
-    VargaWeight { amsha: Amsha::D4, weight: 0.5 },
-    VargaWeight { amsha: Amsha::D7, weight: 0.5 },
-    VargaWeight { amsha: Amsha::D9, weight: 3.0 },
-    VargaWeight { amsha: Amsha::D10, weight: 0.5 },
-    VargaWeight { amsha: Amsha::D12, weight: 0.5 },
-    VargaWeight { amsha: Amsha::D16, weight: 2.0 },
-    VargaWeight { amsha: Amsha::D20, weight: 0.5 },
-    VargaWeight { amsha: Amsha::D24, weight: 0.5 },
-    VargaWeight { amsha: Amsha::D27, weight: 0.5 },
-    VargaWeight { amsha: Amsha::D30, weight: 1.0 },
-    VargaWeight { amsha: Amsha::D40, weight: 0.5 },
-    VargaWeight { amsha: Amsha::D45, weight: 0.5 },
-    VargaWeight { amsha: Amsha::D60, weight: 4.0 },
+    VargaWeight {
+        amsha: Amsha::D1,
+        weight: 3.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D2,
+        weight: 1.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D3,
+        weight: 1.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D4,
+        weight: 0.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D7,
+        weight: 0.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D9,
+        weight: 3.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D10,
+        weight: 0.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D12,
+        weight: 0.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D16,
+        weight: 2.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D20,
+        weight: 0.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D24,
+        weight: 0.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D27,
+        weight: 0.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D30,
+        weight: 1.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D40,
+        weight: 0.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D45,
+        weight: 0.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D60,
+        weight: 4.0,
+    },
 ];
 
 // ---------------------------------------------------------------------------
@@ -132,7 +249,7 @@ pub fn vimsopaka_from_entries(entries: &[VargaDignityEntry]) -> Result<f64, Vedi
         _ => {
             return Err(VedicError::NoConvergence(
                 "vimsopaka: invalid entry count (must be 6, 7, 10, or 16)",
-            ))
+            ));
         }
     };
 
@@ -253,7 +370,13 @@ pub fn all_vimsopaka_balas(
     let mut results: Vec<VimsopakaBala> = Vec::with_capacity(9);
     for g in ALL_GRAHAS {
         let i = g.index() as usize;
-        results.push(vimsopaka_bala(g, sidereal_lons[i], sidereal_lons, vargas, node_policy));
+        results.push(vimsopaka_bala(
+            g,
+            sidereal_lons[i],
+            sidereal_lons,
+            vargas,
+            node_policy,
+        ));
     }
     // Convert Vec to array
     let mut arr: [VimsopakaBala; 9] = std::array::from_fn(|_| VimsopakaBala {
@@ -311,26 +434,17 @@ pub fn shodasavarga_vimsopaka(
 }
 
 /// Shadvarga Vimsopaka for all 9 navagrahas.
-pub fn all_shadvarga_vimsopaka(
-    lons: &[f64; 9],
-    policy: NodeDignityPolicy,
-) -> [VimsopakaBala; 9] {
+pub fn all_shadvarga_vimsopaka(lons: &[f64; 9], policy: NodeDignityPolicy) -> [VimsopakaBala; 9] {
     all_vimsopaka_balas(lons, &SHADVARGA, policy)
 }
 
 /// Saptavarga Vimsopaka for all 9.
-pub fn all_saptavarga_vimsopaka(
-    lons: &[f64; 9],
-    policy: NodeDignityPolicy,
-) -> [VimsopakaBala; 9] {
+pub fn all_saptavarga_vimsopaka(lons: &[f64; 9], policy: NodeDignityPolicy) -> [VimsopakaBala; 9] {
     all_vimsopaka_balas(lons, &SAPTAVARGA, policy)
 }
 
 /// Dashavarga Vimsopaka for all 9.
-pub fn all_dashavarga_vimsopaka(
-    lons: &[f64; 9],
-    policy: NodeDignityPolicy,
-) -> [VimsopakaBala; 9] {
+pub fn all_dashavarga_vimsopaka(lons: &[f64; 9], policy: NodeDignityPolicy) -> [VimsopakaBala; 9] {
     all_vimsopaka_balas(lons, &DASHAVARGA, policy)
 }
 
@@ -426,9 +540,12 @@ mod tests {
             let dash = dashavarga_vimsopaka(g, lons[i], &lons, policy);
             let shod = shodasavarga_vimsopaka(g, lons[i], &lons, policy);
 
-            for (name, result) in
-                [("shad", &shad), ("sapt", &sapt), ("dash", &dash), ("shod", &shod)]
-            {
+            for (name, result) in [
+                ("shad", &shad),
+                ("sapt", &sapt),
+                ("dash", &dash),
+                ("shod", &shod),
+            ] {
                 assert!(
                     result.score >= 0.0 && result.score <= 20.0,
                     "{:?} {name}: score = {}",
@@ -456,12 +573,8 @@ mod tests {
     #[test]
     fn rahu_always_sama_all_neutral() {
         let lons = [45.0, 80.0, 150.0, 210.0, 280.0, 330.0, 15.0, 100.0, 250.0];
-        let result = shadvarga_vimsopaka(
-            Graha::Rahu,
-            lons[7],
-            &lons,
-            NodeDignityPolicy::AlwaysSama,
-        );
+        let result =
+            shadvarga_vimsopaka(Graha::Rahu, lons[7], &lons, NodeDignityPolicy::AlwaysSama);
         // All entries should have Sama dignity → 7 points → score = 7.0
         assert!(
             (result.score - 7.0).abs() < EPS,

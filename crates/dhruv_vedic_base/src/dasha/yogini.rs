@@ -9,8 +9,8 @@ use super::balance::nakshatra_birth_balance;
 use super::query::find_active_period;
 use super::subperiod::generate_children;
 use super::types::{
-    DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot, DashaSystem,
-    MAX_DASHA_LEVEL, MAX_PERIODS_PER_LEVEL,
+    DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot, DashaSystem, MAX_DASHA_LEVEL,
+    MAX_PERIODS_PER_LEVEL,
 };
 use super::variation::{DashaVariationConfig, SubPeriodMethod};
 use super::yogini_data::YoginiDashaConfig;
@@ -42,7 +42,11 @@ pub fn yogini_level0(
         let entity = config.yogini_sequence[seq_idx];
         let full_period = config.periods_days[seq_idx];
 
-        let duration = if offset == 0 { balance_days } else { full_period };
+        let duration = if offset == 0 {
+            balance_days
+        } else {
+            full_period
+        };
 
         let end = cursor + duration;
         periods.push(DashaPeriod {
@@ -99,7 +103,14 @@ pub fn yogini_children(
         None => return Vec::new(),
     };
     let seq = config.entity_sequence();
-    generate_children(parent, &seq, config.total_period_days, child_level, 0, method)
+    generate_children(
+        parent,
+        &seq,
+        config.total_period_days,
+        child_level,
+        0,
+        method,
+    )
 }
 
 // ── Tier 3: Complete level from parent level ─────────────────────────
@@ -233,7 +244,10 @@ mod tests {
         assert_eq!(periods.len(), 8);
         assert_eq!(periods[0].entity, DashaEntity::Yogini(0)); // Mangala
         let mangala_years = periods[0].duration_days() / DAYS_PER_YEAR;
-        assert!((mangala_years - 1.0).abs() < 0.01, "Mangala should be 1y, got {mangala_years}");
+        assert!(
+            (mangala_years - 1.0).abs() < 0.01,
+            "Mangala should be 1y, got {mangala_years}"
+        );
     }
 
     #[test]
@@ -259,7 +273,7 @@ mod tests {
 
         assert_eq!(h.system, DashaSystem::Yogini);
         assert_eq!(h.levels.len(), 3);
-        assert_eq!(h.levels[0].len(), 8);  // 8 mahadashas
+        assert_eq!(h.levels[0].len(), 8); // 8 mahadashas
         assert_eq!(h.levels[1].len(), 64); // 8*8 antardashas
         assert_eq!(h.levels[2].len(), 512); // 8*8*8
     }
@@ -293,7 +307,8 @@ mod tests {
             assert!(
                 (periods[i].start_jd - periods[i - 1].end_jd).abs() < 1e-10,
                 "gap between periods {} and {}",
-                i - 1, i
+                i - 1,
+                i
             );
         }
     }

@@ -10,14 +10,19 @@ use super::variation::SubPeriodMethod;
 
 /// Yogini names (0-indexed).
 pub const YOGINI_NAMES: [&str; 8] = [
-    "Mangala", "Pingala", "Dhanya", "Bhramari",
-    "Bhadrika", "Ulka", "Siddha", "Sankata",
+    "Mangala", "Pingala", "Dhanya", "Bhramari", "Bhadrika", "Ulka", "Siddha", "Sankata",
 ];
 
 /// Graha lord for each Yogini (default scheme).
 pub const YOGINI_GRAHAS: [Graha; 8] = [
-    Graha::Chandra, Graha::Surya, Graha::Guru, Graha::Mangal,
-    Graha::Buddh, Graha::Shani, Graha::Shukra, Graha::Rahu,
+    Graha::Chandra,
+    Graha::Surya,
+    Graha::Guru,
+    Graha::Mangal,
+    Graha::Buddh,
+    Graha::Shani,
+    Graha::Shukra,
+    Graha::Rahu,
 ];
 
 /// Periods in years (1..8).

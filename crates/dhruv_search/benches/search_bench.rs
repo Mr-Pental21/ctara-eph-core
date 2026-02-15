@@ -4,8 +4,10 @@ use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use dhruv_core::{Engine, EngineConfig};
 use dhruv_search::{AmshaChartScope, SankrantiConfig, next_purnima, next_sankranti};
 use dhruv_time::{EopKernel, UtcTime};
-use dhruv_vedic_base::{AmshaRequest, AyanamshaSystem, BhavaConfig, NodeDignityPolicy, SHODASHAVARGA};
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
+use dhruv_vedic_base::{
+    AmshaRequest, AyanamshaSystem, BhavaConfig, NodeDignityPolicy, SHODASHAVARGA,
+};
 
 fn load_engine() -> Option<Engine> {
     let base = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../kernels/data");
@@ -81,7 +83,10 @@ fn amsha_charts_bench(c: &mut Criterion) {
     let bhava_config = BhavaConfig::default();
     let rs_config = RiseSetConfig::default();
     let aya_config = SankrantiConfig::default_lahiri();
-    let requests: Vec<AmshaRequest> = SHODASHAVARGA.iter().map(|&a| AmshaRequest::new(a)).collect();
+    let requests: Vec<AmshaRequest> = SHODASHAVARGA
+        .iter()
+        .map(|&a| AmshaRequest::new(a))
+        .collect();
     let scope = AmshaChartScope::default();
 
     let mut group = c.benchmark_group("search_amsha");

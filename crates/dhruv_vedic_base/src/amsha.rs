@@ -411,7 +411,8 @@ impl AmshaRequest {
 
     /// Resolve None to the default variation.
     pub fn effective_variation(&self) -> AmshaVariation {
-        self.variation.unwrap_or(AmshaVariation::TraditionalParashari)
+        self.variation
+            .unwrap_or(AmshaVariation::TraditionalParashari)
     }
 }
 
@@ -550,11 +551,7 @@ fn increment_start(natal_rashi_idx: u8, div_idx: u16, even_offset: u16) -> u8 {
 /// Transform a sidereal longitude through an amsha division.
 ///
 /// Returns amsha-transformed sidereal longitude in [0, 360).
-pub fn amsha_longitude(
-    sidereal_lon: f64,
-    amsha: Amsha,
-    variation: Option<AmshaVariation>,
-) -> f64 {
+pub fn amsha_longitude(sidereal_lon: f64, amsha: Amsha, variation: Option<AmshaVariation>) -> f64 {
     let variation = variation.unwrap_or(AmshaVariation::TraditionalParashari);
 
     // D1: identity
@@ -722,23 +719,18 @@ mod tests {
         // target = 3 (Karka)
         // scaled = 10/15 * 30 = 20.0
         // result = 90 + 20 = 110.0
-        let result = amsha_longitude(
-            10.0,
-            Amsha::D2,
-            Some(AmshaVariation::HoraCancerLeoOnly),
+        let result = amsha_longitude(10.0, Amsha::D2, Some(AmshaVariation::HoraCancerLeoOnly));
+        assert!(
+            (result - 110.0).abs() < 0.01,
+            "D2 cancer-leo odd: got {result}"
         );
-        assert!((result - 110.0).abs() < 0.01, "D2 cancer-leo odd: got {result}");
 
         // Vrishabha (1, even 1-based) at 40.0: pos_in_rashi=10
         // even → first half Leo(4), second half Cancer(3)
         // div_idx = 0, target = 4 (Simha)
         // scaled = 10/15 * 30 = 20.0
         // result = 120 + 20 = 140.0
-        let result2 = amsha_longitude(
-            40.0,
-            Amsha::D2,
-            Some(AmshaVariation::HoraCancerLeoOnly),
-        );
+        let result2 = amsha_longitude(40.0, Amsha::D2, Some(AmshaVariation::HoraCancerLeoOnly));
         assert!(
             (result2 - 140.0).abs() < 0.01,
             "D2 cancer-leo even: got {result2}"
@@ -869,7 +861,10 @@ mod tests {
     #[test]
     fn amsha_request_default_variation() {
         let req = AmshaRequest::new(Amsha::D9);
-        assert_eq!(req.effective_variation(), AmshaVariation::TraditionalParashari);
+        assert_eq!(
+            req.effective_variation(),
+            AmshaVariation::TraditionalParashari
+        );
     }
 
     #[test]
@@ -912,17 +907,17 @@ mod tests {
 
     #[test]
     fn rashi_element_all_12() {
-        assert_eq!(rashi_element(0), RashiElement::Fire);   // Mesha
-        assert_eq!(rashi_element(1), RashiElement::Earth);  // Vrishabha
-        assert_eq!(rashi_element(2), RashiElement::Air);    // Mithuna
-        assert_eq!(rashi_element(3), RashiElement::Water);  // Karka
-        assert_eq!(rashi_element(4), RashiElement::Fire);   // Simha
-        assert_eq!(rashi_element(5), RashiElement::Earth);  // Kanya
-        assert_eq!(rashi_element(6), RashiElement::Air);    // Tula
-        assert_eq!(rashi_element(7), RashiElement::Water);  // Vrischika
-        assert_eq!(rashi_element(8), RashiElement::Fire);   // Dhanu
-        assert_eq!(rashi_element(9), RashiElement::Earth);  // Makara
-        assert_eq!(rashi_element(10), RashiElement::Air);   // Kumbha
+        assert_eq!(rashi_element(0), RashiElement::Fire); // Mesha
+        assert_eq!(rashi_element(1), RashiElement::Earth); // Vrishabha
+        assert_eq!(rashi_element(2), RashiElement::Air); // Mithuna
+        assert_eq!(rashi_element(3), RashiElement::Water); // Karka
+        assert_eq!(rashi_element(4), RashiElement::Fire); // Simha
+        assert_eq!(rashi_element(5), RashiElement::Earth); // Kanya
+        assert_eq!(rashi_element(6), RashiElement::Air); // Tula
+        assert_eq!(rashi_element(7), RashiElement::Water); // Vrischika
+        assert_eq!(rashi_element(8), RashiElement::Fire); // Dhanu
+        assert_eq!(rashi_element(9), RashiElement::Earth); // Makara
+        assert_eq!(rashi_element(10), RashiElement::Air); // Kumbha
         assert_eq!(rashi_element(11), RashiElement::Water); // Meena
     }
 
@@ -951,10 +946,7 @@ mod tests {
     #[test]
     fn amsha_rashi_infos_batch() {
         let lon = 100.0;
-        let requests = vec![
-            AmshaRequest::new(Amsha::D9),
-            AmshaRequest::new(Amsha::D12),
-        ];
+        let requests = vec![AmshaRequest::new(Amsha::D9), AmshaRequest::new(Amsha::D12)];
         let results = amsha_rashi_infos(lon, &requests);
         assert_eq!(results.len(), 2);
         let individual_d9 = amsha_rashi_info(lon, Amsha::D9, None);

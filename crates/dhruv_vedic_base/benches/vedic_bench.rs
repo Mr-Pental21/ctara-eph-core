@@ -1,13 +1,13 @@
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use dhruv_vedic_base::shadbala::{
+    KalaBalaInputs, ShadbalaInputs, all_shadbalas_from_inputs, shadbala_from_inputs,
+};
+use dhruv_vedic_base::vimsopaka::{SHODASAVARGA as SHODASAVARGA_WEIGHTS, all_vimsopaka_balas};
 use dhruv_vedic_base::{
     Amsha, AmshaRequest, AyanamshaSystem, Graha, LunarNode, NodeDignityPolicy, NodeMode,
     SHODASHAVARGA, amsha_longitude, amsha_longitudes, ayanamsha_deg, lunar_node_deg,
     nakshatra_from_tropical, rashi_from_tropical, tithi_from_elongation, yoga_from_sum,
 };
-use dhruv_vedic_base::shadbala::{
-    KalaBalaInputs, ShadbalaInputs, all_shadbalas_from_inputs, shadbala_from_inputs,
-};
-use dhruv_vedic_base::vimsopaka::{SHODASAVARGA as SHODASAVARGA_WEIGHTS, all_vimsopaka_balas};
 
 fn ayanamsha_bench(c: &mut Criterion) {
     let t = 0.24;
@@ -75,7 +75,10 @@ fn amsha_bench(c: &mut Criterion) {
     group.bench_function("amsha_longitude_d9", |b| {
         b.iter(|| amsha_longitude(black_box(lon), Amsha::D9, None))
     });
-    let requests: Vec<AmshaRequest> = SHODASHAVARGA.iter().map(|&a| AmshaRequest::new(a)).collect();
+    let requests: Vec<AmshaRequest> = SHODASHAVARGA
+        .iter()
+        .map(|&a| AmshaRequest::new(a))
+        .collect();
     group.bench_function("amsha_longitudes_shodashavarga", |b| {
         b.iter(|| amsha_longitudes(black_box(lon), black_box(&requests)))
     });
@@ -135,18 +138,22 @@ fn vimsopaka_bench(c: &mut Criterion) {
 }
 
 fn avastha_bench(c: &mut Criterion) {
-    use dhruv_vedic_base::avastha::{
-        AvasthaInputs, LajjitadiInputs, SayanadiInputs, all_avasthas,
-    };
+    use dhruv_vedic_base::avastha::{AvasthaInputs, LajjitadiInputs, SayanadiInputs, all_avasthas};
     use dhruv_vedic_base::{Dignity, GrahaDrishtiMatrix, graha_drishti_matrix};
 
     let sidereal_lons = [15.0, 120.0, 200.0, 300.0, 50.0, 160.0, 270.0, 335.0, 155.0];
     let rashi_indices = [0u8, 3, 6, 9, 1, 5, 8, 11, 5];
     let bhava_numbers = [1u8, 4, 7, 10, 2, 6, 9, 12, 5];
     let dignities = [
-        Dignity::OwnSign, Dignity::Mitra, Dignity::Exalted, Dignity::Sama,
-        Dignity::Debilitated, Dignity::Shatru, Dignity::Moolatrikone,
-        Dignity::Sama, Dignity::Sama,
+        Dignity::OwnSign,
+        Dignity::Mitra,
+        Dignity::Exalted,
+        Dignity::Sama,
+        Dignity::Debilitated,
+        Dignity::Shatru,
+        Dignity::Moolatrikone,
+        Dignity::Sama,
+        Dignity::Sama,
     ];
     let is_combust = [false; 9];
     let is_retrograde = [false, false, true, false, false, false, false, false, false];
@@ -185,11 +192,10 @@ fn avastha_bench(c: &mut Criterion) {
 
 fn dasha_bench(c: &mut Criterion) {
     use dhruv_vedic_base::dasha::{
-        DashaVariationConfig, nakshatra_hierarchy, nakshatra_level0, nakshatra_snapshot,
-        vimshottari_config, nakshatra_config_for_system, DashaSystem,
+        DashaSystem, DashaVariationConfig, RashiDashaInputs, chara_hierarchy, chara_level0,
+        chara_snapshot, kendradi_hierarchy, kendradi_level0, nakshatra_config_for_system,
+        nakshatra_hierarchy, nakshatra_level0, nakshatra_snapshot, vimshottari_config,
         yogini_config, yogini_hierarchy, yogini_level0, yogini_snapshot,
-        RashiDashaInputs, chara_level0, chara_hierarchy, chara_snapshot,
-        kendradi_level0, kendradi_hierarchy,
     };
 
     let cfg = vimshottari_config();
@@ -267,7 +273,13 @@ fn dasha_bench(c: &mut Criterion) {
     // Yogini (8-entity, 36y cycle)
     let yog_cfg = yogini_config();
     group.bench_function("yogini_level0", |b| {
-        b.iter(|| yogini_level0(black_box(birth_jd), black_box(moon_lon), black_box(&yog_cfg)))
+        b.iter(|| {
+            yogini_level0(
+                black_box(birth_jd),
+                black_box(moon_lon),
+                black_box(&yog_cfg),
+            )
+        })
     });
     group.bench_function("yogini_hierarchy_2", |b| {
         b.iter(|| {

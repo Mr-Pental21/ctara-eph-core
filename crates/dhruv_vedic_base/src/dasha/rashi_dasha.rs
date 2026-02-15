@@ -10,8 +10,8 @@ use crate::error::VedicError;
 use super::query::find_active_period;
 use super::subperiod::{equal_children, proportional_children};
 use super::types::{
-    DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot, DashaSystem,
-    DAYS_PER_YEAR, MAX_DASHA_LEVEL, MAX_PERIODS_PER_LEVEL,
+    DAYS_PER_YEAR, DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot,
+    DashaSystem, MAX_DASHA_LEVEL, MAX_PERIODS_PER_LEVEL,
 };
 use super::variation::{DashaVariationConfig, SubPeriodMethod};
 
@@ -133,7 +133,8 @@ pub fn rashi_complete_level(
 
     let mut result = Vec::with_capacity(estimated);
     for (pidx, parent) in parent_level.iter().enumerate() {
-        let mut children = rashi_children(parent, period_years_fn, total_years, default_method, method);
+        let mut children =
+            rashi_children(parent, period_years_fn, total_years, default_method, method);
         // Fix parent_idx for complete level
         for c in &mut children {
             c.parent_idx = pidx as u32;
@@ -171,7 +172,12 @@ pub fn rashi_hierarchy(
         let method = variation.method_for_level(depth - 1, default_method);
         let parent = &levels[(depth - 1) as usize];
         let children = rashi_complete_level(
-            parent, period_years_fn, total_years, child_level, default_method, method,
+            parent,
+            period_years_fn,
+            total_years,
+            child_level,
+            default_method,
+            method,
         )?;
         levels.push(children);
     }
@@ -214,7 +220,11 @@ pub fn rashi_snapshot(
     for depth in 1..=max_level {
         let method = variation.method_for_level(depth - 1, default_method);
         let children = rashi_children(
-            &current_parent, period_years_fn, total_years, default_method, method,
+            &current_parent,
+            period_years_fn,
+            total_years,
+            default_method,
+            method,
         );
         match find_active_period(&children, query_jd) {
             Some(idx) => {

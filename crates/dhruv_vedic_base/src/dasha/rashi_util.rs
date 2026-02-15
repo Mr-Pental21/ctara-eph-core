@@ -33,11 +33,7 @@ pub fn is_odd_sign(rashi_index: u8) -> bool {
 pub fn count_signs_forward(from: u8, to: u8) -> u8 {
     let f = from % 12;
     let t = to % 12;
-    if t >= f {
-        t - f + 1
-    } else {
-        12 - f + t + 1
-    }
+    if t >= f { t - f + 1 } else { 12 - f + t + 1 }
 }
 
 /// Count signs in reverse from `from` to `to`.
@@ -45,11 +41,7 @@ pub fn count_signs_forward(from: u8, to: u8) -> u8 {
 pub fn count_signs_reverse(from: u8, to: u8) -> u8 {
     let f = from % 12;
     let t = to % 12;
-    if f >= t {
-        f - t + 1
-    } else {
-        12 - t + f + 1
-    }
+    if f >= t { f - t + 1 } else { 12 - t + f + 1 }
 }
 
 /// Next rashi in zodiacal order (+1, wrapping).

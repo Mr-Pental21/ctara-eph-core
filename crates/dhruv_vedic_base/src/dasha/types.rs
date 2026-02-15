@@ -270,7 +270,10 @@ mod tests {
     #[test]
     fn dasha_system_from_u8() {
         assert_eq!(DashaSystem::from_u8(0), Some(DashaSystem::Vimshottari));
-        assert_eq!(DashaSystem::from_u8(22), Some(DashaSystem::KarakaKendradiGraha));
+        assert_eq!(
+            DashaSystem::from_u8(22),
+            Some(DashaSystem::KarakaKendradiGraha)
+        );
         assert_eq!(DashaSystem::from_u8(23), None);
     }
 

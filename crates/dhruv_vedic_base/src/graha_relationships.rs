@@ -23,13 +23,13 @@ use crate::vaar::Vaar;
 /// Mercury 15 Vir=165, Jupiter 5 Can=95, Venus 27 Pis=357, Saturn 20 Lib=200.
 pub const fn exaltation_degree(graha: Graha) -> Option<f64> {
     match graha {
-        Graha::Surya => Some(10.0),    // 10 Aries
-        Graha::Chandra => Some(33.0),  // 3 Taurus
-        Graha::Mangal => Some(298.0),  // 28 Capricorn
-        Graha::Buddh => Some(165.0),   // 15 Virgo
-        Graha::Guru => Some(95.0),     // 5 Cancer
-        Graha::Shukra => Some(357.0),  // 27 Pisces
-        Graha::Shani => Some(200.0),   // 20 Libra
+        Graha::Surya => Some(10.0),   // 10 Aries
+        Graha::Chandra => Some(33.0), // 3 Taurus
+        Graha::Mangal => Some(298.0), // 28 Capricorn
+        Graha::Buddh => Some(165.0),  // 15 Virgo
+        Graha::Guru => Some(95.0),    // 5 Cancer
+        Graha::Shukra => Some(357.0), // 27 Pisces
+        Graha::Shani => Some(200.0),  // 20 Libra
         Graha::Rahu | Graha::Ketu => None,
     }
 }
@@ -57,12 +57,12 @@ pub const fn debilitation_degree(graha: Graha) -> Option<f64> {
 pub const fn moolatrikone_range(graha: Graha) -> Option<(u8, f64, f64)> {
     match graha {
         Graha::Surya => Some((4, 0.0, 20.0)),   // Simha (Leo)
-        Graha::Chandra => Some((1, 4.0, 20.0)),  // Vrishabha (Taurus)
-        Graha::Mangal => Some((0, 0.0, 12.0)),   // Mesha (Aries)
-        Graha::Buddh => Some((5, 16.0, 20.0)),   // Kanya (Virgo)
-        Graha::Guru => Some((8, 0.0, 10.0)),     // Dhanu (Sagittarius)
-        Graha::Shukra => Some((6, 0.0, 15.0)),   // Tula (Libra)
-        Graha::Shani => Some((10, 0.0, 20.0)),   // Kumbha (Aquarius)
+        Graha::Chandra => Some((1, 4.0, 20.0)), // Vrishabha (Taurus)
+        Graha::Mangal => Some((0, 0.0, 12.0)),  // Mesha (Aries)
+        Graha::Buddh => Some((5, 16.0, 20.0)),  // Kanya (Virgo)
+        Graha::Guru => Some((8, 0.0, 10.0)),    // Dhanu (Sagittarius)
+        Graha::Shukra => Some((6, 0.0, 15.0)),  // Tula (Libra)
+        Graha::Shani => Some((10, 0.0, 20.0)),  // Kumbha (Aquarius)
         Graha::Rahu | Graha::Ketu => None,
     }
 }
@@ -77,13 +77,13 @@ pub const fn moolatrikone_range(graha: Graha) -> Option<(u8, f64, f64)> {
 /// Jupiter [8,11], Venus [1,6], Saturn [9,10].
 pub fn own_signs(graha: Graha) -> &'static [u8] {
     match graha {
-        Graha::Surya => &[4],      // Simha
-        Graha::Chandra => &[3],    // Karka
-        Graha::Mangal => &[0, 7],  // Mesha, Vrischika
-        Graha::Buddh => &[2, 5],   // Mithuna, Kanya
-        Graha::Guru => &[8, 11],   // Dhanu, Meena
-        Graha::Shukra => &[1, 6],  // Vrishabha, Tula
-        Graha::Shani => &[9, 10],  // Makara, Kumbha
+        Graha::Surya => &[4],     // Simha
+        Graha::Chandra => &[3],   // Karka
+        Graha::Mangal => &[0, 7], // Mesha, Vrischika
+        Graha::Buddh => &[2, 5],  // Mithuna, Kanya
+        Graha::Guru => &[8, 11],  // Dhanu, Meena
+        Graha::Shukra => &[1, 6], // Vrishabha, Tula
+        Graha::Shani => &[9, 10], // Makara, Kumbha
         Graha::Rahu | Graha::Ketu => &[],
     }
 }
@@ -755,10 +755,7 @@ mod tests {
     #[test]
     fn naisargika_rahu_always_neutral() {
         for g in ALL_GRAHAS {
-            assert_eq!(
-                naisargika_maitri(Graha::Rahu, g),
-                NaisargikaMaitri::Neutral
-            );
+            assert_eq!(naisargika_maitri(Graha::Rahu, g), NaisargikaMaitri::Neutral);
         }
     }
 
@@ -862,8 +859,7 @@ mod tests {
         // If tatkalika makes it Friend, compound = Sama.
         // Sun rashi=1, Venus rashi=2 → dist=1 → tatkalika friend
         let positions: [u8; 7] = [1, 0, 0, 0, 0, 2, 0]; // Sun=1, Venus=2
-        let d =
-            dignity_in_rashi_with_positions(Graha::Surya, 45.0, 1, &positions);
+        let d = dignity_in_rashi_with_positions(Graha::Surya, 45.0, 1, &positions);
         assert_eq!(d, Dignity::Sama); // Enemy+Friend = Sama
     }
 
@@ -887,8 +883,7 @@ mod tests {
         // Rahu in Mesha (0), dispositor=Mars. Target rashi=0 (Mesha), target lord=Mars.
         // Dispositor == target lord → OwnSign.
         let indices: [u8; 9] = [0, 0, 0, 0, 0, 0, 0, 0, 0]; // Rahu in idx 7=0
-        let d =
-            node_dignity_in_rashi(Graha::Rahu, 0, &indices, NodeDignityPolicy::SignLordBased);
+        let d = node_dignity_in_rashi(Graha::Rahu, 0, &indices, NodeDignityPolicy::SignLordBased);
         assert_eq!(d, Dignity::OwnSign);
     }
 
@@ -903,10 +898,7 @@ mod tests {
 
     #[test]
     fn natural_benefic() {
-        assert_eq!(
-            natural_benefic_malefic(Graha::Guru),
-            BeneficNature::Benefic
-        );
+        assert_eq!(natural_benefic_malefic(Graha::Guru), BeneficNature::Benefic);
         assert_eq!(
             natural_benefic_malefic(Graha::Shukra),
             BeneficNature::Benefic
@@ -1013,27 +1005,18 @@ mod tests {
     #[test]
     fn samvatsara_lord_prabhava() {
         // index 0 % 7 = 0 → Surya
-        assert_eq!(
-            samvatsara_lord(Samvatsara::Prabhava),
-            Graha::Surya
-        );
+        assert_eq!(samvatsara_lord(Samvatsara::Prabhava), Graha::Surya);
     }
 
     #[test]
     fn samvatsara_lord_vibhava() {
         // index 1 % 7 = 1 → Chandra
-        assert_eq!(
-            samvatsara_lord(Samvatsara::Vibhava),
-            Graha::Chandra
-        );
+        assert_eq!(samvatsara_lord(Samvatsara::Vibhava), Graha::Chandra);
     }
 
     #[test]
     fn samvatsara_lord_wraps() {
         // index 7 % 7 = 0 → Surya
-        assert_eq!(
-            samvatsara_lord(Samvatsara::Bhava),
-            Graha::Surya
-        );
+        assert_eq!(samvatsara_lord(Samvatsara::Bhava), Graha::Surya);
     }
 }

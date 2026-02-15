@@ -8,9 +8,9 @@ use dhruv_core::{Engine, EngineConfig};
 use dhruv_search::sankranti_types::SankrantiConfig;
 use dhruv_search::{dasha_hierarchy_for_birth, dasha_snapshot_at};
 use dhruv_time::{EopKernel, UtcTime};
+use dhruv_vedic_base::BhavaConfig;
 use dhruv_vedic_base::dasha::{DashaLevel, DashaSystem, DashaVariationConfig};
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
-use dhruv_vedic_base::BhavaConfig;
 
 const SPK_PATH: &str = "../../kernels/data/de442s.bsp";
 const LSK_PATH: &str = "../../kernels/data/naif0012.tls";
@@ -74,7 +74,11 @@ fn vimshottari_hierarchy_valid() {
         &aya_config,
         &variation,
     );
-    assert!(result.is_ok(), "hierarchy should succeed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "hierarchy should succeed: {:?}",
+        result.err()
+    );
 
     let hierarchy = result.unwrap();
     assert_eq!(hierarchy.system, DashaSystem::Vimshottari);
@@ -105,8 +109,8 @@ fn vimshottari_hierarchy_valid() {
     assert_eq!(hierarchy.levels[2].len(), 729);
 
     // Total time span should be <= 120 years (first period is partial due to balance)
-    let total_days = hierarchy.levels[0].last().unwrap().end_jd
-        - hierarchy.levels[0].first().unwrap().start_jd;
+    let total_days =
+        hierarchy.levels[0].last().unwrap().end_jd - hierarchy.levels[0].first().unwrap().start_jd;
     let max_span = 120.0 * 365.25;
     assert!(
         total_days > 0.0 && total_days <= max_span + 1.0,
@@ -139,7 +143,11 @@ fn vimshottari_snapshot_valid() {
         &aya_config,
         &variation,
     );
-    assert!(result.is_ok(), "snapshot should succeed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "snapshot should succeed: {:?}",
+        result.err()
+    );
 
     let snapshot = result.unwrap();
     assert_eq!(snapshot.system, DashaSystem::Vimshottari);
@@ -340,7 +348,12 @@ fn all_rashi_systems_hierarchy_valid() {
         let h = result.unwrap();
         assert_eq!(h.system, system);
         assert_eq!(h.levels.len(), 2); // level 0 + level 1
-        assert_eq!(h.levels[0].len(), 12, "{:?} should have 12 mahadasha periods", system);
+        assert_eq!(
+            h.levels[0].len(),
+            12,
+            "{:?} should have 12 mahadasha periods",
+            system
+        );
 
         // Adjacent periods contiguous
         for i in 1..h.levels[0].len() {

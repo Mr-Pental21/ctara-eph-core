@@ -62,7 +62,15 @@ fn amsha_charts_basic_d9() {
     let scope = AmshaChartScope::default();
 
     let result = amsha_charts_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &requests, &scope,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &requests,
+        &scope,
     )
     .expect("amsha_charts_for_date should succeed");
 
@@ -110,7 +118,15 @@ fn amsha_charts_multiple() {
     let scope = AmshaChartScope::default();
 
     let result = amsha_charts_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &requests, &scope,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &requests,
+        &scope,
     )
     .expect("amsha_charts_for_date should succeed");
 
@@ -134,7 +150,15 @@ fn amsha_d1_matches_graha_positions() {
     let requests = [AmshaRequest::new(Amsha::D1)];
     let scope = AmshaChartScope::default();
     let amsha_result = amsha_charts_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &requests, &scope,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &requests,
+        &scope,
     )
     .expect("amsha_charts should succeed");
 
@@ -144,7 +168,13 @@ fn amsha_d1_matches_graha_positions() {
         ..Default::default()
     };
     let gp = dhruv_search::graha_positions(
-        &engine, &eop, &utc, &location, &bhava_config, &aya_config, &gp_config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &aya_config,
+        &gp_config,
     )
     .expect("graha_positions should succeed");
 
@@ -185,7 +215,15 @@ fn amsha_with_scope_flags() {
     };
 
     let result = amsha_charts_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &requests, &scope,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &requests,
+        &scope,
     )
     .expect("amsha_charts with full scope should succeed");
 
@@ -217,7 +255,15 @@ fn amsha_from_kundali_matches_direct() {
 
     // Compute via direct function
     let direct = amsha_charts_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &requests, &scope,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &requests,
+        &scope,
     )
     .expect("direct should succeed");
 
@@ -231,7 +277,14 @@ fn amsha_from_kundali_matches_direct() {
         ..Default::default()
     };
     let kundali = full_kundali_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &kundali_config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &kundali_config,
     )
     .expect("kundali should succeed");
 
@@ -263,7 +316,7 @@ fn full_kundali_with_amshas() {
 
     let mut sel = AmshaSelectionConfig::default();
     sel.count = 3;
-    sel.codes[0] = 9;  // D9
+    sel.codes[0] = 9; // D9
     sel.codes[1] = 10; // D10
     sel.codes[2] = 12; // D12
 
@@ -279,7 +332,14 @@ fn full_kundali_with_amshas() {
     };
 
     let result = full_kundali_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     )
     .expect("full_kundali should succeed");
 
@@ -309,7 +369,15 @@ fn validation_inapplicable_variation() {
     let scope = AmshaChartScope::default();
 
     let result = amsha_charts_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &requests, &scope,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &requests,
+        &scope,
     );
     assert!(result.is_err());
 }
@@ -340,7 +408,14 @@ fn validation_unknown_amsha_code() {
     };
 
     let result = full_kundali_for_date(
-        &engine, &eop, &utc, &location, &bhava_config, &rs_config, &aya_config, &config,
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
     );
     assert!(result.is_err());
 }

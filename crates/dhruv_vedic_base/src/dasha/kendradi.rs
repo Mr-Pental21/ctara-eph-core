@@ -19,8 +19,7 @@ use super::rashi_dasha::{rashi_hierarchy, rashi_snapshot};
 use super::rashi_strength::{RashiDashaInputs, atmakaraka, stronger_rashi};
 use super::rashi_util::is_odd_sign;
 use super::types::{
-    DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot, DashaSystem,
-    DAYS_PER_YEAR,
+    DAYS_PER_YEAR, DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot, DashaSystem,
 };
 use super::variation::{DashaVariationConfig, SubPeriodMethod};
 use crate::error::VedicError;
@@ -47,7 +46,11 @@ fn kendradi_sequence(start: u8) -> Vec<u8> {
     let panapara_offsets = [1u8, 4, 7, 10];
     let apoklima_offsets = [2u8, 5, 8, 11];
 
-    for group in &[&kendra_offsets[..], &panapara_offsets[..], &apoklima_offsets[..]] {
+    for group in &[
+        &kendra_offsets[..],
+        &panapara_offsets[..],
+        &apoklima_offsets[..],
+    ] {
         for &offset in *group {
             let rashi = if forward {
                 (start + offset) % 12
@@ -78,7 +81,11 @@ fn kendradi_level0_from_start(
 
     for (i, &rashi) in sequence.iter().enumerate() {
         let full_period_days = chara_period_years(rashi, inputs) * DAYS_PER_YEAR;
-        let duration = if i == 0 { balance_days } else { full_period_days };
+        let duration = if i == 0 {
+            balance_days
+        } else {
+            full_period_days
+        };
 
         let end = cursor + duration;
         periods.push(DashaPeriod {
@@ -308,8 +315,8 @@ mod tests {
         let seq = kendradi_sequence(1);
         assert_eq!(seq[0], 1);
         assert_eq!(seq[1], 10); // 1-3=10
-        assert_eq!(seq[2], 7);  // 1-6=7
-        assert_eq!(seq[3], 4);  // 1-9=4
+        assert_eq!(seq[2], 7); // 1-6=7
+        assert_eq!(seq[3], 4); // 1-9=4
     }
 
     #[test]

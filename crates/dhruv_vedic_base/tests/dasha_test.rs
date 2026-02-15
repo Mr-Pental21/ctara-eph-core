@@ -2,13 +2,13 @@
 //!
 //! These tests verify the pure-math dasha engine without requiring kernel files.
 
+use dhruv_vedic_base::Graha;
 use dhruv_vedic_base::dasha::{
     DAYS_PER_YEAR, DashaEntity, DashaLevel, DashaSystem, DashaVariationConfig, MAX_DASHA_LEVEL,
     nakshatra_config_for_system, nakshatra_hierarchy, nakshatra_level0, nakshatra_snapshot,
     snapshot_from_hierarchy, vimshottari_config, yogini_config, yogini_hierarchy, yogini_level0,
     yogini_snapshot,
 };
-use dhruv_vedic_base::Graha;
 
 /// Moon at 0° Aries (Ashwini nakshatra, index 0) → Ketu mahadasha, full 7y.
 #[test]
@@ -165,7 +165,10 @@ fn snapshot_matches_hierarchy() {
         .zip(direct.periods.iter())
         .enumerate()
     {
-        assert_eq!(h_period.entity, d_period.entity, "Level {i} entity mismatch");
+        assert_eq!(
+            h_period.entity, d_period.entity,
+            "Level {i} entity mismatch"
+        );
         assert!(
             (h_period.start_jd - d_period.start_jd).abs() < 1e-10,
             "Level {i} start_jd mismatch"
@@ -193,7 +196,11 @@ fn last_child_snaps_to_parent() {
             .iter()
             .filter(|c| c.parent_idx == parent_idx as u32)
             .collect();
-        assert_eq!(children.len(), 9, "Each mahadasha should have 9 antardashas");
+        assert_eq!(
+            children.len(),
+            9,
+            "Each mahadasha should have 9 antardashas"
+        );
 
         let last_child = children.last().unwrap();
         assert!(
@@ -324,7 +331,11 @@ fn verify_nakshatra_system(
         );
     } else {
         // Shashtihayani: just verify it's positive and bounded
-        assert!(total_full_days > 0.0, "{:?}: total should be positive", system);
+        assert!(
+            total_full_days > 0.0,
+            "{:?}: total should be positive",
+            system
+        );
     }
 
     // Hierarchy depth 1 (depth 2 can exceed MAX_PERIODS_PER_LEVEL for multi-cycle systems)
@@ -340,7 +351,11 @@ fn verify_nakshatra_system(
     let from_h = snapshot_from_hierarchy(&h, query_jd);
     assert_eq!(snap.periods.len(), from_h.periods.len());
     for (i, (s, h_p)) in snap.periods.iter().zip(from_h.periods.iter()).enumerate() {
-        assert_eq!(s.entity, h_p.entity, "{:?}: level {i} entity mismatch", system);
+        assert_eq!(
+            s.entity, h_p.entity,
+            "{:?}: level {i} entity mismatch",
+            system
+        );
     }
 }
 

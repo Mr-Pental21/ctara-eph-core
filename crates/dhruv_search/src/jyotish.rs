@@ -14,20 +14,20 @@ use dhruv_vedic_base::special_lagna::all_special_lagnas;
 use dhruv_vedic_base::upagraha::TIME_BASED_UPAGRAHAS;
 use dhruv_vedic_base::vaar::vaar_from_jd;
 use dhruv_vedic_base::{
-    ALL_GRAHAS, AllGrahaAvasthas, Amsha, AmshaRequest, AmshaVariation, AllSpecialLagnas,
-    AllUpagrahas, ArudhaResult, AshtakavargaResult, AvasthaInputs, AyanamshaSystem, BhavaConfig,
+    ALL_GRAHAS, AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AmshaRequest,
+    AmshaVariation, ArudhaResult, AshtakavargaResult, AvasthaInputs, AyanamshaSystem, BhavaConfig,
     BhavaResult, Dignity, DrishtiEntry, Graha, GrahaAvasthas, KalaBalaInputs, LajjitadiInputs,
-    LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS, SayanadiInputs, ShadbalaInputs,
-    Upagraha, all_avasthas, all_combustion_status, amsha_longitude, all_shadbalas_from_inputs,
-    all_shadvarga_vimsopaka, all_saptavarga_vimsopaka, all_dashavarga_vimsopaka,
-    all_shodasavarga_vimsopaka, ayanamsha_deg, bhrigu_bindu,
-    calculate_ashtakavarga, compute_bhavas, dignity_in_rashi_with_positions, ghati_lagna,
-    ghatikas_since_sunrise, graha_drishti, graha_drishti_matrix, hora_lord as graha_hora_lord,
-    hora_lagna, jd_tdb_to_centuries, lagna_longitude_rad, lost_planetary_war, lunar_node_deg,
-    masa_lord as graha_masa_lord, nakshatra_from_longitude, navamsa_number, node_dignity_in_rashi,
-    normalize_360, nth_rashi_from, pranapada_lagna, rashi_from_longitude, rashi_lord_by_index,
-    samvatsara_lord as graha_samvatsara_lord, sree_lagna, sun_based_upagrahas,
-    time_upagraha_jd, vaar_lord as graha_vaar_lord,
+    LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS, SayanadiInputs, ShadbalaInputs, Upagraha,
+    all_avasthas, all_combustion_status, all_dashavarga_vimsopaka, all_saptavarga_vimsopaka,
+    all_shadbalas_from_inputs, all_shadvarga_vimsopaka, all_shodasavarga_vimsopaka,
+    amsha_longitude, ayanamsha_deg, bhrigu_bindu, calculate_ashtakavarga, compute_bhavas,
+    dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise, graha_drishti,
+    graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord, jd_tdb_to_centuries,
+    lagna_longitude_rad, lost_planetary_war, lunar_node_deg, masa_lord as graha_masa_lord,
+    nakshatra_from_longitude, navamsa_number, node_dignity_in_rashi, normalize_360, nth_rashi_from,
+    pranapada_lagna, rashi_from_longitude, rashi_lord_by_index,
+    samvatsara_lord as graha_samvatsara_lord, sree_lagna, sun_based_upagrahas, time_upagraha_jd,
+    vaar_lord as graha_vaar_lord,
 };
 
 use crate::conjunction::body_ecliptic_lon_lat;
@@ -1042,7 +1042,12 @@ pub fn full_kundali_for_date(
     // Amsha charts: computed if requested, after all D1 positions are resolved.
     let amshas = if config.include_amshas {
         Some(amsha_charts_from_kundali_with_ctx(
-            config, &graha_positions, &bindus, &upagrahas, &special_lagnas, &mut ctx,
+            config,
+            &graha_positions,
+            &bindus,
+            &upagrahas,
+            &special_lagnas,
+            &mut ctx,
         )?)
     } else {
         None
@@ -1050,7 +1055,14 @@ pub fn full_kundali_for_date(
 
     let shadbala = if config.include_shadbala {
         Some(shadbala_for_date_with_ctx(
-            engine, eop, utc, location, bhava_config, riseset_config, aya_config, &mut ctx,
+            engine,
+            eop,
+            utc,
+            location,
+            bhava_config,
+            riseset_config,
+            aya_config,
+            &mut ctx,
         )?)
     } else {
         None
@@ -1058,7 +1070,12 @@ pub fn full_kundali_for_date(
 
     let vimsopaka = if config.include_vimsopaka {
         Some(vimsopaka_for_date_with_ctx(
-            engine, eop, location, aya_config, config.node_dignity_policy, &mut ctx,
+            engine,
+            eop,
+            location,
+            aya_config,
+            config.node_dignity_policy,
+            &mut ctx,
         )?)
     } else {
         None
@@ -1066,8 +1083,15 @@ pub fn full_kundali_for_date(
 
     let avastha = if config.include_avastha {
         Some(avastha_for_date_with_ctx(
-            engine, eop, location, utc, bhava_config, riseset_config, aya_config,
-            config.node_dignity_policy, &mut ctx,
+            engine,
+            eop,
+            location,
+            utc,
+            bhava_config,
+            riseset_config,
+            aya_config,
+            config.node_dignity_policy,
+            &mut ctx,
         )?)
     } else {
         None
@@ -1130,7 +1154,14 @@ pub fn shadbala_for_date(
 ) -> Result<ShadbalaResult, SearchError> {
     let mut ctx = JyotishContext::new(engine, utc, aya_config);
     shadbala_for_date_with_ctx(
-        engine, eop, utc, location, bhava_config, riseset_config, aya_config, &mut ctx,
+        engine,
+        eop,
+        utc,
+        location,
+        bhava_config,
+        riseset_config,
+        aya_config,
+        &mut ctx,
     )
 }
 
@@ -1145,7 +1176,14 @@ fn shadbala_for_date_with_ctx(
     ctx: &mut JyotishContext,
 ) -> Result<ShadbalaResult, SearchError> {
     let inputs = assemble_shadbala_inputs(
-        engine, eop, utc, location, bhava_config, riseset_config, aya_config, ctx,
+        engine,
+        eop,
+        utc,
+        location,
+        bhava_config,
+        riseset_config,
+        aya_config,
+        ctx,
     )?;
     let breakdowns = all_shadbalas_from_inputs(&inputs);
     let mut entries = [ShadbalaEntry::from_breakdown(Graha::Surya, &breakdowns[0]); 7];
@@ -1172,7 +1210,13 @@ pub fn shadbala_for_graha(
         ));
     }
     let result = shadbala_for_date(
-        engine, eop, utc, location, bhava_config, riseset_config, aya_config,
+        engine,
+        eop,
+        utc,
+        location,
+        bhava_config,
+        riseset_config,
+        aya_config,
     )?;
     Ok(result.entries[graha.index() as usize])
 }
@@ -1411,7 +1455,14 @@ pub fn avastha_for_date(
 ) -> Result<AllGrahaAvasthas, SearchError> {
     let mut ctx = JyotishContext::new(engine, utc, aya_config);
     avastha_for_date_with_ctx(
-        engine, eop, location, utc, bhava_config, riseset_config, aya_config, node_policy,
+        engine,
+        eop,
+        location,
+        utc,
+        bhava_config,
+        riseset_config,
+        aya_config,
+        node_policy,
         &mut ctx,
     )
 }
@@ -1428,7 +1479,15 @@ fn avastha_for_date_with_ctx(
     ctx: &mut JyotishContext,
 ) -> Result<AllGrahaAvasthas, SearchError> {
     let inputs = assemble_avastha_inputs(
-        engine, eop, utc, location, bhava_config, riseset_config, aya_config, node_policy, ctx,
+        engine,
+        eop,
+        utc,
+        location,
+        bhava_config,
+        riseset_config,
+        aya_config,
+        node_policy,
+        ctx,
     )?;
     Ok(all_avasthas(&inputs))
 }
@@ -1446,7 +1505,14 @@ pub fn avastha_for_graha(
     graha: Graha,
 ) -> Result<GrahaAvasthas, SearchError> {
     let result = avastha_for_date(
-        engine, eop, location, utc, bhava_config, riseset_config, aya_config, node_policy,
+        engine,
+        eop,
+        location,
+        utc,
+        bhava_config,
+        riseset_config,
+        aya_config,
+        node_policy,
     )?;
     Ok(result.entries[graha.index() as usize])
 }
@@ -1505,7 +1571,8 @@ fn assemble_avastha_inputs(
     // Rahu/Ketu via node_dignity_in_rashi
     for &graha in &[Graha::Rahu, Graha::Ketu] {
         let idx = graha.index() as usize;
-        dignities[idx] = node_dignity_in_rashi(graha, rashi_indices[idx], &rashi_indices, node_policy);
+        dignities[idx] =
+            node_dignity_in_rashi(graha, rashi_indices[idx], &rashi_indices, node_policy);
     }
 
     // 6. Combustion
@@ -1614,23 +1681,19 @@ fn validate_amsha_requests(requests: &[AmshaRequest]) -> Result<(), SearchError>
 }
 
 /// Convert AmshaSelectionConfig to a Vec of AmshaRequest.
-fn selection_to_requests(
-    sel: &AmshaSelectionConfig,
-) -> Result<Vec<AmshaRequest>, SearchError> {
+fn selection_to_requests(sel: &AmshaSelectionConfig) -> Result<Vec<AmshaRequest>, SearchError> {
     if sel.count as usize > MAX_AMSHA_REQUESTS {
         return Err(SearchError::InvalidConfig("amsha count exceeds maximum"));
     }
     let mut requests = Vec::with_capacity(sel.count as usize);
     for i in 0..sel.count as usize {
-        let amsha = Amsha::from_code(sel.codes[i]).ok_or_else(|| {
-            SearchError::InvalidConfig("unknown amsha code")
-        })?;
+        let amsha = Amsha::from_code(sel.codes[i])
+            .ok_or_else(|| SearchError::InvalidConfig("unknown amsha code"))?;
         let variation = if sel.variations[i] == 0 {
             None
         } else {
-            let v = AmshaVariation::from_code(sel.variations[i]).ok_or_else(|| {
-                SearchError::InvalidConfig("unknown variation code")
-            })?;
+            let v = AmshaVariation::from_code(sel.variations[i])
+                .ok_or_else(|| SearchError::InvalidConfig("unknown variation code"))?;
             if !v.is_applicable_to(amsha) {
                 return Err(SearchError::InvalidConfig(
                     "variation not applicable to amsha",
@@ -1797,7 +1860,13 @@ pub fn amsha_charts_for_date(
     // Upagrahas
     let upagraha_lons = if scope.include_upagrahas {
         let upa = all_upagrahas_for_date_with_ctx(
-            engine, eop, utc, location, riseset_config, aya_config, &mut ctx,
+            engine,
+            eop,
+            utc,
+            location,
+            riseset_config,
+            aya_config,
+            &mut ctx,
         )?;
         Some(all_upagraha_lons(&upa))
     } else {
@@ -1822,7 +1891,12 @@ pub fn amsha_charts_for_date(
         let weekday = vaar_from_jd(jd_sunrise).index();
 
         let gulika_jd = time_upagraha_jd(
-            Upagraha::Gulika, weekday, is_day, jd_sunrise, jd_sunset, jd_next_sunrise,
+            Upagraha::Gulika,
+            weekday,
+            is_day,
+            jd_sunrise,
+            jd_sunset,
+            jd_next_sunrise,
         );
         let gulika_rad = lagna_longitude_rad(engine.lsk(), eop, location, gulika_jd)?;
         let gulika_sid = normalize_360(gulika_rad.to_degrees() - aya);
@@ -1857,7 +1931,13 @@ pub fn amsha_charts_for_date(
     // Special lagnas
     let special_lagna_lons = if scope.include_special_lagnas {
         let sl = special_lagnas_for_date_with_ctx(
-            engine, eop, utc, location, riseset_config, aya_config, &mut ctx,
+            engine,
+            eop,
+            utc,
+            location,
+            riseset_config,
+            aya_config,
+            &mut ctx,
         )?;
         Some(all_special_lagna_lons(&sl))
     } else {
@@ -1976,11 +2056,9 @@ fn amsha_charts_from_kundali_with_ctx(
     let requests = selection_to_requests(&config.amsha_selection)?;
     validate_amsha_requests(&requests)?;
 
-    let gp = graha_positions
-        .as_ref()
-        .ok_or(SearchError::InvalidConfig(
-            "graha_positions required for amsha charts",
-        ))?;
+    let gp = graha_positions.as_ref().ok_or(SearchError::InvalidConfig(
+        "graha_positions required for amsha charts",
+    ))?;
 
     let lagna_sid = gp.lagna.sidereal_longitude;
     let scope = &config.amsha_scope;
@@ -2019,9 +2097,7 @@ fn amsha_charts_from_kundali_with_ctx(
     };
 
     let special_lagna_lons = if scope.include_special_lagnas {
-        special_lagnas
-            .as_ref()
-            .map(|s| all_special_lagna_lons(s))
+        special_lagnas.as_ref().map(|s| all_special_lagna_lons(s))
     } else {
         None
     };

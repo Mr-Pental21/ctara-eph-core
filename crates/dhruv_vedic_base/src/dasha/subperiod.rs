@@ -202,8 +202,11 @@ mod tests {
     #[test]
     fn cyclic_sequence_from_parent() {
         let seq = test_sequence();
-        let result =
-            build_cyclic_sequence(&seq, DashaEntity::Graha(Graha::Shukra), SubPeriodMethod::ProportionalFromParent);
+        let result = build_cyclic_sequence(
+            &seq,
+            DashaEntity::Graha(Graha::Shukra),
+            SubPeriodMethod::ProportionalFromParent,
+        );
         assert_eq!(result[0].0, DashaEntity::Graha(Graha::Shukra));
         assert_eq!(result[1].0, DashaEntity::Graha(Graha::Surya));
         assert_eq!(result[2].0, DashaEntity::Graha(Graha::Ketu));
@@ -212,8 +215,11 @@ mod tests {
     #[test]
     fn cyclic_sequence_from_next() {
         let seq = test_sequence();
-        let result =
-            build_cyclic_sequence(&seq, DashaEntity::Graha(Graha::Shukra), SubPeriodMethod::ProportionalFromNext);
+        let result = build_cyclic_sequence(
+            &seq,
+            DashaEntity::Graha(Graha::Shukra),
+            SubPeriodMethod::ProportionalFromNext,
+        );
         assert_eq!(result[0].0, DashaEntity::Graha(Graha::Surya));
         assert_eq!(result[1].0, DashaEntity::Graha(Graha::Ketu));
         assert_eq!(result[2].0, DashaEntity::Graha(Graha::Shukra));

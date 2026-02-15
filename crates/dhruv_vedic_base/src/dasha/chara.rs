@@ -13,8 +13,7 @@ use super::rashi_dasha::{rashi_hierarchy, rashi_snapshot};
 use super::rashi_strength::RashiDashaInputs;
 use super::rashi_util::is_odd_sign;
 use super::types::{
-    DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot, DashaSystem,
-    DAYS_PER_YEAR,
+    DAYS_PER_YEAR, DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot, DashaSystem,
 };
 use super::variation::{DashaVariationConfig, SubPeriodMethod};
 use crate::error::VedicError;
@@ -87,7 +86,11 @@ pub fn chara_level0(birth_jd: f64, inputs: &RashiDashaInputs) -> Vec<DashaPeriod
         };
 
         let full_period_days = chara_period_years(rashi, inputs) * DAYS_PER_YEAR;
-        let duration = if i == 0 { balance_days } else { full_period_days };
+        let duration = if i == 0 {
+            balance_days
+        } else {
+            full_period_days
+        };
 
         let end = cursor + duration;
         periods.push(DashaPeriod {

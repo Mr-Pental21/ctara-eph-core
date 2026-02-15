@@ -711,7 +711,13 @@ pub fn shadbala(
     let rs_config = RiseSetConfig::default();
     let aya_config = SankrantiConfig::new(system, use_nutation);
     Ok(dhruv_search::shadbala_for_date(
-        eng, eop, &utc, location, &bhava_config, &rs_config, &aya_config,
+        eng,
+        eop,
+        &utc,
+        location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
     )?)
 }
 
@@ -730,7 +736,14 @@ pub fn shadbala_for_graha(
     let rs_config = RiseSetConfig::default();
     let aya_config = SankrantiConfig::new(system, use_nutation);
     Ok(dhruv_search::shadbala_for_graha(
-        eng, eop, &utc, location, &bhava_config, &rs_config, &aya_config, graha,
+        eng,
+        eop,
+        &utc,
+        location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        graha,
     )?)
 }
 
@@ -747,7 +760,12 @@ pub fn vimsopaka(
     let utc: UtcTime = date.into();
     let aya_config = SankrantiConfig::new(system, use_nutation);
     Ok(dhruv_search::vimsopaka_for_date(
-        eng, eop, &utc, location, &aya_config, node_policy,
+        eng,
+        eop,
+        &utc,
+        location,
+        &aya_config,
+        node_policy,
     )?)
 }
 
@@ -765,7 +783,13 @@ pub fn vimsopaka_for_graha(
     let utc: UtcTime = date.into();
     let aya_config = SankrantiConfig::new(system, use_nutation);
     Ok(dhruv_search::vimsopaka_for_graha(
-        eng, eop, &utc, location, &aya_config, node_policy, graha,
+        eng,
+        eop,
+        &utc,
+        location,
+        &aya_config,
+        node_policy,
+        graha,
     )?)
 }
 
@@ -784,7 +808,14 @@ pub fn avastha(
     let rs_config = RiseSetConfig::default();
     let aya_config = SankrantiConfig::new(system, use_nutation);
     Ok(dhruv_search::avastha_for_date(
-        eng, eop, location, &utc, &bhava_config, &rs_config, &aya_config, node_policy,
+        eng,
+        eop,
+        location,
+        &utc,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        node_policy,
     )?)
 }
 
@@ -804,7 +835,15 @@ pub fn avastha_for_graha(
     let rs_config = RiseSetConfig::default();
     let aya_config = SankrantiConfig::new(system, use_nutation);
     Ok(dhruv_search::avastha_for_graha(
-        eng, eop, location, &utc, &bhava_config, &rs_config, &aya_config, node_policy, graha,
+        eng,
+        eop,
+        location,
+        &utc,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        node_policy,
+        graha,
     )?)
 }
 
@@ -829,8 +868,16 @@ pub fn dasha_hierarchy(
     let rs_config = RiseSetConfig::default();
     let aya_config = SankrantiConfig::new(aya_system, use_nutation);
     Ok(dhruv_search::dasha_hierarchy_for_birth(
-        eng, eop, &utc, location, system, max_level, &bhava_config, &rs_config,
-        &aya_config, variation,
+        eng,
+        eop,
+        &utc,
+        location,
+        system,
+        max_level,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        variation,
     )?)
 }
 
@@ -853,8 +900,17 @@ pub fn dasha_snapshot(
     let rs_config = RiseSetConfig::default();
     let aya_config = SankrantiConfig::new(aya_system, use_nutation);
     Ok(dhruv_search::dasha_snapshot_at(
-        eng, eop, &birth_utc, &query_utc, location, system, max_level, &bhava_config,
-        &rs_config, &aya_config, variation,
+        eng,
+        eop,
+        &birth_utc,
+        &query_utc,
+        location,
+        system,
+        max_level,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        variation,
     )?)
 }
 

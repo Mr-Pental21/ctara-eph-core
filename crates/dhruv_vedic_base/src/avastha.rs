@@ -611,10 +611,7 @@ pub fn sayanadi_sub_state(
 }
 
 /// Compute all 5 name-group sub-states for a Sayanadi avastha.
-pub fn sayanadi_all_sub_states(
-    avastha: SayanadiAvastha,
-    graha: Graha,
-) -> [SayanadiSubState; 5] {
+pub fn sayanadi_all_sub_states(avastha: SayanadiAvastha, graha: Graha) -> [SayanadiSubState; 5] {
     let mut result = [SayanadiSubState::Vicheshta; 5];
     for (i, &anka) in NAME_GROUP_ANKAS.iter().enumerate() {
         result[i] = sayanadi_sub_state(avastha, graha, anka);
@@ -703,7 +700,10 @@ pub fn lost_planetary_war(
 // ---------------------------------------------------------------------------
 
 /// Compute Baladi avastha for all 9 grahas.
-pub fn all_baladi_avasthas(sidereal_lons: &[f64; 9], rashi_indices: &[u8; 9]) -> [BaladiAvastha; 9] {
+pub fn all_baladi_avasthas(
+    sidereal_lons: &[f64; 9],
+    rashi_indices: &[u8; 9],
+) -> [BaladiAvastha; 9] {
     let mut result = [BaladiAvastha::Bala; 9];
     for g in ALL_GRAHAS {
         let i = g.index() as usize;
@@ -873,15 +873,36 @@ mod tests {
 
     #[test]
     fn jagradadi_all_mappings() {
-        assert_eq!(jagradadi_avastha(Dignity::Exalted), JagradadiAvastha::Jagrat);
-        assert_eq!(jagradadi_avastha(Dignity::Moolatrikone), JagradadiAvastha::Jagrat);
-        assert_eq!(jagradadi_avastha(Dignity::OwnSign), JagradadiAvastha::Jagrat);
-        assert_eq!(jagradadi_avastha(Dignity::AdhiMitra), JagradadiAvastha::Swapna);
+        assert_eq!(
+            jagradadi_avastha(Dignity::Exalted),
+            JagradadiAvastha::Jagrat
+        );
+        assert_eq!(
+            jagradadi_avastha(Dignity::Moolatrikone),
+            JagradadiAvastha::Jagrat
+        );
+        assert_eq!(
+            jagradadi_avastha(Dignity::OwnSign),
+            JagradadiAvastha::Jagrat
+        );
+        assert_eq!(
+            jagradadi_avastha(Dignity::AdhiMitra),
+            JagradadiAvastha::Swapna
+        );
         assert_eq!(jagradadi_avastha(Dignity::Mitra), JagradadiAvastha::Swapna);
         assert_eq!(jagradadi_avastha(Dignity::Sama), JagradadiAvastha::Sushupta);
-        assert_eq!(jagradadi_avastha(Dignity::Shatru), JagradadiAvastha::Sushupta);
-        assert_eq!(jagradadi_avastha(Dignity::AdhiShatru), JagradadiAvastha::Sushupta);
-        assert_eq!(jagradadi_avastha(Dignity::Debilitated), JagradadiAvastha::Sushupta);
+        assert_eq!(
+            jagradadi_avastha(Dignity::Shatru),
+            JagradadiAvastha::Sushupta
+        );
+        assert_eq!(
+            jagradadi_avastha(Dignity::AdhiShatru),
+            JagradadiAvastha::Sushupta
+        );
+        assert_eq!(
+            jagradadi_avastha(Dignity::Debilitated),
+            JagradadiAvastha::Sushupta
+        );
     }
 
     // --- Deeptadi ---
@@ -965,7 +986,10 @@ mod tests {
     fn lajjitadi_fifth_house_malefic_conjunct() {
         assert_eq!(
             lajjitadi_avastha(
-                Graha::Guru, 5, 0, Dignity::Sama,
+                Graha::Guru,
+                5,
+                0,
+                Dignity::Sama,
                 &[Graha::Shani], // malefic conjunct
                 &[],
             ),
@@ -976,10 +1000,7 @@ mod tests {
     #[test]
     fn lajjitadi_exalted() {
         assert_eq!(
-            lajjitadi_avastha(
-                Graha::Guru, 1, 0, Dignity::Exalted,
-                &[], &[],
-            ),
+            lajjitadi_avastha(Graha::Guru, 1, 0, Dignity::Exalted, &[], &[],),
             LajjitadiAvastha::Garvita,
         );
     }
@@ -987,10 +1008,7 @@ mod tests {
     #[test]
     fn lajjitadi_enemy_sign() {
         assert_eq!(
-            lajjitadi_avastha(
-                Graha::Guru, 1, 0, Dignity::Shatru,
-                &[], &[],
-            ),
+            lajjitadi_avastha(Graha::Guru, 1, 0, Dignity::Shatru, &[], &[],),
             LajjitadiAvastha::Kshudhita,
         );
     }
@@ -998,10 +1016,7 @@ mod tests {
     #[test]
     fn lajjitadi_default_mudita() {
         assert_eq!(
-            lajjitadi_avastha(
-                Graha::Guru, 1, 0, Dignity::Sama,
-                &[], &[],
-            ),
+            lajjitadi_avastha(Graha::Guru, 1, 0, Dignity::Sama, &[], &[],),
             LajjitadiAvastha::Mudita,
         );
     }
@@ -1011,7 +1026,10 @@ mod tests {
         // Karka (3) = water, aspected by enemy, no benefic → Trushita
         assert_eq!(
             lajjitadi_avastha(
-                Graha::Surya, 1, 3, Dignity::Sama,
+                Graha::Surya,
+                1,
+                3,
+                Dignity::Sama,
                 &[],
                 &[Graha::Shukra], // Venus is enemy of Sun, and Venus is benefic...
             ),
@@ -1021,7 +1039,10 @@ mod tests {
         // Now with only Saturn (malefic enemy of Sun)
         assert_eq!(
             lajjitadi_avastha(
-                Graha::Surya, 1, 3, Dignity::Sama,
+                Graha::Surya,
+                1,
+                3,
+                Dignity::Sama,
                 &[],
                 &[Graha::Shani], // Saturn is enemy of Sun, malefic
             ),
@@ -1033,9 +1054,12 @@ mod tests {
     fn lajjitadi_kshobhita_sun_conjunct_malefic_aspect() {
         assert_eq!(
             lajjitadi_avastha(
-                Graha::Guru, 1, 0, Dignity::Sama,
-                &[Graha::Surya],   // conjunct Sun
-                &[Graha::Mangal],  // aspected by malefic
+                Graha::Guru,
+                1,
+                0,
+                Dignity::Sama,
+                &[Graha::Surya],  // conjunct Sun
+                &[Graha::Mangal], // aspected by malefic
             ),
             LajjitadiAvastha::Kshobhita,
         );
@@ -1112,8 +1136,11 @@ mod tests {
     #[test]
     fn strength_factors_in_range() {
         let all_baladi = [
-            BaladiAvastha::Bala, BaladiAvastha::Kumara, BaladiAvastha::Yuva,
-            BaladiAvastha::Vriddha, BaladiAvastha::Mrita,
+            BaladiAvastha::Bala,
+            BaladiAvastha::Kumara,
+            BaladiAvastha::Yuva,
+            BaladiAvastha::Vriddha,
+            BaladiAvastha::Mrita,
         ];
         for a in all_baladi {
             let f = a.strength_factor();
@@ -1121,7 +1148,9 @@ mod tests {
         }
 
         let all_jagradadi = [
-            JagradadiAvastha::Jagrat, JagradadiAvastha::Swapna, JagradadiAvastha::Sushupta,
+            JagradadiAvastha::Jagrat,
+            JagradadiAvastha::Swapna,
+            JagradadiAvastha::Sushupta,
         ];
         for a in all_jagradadi {
             let f = a.strength_factor();
@@ -1129,9 +1158,15 @@ mod tests {
         }
 
         let all_deeptadi = [
-            DeeptadiAvastha::Deepta, DeeptadiAvastha::Swastha, DeeptadiAvastha::Mudita,
-            DeeptadiAvastha::Shanta, DeeptadiAvastha::Shakta, DeeptadiAvastha::Peedita,
-            DeeptadiAvastha::Deena, DeeptadiAvastha::Vikala, DeeptadiAvastha::Khala,
+            DeeptadiAvastha::Deepta,
+            DeeptadiAvastha::Swastha,
+            DeeptadiAvastha::Mudita,
+            DeeptadiAvastha::Shanta,
+            DeeptadiAvastha::Shakta,
+            DeeptadiAvastha::Peedita,
+            DeeptadiAvastha::Deena,
+            DeeptadiAvastha::Vikala,
+            DeeptadiAvastha::Khala,
         ];
         for a in all_deeptadi {
             let f = a.strength_factor();
@@ -1139,8 +1174,12 @@ mod tests {
         }
 
         let all_lajjitadi = [
-            LajjitadiAvastha::Lajjita, LajjitadiAvastha::Garvita, LajjitadiAvastha::Kshudhita,
-            LajjitadiAvastha::Trushita, LajjitadiAvastha::Mudita, LajjitadiAvastha::Kshobhita,
+            LajjitadiAvastha::Lajjita,
+            LajjitadiAvastha::Garvita,
+            LajjitadiAvastha::Kshudhita,
+            LajjitadiAvastha::Trushita,
+            LajjitadiAvastha::Mudita,
+            LajjitadiAvastha::Kshobhita,
         ];
         for a in all_lajjitadi {
             let f = a.strength_factor();
@@ -1148,7 +1187,9 @@ mod tests {
         }
 
         let all_sub = [
-            SayanadiSubState::Drishti, SayanadiSubState::Chestha, SayanadiSubState::Vicheshta,
+            SayanadiSubState::Drishti,
+            SayanadiSubState::Chestha,
+            SayanadiSubState::Vicheshta,
         ];
         for a in all_sub {
             let f = a.strength_factor();
@@ -1194,9 +1235,15 @@ mod tests {
             rashi_indices: [0, 1, 3, 5, 6, 8, 10, 11, 11],
             bhava_numbers: [1, 2, 4, 6, 7, 9, 10, 11, 12],
             dignities: [
-                Dignity::Exalted, Dignity::OwnSign, Dignity::Mitra, Dignity::Sama,
-                Dignity::Shatru, Dignity::AdhiMitra, Dignity::Debilitated,
-                Dignity::Sama, Dignity::Sama,
+                Dignity::Exalted,
+                Dignity::OwnSign,
+                Dignity::Mitra,
+                Dignity::Sama,
+                Dignity::Shatru,
+                Dignity::AdhiMitra,
+                Dignity::Debilitated,
+                Dignity::Sama,
+                Dignity::Sama,
             ],
             is_combust: [false; 9],
             is_retrograde: [false; 9],
@@ -1205,9 +1252,15 @@ mod tests {
                 rashi_indices: [0, 1, 3, 5, 6, 8, 10, 11, 11],
                 bhava_numbers: [1, 2, 4, 6, 7, 9, 10, 11, 12],
                 dignities: [
-                    Dignity::Exalted, Dignity::OwnSign, Dignity::Mitra, Dignity::Sama,
-                    Dignity::Shatru, Dignity::AdhiMitra, Dignity::Debilitated,
-                    Dignity::Sama, Dignity::Sama,
+                    Dignity::Exalted,
+                    Dignity::OwnSign,
+                    Dignity::Mitra,
+                    Dignity::Sama,
+                    Dignity::Shatru,
+                    Dignity::AdhiMitra,
+                    Dignity::Debilitated,
+                    Dignity::Sama,
+                    Dignity::Sama,
                 ],
                 drishti_matrix: GrahaDrishtiMatrix {
                     entries: [[DrishtiEntry::zero(); 9]; 9],
