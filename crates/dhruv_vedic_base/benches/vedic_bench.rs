@@ -188,6 +188,8 @@ fn dasha_bench(c: &mut Criterion) {
         DashaVariationConfig, nakshatra_hierarchy, nakshatra_level0, nakshatra_snapshot,
         vimshottari_config, nakshatra_config_for_system, DashaSystem,
         yogini_config, yogini_hierarchy, yogini_level0, yogini_snapshot,
+        RashiDashaInputs, chara_level0, chara_hierarchy, chara_snapshot,
+        kendradi_level0, kendradi_hierarchy,
     };
 
     let cfg = vimshottari_config();
@@ -286,6 +288,49 @@ fn dasha_bench(c: &mut Criterion) {
                 black_box(moon_lon),
                 black_box(&yog_cfg),
                 black_box(query_jd),
+                2,
+                black_box(&variation),
+            )
+        })
+    });
+
+    // Rashi-based dasha benchmarks (Phase 18c)
+    let graha_lons = [40.0, 75.0, 195.0, 160.0, 250.0, 310.0, 100.0, 10.0, 190.0];
+    let rashi_inputs = RashiDashaInputs::new(graha_lons, 15.0);
+
+    group.bench_function("chara_level0", |b| {
+        b.iter(|| chara_level0(black_box(birth_jd), black_box(&rashi_inputs)))
+    });
+    group.bench_function("chara_hierarchy_2", |b| {
+        b.iter(|| {
+            chara_hierarchy(
+                black_box(birth_jd),
+                black_box(&rashi_inputs),
+                2,
+                black_box(&variation),
+            )
+        })
+    });
+    group.bench_function("chara_snapshot_2", |b| {
+        let query_jd = birth_jd + 10_000.0;
+        b.iter(|| {
+            chara_snapshot(
+                black_box(birth_jd),
+                black_box(&rashi_inputs),
+                black_box(query_jd),
+                2,
+                black_box(&variation),
+            )
+        })
+    });
+    group.bench_function("kendradi_level0", |b| {
+        b.iter(|| kendradi_level0(black_box(birth_jd), black_box(&rashi_inputs)))
+    });
+    group.bench_function("kendradi_hierarchy_2", |b| {
+        b.iter(|| {
+            kendradi_hierarchy(
+                black_box(birth_jd),
+                black_box(&rashi_inputs),
                 2,
                 black_box(&variation),
             )

@@ -188,9 +188,196 @@ The pattern repeats every 8 nakshatras starting from Ardra (index 5) → Mangala
 
 **Entity type**: Uses `DashaEntity::Yogini(u8)` (0-7) instead of `DashaEntity::Graha`.
 
+## Phase 18c: Rashi-Based Dasha Systems (10 systems)
+
+### Sources
+
+- **BPHS Ch.46-53**: Rashi dasha systems (Chara, Sthira, Yogardha, Driga, Shoola, Mandooka, Chakra, Kendradi)
+- **Jaimini Sutras**: Chara dasha (primary source for rashi-based period calculation)
+- **B.V. Raman**: Hindu Predictive Astrology, rashi dasha descriptions
+- **K.N. Rao**: Jaimini's Chara Dasha, practical applications
+
+### Key Differences from Nakshatra-Based Systems
+
+Rashi-based dashas differ from nakshatra-based in several ways:
+
+1. **Input data**: Require full chart (9 graha sidereal longitudes + lagna) instead of just Moon longitude
+2. **Entity type**: Use `DashaEntity::Rashi(0..11)` instead of `DashaEntity::Graha`
+3. **12-period cycle**: All systems generate 12 mahadasha periods (one per rashi)
+4. **Birth balance**: Based on lagna degree within its rashi (not Moon in nakshatra)
+5. **Direction**: Odd signs traverse forward, even signs traverse reverse (for most systems)
+
+### Rashi Birth Balance
+
+```
+rashi_index = floor(lagna_sidereal_lon / 30)
+position_in_rashi = lagna_sidereal_lon - rashi_index * 30
+elapsed_fraction = position_in_rashi / 30
+balance_days = entry_period_days * (1 - elapsed_fraction)
+```
+
+### RashiDashaInputs
+
+All rashi-based systems share a common input struct assembled by the orchestration layer:
+
+- `graha_sidereal_lons`: 9 sidereal longitudes (Sun through Ketu)
+- `lagna_sidereal_lon`: sidereal lagna longitude
+- `lagna_rashi_index`: whole-sign house of lagna (0-11)
+- `bhava_rashi_indices`: whole-sign house indices for all 12 bhavas
+
+### Rashi Strength (6-Rule Hierarchy)
+
+Several systems need to determine the "stronger" of two rashis. Rules applied in order
+(first decisive rule wins):
+
+1. **Occupant count**: More grahas present in the rashi
+2. **Benefic association**: Lord aspected by/conjunct Jupiter or Mercury
+3. **Exaltation proximity**: Lord closer to its exaltation degree
+4. **Odd/even preference**: Odd signs preferred for odd pairs, even for even
+5. **Lord longitude**: Higher sidereal longitude of the rashi lord
+6. **Index fallback**: Higher rashi index
+
+### System Details
+
+#### Chara Dasha (Jaimini)
+
+The most complex rashi system. Period (in years) for each rashi:
+
+```
+For odd signs: count_forward(rashi, lord_rashi) - 1
+For even signs: count_reverse(rashi, lord_rashi) - 1
+If result = 0: period = 12 years (lord in own sign)
+```
+
+- **Starting rashi**: Lagna rashi
+- **Direction**: Odd lagna → forward, even lagna → reverse
+- **Sub-period**: EqualFromNext (12 equal sub-periods starting from next rashi)
+- **Total cycle**: Variable, depends on chart
+
+#### Sthira Dasha
+
+Fixed periods based on sign type:
+
+| Sign Type | Examples | Period |
+|-----------|----------|--------|
+| Chara (Movable) | Aries, Cancer, Libra, Capricorn | 7 years |
+| Sthira (Fixed) | Taurus, Leo, Scorpio, Aquarius | 8 years |
+| Dvisvabhava (Dual) | Gemini, Virgo, Sagittarius, Pisces | 9 years |
+
+- **Total cycle**: 4×7 + 4×8 + 4×9 = 96 years
+- **Starting rashi**: Sign of the Brahma Graha (Venus/Jupiter/Saturn in odd sign, houses 1-7)
+- **Sub-period**: ProportionalFromNext
+
+#### Yogardha Dasha
+
+Average of Chara and Sthira periods:
+
+```
+yogardha_period(rashi) = (chara_period(rashi) + sthira_period(rashi)) / 2
+```
+
+- **Starting rashi**: Stronger of lagna rashi or 7th house rashi
+- **Sub-period**: ProportionalFromNext
+
+#### Driga Dasha
+
+Signs grouped by type (4 each), traversed as three groups:
+
+```
+Group 1: All 4 Chara (movable) signs
+Group 2: All 4 Sthira (fixed) signs
+Group 3: All 4 Dvisvabhava (dual) signs
+```
+
+Within each group, signs are traversed forward (odd start) or reverse (even start).
+
+- **Fixed periods**: Same as Sthira (C=7/S=8/D=9), total 96 years
+- **Sub-period**: ProportionalFromParent
+
+#### Shoola Dasha
+
+- **Fixed periods**: C=7/S=8/D=9, total 96 years
+- **Starting rashi**: Stronger of 2nd house rashi or 8th house rashi
+- **Sub-period**: ProportionalFromParent
+
+#### Mandooka (Frog) Dasha
+
+Distinctive movement pattern — jumps ±3 signs instead of sequential traversal:
+
+```
+Sequence from Mesha(0), forward: 0, 3, 6, 9, 2, 5, 8, 11, 4, 7, 10, 1
+(each step adds or subtracts 3, wrapping around the zodiac)
+```
+
+- **Fixed periods**: C=7/S=8/D=9, total 96 years
+- **Starting rashi**: Stronger of lagna rashi or 7th house rashi
+- **Sub-period**: ProportionalFromParent
+
+#### Chakra Dasha
+
+Simplest rashi-based system:
+
+- **Fixed period**: 10 years per rashi, 120 years total
+- **Direction**: Always forward (regardless of sign parity)
+- **Starting sign**: Depends on birth period:
+  - Day birth: lagna rashi
+  - Night birth: 7th from lagna
+  - Twilight: 9th from lagna
+- **Sub-period**: EqualFromSame (12 equal sub-periods starting from same rashi)
+
+#### Kendradi Dasha (3 variants)
+
+Signs traversed in Kendra→Panapara→Apoklima groups:
+
+```
+Kendra:   offsets 0, 3, 6, 9 from starting rashi
+Panapara: offsets 1, 4, 7, 10
+Apoklima: offsets 2, 5, 8, 11
+```
+
+Three variants differ only in starting rashi determination:
+
+| Variant | Starting Rashi |
+|---------|---------------|
+| Kendradi | Stronger of lagna or 7th house |
+| Karaka Kendradi | Atmakaraka's rashi |
+| Karaka Kendradi Graha | Atmakaraka's rashi (graha-based sub-periods) |
+
+- **Periods**: Chara period years (variable, chart-dependent)
+- **Sub-period**: ProportionalFromParent
+
+### Special Computations
+
+#### Brahma Graha (for Sthira Dasha)
+
+The Brahma Graha is determined by:
+1. Consider Venus, Jupiter, Saturn only
+2. Filter to those in odd signs
+3. Filter to those in houses 1 through 7 (from lagna)
+4. Among remaining, select the one with the highest degree-in-sign
+5. Fallback: lord of the 6th house
+
+#### Atmakaraka (for Kendradi variants)
+
+The Atmakaraka is the graha with the highest degree within its sign (degree-in-sign),
+considering only the 7 sapta grahas (Sun through Saturn, excluding Rahu and Ketu).
+
+### Sub-Period Methods for Rashi Systems
+
+| Method | Description |
+|--------|-------------|
+| ProportionalFromParent | Duration ∝ period/total, sequence starts from parent rashi |
+| ProportionalFromNext | Duration ∝ period/total, sequence starts from next rashi |
+| EqualFromSame | Parent duration ÷ 12, sequence starts from parent rashi |
+| EqualFromNext | Parent duration ÷ 12, sequence starts from next rashi |
+
+For all methods, the 12-rashi sub-sequence direction follows the parent's sign parity
+(odd → forward, even → reverse).
+
 ## Data Provenance
 
 All dasha sequences, periods, and algorithms are derived from:
 - BPHS text (multiple translations/commentaries cross-referenced)
 - Published Vimshottari tables in standard Jyotish reference works
+- Jaimini Sutras for Chara dasha rashi-based period calculations
 - No copyleft or proprietary source code was referenced

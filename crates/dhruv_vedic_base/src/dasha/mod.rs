@@ -23,7 +23,19 @@ pub mod variation;
 pub mod yogini;
 pub mod yogini_data;
 
-pub use balance::nakshatra_birth_balance;
+// Rashi-based dasha modules (Phase 18c)
+pub mod rashi_dasha;
+pub mod rashi_strength;
+pub mod chakra;
+pub mod chara;
+pub mod driga;
+pub mod kendradi;
+pub mod mandooka;
+pub mod shoola;
+pub mod sthira;
+pub mod yogardha;
+
+pub use balance::{nakshatra_birth_balance, rashi_birth_balance};
 pub use nakshatra::{
     nakshatra_children, nakshatra_child_period, nakshatra_complete_level, nakshatra_hierarchy,
     nakshatra_level0, nakshatra_level0_entity, nakshatra_snapshot,
@@ -48,3 +60,18 @@ pub use yogini::{
     yogini_level0_entity, yogini_snapshot,
 };
 pub use yogini_data::{YoginiDashaConfig, yogini_config, yogini_graha, yogini_name};
+
+// Rashi-based dasha re-exports
+pub use rashi_strength::RashiDashaInputs;
+pub use chakra::{BirthPeriod, chakra_hierarchy, chakra_level0, chakra_snapshot};
+pub use chara::{chara_hierarchy, chara_level0, chara_period_years, chara_snapshot};
+pub use driga::{driga_hierarchy, driga_level0, driga_snapshot};
+pub use kendradi::{
+    karaka_kendradi_graha_hierarchy, karaka_kendradi_graha_snapshot,
+    karaka_kendradi_hierarchy, karaka_kendradi_snapshot,
+    kendradi_hierarchy, kendradi_level0, kendradi_snapshot,
+};
+pub use mandooka::{mandooka_hierarchy, mandooka_level0, mandooka_snapshot};
+pub use shoola::{shoola_hierarchy, shoola_level0, shoola_snapshot};
+pub use sthira::{sthira_hierarchy, sthira_level0, sthira_snapshot};
+pub use yogardha::{yogardha_hierarchy, yogardha_level0, yogardha_snapshot};

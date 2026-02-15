@@ -266,7 +266,7 @@ fn yogini_hierarchy_and_snapshot_valid() {
     assert_eq!(snap.periods.len(), 3);
 }
 
-/// Rashi-based systems are not yet implemented (Phase 18c).
+/// Special systems not yet implemented should return error.
 #[test]
 fn unimplemented_system_returns_error() {
     let Some(engine) = load_engine() else { return };
@@ -283,7 +283,7 @@ fn unimplemented_system_returns_error() {
         &eop,
         &utc,
         &location,
-        DashaSystem::Chara,
+        DashaSystem::Kala, // Kala is not yet implemented
         2,
         &bhava_config,
         &rs_config,
@@ -291,4 +291,108 @@ fn unimplemented_system_returns_error() {
         &variation,
     );
     assert!(result.is_err(), "unimplemented system should return error");
+}
+
+/// All 10 rashi-based systems should produce valid hierarchies.
+#[test]
+fn all_rashi_systems_hierarchy_valid() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = birth_utc();
+    let location = new_delhi();
+    let bhava_config = BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+    let variation = DashaVariationConfig::default();
+
+    let systems = [
+        DashaSystem::Chara,
+        DashaSystem::Sthira,
+        DashaSystem::Yogardha,
+        DashaSystem::Driga,
+        DashaSystem::Shoola,
+        DashaSystem::Mandooka,
+        DashaSystem::Chakra,
+        DashaSystem::Kendradi,
+        DashaSystem::KarakaKendradi,
+        DashaSystem::KarakaKendradiGraha,
+    ];
+
+    for system in systems {
+        let result = dasha_hierarchy_for_birth(
+            &engine,
+            &eop,
+            &utc,
+            &location,
+            system,
+            1,
+            &bhava_config,
+            &rs_config,
+            &aya_config,
+            &variation,
+        );
+        assert!(
+            result.is_ok(),
+            "{:?} hierarchy should succeed: {:?}",
+            system,
+            result.err()
+        );
+        let h = result.unwrap();
+        assert_eq!(h.system, system);
+        assert_eq!(h.levels.len(), 2); // level 0 + level 1
+        assert_eq!(h.levels[0].len(), 12, "{:?} should have 12 mahadasha periods", system);
+
+        // Adjacent periods contiguous
+        for i in 1..h.levels[0].len() {
+            let prev_end = h.levels[0][i - 1].end_jd;
+            let curr_start = h.levels[0][i].start_jd;
+            assert!(
+                (prev_end - curr_start).abs() < 1e-10,
+                "{:?}: gap between periods {} and {}",
+                system,
+                i - 1,
+                i
+            );
+        }
+    }
+}
+
+/// Rashi-based snapshot should find active periods.
+#[test]
+fn chara_snapshot_valid() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let birth = birth_utc();
+    let query = UtcTime::new(2000, 6, 1, 12, 0, 0.0);
+    let location = new_delhi();
+    let bhava_config = BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+    let variation = DashaVariationConfig::default();
+
+    let result = dasha_snapshot_at(
+        &engine,
+        &eop,
+        &birth,
+        &query,
+        &location,
+        DashaSystem::Chara,
+        2,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &variation,
+    );
+    assert!(result.is_ok(), "Chara snapshot: {:?}", result.err());
+    let snap = result.unwrap();
+    assert_eq!(snap.system, DashaSystem::Chara);
+    assert_eq!(snap.periods.len(), 3);
+
+    // Each level should contain the query JD
+    for (i, period) in snap.periods.iter().enumerate() {
+        assert!(
+            period.start_jd <= snap.query_jd && snap.query_jd < period.end_jd,
+            "Level {i}: period does not contain query_jd"
+        );
+    }
 }
