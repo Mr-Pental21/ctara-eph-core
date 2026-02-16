@@ -374,10 +374,97 @@ considering only the 7 sapta grahas (Sun through Saturn, excluding Rahu and Ketu
 For all methods, the 12-rashi sub-sequence direction follows the parent's sign parity
 (odd → forward, even → reverse).
 
+## Phase 18d: Kala (Graha-based) + Kaal Chakra (Special)
+
+### Sources
+
+- **BPHS**: Brihat Parashara Hora Shastra, Chapter 46 (Kala dasha), Chapters 46-53 (Kaal Chakra)
+- **B.V. Raman**: Hindu Predictive Astrology, Kaal Chakra dasha section
+- **Sanjay Rath**: Vedic Astrology — An Integrated Approach, Kaal Chakra dasha tables
+
+### Kala Dasha (Graha-based)
+
+The only graha-based dasha system. Uses birth time relative to sunrise/sunset to compute
+a "kala figure" that determines all period durations.
+
+**4 Kala Periods** (segments of the day/night cycle):
+
+| Period | Span | Multiplier |
+|--------|------|-----------|
+| Khanda | 5 ghatikas before sunrise | 4/15 |
+| Mugdha | Sunrise to sunset (daytime) | 2/15 |
+| Sudha | 5 ghatikas after sunset | 4/15 |
+| Poorna | Remaining nighttime | 2/15 |
+
+1 ghatika = 24 minutes = 1/60 day.
+
+**Algorithm**:
+1. Determine which Kala period birth falls in
+2. Count ghatikas elapsed within that period
+3. `kala_years = ghatikas_elapsed × multiplier`
+4. Each graha's period = `kala_years × serial_number × 365.25` days
+
+**Graha Sequence and Serial Numbers**:
+
+| Graha | Serial | Period (× kala_years) |
+|-------|--------|----------------------|
+| Surya | 1 | 1× |
+| Chandra | 2 | 2× |
+| Mangal | 3 | 3× |
+| Budha | 4 | 4× |
+| Guru | 5 | 5× |
+| Shukra | 6 | 6× |
+| Shani | 7 | 7× |
+| Rahu | 8 | 8× |
+| Ketu | 9 | 9× |
+
+Total cycle = `kala_years × 45`. Always starts with Surya. No birth balance.
+
+**Sub-periods**: ProportionalFromParent — each child's duration = (serial/45) × parent_duration.
+
+### Kaal Chakra Dasha (Special Rashi-based)
+
+Uses Moon's nakshatra pada to look up one of 24 Dasha Progressions (DPs).
+Each DP defines a fixed 9-rashi sequence with predetermined durations.
+
+**Fixed Rashi Durations** (years per rashi):
+
+| Rashi | Duration |
+|-------|----------|
+| Mesha | 7 |
+| Vrishabha | 16 |
+| Mithuna | 9 |
+| Karka | 21 |
+| Simha | 5 |
+| Kanya | 9 |
+| Tula | 16 |
+| Vrischika | 7 |
+| Dhanu | 10 |
+| Makara | 4 |
+| Kumbha | 4 |
+| Meena | 10 |
+
+**24 Dasha Progressions**: 12 "direct" DPs (Savya/clockwise) + 12 "indirect" DPs
+(Apsavya/counter-clockwise). Each DP covers 9 of the 12 rashis in a specific order
+with spans of 83, 85, 86, or 100 years.
+
+**Nakshatra-Pada Mapping**: Each of the 108 padas (27 nakshatras × 4 padas) maps to
+one of the 24 DPs via a fixed lookup table derived from BPHS.
+
+**Level-0 Generation**:
+1. Find birth Moon's nakshatra and pada
+2. Look up the corresponding DP
+3. Compute birth balance from Moon's fractional position within pada
+4. Generate periods: remaining rashis from current DP (with balance) + next pada's full DP
+
+**Sub-periods**: 12-rashi proportional distribution using fixed rashi durations.
+Total weight = sum of all 12 rashi durations. Each child's share = (rashi_years/total) × parent_duration.
+
 ## Data Provenance
 
 All dasha sequences, periods, and algorithms are derived from:
 - BPHS text (multiple translations/commentaries cross-referenced)
 - Published Vimshottari tables in standard Jyotish reference works
 - Jaimini Sutras for Chara dasha rashi-based period calculations
+- B.V. Raman's published Kaal Chakra dasha tables and progression mappings
 - No copyleft or proprietary source code was referenced

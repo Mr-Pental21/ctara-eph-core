@@ -35,6 +35,12 @@ pub mod shoola;
 pub mod sthira;
 pub mod yogardha;
 
+// Graha-based and special dasha modules (Phase 18d)
+pub mod kaal_chakra;
+pub mod kaal_chakra_data;
+pub mod kala;
+pub mod kala_data;
+
 pub use balance::{nakshatra_birth_balance, rashi_birth_balance};
 pub use nakshatra::{
     nakshatra_child_period, nakshatra_children, nakshatra_complete_level, nakshatra_hierarchy,
@@ -74,3 +80,20 @@ pub use rashi_strength::RashiDashaInputs;
 pub use shoola::{shoola_hierarchy, shoola_level0, shoola_snapshot};
 pub use sthira::{sthira_hierarchy, sthira_level0, sthira_snapshot};
 pub use yogardha::{yogardha_hierarchy, yogardha_level0, yogardha_snapshot};
+
+// Kala (graha-based) re-exports
+pub use kala::{
+    kala_child_period, kala_children, kala_complete_level, kala_hierarchy, kala_level0,
+    kala_level0_entity, kala_snapshot,
+};
+pub use kala_data::{KalaInfo, KalaPeriod, compute_kala_info, kala_entity_sequence};
+
+// Kaal Chakra (special) re-exports
+pub use kaal_chakra::{
+    kaal_chakra_children, kaal_chakra_complete_level, kaal_chakra_hierarchy, kaal_chakra_level0,
+    kaal_chakra_level0_entity, kaal_chakra_snapshot,
+};
+pub use kaal_chakra_data::{
+    ALL_DPS, DashaProgression, KCD_NAKSHATRA_PADA_MAP, KCD_RASHI_YEARS, kcd_birth_balance,
+    kcd_dp_index, kcd_progression,
+};

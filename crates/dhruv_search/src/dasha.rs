@@ -11,14 +11,15 @@ use dhruv_vedic_base::BhavaConfig;
 use dhruv_vedic_base::dasha::{
     BirthPeriod, DashaHierarchy, DashaSnapshot, DashaSystem, DashaVariationConfig,
     RashiDashaInputs, chakra_hierarchy, chakra_snapshot, chara_hierarchy, chara_snapshot,
-    driga_hierarchy, driga_snapshot, karaka_kendradi_graha_hierarchy,
-    karaka_kendradi_graha_snapshot, karaka_kendradi_hierarchy, karaka_kendradi_snapshot,
-    kendradi_hierarchy, kendradi_snapshot, mandooka_hierarchy, mandooka_snapshot,
-    nakshatra_config_for_system, nakshatra_hierarchy, nakshatra_snapshot, shoola_hierarchy,
-    shoola_snapshot, sthira_hierarchy, sthira_snapshot, yogardha_hierarchy, yogardha_snapshot,
-    yogini_config, yogini_hierarchy, yogini_snapshot,
+    driga_hierarchy, driga_snapshot, kaal_chakra_hierarchy, kaal_chakra_snapshot, kala_hierarchy,
+    kala_snapshot, karaka_kendradi_graha_hierarchy, karaka_kendradi_graha_snapshot,
+    karaka_kendradi_hierarchy, karaka_kendradi_snapshot, kendradi_hierarchy, kendradi_snapshot,
+    mandooka_hierarchy, mandooka_snapshot, nakshatra_config_for_system, nakshatra_hierarchy,
+    nakshatra_snapshot, shoola_hierarchy, shoola_snapshot, sthira_hierarchy, sthira_snapshot,
+    yogardha_hierarchy, yogardha_snapshot, yogini_config, yogini_hierarchy, yogini_snapshot,
 };
-use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
+use dhruv_vedic_base::riseset::compute_rise_set;
+use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig, RiseSetEvent, RiseSetResult};
 
 use crate::error::SearchError;
 use crate::jyotish::graha_sidereal_longitudes;
@@ -85,6 +86,62 @@ fn assemble_rashi_inputs(
     Ok(RashiDashaInputs::new(graha_lons.longitudes, lagna_sid))
 }
 
+/// Compute sunrise and sunset JD for Kala dasha.
+///
+/// Uses the birth date's local noon as search seed for both events.
+fn compute_birth_sunrise_sunset(
+    engine: &Engine,
+    eop: &EopKernel,
+    birth_utc: &UtcTime,
+    location: &GeoLocation,
+    riseset_config: &RiseSetConfig,
+) -> Result<(f64, f64), SearchError> {
+    let jd_utc = utc_to_jd_utc(birth_utc);
+    let jd_midnight = jd_utc.floor() + 0.5;
+    let jd_noon =
+        dhruv_vedic_base::approximate_local_noon_jd(jd_midnight, location.longitude_deg);
+
+    let sunrise_result = compute_rise_set(
+        engine,
+        engine.lsk(),
+        eop,
+        location,
+        RiseSetEvent::Sunrise,
+        jd_noon,
+        riseset_config,
+    )
+    .map_err(|_| SearchError::NoConvergence("sunrise computation failed"))?;
+    let sunrise_jd = match sunrise_result {
+        RiseSetResult::Event { jd_tdb, .. } => jd_tdb,
+        _ => {
+            return Err(SearchError::NoConvergence(
+                "sun never rises at this location",
+            ));
+        }
+    };
+
+    let sunset_result = compute_rise_set(
+        engine,
+        engine.lsk(),
+        eop,
+        location,
+        RiseSetEvent::Sunset,
+        jd_noon,
+        riseset_config,
+    )
+    .map_err(|_| SearchError::NoConvergence("sunset computation failed"))?;
+    let sunset_jd = match sunset_result {
+        RiseSetResult::Event { jd_tdb, .. } => jd_tdb,
+        _ => {
+            return Err(SearchError::NoConvergence(
+                "sun never sets at this location",
+            ));
+        }
+    };
+
+    Ok((sunrise_jd, sunset_jd))
+}
+
 /// Convert UtcTime to JD UTC (calendar only, no TDB).
 fn utc_to_jd_utc(utc: &UtcTime) -> f64 {
     let y = utc.year as f64;
@@ -109,6 +166,7 @@ fn dispatch_hierarchy(
     birth_jd: f64,
     moon_sid_lon: f64,
     rashi_inputs: Option<&RashiDashaInputs>,
+    sunrise_sunset: Option<(f64, f64)>,
     max_level: u8,
     variation: &DashaVariationConfig,
 ) -> Result<DashaHierarchy, SearchError> {
@@ -168,9 +226,18 @@ fn dispatch_hierarchy(
             karaka_kendradi_graha_hierarchy(birth_jd, ri, max_level, variation)
                 .map_err(SearchError::from)
         }
-        _ => Err(SearchError::InvalidConfig(
-            "dasha system not yet implemented",
-        )),
+        DashaSystem::Kala => {
+            let (sunrise, sunset) =
+                sunrise_sunset.ok_or(SearchError::InvalidConfig("sunrise/sunset required for Kala dasha"))?;
+            kala_hierarchy(birth_jd, sunrise, sunset, max_level, variation)
+                .map_err(SearchError::from)
+        }
+        DashaSystem::KaalChakra => {
+            kaal_chakra_hierarchy(birth_jd, moon_sid_lon, max_level, variation)
+                .map_err(SearchError::from)
+        }
+        // Nakshatra-based systems already handled above
+        _ => unreachable!("nakshatra systems handled before match"),
     }
 }
 
@@ -180,6 +247,7 @@ fn dispatch_snapshot(
     birth_jd: f64,
     moon_sid_lon: f64,
     rashi_inputs: Option<&RashiDashaInputs>,
+    sunrise_sunset: Option<(f64, f64)>,
     query_jd: f64,
     max_level: u8,
     variation: &DashaVariationConfig,
@@ -270,9 +338,20 @@ fn dispatch_snapshot(
                 birth_jd, ri, query_jd, max_level, variation,
             ))
         }
-        _ => Err(SearchError::InvalidConfig(
-            "dasha system not yet implemented",
-        )),
+        DashaSystem::Kala => {
+            let (sunrise, sunset) =
+                sunrise_sunset.ok_or(SearchError::InvalidConfig("sunrise/sunset required for Kala dasha"))?;
+            Ok(kala_snapshot(
+                birth_jd, sunrise, sunset, query_jd, max_level, variation,
+            ))
+        }
+        DashaSystem::KaalChakra => {
+            Ok(kaal_chakra_snapshot(
+                birth_jd, moon_sid_lon, query_jd, max_level, variation,
+            ))
+        }
+        // Nakshatra-based systems already handled above
+        _ => unreachable!("nakshatra systems handled before match"),
     }
 }
 
@@ -285,7 +364,7 @@ pub fn dasha_hierarchy_for_birth(
     system: DashaSystem,
     max_level: u8,
     _bhava_config: &BhavaConfig,
-    _riseset_config: &RiseSetConfig,
+    riseset_config: &RiseSetConfig,
     aya_config: &SankrantiConfig,
     variation: &DashaVariationConfig,
 ) -> Result<DashaHierarchy, SearchError> {
@@ -300,11 +379,24 @@ pub fn dasha_hierarchy_for_birth(
         None
     };
 
+    let sunrise_sunset = if system == DashaSystem::Kala {
+        Some(compute_birth_sunrise_sunset(
+            engine,
+            eop,
+            birth_utc,
+            location,
+            riseset_config,
+        )?)
+    } else {
+        None
+    };
+
     dispatch_hierarchy(
         system,
         birth_jd,
         moon_sid_lon,
         rashi_inputs.as_ref(),
+        sunrise_sunset,
         max_level,
         variation,
     )
@@ -322,7 +414,7 @@ pub fn dasha_snapshot_at(
     system: DashaSystem,
     max_level: u8,
     _bhava_config: &BhavaConfig,
-    _riseset_config: &RiseSetConfig,
+    riseset_config: &RiseSetConfig,
     aya_config: &SankrantiConfig,
     variation: &DashaVariationConfig,
 ) -> Result<DashaSnapshot, SearchError> {
@@ -338,11 +430,24 @@ pub fn dasha_snapshot_at(
         None
     };
 
+    let sunrise_sunset = if system == DashaSystem::Kala {
+        Some(compute_birth_sunrise_sunset(
+            engine,
+            eop,
+            birth_utc,
+            location,
+            riseset_config,
+        )?)
+    } else {
+        None
+    };
+
     dispatch_snapshot(
         system,
         birth_jd,
         moon_sid_lon,
         rashi_inputs.as_ref(),
+        sunrise_sunset,
         query_jd,
         max_level,
         variation,
@@ -353,10 +458,12 @@ pub fn dasha_snapshot_at(
 ///
 /// Takes a pre-computed Moon sidereal longitude to avoid redundant queries.
 /// For rashi-based systems, also accepts optional RashiDashaInputs.
+/// For Kala dasha, requires sunrise/sunset JDs.
 pub fn dasha_hierarchy_with_moon(
     birth_jd: f64,
     moon_sid_lon: f64,
     rashi_inputs: Option<&RashiDashaInputs>,
+    sunrise_sunset: Option<(f64, f64)>,
     system: DashaSystem,
     max_level: u8,
     variation: &DashaVariationConfig,
@@ -366,16 +473,20 @@ pub fn dasha_hierarchy_with_moon(
         birth_jd,
         moon_sid_lon,
         rashi_inputs,
+        sunrise_sunset,
         max_level,
         variation,
     )
 }
 
 /// Context-sharing snapshot variant.
+///
+/// For Kala dasha, requires sunrise/sunset JDs.
 pub fn dasha_snapshot_with_moon(
     birth_jd: f64,
     moon_sid_lon: f64,
     rashi_inputs: Option<&RashiDashaInputs>,
+    sunrise_sunset: Option<(f64, f64)>,
     query_jd: f64,
     system: DashaSystem,
     max_level: u8,
@@ -386,6 +497,7 @@ pub fn dasha_snapshot_with_moon(
         birth_jd,
         moon_sid_lon,
         rashi_inputs,
+        sunrise_sunset,
         query_jd,
         max_level,
         variation,

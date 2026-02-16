@@ -274,9 +274,9 @@ fn yogini_hierarchy_and_snapshot_valid() {
     assert_eq!(snap.periods.len(), 3);
 }
 
-/// Special systems not yet implemented should return error.
+/// Kala (graha-based) dasha should produce valid hierarchy.
 #[test]
-fn unimplemented_system_returns_error() {
+fn kala_hierarchy_valid() {
     let Some(engine) = load_engine() else { return };
     let Some(eop) = load_eop() else { return };
     let utc = birth_utc();
@@ -291,14 +291,50 @@ fn unimplemented_system_returns_error() {
         &eop,
         &utc,
         &location,
-        DashaSystem::Kala, // Kala is not yet implemented
-        2,
+        DashaSystem::Kala,
+        1,
         &bhava_config,
         &rs_config,
         &aya_config,
         &variation,
     );
-    assert!(result.is_err(), "unimplemented system should return error");
+    assert!(result.is_ok(), "Kala hierarchy: {:?}", result.err());
+    let h = result.unwrap();
+    assert_eq!(h.system, DashaSystem::Kala);
+    assert_eq!(h.levels.len(), 2);
+    assert_eq!(h.levels[0].len(), 9); // 9 graha periods
+}
+
+/// Kaal Chakra (special) dasha should produce valid hierarchy.
+#[test]
+fn kaal_chakra_hierarchy_valid() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = birth_utc();
+    let location = new_delhi();
+    let bhava_config = BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+    let variation = DashaVariationConfig::default();
+
+    let result = dasha_hierarchy_for_birth(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        DashaSystem::KaalChakra,
+        1,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &variation,
+    );
+    assert!(result.is_ok(), "KaalChakra hierarchy: {:?}", result.err());
+    let h = result.unwrap();
+    assert_eq!(h.system, DashaSystem::KaalChakra);
+    assert_eq!(h.levels.len(), 2);
+    // current DP (remaining rashis from start_pos) + next DP (9 rashis)
+    assert!(h.levels[0].len() >= 10 && h.levels[0].len() <= 18);
 }
 
 /// All 10 rashi-based systems should produce valid hierarchies.
