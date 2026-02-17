@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 32`
+**ABI version:** `DHRUV_API_VERSION = 33`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -1418,5 +1418,72 @@ Determine the hora lord for a given weekday and hora position. Returns the lord'
 | 70 | `dhruv_ghatika_from_elapsed` | | | | yes |
 | 71 | `dhruv_ghatikas_since_sunrise` | | | | yes |
 | 72 | `dhruv_hora_at` | | | | yes |
+| 73 | `dhruv_dasha_selection_config_default` | | | | yes |
+| 74 | `dhruv_dasha_hierarchy_utc` | yes | | | |
+| 75 | `dhruv_dasha_snapshot_utc` | yes | | | |
+| 76 | `dhruv_dasha_hierarchy_level_count` | | | | yes |
+| 77 | `dhruv_dasha_hierarchy_period_count` | | | | yes |
+| 78 | `dhruv_dasha_hierarchy_period_at` | | | | yes |
+| 79 | `dhruv_dasha_hierarchy_free` | | | | yes |
+| 80 | `dhruv_full_kundali_result_free` | | | | yes |
 
-**Total exported symbols: 60 functions**
+**Total exported symbols: 68 functions**
+
+---
+
+## Dasha Types
+
+### `DhruvDashaSelectionConfig`
+
+```c
+struct DhruvDashaSelectionConfig {
+    uint8_t count;           // number of valid entries in systems (0..8)
+    uint8_t systems[8];      // DashaSystem codes (0xFF = unused)
+    uint8_t max_level;       // hierarchy depth (0-4, default 2)
+    uint8_t level_methods[5]; // per-level sub-period method (0xFF = default)
+    uint8_t yogini_scheme;   // 0 = default
+    uint8_t use_abhijit;     // 1 = yes, 0 = no
+    uint8_t has_snapshot_jd; // 0 = no snapshot, 1 = snapshot_jd is valid
+    double  snapshot_jd;     // JD UTC, only read when has_snapshot_jd == 1
+};
+```
+
+### `DhruvDashaPeriod`
+
+```c
+struct DhruvDashaPeriod {
+    uint8_t  entity_type;  // 0=Graha, 1=Rashi, 2=Yogini
+    uint8_t  entity_index; // Graha (0-8), Rashi (0-11), Yogini (0-7)
+    double   start_jd;     // JD UTC, inclusive
+    double   end_jd;       // JD UTC, exclusive
+    uint8_t  level;        // 0-4
+    uint16_t order;        // 1-indexed position among siblings
+    uint32_t parent_idx;   // index into parent level (0 for level 0)
+};
+```
+
+### `DhruvDashaSnapshot`
+
+```c
+struct DhruvDashaSnapshot {
+    uint8_t           system;     // DashaSystem code
+    double            query_jd;   // echoed query JD UTC
+    uint8_t           count;      // number of valid periods (0-5)
+    DhruvDashaPeriod  periods[5]; // one per level
+};
+```
+
+## JD Timescale Notes (Dasha)
+
+All JD values in dasha APIs use **JD UTC** (not TDB):
+- `DhruvDashaSelectionConfig.snapshot_jd` — query time (only when `has_snapshot_jd == 1`)
+- `DhruvDashaPeriod.start_jd`, `.end_jd` — period boundaries
+- `DhruvDashaSnapshot.query_jd` — echoed query time
+
+## Ownership & Lifetime Table (Dasha)
+
+| Handle/Resource | Allocated by | Freed by | Notes |
+|-----------------|-------------|----------|-------|
+| `DhruvDashaHierarchyHandle` (standalone) | `dhruv_dasha_hierarchy_utc` | `dhruv_dasha_hierarchy_free` | Caller owns. Must free exactly once. |
+| `DhruvDashaHierarchyHandle` (in kundali) | `dhruv_full_kundali_for_date` | `dhruv_full_kundali_result_free` | Result owns. Do NOT call `dhruv_dasha_hierarchy_free` on these. |
+| `DhruvFullKundaliResult` | Caller stack/heap | `dhruv_full_kundali_result_free` | **Move-only:** do NOT memcpy the struct and free both copies — copied handles become dangling after the first free. Exactly one `result_free` call per `dhruv_full_kundali_for_date` invocation. |

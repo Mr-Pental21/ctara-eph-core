@@ -157,3 +157,54 @@ fn error_before_init_in_fresh_process() {
     let e = DhruvError::NotInitialized;
     assert!(e.to_string().contains("not initialized"));
 }
+
+fn eop_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../kernels/data/finals2000A.all")
+}
+
+fn all_kernels_available() -> bool {
+    kernels_available() && eop_path().exists()
+}
+
+fn load_eop() -> EopKernel {
+    EopKernel::parse(&std::fs::read_to_string(eop_path()).unwrap()).unwrap()
+}
+
+#[test]
+fn full_kundali_with_dasha() {
+    if !ensure_init() || !all_kernels_available() {
+        return;
+    }
+    let eop = load_eop();
+    let date = UtcDate::new(1990, 1, 15, 6, 30, 0.0);
+    let location = dhruv_vedic_base::GeoLocation::new(28.6139, 77.2090, 0.0);
+
+    let mut dasha_config = dhruv_search::DashaSelectionConfig::default();
+    dasha_config.count = 1;
+    dasha_config.systems[0] = dhruv_vedic_base::dasha::DashaSystem::Vimshottari as u8;
+
+    let config = dhruv_search::FullKundaliConfig {
+        include_dasha: true,
+        dasha_config,
+        ..dhruv_search::FullKundaliConfig::default()
+    };
+
+    let result = full_kundali(
+        date,
+        &eop,
+        &location,
+        AyanamshaSystem::Lahiri,
+        true,
+        &config,
+    )
+    .unwrap();
+
+    assert!(result.dasha.is_some(), "dasha should be present");
+    let dasha = result.dasha.unwrap();
+    assert_eq!(dasha.len(), 1);
+    assert_eq!(
+        dasha[0].system,
+        dhruv_vedic_base::dasha::DashaSystem::Vimshottari
+    );
+    assert!(!dasha[0].levels.is_empty());
+}

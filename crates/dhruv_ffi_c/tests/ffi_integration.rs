@@ -1918,3 +1918,414 @@ fn ffi_utc_nutation_roundtrip() {
 
     unsafe { dhruv_lsk_free(lsk_ptr) };
 }
+
+// ---------------------------------------------------------------------------
+// Dasha / FullKundali integration tests
+// ---------------------------------------------------------------------------
+
+#[test]
+fn ffi_dasha_selection_config_default_values() {
+    let cfg = dhruv_dasha_selection_config_default();
+    assert_eq!(cfg.count, 0);
+    assert_eq!(cfg.systems, [0xFF; 8]);
+    assert_eq!(cfg.max_level, 2);
+    assert_eq!(cfg.level_methods, [0xFF; 5]);
+    assert_eq!(cfg.yogini_scheme, 0);
+    assert_eq!(cfg.use_abhijit, 1);
+    assert_eq!(cfg.has_snapshot_jd, 0);
+}
+
+#[test]
+fn ffi_full_kundali_result_free_null_is_noop() {
+    // Must not crash.
+    unsafe { dhruv_full_kundali_result_free(ptr::null_mut()) };
+}
+
+/// Helper: set up engine + EOP for FullKundali tests.
+fn make_kundali_fixtures() -> Option<(*mut DhruvEngineHandle, *mut DhruvEopHandle)> {
+    if !all_kernels_available() {
+        return None;
+    }
+    let engine_ptr = make_engine()?;
+    let eop_cstr = eop_path_cstr()?;
+    let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
+    let status = unsafe { dhruv_eop_load(eop_cstr.as_ptr() as *const u8, &mut eop_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+    Some((engine_ptr, eop_ptr))
+}
+
+fn kundali_test_params() -> (
+    DhruvUtcTime,
+    DhruvGeoLocation,
+    DhruvBhavaConfig,
+    DhruvRiseSetConfig,
+) {
+    let utc = DhruvUtcTime {
+        year: 1990,
+        month: 1,
+        day: 15,
+        hour: 6,
+        minute: 30,
+        second: 0.0,
+    };
+    let loc = DhruvGeoLocation {
+        latitude_deg: 28.6139,
+        longitude_deg: 77.2090,
+        altitude_m: 0.0,
+    };
+    let bhava = dhruv_bhava_config_default();
+    let rs = dhruv_riseset_config_default();
+    (utc, loc, bhava, rs)
+}
+
+#[test]
+fn ffi_full_kundali_result_free_double_free_same_pointer() {
+    let (engine_ptr, eop_ptr) = match make_kundali_fixtures() {
+        Some(f) => f,
+        None => return,
+    };
+    let (utc, loc, bhava, rs) = kundali_test_params();
+
+    // Config with Vimshottari dasha.
+    let mut dasha_cfg = dhruv_dasha_selection_config_default();
+    dasha_cfg.count = 1;
+    dasha_cfg.systems[0] = 0; // Vimshottari
+
+    let fk_config = DhruvFullKundaliConfig {
+        include_graha_positions: 0,
+        include_bindus: 0,
+        include_drishti: 0,
+        include_ashtakavarga: 0,
+        include_upagrahas: 0,
+        include_special_lagnas: 0,
+        include_amshas: 0,
+        include_shadbala: 0,
+        include_vimsopaka: 0,
+        include_avastha: 0,
+        node_dignity_policy: 0,
+        graha_positions_config: DhruvGrahaPositionsConfig {
+            include_nakshatra: 0,
+            include_lagna: 0,
+            include_outer_planets: 0,
+            include_bhava: 0,
+        },
+        bindus_config: DhruvBindusConfig {
+            include_nakshatra: 0,
+            include_bhava: 0,
+        },
+        drishti_config: DhruvDrishtiConfig {
+            include_bhava: 0,
+            include_lagna: 0,
+            include_bindus: 0,
+        },
+        amsha_scope: DhruvAmshaChartScope {
+            include_bhava_cusps: 0,
+            include_arudha_padas: 0,
+            include_upagrahas: 0,
+            include_sphutas: 0,
+            include_special_lagnas: 0,
+        },
+        amsha_selection: DhruvAmshaSelectionConfig {
+            count: 0,
+            codes: [0; 40],
+            variations: [0; 40],
+        },
+        include_dasha: 1,
+        dasha_config: dasha_cfg,
+    };
+
+    let mut result = std::mem::MaybeUninit::<DhruvFullKundaliResult>::uninit();
+    let status = unsafe {
+        dhruv_full_kundali_for_date(
+            engine_ptr as *const _,
+            eop_ptr as *const _,
+            &utc,
+            &loc,
+            &bhava,
+            &rs,
+            0,
+            1,
+            &fk_config,
+            result.as_mut_ptr(),
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    let result_ptr = result.as_mut_ptr();
+
+    // Verify dasha was produced.
+    let r = unsafe { &*result_ptr };
+    assert_eq!(r.dasha_count, 1);
+    assert_eq!(r.dasha_systems[0], 0); // Vimshottari
+    assert!(!r.dasha_handles[0].is_null());
+
+    // First free.
+    unsafe { dhruv_full_kundali_result_free(result_ptr) };
+    let r = unsafe { &*result_ptr };
+    assert_eq!(r.dasha_count, 0);
+    assert!(r.dasha_handles[0].is_null());
+
+    // Second free — must not crash (handles already nulled).
+    unsafe { dhruv_full_kundali_result_free(result_ptr) };
+
+    unsafe { dhruv_engine_free(engine_ptr) };
+    unsafe { dhruv_eop_free(eop_ptr) };
+}
+
+#[test]
+fn ffi_full_kundali_error_path_free_safety() {
+    // Real objects for all pointers, but invalid ayanamsha code to trigger error.
+    let (engine_ptr, eop_ptr) = match make_kundali_fixtures() {
+        Some(f) => f,
+        None => return,
+    };
+    let (utc, loc, bhava, rs) = kundali_test_params();
+
+    let fk_config = DhruvFullKundaliConfig {
+        include_graha_positions: 1,
+        include_bindus: 0,
+        include_drishti: 0,
+        include_ashtakavarga: 0,
+        include_upagrahas: 0,
+        include_special_lagnas: 0,
+        include_amshas: 0,
+        include_shadbala: 0,
+        include_vimsopaka: 0,
+        include_avastha: 0,
+        node_dignity_policy: 0,
+        graha_positions_config: DhruvGrahaPositionsConfig {
+            include_nakshatra: 0,
+            include_lagna: 0,
+            include_outer_planets: 0,
+            include_bhava: 0,
+        },
+        bindus_config: DhruvBindusConfig {
+            include_nakshatra: 0,
+            include_bhava: 0,
+        },
+        drishti_config: DhruvDrishtiConfig {
+            include_bhava: 0,
+            include_lagna: 0,
+            include_bindus: 0,
+        },
+        amsha_scope: DhruvAmshaChartScope {
+            include_bhava_cusps: 0,
+            include_arudha_padas: 0,
+            include_upagrahas: 0,
+            include_sphutas: 0,
+            include_special_lagnas: 0,
+        },
+        amsha_selection: DhruvAmshaSelectionConfig {
+            count: 0,
+            codes: [0; 40],
+            variations: [0; 40],
+        },
+        include_dasha: 1,
+        dasha_config: dhruv_dasha_selection_config_default(),
+    };
+
+    let mut result = std::mem::MaybeUninit::<DhruvFullKundaliResult>::uninit();
+    // Invalid ayanamsha_system=999 triggers InvalidQuery error.
+    let status = unsafe {
+        dhruv_full_kundali_for_date(
+            engine_ptr as *const _,
+            eop_ptr as *const _,
+            &utc,
+            &loc,
+            &bhava,
+            &rs,
+            999, // invalid
+            1,
+            &fk_config,
+            result.as_mut_ptr(),
+        )
+    };
+    assert_ne!(status, DhruvStatus::Ok);
+
+    // result_free is safe because write_bytes zeroed at entry before the error return.
+    unsafe { dhruv_full_kundali_result_free(result.as_mut_ptr()) };
+
+    unsafe { dhruv_engine_free(engine_ptr) };
+    unsafe { dhruv_eop_free(eop_ptr) };
+}
+
+#[test]
+fn ffi_full_kundali_dasha_overflow_rejection() {
+    let (engine_ptr, eop_ptr) = match make_kundali_fixtures() {
+        Some(f) => f,
+        None => return,
+    };
+    let (utc, loc, bhava, rs) = kundali_test_params();
+
+    let mut dasha_cfg = dhruv_dasha_selection_config_default();
+    dasha_cfg.count = 9; // exceeds MAX_DASHA_SYSTEMS
+
+    let fk_config = DhruvFullKundaliConfig {
+        include_graha_positions: 0,
+        include_bindus: 0,
+        include_drishti: 0,
+        include_ashtakavarga: 0,
+        include_upagrahas: 0,
+        include_special_lagnas: 0,
+        include_amshas: 0,
+        include_shadbala: 0,
+        include_vimsopaka: 0,
+        include_avastha: 0,
+        node_dignity_policy: 0,
+        graha_positions_config: DhruvGrahaPositionsConfig {
+            include_nakshatra: 0,
+            include_lagna: 0,
+            include_outer_planets: 0,
+            include_bhava: 0,
+        },
+        bindus_config: DhruvBindusConfig {
+            include_nakshatra: 0,
+            include_bhava: 0,
+        },
+        drishti_config: DhruvDrishtiConfig {
+            include_bhava: 0,
+            include_lagna: 0,
+            include_bindus: 0,
+        },
+        amsha_scope: DhruvAmshaChartScope {
+            include_bhava_cusps: 0,
+            include_arudha_padas: 0,
+            include_upagrahas: 0,
+            include_sphutas: 0,
+            include_special_lagnas: 0,
+        },
+        amsha_selection: DhruvAmshaSelectionConfig {
+            count: 0,
+            codes: [0; 40],
+            variations: [0; 40],
+        },
+        include_dasha: 1,
+        dasha_config: dasha_cfg,
+    };
+
+    let mut result = std::mem::MaybeUninit::<DhruvFullKundaliResult>::uninit();
+    let status = unsafe {
+        dhruv_full_kundali_for_date(
+            engine_ptr as *const _,
+            eop_ptr as *const _,
+            &utc,
+            &loc,
+            &bhava,
+            &rs,
+            0,
+            1,
+            &fk_config,
+            result.as_mut_ptr(),
+        )
+    };
+    // Should fail validation (count > MAX_DASHA_SYSTEMS).
+    assert_ne!(status, DhruvStatus::Ok);
+
+    unsafe { dhruv_full_kundali_result_free(result.as_mut_ptr()) };
+    unsafe { dhruv_engine_free(engine_ptr) };
+    unsafe { dhruv_eop_free(eop_ptr) };
+}
+
+#[test]
+fn ffi_full_kundali_dasha_partial_success_contract() {
+    // Compute with 2 systems + snapshot. Verify snapshot system codes match hierarchy system codes.
+    let (engine_ptr, eop_ptr) = match make_kundali_fixtures() {
+        Some(f) => f,
+        None => return,
+    };
+    let (utc, loc, bhava, rs) = kundali_test_params();
+
+    let mut dasha_cfg = dhruv_dasha_selection_config_default();
+    dasha_cfg.count = 2;
+    dasha_cfg.systems[0] = 0; // Vimshottari
+    dasha_cfg.systems[1] = 11; // Chara
+    dasha_cfg.has_snapshot_jd = 1;
+    // Snapshot at 2020-01-01 12:00 UTC = JD 2458849.0
+    dasha_cfg.snapshot_jd = 2_458_849.0;
+
+    let fk_config = DhruvFullKundaliConfig {
+        include_graha_positions: 0,
+        include_bindus: 0,
+        include_drishti: 0,
+        include_ashtakavarga: 0,
+        include_upagrahas: 0,
+        include_special_lagnas: 0,
+        include_amshas: 0,
+        include_shadbala: 0,
+        include_vimsopaka: 0,
+        include_avastha: 0,
+        node_dignity_policy: 0,
+        graha_positions_config: DhruvGrahaPositionsConfig {
+            include_nakshatra: 0,
+            include_lagna: 0,
+            include_outer_planets: 0,
+            include_bhava: 0,
+        },
+        bindus_config: DhruvBindusConfig {
+            include_nakshatra: 0,
+            include_bhava: 0,
+        },
+        drishti_config: DhruvDrishtiConfig {
+            include_bhava: 0,
+            include_lagna: 0,
+            include_bindus: 0,
+        },
+        amsha_scope: DhruvAmshaChartScope {
+            include_bhava_cusps: 0,
+            include_arudha_padas: 0,
+            include_upagrahas: 0,
+            include_sphutas: 0,
+            include_special_lagnas: 0,
+        },
+        amsha_selection: DhruvAmshaSelectionConfig {
+            count: 0,
+            codes: [0; 40],
+            variations: [0; 40],
+        },
+        include_dasha: 1,
+        dasha_config: dasha_cfg,
+    };
+
+    let mut result = std::mem::MaybeUninit::<DhruvFullKundaliResult>::uninit();
+    let status = unsafe {
+        dhruv_full_kundali_for_date(
+            engine_ptr as *const _,
+            eop_ptr as *const _,
+            &utc,
+            &loc,
+            &bhava,
+            &rs,
+            0,
+            1,
+            &fk_config,
+            result.as_mut_ptr(),
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let r = unsafe { &*result.as_ptr() };
+
+    // Verify hierarchies were produced.
+    assert!(r.dasha_count >= 1, "dasha_count={}", r.dasha_count);
+    assert!(
+        r.dasha_snapshot_count <= r.dasha_count,
+        "snap={} > hier={}",
+        r.dasha_snapshot_count,
+        r.dasha_count
+    );
+
+    // Verify each snapshot's system code matches one of the hierarchy system codes.
+    let hier_systems: Vec<u8> = r.dasha_systems[..r.dasha_count as usize].to_vec();
+    for i in 0..r.dasha_snapshot_count as usize {
+        let snap_sys = r.dasha_snapshots[i].system;
+        assert!(
+            hier_systems.contains(&snap_sys),
+            "snapshot system {} not in hierarchy systems {:?}",
+            snap_sys,
+            hier_systems
+        );
+    }
+
+    unsafe { dhruv_full_kundali_result_free(result.as_mut_ptr()) };
+    unsafe { dhruv_engine_free(engine_ptr) };
+    unsafe { dhruv_eop_free(eop_ptr) };
+}

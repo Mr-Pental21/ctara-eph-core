@@ -632,6 +632,15 @@ enum Commands {
         /// Path to IERS EOP file (finals2000A.all)
         #[arg(long)]
         eop: PathBuf,
+        /// Comma-separated dasha systems (e.g. "vimshottari,chara")
+        #[arg(long)]
+        dasha_systems: Option<String>,
+        /// Max dasha hierarchy depth (0-4, default 2)
+        #[arg(long, default_value = "2")]
+        dasha_max_level: u8,
+        /// UTC datetime for dasha snapshot query
+        #[arg(long)]
+        dasha_snapshot_date: Option<String>,
     },
     /// Find previous Purnima (full moon)
     PrevPurnima {
@@ -3111,7 +3120,14 @@ fn main() {
             bsp,
             lsk,
             eop,
+            dasha_systems,
+            dasha_max_level,
+            dasha_snapshot_date,
         } => {
+            if dasha_snapshot_date.is_some() && dasha_systems.is_none() {
+                eprintln!("Error: --dasha-snapshot-date requires --dasha-systems");
+                std::process::exit(1);
+            }
             let system = require_aya_system(ayanamsha);
             let utc = parse_utc(&date).unwrap_or_else(|e| {
                 eprintln!("{e}");
@@ -3123,6 +3139,23 @@ fn main() {
             let bhava_config = BhavaConfig::default();
             let rs_config = RiseSetConfig::default();
             let aya_config = SankrantiConfig::new(system, nutation);
+
+            let (include_dasha, dasha_config) = if let Some(ref sys_str) = dasha_systems {
+                let dasha_cfg = parse_dasha_systems_config(sys_str, dasha_max_level);
+                let snapshot_jd = dasha_snapshot_date.as_ref().map(|d| {
+                    let snap_utc = parse_utc(d).unwrap_or_else(|e| {
+                        eprintln!("{e}");
+                        std::process::exit(1);
+                    });
+                    utc_to_jd_utc(&snap_utc)
+                });
+                let mut cfg = dasha_cfg;
+                cfg.snapshot_jd = snapshot_jd;
+                (true, cfg)
+            } else {
+                (false, dhruv_search::DashaSelectionConfig::default())
+            };
+
             let full_config = dhruv_search::FullKundaliConfig {
                 graha_positions_config: dhruv_search::GrahaPositionsConfig {
                     include_nakshatra: true,
@@ -3139,6 +3172,8 @@ fn main() {
                     include_lagna: true,
                     include_bindus: true,
                 },
+                include_dasha,
+                dasha_config,
                 ..dhruv_search::FullKundaliConfig::default()
             };
 
@@ -3321,6 +3356,58 @@ fn main() {
                     let r = dhruv_vedic_base::rashi_from_longitude(lon);
                     println!("  {:<13} {:>8.4}° ({})", name, lon, r.rashi.name());
                 }
+                println!();
+            }
+
+            if let Some(ref dasha_vec) = result.dasha {
+                println!("Dasha Hierarchies ({} system(s)):", dasha_vec.len());
+                for hierarchy in dasha_vec {
+                    println!(
+                        "\n  {} ({} levels):",
+                        hierarchy.system.name(),
+                        hierarchy.levels.len()
+                    );
+                    for (lvl_idx, level) in hierarchy.levels.iter().enumerate() {
+                        let level_name =
+                            dhruv_vedic_base::dasha::DashaLevel::from_u8(lvl_idx as u8)
+                                .map(|l| l.name())
+                                .unwrap_or("Unknown");
+                        let display_count = level.len().min(20);
+                        for period in &level[..display_count] {
+                            let indent = "    ".to_string() + &"  ".repeat(lvl_idx);
+                            println!(
+                                "{}[{}] {} ({:.1} days)",
+                                indent,
+                                level_name,
+                                format_dasha_entity(&period.entity),
+                                period.duration_days(),
+                            );
+                        }
+                        if level.len() > display_count {
+                            let indent = "    ".to_string() + &"  ".repeat(lvl_idx);
+                            println!("{}... and {} more", indent, level.len() - display_count);
+                        }
+                    }
+                }
+                println!();
+            }
+
+            if let Some(ref snap_vec) = result.dasha_snapshots {
+                println!("Dasha Snapshots:");
+                for snap in snap_vec {
+                    println!("  {} at JD {:.4}:", snap.system.name(), snap.query_jd);
+                    for period in &snap.periods {
+                        let indent = "    ".to_string() + &"  ".repeat(period.level as usize);
+                        println!(
+                            "{}{}: {} ({:.1} days)",
+                            indent,
+                            period.level.name(),
+                            format_dasha_entity(&period.entity),
+                            period.duration_days(),
+                        );
+                    }
+                }
+                println!();
             }
         }
 
@@ -5255,6 +5342,40 @@ fn main() {
                 }
             }
         }
+    }
+}
+
+fn parse_dasha_systems_config(s: &str, max_level: u8) -> dhruv_search::DashaSelectionConfig {
+    let mut seen = std::collections::HashSet::new();
+    let mut systems = [0xFFu8; 8];
+    let mut count = 0usize;
+
+    for token in s.split(',') {
+        let trimmed = token.trim();
+        if trimmed.is_empty() {
+            eprintln!("Error: empty dasha system name in --dasha-systems");
+            std::process::exit(1);
+        }
+        let ds = parse_dasha_system(trimmed);
+        let code = ds as u8;
+        if !seen.insert(code) {
+            eprintln!("Warning: ignoring duplicate system: {trimmed}");
+            continue;
+        }
+        if count >= 8 {
+            eprintln!("Error: too many dasha systems (max 8)");
+            std::process::exit(1);
+        }
+        systems[count] = code;
+        count += 1;
+    }
+
+    dhruv_search::DashaSelectionConfig {
+        count: count as u8,
+        systems,
+        max_level,
+        snapshot_jd: None,
+        ..dhruv_search::DashaSelectionConfig::default()
     }
 }
 

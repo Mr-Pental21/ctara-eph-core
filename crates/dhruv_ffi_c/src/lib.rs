@@ -35,7 +35,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 32;
+pub const DHRUV_API_VERSION: u32 = 33;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -8700,14 +8700,27 @@ pub struct DhruvFullKundaliConfig {
     pub amsha_scope: DhruvAmshaChartScope,
     /// Which amshas to compute.
     pub amsha_selection: DhruvAmshaSelectionConfig,
+    /// Include dasha (planetary period) section.
+    pub include_dasha: u8,
+    /// Dasha configuration.
+    pub dasha_config: DhruvDashaSelectionConfig,
 }
 
 /// Maximum number of amsha charts in a single FFI batch.
 pub const DHRUV_MAX_AMSHA_REQUESTS: usize = 40;
 
 /// C-compatible full kundali result.
+///
+/// **Ownership:** This struct owns its `dasha_handles`. After use, call
+/// `dhruv_full_kundali_result_free` to release inner resources. Do NOT
+/// `memcpy` the struct and free both copies — copied handles become dangling
+/// after the first free. Treat as move-only: exactly one `result_free` call
+/// per `dhruv_full_kundali_for_date` invocation.
+///
+/// `dasha_snapshot_count` may be less than `dasha_count` (partial success).
+/// Match snapshots to hierarchies by `dasha_snapshots[i].system`, not index.
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DhruvFullKundaliResult {
     pub graha_positions_valid: u8,
     pub graha_positions: DhruvGrahaPositions,
@@ -8732,6 +8745,48 @@ pub struct DhruvFullKundaliResult {
     pub vimsopaka: DhruvVimsopakaResult,
     pub avastha_valid: u8,
     pub avastha: DhruvAllGrahaAvasthas,
+    /// Number of valid dasha hierarchies (0..=8).
+    pub dasha_count: u8,
+    /// Opaque hierarchy handles. Read via `dhruv_dasha_hierarchy_*` accessors.
+    /// Freed by `dhruv_full_kundali_result_free`. Do NOT call
+    /// `dhruv_dasha_hierarchy_free` on these.
+    pub dasha_handles: [DhruvDashaHierarchyHandle; 8],
+    /// System codes for each hierarchy (DashaSystem repr(u8)).
+    pub dasha_systems: [u8; 8],
+    /// Number of valid dasha snapshots (may be < dasha_count).
+    pub dasha_snapshot_count: u8,
+    /// Inline snapshots matched by `.system` field, not by index.
+    pub dasha_snapshots: [DhruvDashaSnapshot; 8],
+}
+
+/// Free resources owned by a `DhruvFullKundaliResult`.
+/// Passing NULL is a no-op. Sets freed handles to NULL and zeroes all dasha
+/// bookkeeping fields for deterministic post-free state.
+///
+/// **Ownership:** Exactly one `result_free` call per
+/// `dhruv_full_kundali_for_date` invocation. Do NOT memcpy the result struct
+/// and free both copies.
+///
+/// # Safety
+/// `result` must point to a struct previously initialized by
+/// `dhruv_full_kundali_for_date`, or be NULL.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_full_kundali_result_free(result: *mut DhruvFullKundaliResult) {
+    if result.is_null() {
+        return;
+    }
+    let r = unsafe { &mut *result };
+    // Iterate all 8 slots — don't trust dasha_count which may be corrupt.
+    for handle in &mut r.dasha_handles {
+        if !handle.is_null() {
+            let _ =
+                unsafe { Box::from_raw(*handle as *mut dhruv_vedic_base::dasha::DashaHierarchy) };
+            *handle = ptr::null_mut();
+        }
+    }
+    r.dasha_count = 0;
+    r.dasha_snapshot_count = 0;
+    r.dasha_systems = [0; 8];
 }
 
 /// Compute a full kundali in one call, reusing shared intermediates.
@@ -8762,6 +8817,9 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
     {
         return DhruvStatus::NullPointer;
     }
+
+    // Zero-init immediately after null checks so result_free is safe on all paths.
+    unsafe { std::ptr::write_bytes(out, 0, 1) };
 
     let engine = unsafe { &*engine };
     let eop = unsafe { &*eop };
@@ -8846,8 +8904,8 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
             include_special_lagnas: cfg_c.amsha_scope.include_special_lagnas != 0,
         },
         amsha_selection: amsha_sel,
-        include_dasha: false,
-        dasha_config: dhruv_search::DashaSelectionConfig::default(),
+        include_dasha: cfg_c.include_dasha != 0,
+        dasha_config: dasha_selection_from_ffi(&cfg_c.dasha_config),
     };
 
     match full_kundali_for_date(
@@ -8861,9 +8919,8 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
         &rust_config,
     ) {
         Ok(result) => {
+            // out was zero-init'd at entry; safe to populate fields now.
             let out = unsafe { &mut *out };
-            // SAFETY: POD fields only; zero-init valid as "absent" default.
-            unsafe { std::ptr::write_bytes(out as *mut DhruvFullKundaliResult, 0, 1) };
 
             if let Some(g) = result.graha_positions {
                 out.graha_positions_valid = 1;
@@ -9032,6 +9089,34 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
                             ],
                         },
                     };
+                }
+            }
+
+            if let Some(ref dasha_vec) = result.dasha {
+                if dasha_vec.len() > 8 {
+                    return DhruvStatus::InvalidSearchConfig;
+                }
+                out.dasha_count = dasha_vec.len() as u8;
+                for (i, h) in dasha_vec.iter().enumerate() {
+                    let boxed = Box::new(h.clone());
+                    out.dasha_handles[i] = Box::into_raw(boxed) as DhruvDashaHierarchyHandle;
+                    out.dasha_systems[i] = h.system as u8;
+                }
+
+                if let Some(ref snap_vec) = result.dasha_snapshots {
+                    if snap_vec.len() > 8 {
+                        return DhruvStatus::InvalidSearchConfig;
+                    }
+                    out.dasha_snapshot_count = snap_vec.len() as u8;
+                    for (i, s) in snap_vec.iter().enumerate() {
+                        out.dasha_snapshots[i].system = s.system as u8;
+                        out.dasha_snapshots[i].query_jd = s.query_jd;
+                        let count = s.periods.len().min(5);
+                        out.dasha_snapshots[i].count = count as u8;
+                        for j in 0..count {
+                            out.dasha_snapshots[i].periods[j] = dasha_period_to_ffi(&s.periods[j]);
+                        }
+                    }
                 }
             }
 
@@ -9791,6 +9876,63 @@ pub unsafe extern "C" fn dhruv_dasha_hierarchy_free(handle: DhruvDashaHierarchyH
     }
 }
 
+/// C-compatible dasha selection config for FullKundali integration.
+///
+/// Mirrors `DashaSelectionConfig` from `dhruv_search`.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvDashaSelectionConfig {
+    /// Number of valid entries in `systems` (0..=8).
+    pub count: u8,
+    /// Dasha system codes (DashaSystem repr(u8), 0xFF=unused).
+    pub systems: [u8; 8],
+    /// Max level depth (0-4, default 2).
+    pub max_level: u8,
+    /// Per-level sub-period method overrides (0xFF=system default).
+    pub level_methods: [u8; 5],
+    /// Yogini scheme code (0=default).
+    pub yogini_scheme: u8,
+    /// Use Abhijit for Ashtottari (1=yes, 0=no).
+    pub use_abhijit: u8,
+    /// 0 = no snapshot, 1 = snapshot_jd is valid.
+    pub has_snapshot_jd: u8,
+    /// Query JD UTC for snapshot. Only read when `has_snapshot_jd == 1`.
+    pub snapshot_jd: f64,
+}
+
+fn dasha_selection_from_ffi(c: &DhruvDashaSelectionConfig) -> dhruv_search::DashaSelectionConfig {
+    dhruv_search::DashaSelectionConfig {
+        count: c.count,
+        systems: c.systems,
+        max_level: c.max_level,
+        level_methods: c.level_methods,
+        yogini_scheme: c.yogini_scheme,
+        use_abhijit: c.use_abhijit,
+        snapshot_jd: if c.has_snapshot_jd != 0 {
+            Some(c.snapshot_jd)
+        } else {
+            None
+        },
+    }
+}
+
+/// Return a `DhruvDashaSelectionConfig` with safe defaults.
+///
+/// count=0 (no systems selected), max_level=2, no snapshot.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_dasha_selection_config_default() -> DhruvDashaSelectionConfig {
+    DhruvDashaSelectionConfig {
+        count: 0,
+        systems: [0xFF; 8],
+        max_level: dhruv_vedic_base::dasha::DEFAULT_DASHA_LEVEL,
+        level_methods: [0xFF; 5],
+        yogini_scheme: 0,
+        use_abhijit: 1,
+        has_snapshot_jd: 0,
+        snapshot_jd: 0.0,
+    }
+}
+
 /// Compute a full dasha hierarchy for a birth chart.
 ///
 /// Returns an opaque handle that must be freed with `dhruv_dasha_hierarchy_free`.
@@ -10464,8 +10606,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_32() {
-        assert_eq!(dhruv_api_version(), 32);
+    fn ffi_api_version_is_33() {
+        assert_eq!(dhruv_api_version(), 33);
     }
 
     // --- Search error mapping ---
@@ -12571,6 +12713,7 @@ mod tests {
             include_shadbala: 0,
             include_vimsopaka: 0,
             include_avastha: 0,
+            include_dasha: 0,
             node_dignity_policy: 0,
             graha_positions_config: DhruvGrahaPositionsConfig {
                 include_nakshatra: 0,
@@ -12599,6 +12742,7 @@ mod tests {
                 codes: [0; 40],
                 variations: [0; 40],
             },
+            dasha_config: dhruv_dasha_selection_config_default(),
         };
         let bhava_cfg = dhruv_bhava_config_default();
         let rs_cfg = dhruv_riseset_config_default();
@@ -12632,6 +12776,7 @@ mod tests {
             include_shadbala: 0,
             include_vimsopaka: 0,
             include_avastha: 0,
+            include_dasha: 0,
             node_dignity_policy: 0,
             graha_positions_config: DhruvGrahaPositionsConfig {
                 include_nakshatra: 0,
@@ -12660,6 +12805,7 @@ mod tests {
                 codes: [0; 40],
                 variations: [0; 40],
             },
+            dasha_config: dhruv_dasha_selection_config_default(),
         };
         let bhava_cfg = dhruv_bhava_config_default();
         let rs_cfg = dhruv_riseset_config_default();
