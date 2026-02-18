@@ -3,12 +3,15 @@
 //! Requires kernel files (de442s.bsp, naif0012.tls) AND IERS EOP file
 //! (finals2000A.all). Skips gracefully if any are absent.
 
+use std::f64::consts::{PI, TAU};
 use std::path::Path;
 
 use dhruv_core::{Body, Engine, EngineConfig};
-use dhruv_time::{EopKernel, LeapSecondKernel};
+use dhruv_frames::OBLIQUITY_J2000_RAD;
+use dhruv_time::{EopKernel, LeapSecondKernel, gmst_rad, local_sidereal_time_rad};
 use dhruv_vedic_base::{
     BhavaConfig, BhavaReferenceMode, BhavaStartingPoint, BhavaSystem, GeoLocation, compute_bhavas,
+    lagna_and_mc_rad, lagna_longitude_rad,
 };
 
 const SPK_PATH: &str = "../../data/de442s.bsp";
@@ -295,4 +298,94 @@ fn middle_of_first_shifts_cusps() {
     // For equal houses, middle-of-first shifts all cusps back by 15 deg
     let diff = (result_start.bhavas[0].cusp_deg - result_mid.bhavas[0].cusp_deg).rem_euclid(360.0);
     assert!((diff - 15.0).abs() < 0.01, "shift = {diff}, expected 15");
+}
+
+/// Helper: verify the ascendant (tropical, radians) is a rising point (H < 0).
+fn assert_lagna_is_rising(tropical_lagna_rad: f64, lst_rad: f64) {
+    let eps = OBLIQUITY_J2000_RAD;
+    let lambda = tropical_lagna_rad;
+    let ra = f64::atan2(lambda.sin() * eps.cos(), lambda.cos()).rem_euclid(TAU);
+    let mut h = (lst_rad - ra).rem_euclid(TAU);
+    if h > PI {
+        h -= TAU;
+    }
+    assert!(
+        h < 0.0,
+        "H = {:.4} rad ({:.2} deg) — ascendant should be rising (H < 0)",
+        h,
+        h.to_degrees()
+    );
+}
+
+/// Verify the lagna from compute_bhavas is a rising point (eastern horizon).
+#[test]
+fn lagna_is_rising_point() {
+    let Some((_engine, _lsk, eop)) = load_test_resources() else {
+        return;
+    };
+    let loc = GeoLocation::new(28.6139, 77.209, 0.0);
+    let jd_utc = jd_0h_utc(2024, 3, 20) + 0.5;
+
+    let config = BhavaConfig {
+        system: BhavaSystem::Equal,
+        starting_point: BhavaStartingPoint::Lagna,
+        reference_mode: BhavaReferenceMode::StartOfFirst,
+    };
+    let result = compute_bhavas(&_engine, &_lsk, &eop, &loc, jd_utc, &config)
+        .expect("compute_bhavas should succeed");
+
+    // Reconstruct LST via the same chain as production code
+    let jd_ut1 = eop.utc_to_ut1_jd(jd_utc).expect("EOP lookup");
+    let gmst = gmst_rad(jd_ut1);
+    let lst = local_sidereal_time_rad(gmst, loc.longitude_rad());
+
+    let tropical_lagna_rad = result.lagna_deg.to_radians();
+    assert_lagna_is_rising(tropical_lagna_rad, lst);
+}
+
+/// Verify Desc (cusp 7) = Lagna + 180 deg for Sripati system.
+#[test]
+fn descendant_is_lagna_plus_180() {
+    let Some((engine, lsk, eop)) = load_test_resources() else {
+        return;
+    };
+    let loc = GeoLocation::new(28.6139, 77.209, 0.0);
+    let jd_utc = jd_0h_utc(2024, 3, 20) + 0.5;
+
+    let config = BhavaConfig {
+        system: BhavaSystem::Sripati,
+        starting_point: BhavaStartingPoint::Lagna,
+        reference_mode: BhavaReferenceMode::StartOfFirst,
+    };
+    let result = compute_bhavas(&engine, &lsk, &eop, &loc, jd_utc, &config)
+        .expect("compute_bhavas should succeed");
+
+    let desc = result.bhavas[6].cusp_deg;
+    let expected = (result.lagna_deg + 180.0).rem_euclid(360.0);
+    let err = (desc - expected).rem_euclid(360.0);
+    let err = err.min(360.0 - err);
+    assert!(
+        err < 0.01,
+        "Desc = {desc:.4}, expected Lagna+180 = {expected:.4}"
+    );
+}
+
+/// Verify lagna_longitude_rad and lagna_and_mc_rad agree.
+#[test]
+fn lagna_longitude_and_lagna_and_mc_agree() {
+    let Some((_engine, lsk, eop)) = load_test_resources() else {
+        return;
+    };
+    let loc = GeoLocation::new(28.6139, 77.209, 0.0);
+    let jd_utc = jd_0h_utc(2024, 3, 20) + 0.5;
+
+    let asc1 =
+        lagna_longitude_rad(&lsk, &eop, &loc, jd_utc).expect("lagna_longitude_rad should succeed");
+    let (asc2, _mc) =
+        lagna_and_mc_rad(&lsk, &eop, &loc, jd_utc).expect("lagna_and_mc_rad should succeed");
+
+    assert!(
+        (asc1 - asc2).abs() < 1e-15,
+        "lagna_longitude_rad={asc1}, lagna_and_mc_rad={asc2}"
+    );
 }

@@ -3,9 +3,12 @@
 use std::path::PathBuf;
 use std::ptr;
 
+use std::f64::consts::{PI, TAU};
+
 use dhruv_core::{Body, Frame, Observer};
 use dhruv_ffi_c::*;
-use dhruv_time::calendar_to_jd;
+use dhruv_frames::OBLIQUITY_J2000_RAD;
+use dhruv_time::{calendar_to_jd, gmst_rad, local_sidereal_time_rad};
 
 fn kernel_base() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../kernels/data")
@@ -1031,11 +1034,87 @@ fn ffi_lagna_deg_new_delhi() {
         asc
     );
 
+    // Rising-condition check: the FFI returns tropical lagna in degrees.
+    // Reconstruct LST via the full UTC->UT1->GMST->LST chain.
+    {
+        let eop_rust = dhruv_time::EopKernel::load(&kernel_base().join("finals2000A.all")).unwrap();
+        let jd_ut1 = eop_rust.utc_to_ut1_jd(jd_utc).expect("EOP lookup");
+        let gmst = gmst_rad(jd_ut1);
+        let lst = local_sidereal_time_rad(gmst, loc.longitude_deg.to_radians());
+
+        let eps = OBLIQUITY_J2000_RAD;
+        let lagna_rad = asc.to_radians();
+        let ra = f64::atan2(lagna_rad.sin() * eps.cos(), lagna_rad.cos()).rem_euclid(TAU);
+        let mut h = (lst - ra).rem_euclid(TAU);
+        if h > PI {
+            h -= TAU;
+        }
+        assert!(
+            h < 0.0,
+            "H = {:.4} rad ({:.2} deg) — FFI lagna should be rising (H < 0)",
+            h,
+            h.to_degrees()
+        );
+    }
+
     // MC should also work
     let mut mc: f64 = 0.0;
     let status = unsafe { dhruv_mc_deg(lsk_ptr, eop_ptr, &loc, jd_utc, &mut mc) };
     assert_eq!(status, DhruvStatus::Ok);
     assert!(mc >= 0.0 && mc < 360.0, "MC = {} deg, out of range", mc);
+
+    unsafe { dhruv_eop_free(eop_ptr) };
+    unsafe { dhruv_lsk_free(lsk_ptr) };
+}
+
+/// Verify dhruv_lagna_deg (JD UTC) and dhruv_lagna_deg_utc (UTC struct) agree.
+#[test]
+fn ffi_lagna_variants_agree() {
+    if !all_kernels_available() {
+        eprintln!("Skipping: not all kernel files available");
+        return;
+    }
+
+    let lsk_path = lsk_path_cstr().unwrap();
+    let eop_path = eop_path_cstr().unwrap();
+
+    let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
+    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
+    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let loc = DhruvGeoLocation {
+        latitude_deg: 28.6139,
+        longitude_deg: 77.209,
+        altitude_m: 0.0,
+    };
+
+    let jd_utc = calendar_to_jd(2024, 3, 20.5);
+    let utc = DhruvUtcTime {
+        year: 2024,
+        month: 3,
+        day: 20,
+        hour: 12,
+        minute: 0,
+        second: 0.0,
+    };
+
+    let mut asc_jd: f64 = 0.0;
+    let mut asc_utc: f64 = 0.0;
+
+    let s1 = unsafe { dhruv_lagna_deg(lsk_ptr, eop_ptr, &loc, jd_utc, &mut asc_jd) };
+    assert_eq!(s1, DhruvStatus::Ok);
+
+    let s2 = unsafe { dhruv_lagna_deg_utc(lsk_ptr, eop_ptr, &loc, &utc, &mut asc_utc) };
+    assert_eq!(s2, DhruvStatus::Ok);
+
+    assert!(
+        (asc_jd - asc_utc).abs() < 0.001,
+        "JD variant={asc_jd}, UTC variant={asc_utc}"
+    );
 
     unsafe { dhruv_eop_free(eop_ptr) };
     unsafe { dhruv_lsk_free(lsk_ptr) };

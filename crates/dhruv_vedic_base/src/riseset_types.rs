@@ -12,6 +12,8 @@ const EARTH_RADIUS_M: f64 = 6_371_000.0;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GeoLocation {
     /// Geodetic latitude in degrees, north positive. Range: [-90, 90].
+    /// **Not validated** — out-of-range values are accepted but produce
+    /// undefined astronomical results from downstream functions.
     pub latitude_deg: f64,
     /// Geodetic longitude in degrees, east positive. Range: [-180, 180].
     pub longitude_deg: f64,

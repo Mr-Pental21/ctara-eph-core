@@ -15,7 +15,7 @@ for 10 house division systems used in Vedic and Western astrology.
 
 **Formula (Ascendant):**
 ```
-Asc = atan2(-cos(LST), sin(LST)*cos(eps) + tan(phi)*sin(eps))
+Asc = atan2(cos(LST), -(sin(LST)*cos(eps) + tan(phi)*sin(eps)))
 ```
 
 **Formula (MC):**

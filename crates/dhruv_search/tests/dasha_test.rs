@@ -1161,14 +1161,14 @@ fn non_chakra_parity_golden_values() {
         &variation,
     )
     .unwrap();
-    assert_eq!(chara.levels[0][0].entity, DashaEntity::Rashi(6));
+    assert_eq!(chara.levels[0][0].entity, DashaEntity::Rashi(0));
     assert!(
         (chara.levels[0][0].start_jd - 2447906.770833).abs() < 1e-6,
         "Chara start_jd: {:.10}",
         chara.levels[0][0].start_jd
     );
     assert!(
-        (chara.levels[0][0].end_jd - 2448889.698487).abs() < 1e-6,
+        (chara.levels[0][0].end_jd - 2450200.268691).abs() < 1e-6,
         "Chara end_jd: {:.10}",
         chara.levels[0][0].end_jd
     );

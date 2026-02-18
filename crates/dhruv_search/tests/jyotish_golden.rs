@@ -4,12 +4,14 @@
 //! lagna, outer planets, bhava, and all-flags-on.
 //! Requires kernel files. Skips gracefully if absent.
 
+use std::f64::consts::{PI, TAU};
 use std::path::Path;
 
 use dhruv_core::{Engine, EngineConfig};
+use dhruv_frames::OBLIQUITY_J2000_RAD;
 use dhruv_search::sankranti_types::SankrantiConfig;
 use dhruv_search::{GrahaPositionsConfig, graha_positions};
-use dhruv_time::{EopKernel, UtcTime};
+use dhruv_time::{EopKernel, LeapSecondKernel, UtcTime, gmst_rad, local_sidereal_time_rad};
 use dhruv_vedic_base::riseset_types::GeoLocation;
 use dhruv_vedic_base::{BhavaConfig, Rashi};
 
@@ -689,4 +691,81 @@ fn graha_positions_matches_sidereal_longitudes() {
             direct_lon,
         );
     }
+}
+
+// ===== Lagna rising-condition check =====
+
+fn load_lsk() -> Option<LeapSecondKernel> {
+    if !Path::new(LSK_PATH).exists() {
+        return None;
+    }
+    LeapSecondKernel::load(Path::new(LSK_PATH)).ok()
+}
+
+/// Verify the lagna returned by graha_positions is a rising point (H < 0).
+#[test]
+fn lagna_is_rising_in_graha_positions() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let Some(_lsk) = load_lsk() else { return };
+    let utc = utc_2024_jan_15();
+    let location = new_delhi();
+    let bhava_config = BhavaConfig::default();
+    let aya_config = default_aya_config();
+    let config = GrahaPositionsConfig {
+        include_nakshatra: false,
+        include_lagna: true,
+        include_outer_planets: false,
+        include_bhava: false,
+    };
+
+    let result = graha_positions(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &aya_config,
+        &config,
+    )
+    .expect("graha_positions should succeed");
+
+    let sidereal_lagna_deg = result.lagna.sidereal_longitude;
+    assert!(sidereal_lagna_deg > 0.0 && sidereal_lagna_deg < 360.0);
+
+    // Recover tropical lagna: sidereal + ayanamsha
+    let jd_tdb = utc.to_jd_tdb(engine.lsk());
+    let t = dhruv_vedic_base::jd_tdb_to_centuries(jd_tdb);
+    let aya =
+        dhruv_vedic_base::ayanamsha_deg(aya_config.ayanamsha_system, t, aya_config.use_nutation);
+    let tropical_lagna_deg = sidereal_lagna_deg + aya;
+    let tropical_lagna_rad = tropical_lagna_deg.to_radians();
+
+    // Compute LST via the full UTC->UT1->GMST->LST chain
+    let jd_utc = dhruv_time::calendar_to_jd(
+        utc.year,
+        utc.month,
+        utc.day as f64 + utc.hour as f64 / 24.0 + utc.minute as f64 / 1440.0 + utc.second / 86400.0,
+    );
+    let jd_ut1 = eop.utc_to_ut1_jd(jd_utc).expect("EOP lookup");
+    let gmst = gmst_rad(jd_ut1);
+    let lst = local_sidereal_time_rad(gmst, location.longitude_rad());
+
+    // Rising condition: hour angle H < 0 (eastern horizon)
+    let eps = OBLIQUITY_J2000_RAD;
+    let ra = f64::atan2(
+        tropical_lagna_rad.sin() * eps.cos(),
+        tropical_lagna_rad.cos(),
+    )
+    .rem_euclid(TAU);
+    let mut h = (lst - ra).rem_euclid(TAU);
+    if h > PI {
+        h -= TAU;
+    }
+    assert!(
+        h < 0.0,
+        "H = {:.4} rad ({:.2} deg) — lagna should be rising (H < 0)",
+        h,
+        h.to_degrees()
+    );
 }
