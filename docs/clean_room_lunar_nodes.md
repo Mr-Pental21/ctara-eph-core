@@ -47,6 +47,9 @@ Programs from 4000 B.C. to A.D. 8000." Willmann-Bell.
 - Ketu: always Rahu + 180 deg (exact geometric relationship).
 - All outputs normalized to [0, 360).
 - No kernel files required (pure mathematical computation).
+- **Default mode is True** (`NodeMode::True`), matching standard Vedic/jyotish
+  practice. The jyotish pipeline (`graha_sidereal_longitudes`) uses true nodes.
+  Mean nodes remain available for research/comparison via the `NodeMode` parameter.
 
 ## Denylisted Sources
 

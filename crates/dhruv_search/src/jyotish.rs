@@ -267,8 +267,8 @@ fn query_sapta_graha_declinations(engine: &Engine, jd_tdb: f64) -> Result<[f64; 
 /// Query all 9 graha sidereal longitudes at a given TDB epoch.
 ///
 /// For the 7 physical planets, queries the engine for tropical ecliptic
-/// longitude and subtracts ayanamsha. For Rahu/Ketu, uses the mean/true
-/// node mathematical formulas.
+/// longitude and subtracts ayanamsha. For Rahu/Ketu, uses true node
+/// positions (mean + short-period perturbation corrections).
 pub fn graha_sidereal_longitudes(
     engine: &Engine,
     jd_tdb: f64,

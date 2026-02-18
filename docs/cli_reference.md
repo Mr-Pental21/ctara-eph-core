@@ -132,7 +132,7 @@ dhruv nutation-compute --date 2024-03-20T12:00:00Z --bsp de442s.bsp --lsk naif00
 ### `lunar-node`
 
 ```
-dhruv lunar-node --date 2024-03-20T12:00:00Z --node rahu --mode mean --bsp de442s.bsp --lsk naif0012.tls
+dhruv lunar-node --date 2024-03-20T12:00:00Z --node rahu --mode true --bsp de442s.bsp --lsk naif0012.tls
 ```
 
 ---

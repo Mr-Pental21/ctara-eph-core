@@ -865,7 +865,7 @@ enum Commands {
         #[arg(long, default_value = "rahu")]
         node: String,
         /// Mode: mean or true
-        #[arg(long, default_value = "mean")]
+        #[arg(long, default_value = "true")]
         mode: String,
         #[arg(long)]
         bsp: PathBuf,

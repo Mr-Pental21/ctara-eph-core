@@ -132,7 +132,7 @@ Three-point sum.
 
 Engine-dependent orchestration that:
 1. Queries tropical ecliptic longitude of each graha via `body_ecliptic_lon_lat()`
-2. Computes Rahu/Ketu via `lunar_node_deg()` (mean or true mode)
+2. Computes Rahu/Ketu via `lunar_node_deg()` (true node mode by default)
 3. Subtracts ayanamsha to get sidereal longitude
 4. Normalizes all results to [0, 360)
 
@@ -147,7 +147,7 @@ Ketu = normalize(Rahu + 180°).
 | Sphuta formulas | BPHS, Saravali, Uttara Kalamrita |
 | NAIF body codes | NASA/NAIF SPICE convention |
 | Ayanamsha subtraction | Standard sidereal conversion |
-| Lunar nodes | Mean/true node from dhruv_vedic_base |
+| Lunar nodes | True node (default) from dhruv_vedic_base |
 
 ## Implementation Notes
 

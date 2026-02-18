@@ -33,12 +33,15 @@ impl LunarNode {
 }
 
 /// Mean or true (nutation-perturbed) node position.
+///
+/// The default is `True`, matching standard Vedic/jyotish practice where
+/// true nodes (mean + short-period perturbation corrections) are preferred.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum NodeMode {
     /// Mean node: smooth polynomial motion only.
-    #[default]
     Mean,
     /// True node: mean + short-period perturbation corrections.
+    #[default]
     True,
 }
 
@@ -241,6 +244,11 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn default_is_true() {
+        assert_eq!(NodeMode::default(), NodeMode::True);
     }
 
     #[test]
