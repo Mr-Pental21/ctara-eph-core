@@ -158,14 +158,14 @@ impl AyanamshaSystem {
             Self::Yukteshwar => 22.376,
             // J.N. Bhasin
             Self::JnBhasin => 22.376,
-            // Chandra Hari
-            Self::ChandraHari => 23.250,
+            // Chandra Hari: λ Sco at 240° sidereal → J2000 ecl lon 264.586 - 240.0
+            Self::ChandraHari => 24.586,
             // Jagganatha
             Self::Jagganatha => 23.250,
             // Surya Siddhanta (IAU precession back-computed)
             Self::SuryaSiddhanta => 22.459,
-            // Galactic Center at 0 deg Sagittarius
-            Self::GalacticCenter0Sag => 26.860,
+            // Galactic Center at 0° Sag: J2000 ecl lon 266.840 - 240.0
+            Self::GalacticCenter0Sag => 26.840,
             // Aldebaran at 15 deg Taurus
             Self::Aldebaran15Tau => 24.870,
         }
@@ -561,6 +561,54 @@ mod tests {
         assert!(
             (val - expected_mean).abs() < 1e-6,
             "Lahiri mean at 1956 = {val}, expected = {expected_mean}"
+        );
+    }
+
+    #[test]
+    fn with_catalog_none_matches_legacy_mean() {
+        let t = 0.24;
+        for &sys in AyanamshaSystem::all() {
+            let legacy = ayanamsha_mean_deg(sys, t);
+            let catalog = ayanamsha_mean_deg_with_catalog(sys, t, None);
+            assert!(
+                (legacy - catalog).abs() < 1e-15,
+                "{sys:?}: legacy={legacy}, catalog(None)={catalog}"
+            );
+        }
+    }
+
+    #[test]
+    fn with_catalog_none_matches_legacy_deg() {
+        let t = 0.24;
+        for use_nut in [false, true] {
+            for &sys in AyanamshaSystem::all() {
+                let legacy = ayanamsha_deg(sys, t, use_nut);
+                let catalog = ayanamsha_deg_with_catalog(sys, t, use_nut, None);
+                assert!(
+                    (legacy - catalog).abs() < 1e-15,
+                    "{sys:?} nut={use_nut}: legacy={legacy}, catalog(None)={catalog}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn reference_consistent_with_anchor_chandrahari() {
+        // ChandraHari anchor: lon=264.585715, target=240.0 → ref ≈ 24.586
+        let ref_deg = AyanamshaSystem::ChandraHari.reference_j2000_deg();
+        assert!(
+            (ref_deg - 24.586).abs() < 0.001,
+            "ChandraHari reference={ref_deg}, expected ~24.586"
+        );
+    }
+
+    #[test]
+    fn reference_consistent_with_anchor_gc() {
+        // GalacticCenter0Sag anchor: lon=266.839617, target=240.0 → ref ≈ 26.840
+        let ref_deg = AyanamshaSystem::GalacticCenter0Sag.reference_j2000_deg();
+        assert!(
+            (ref_deg - 26.840).abs() < 0.001,
+            "GC reference={ref_deg}, expected ~26.840"
         );
     }
 }

@@ -10997,6 +10997,84 @@ mod tests {
         );
     }
 
+    // --- Ayanamsha catalog-variant tests ---
+
+    #[test]
+    fn ffi_ayanamsha_mean_catalog_null_matches_legacy() {
+        let jd = 2_451_545.0;
+        for code in 0..20_i32 {
+            let mut legacy: f64 = 0.0;
+            let mut catalog: f64 = 0.0;
+            // SAFETY: Valid pointers.
+            let s1 = unsafe { dhruv_ayanamsha_mean_deg(code, jd, &mut legacy) };
+            let s2 = unsafe {
+                dhruv_ayanamsha_mean_deg_with_catalog(code, jd, ptr::null(), &mut catalog)
+            };
+            assert_eq!(s1, DhruvStatus::Ok);
+            assert_eq!(s2, DhruvStatus::Ok);
+            assert!(
+                (legacy - catalog).abs() < 1e-15,
+                "code={code}: legacy={legacy}, catalog(null)={catalog}"
+            );
+        }
+    }
+
+    #[test]
+    fn ffi_ayanamsha_deg_catalog_null_matches_legacy() {
+        let jd = 2_460_310.5; // ~2024
+        for code in 0..20_i32 {
+            let mut legacy: f64 = 0.0;
+            let mut catalog: f64 = 0.0;
+            // SAFETY: Valid pointers.
+            let s1 = unsafe { dhruv_ayanamsha_deg(code, jd, 0, &mut legacy) };
+            let s2 =
+                unsafe { dhruv_ayanamsha_deg_with_catalog(code, jd, 0, ptr::null(), &mut catalog) };
+            assert_eq!(s1, DhruvStatus::Ok);
+            assert_eq!(s2, DhruvStatus::Ok);
+            assert!(
+                (legacy - catalog).abs() < 1e-15,
+                "code={code}: legacy={legacy}, catalog(null)={catalog}"
+            );
+        }
+    }
+
+    #[test]
+    fn ffi_ayanamsha_mean_catalog_rejects_null_output() {
+        // SAFETY: Null output pointer is intentional for validation.
+        let status = unsafe {
+            dhruv_ayanamsha_mean_deg_with_catalog(0, 2_451_545.0, ptr::null(), ptr::null_mut())
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_ayanamsha_deg_catalog_rejects_null_output() {
+        // SAFETY: Null output pointer is intentional for validation.
+        let status = unsafe {
+            dhruv_ayanamsha_deg_with_catalog(0, 2_451_545.0, 0, ptr::null(), ptr::null_mut())
+        };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_ayanamsha_mean_catalog_rejects_invalid_code() {
+        let mut out: f64 = 0.0;
+        // SAFETY: Valid output pointer, invalid system code.
+        let status = unsafe {
+            dhruv_ayanamsha_mean_deg_with_catalog(99, 2_451_545.0, ptr::null(), &mut out)
+        };
+        assert_eq!(status, DhruvStatus::InvalidQuery);
+    }
+
+    #[test]
+    fn ffi_ayanamsha_deg_catalog_rejects_invalid_code() {
+        let mut out: f64 = 0.0;
+        // SAFETY: Valid output pointer, invalid system code.
+        let status =
+            unsafe { dhruv_ayanamsha_deg_with_catalog(99, 2_451_545.0, 0, ptr::null(), &mut out) };
+        assert_eq!(status, DhruvStatus::InvalidQuery);
+    }
+
     #[test]
     fn ffi_nutation_iau2000b_at_j2000() {
         let mut dpsi: f64 = 0.0;
