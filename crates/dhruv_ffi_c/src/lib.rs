@@ -38,7 +38,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 38;
+pub const DHRUV_API_VERSION: u32 = 39;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -65,6 +65,20 @@ pub enum DhruvStatus {
     InvalidSearchConfig = 12,
     InvalidInput = 13,
     Internal = 255,
+}
+
+/// Reference plane for positional measurements.
+///
+/// Most ayanamsha systems use `Ecliptic` (0). The Jagganatha system uses
+/// `Invariable` (1), the plane perpendicular to the solar system's angular
+/// momentum vector.
+#[repr(i32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DhruvReferencePlane {
+    /// Ecliptic plane (standard).
+    Ecliptic = 0,
+    /// Invariable plane (fixed, no precession).
+    Invariable = 1,
 }
 
 impl From<&EngineError> for DhruvStatus {
@@ -768,6 +782,21 @@ pub unsafe extern "C" fn dhruv_ayanamsha_true_deg(
 #[unsafe(no_mangle)]
 pub extern "C" fn dhruv_ayanamsha_system_count() -> u32 {
     AyanamshaSystem::all().len() as u32
+}
+
+/// Returns the default reference plane for an ayanamsha system.
+///
+/// Returns 0 (Ecliptic) for most systems, 1 (Invariable) for Jagganatha.
+/// Returns -1 for invalid system codes.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_reference_plane_default(system_code: i32) -> i32 {
+    match ayanamsha_system_from_code(system_code) {
+        Some(system) => match system.default_reference_plane() {
+            dhruv_frames::ReferencePlane::Ecliptic => 0,
+            dhruv_frames::ReferencePlane::Invariable => 1,
+        },
+        None => -1,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3164,6 +3193,8 @@ pub struct DhruvSankrantiConfig {
     pub ayanamsha_system: i32,
     /// Whether to apply nutation correction (0=false, 1=true).
     pub use_nutation: u8,
+    /// Reference plane (0=Ecliptic, 1=Invariable). Set to -1 for system default.
+    pub reference_plane: i32,
     pub step_size_days: f64,
     pub max_iterations: u32,
     pub convergence_days: f64,
@@ -3236,13 +3267,21 @@ fn lunar_phase_to_code(p: LunarPhase) -> i32 {
     }
 }
 
+fn reference_plane_from_code(code: i32, system: AyanamshaSystem) -> dhruv_frames::ReferencePlane {
+    match code {
+        0 => dhruv_frames::ReferencePlane::Ecliptic,
+        1 => dhruv_frames::ReferencePlane::Invariable,
+        _ => system.default_reference_plane(), // -1 or any other value → system default
+    }
+}
+
 fn sankranti_config_from_ffi(cfg: &DhruvSankrantiConfig) -> Option<SankrantiConfig> {
     let system = ayanamsha_system_from_code(cfg.ayanamsha_system)?;
     Some(SankrantiConfig {
         ayanamsha_system: system,
         use_nutation: cfg.use_nutation != 0,
         precession_model: dhruv_frames::DEFAULT_PRECESSION_MODEL,
-        reference_plane: system.default_reference_plane(),
+        reference_plane: reference_plane_from_code(cfg.reference_plane, system),
         step_size_days: cfg.step_size_days,
         max_iterations: cfg.max_iterations,
         convergence_days: cfg.convergence_days,
@@ -3255,6 +3294,7 @@ pub extern "C" fn dhruv_sankranti_config_default() -> DhruvSankrantiConfig {
     DhruvSankrantiConfig {
         ayanamsha_system: 0, // Lahiri
         use_nutation: 0,
+        reference_plane: -1, // system default
         step_size_days: 1.0,
         max_iterations: 50,
         convergence_days: 1e-8,
@@ -11382,8 +11422,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_38() {
-        assert_eq!(dhruv_api_version(), 38);
+    fn ffi_api_version_is_39() {
+        assert_eq!(dhruv_api_version(), 39);
     }
 
     #[test]

@@ -130,6 +130,7 @@ pub use convenience::{
     search_stationary,
     search_surya_grahan,
     sidereal_longitude,
+    sidereal_longitude_on_plane,
     sidereal_sum_at,
     sookshma_trisphuta,
     special_lagnas,
@@ -170,7 +171,7 @@ pub use global::{init, is_initialized};
 
 // Re-export core types so callers don't need to depend on dhruv_core directly.
 pub use dhruv_core::{Body, EngineConfig, Frame, Observer, StateVector};
-pub use dhruv_frames::{SphericalCoords, SphericalState};
+pub use dhruv_frames::{ReferencePlane, SphericalCoords, SphericalState};
 
 // Re-export vedic types used by the convenience functions.
 pub use dhruv_search::{

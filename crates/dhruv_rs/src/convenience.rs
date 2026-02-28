@@ -1,6 +1,7 @@
 use dhruv_core::{Body, Frame, Observer, Query, StateVector};
 use dhruv_frames::{
-    SphericalCoords, SphericalState, cartesian_to_spherical, icrf_to_ecliptic, nutation_iau2000b,
+    ReferencePlane, SphericalCoords, SphericalState, cartesian_to_spherical,
+    icrf_to_reference_plane, icrf_to_ecliptic, nutation_iau2000b,
     precess_ecliptic_j2000_to_date,
 };
 use dhruv_search::conjunction_types::{ConjunctionConfig, ConjunctionEvent};
@@ -17,9 +18,9 @@ use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig, RiseSetEvent, 
 use dhruv_vedic_base::{
     AshtakavargaResult, AyanamshaSystem, BhavaConfig, BhavaResult, BhinnaAshtakavarga,
     DrishtiEntry, GrahaDrishtiMatrix, LunarNode, Nakshatra28Info, NakshatraInfo, NodeMode, Rashi,
-    RashiInfo, SarvaAshtakavarga, ayanamsha_deg, ayanamsha_deg_with_catalog, jd_tdb_to_centuries,
-    lunar_node_deg_for_epoch, nakshatra_from_longitude, nakshatra28_from_longitude,
-    rashi_from_longitude,
+    RashiInfo, SarvaAshtakavarga, ayanamsha_deg, ayanamsha_deg_on_plane, ayanamsha_deg_with_catalog,
+    jd_tdb_to_centuries, lunar_node_deg_for_epoch, nakshatra_from_longitude,
+    nakshatra28_from_longitude, rashi_from_longitude,
 };
 
 use crate::date::UtcDate;
@@ -224,6 +225,62 @@ pub fn sidereal_longitude(
     let aya = ayanamsha_deg(system, t, use_nutation);
     let sid = (tropical - aya) % 360.0;
     Ok(if sid < 0.0 { sid + 360.0 } else { sid })
+}
+
+/// Compute sidereal longitude on a specified reference plane.
+///
+/// For `Ecliptic`: identical to [`sidereal_longitude`].
+/// For `Invariable`: computes the body's longitude on the invariable plane
+/// and subtracts the invariable-plane ayanamsha.
+pub fn sidereal_longitude_on_plane(
+    target: Body,
+    observer: Observer,
+    date: UtcDate,
+    system: AyanamshaSystem,
+    use_nutation: bool,
+    plane: ReferencePlane,
+) -> Result<f64, DhruvError> {
+    let eng = engine()?;
+    let epoch = Epoch::from_utc(
+        date.year,
+        date.month,
+        date.day,
+        date.hour,
+        date.min,
+        date.sec,
+        eng.lsk(),
+    );
+    let jd = epoch.as_jd_tdb();
+    let state = eng.query(Query {
+        target,
+        observer,
+        frame: Frame::IcrfJ2000,
+        epoch_tdb_jd: jd,
+    })?;
+    let on_plane = icrf_to_reference_plane(&state.position_km, plane);
+    let t = jd_tdb_to_centuries(jd);
+    match plane {
+        ReferencePlane::Ecliptic => {
+            let ecl_date = precess_ecliptic_j2000_to_date(&on_plane, t);
+            let tropical = cartesian_to_spherical(&ecl_date).lon_deg;
+            let aya = ayanamsha_deg(system, t, use_nutation);
+            let sid = (tropical - aya) % 360.0;
+            Ok(if sid < 0.0 { sid + 360.0 } else { sid })
+        }
+        ReferencePlane::Invariable => {
+            // Invariable plane is fixed — no precession
+            let lon = cartesian_to_spherical(&on_plane).lon_deg;
+            let aya = ayanamsha_deg_on_plane(
+                system,
+                t,
+                use_nutation,
+                dhruv_frames::DEFAULT_PRECESSION_MODEL,
+                plane,
+            );
+            let sid = (lon - aya) % 360.0;
+            Ok(if sid < 0.0 { sid + 360.0 } else { sid })
+        }
+    }
 }
 
 /// Determine the rashi (zodiac sign) of a body at a given date.
