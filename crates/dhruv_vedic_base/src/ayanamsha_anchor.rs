@@ -6,7 +6,8 @@
 use crate::ayanamsha::AyanamshaSystem;
 use crate::util::normalize_360;
 use dhruv_frames::{
-    PrecessionModel, cartesian_to_spherical, precess_ecliptic_j2000_to_date_with_model,
+    PrecessionModel, ReferencePlane, cartesian_to_spherical, ecliptic_to_invariable,
+    precess_ecliptic_j2000_to_date_with_model,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -70,6 +71,13 @@ fn anchor_spec(system: AyanamshaSystem) -> Option<AnchorSpec> {
             lat_j2000_deg: -13.788_451,
             target_sidereal_lon_deg: 240.0,
         }),
+        // Jagganatha: Spica (Chitra) at 180° sidereal on the invariable plane.
+        // Same J2000 ecliptic coords as TrueLahiri anchor (Spica).
+        AyanamshaSystem::Jagganatha => Some(AnchorSpec {
+            lon_j2000_deg: 203.853_000,
+            lat_j2000_deg: -2.054_489,
+            target_sidereal_lon_deg: 180.0,
+        }),
         _ => None,
     }
 }
@@ -94,6 +102,40 @@ pub(crate) fn anchor_relative_ayanamsha_deg(
 ) -> Option<f64> {
     let spec = anchor_spec(system)?;
     let anchor_lon = anchor_tropical_longitude_deg(spec, t_centuries, model);
+    Some(normalize_360(anchor_lon - spec.target_sidereal_lon_deg))
+}
+
+/// Plane-aware anchor tropical longitude.
+///
+/// - `Ecliptic`: precess J2000 ecliptic coords to ecliptic-of-date (existing path).
+/// - `Invariable`: project J2000 ecliptic coords to invariable plane (no precession).
+fn anchor_tropical_longitude_deg_on_plane(
+    spec: AnchorSpec,
+    t_centuries: f64,
+    model: PrecessionModel,
+    plane: ReferencePlane,
+) -> f64 {
+    match plane {
+        ReferencePlane::Ecliptic => anchor_tropical_longitude_deg(spec, t_centuries, model),
+        ReferencePlane::Invariable => {
+            let lon = spec.lon_j2000_deg.to_radians();
+            let lat = spec.lat_j2000_deg.to_radians();
+            let v = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+            let inv = ecliptic_to_invariable(&v);
+            cartesian_to_spherical(&inv).lon_deg
+        }
+    }
+}
+
+/// Plane-aware star-relative ayanamsha.
+pub(crate) fn anchor_relative_ayanamsha_deg_on_plane(
+    system: AyanamshaSystem,
+    t_centuries: f64,
+    model: PrecessionModel,
+    plane: ReferencePlane,
+) -> Option<f64> {
+    let spec = anchor_spec(system)?;
+    let anchor_lon = anchor_tropical_longitude_deg_on_plane(spec, t_centuries, model, plane);
     Some(normalize_360(anchor_lon - spec.target_sidereal_lon_deg))
 }
 

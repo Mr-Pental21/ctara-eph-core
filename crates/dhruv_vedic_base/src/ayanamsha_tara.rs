@@ -6,7 +6,7 @@
 use crate::ayanamsha::AyanamshaSystem;
 use crate::util::normalize_360;
 use dhruv_frames::{
-    PrecessionModel, cartesian_to_spherical, icrf_to_ecliptic,
+    PrecessionModel, ReferencePlane, cartesian_to_spherical, icrf_to_ecliptic, icrf_to_invariable,
     precess_ecliptic_j2000_to_date_with_model,
 };
 use dhruv_tara::{TaraCatalog, TaraId, galactic_center_icrs};
@@ -46,6 +46,11 @@ pub(crate) fn anchor_tara_spec(system: AyanamshaSystem) -> Option<TaraAnchorSpec
         AyanamshaSystem::ChandraHari => Some(TaraAnchorSpec {
             tara_id: TaraId::LambdaSco,
             target_sidereal_lon_deg: 240.0,
+        }),
+        // Jagganatha: Spica (Chitra) at 180° sidereal on invariable plane.
+        AyanamshaSystem::Jagganatha => Some(TaraAnchorSpec {
+            tara_id: TaraId::Chitra,
+            target_sidereal_lon_deg: 180.0,
         }),
         _ => None,
     }
@@ -126,6 +131,75 @@ pub(crate) fn tara_anchor_ayanamsha_deg(
 ) -> Option<f64> {
     let spec = anchor_tara_spec(system)?;
     let star_lon = star_tropical_longitude_deg(catalog, &spec, t_centuries, model)?;
+    Some(normalize_360(star_lon - spec.target_sidereal_lon_deg))
+}
+
+/// Convert an ICRS unit direction to longitude on the specified reference plane.
+fn icrs_to_longitude_on_plane(
+    icrs_unit: &[f64; 3],
+    t_centuries: f64,
+    model: PrecessionModel,
+    plane: ReferencePlane,
+) -> f64 {
+    match plane {
+        ReferencePlane::Ecliptic => icrs_to_tropical_longitude(icrs_unit, t_centuries, model),
+        ReferencePlane::Invariable => {
+            let inv = icrf_to_invariable(icrs_unit);
+            cartesian_to_spherical(&inv).lon_deg
+        }
+    }
+}
+
+/// Compute star longitude on the specified reference plane.
+fn star_longitude_deg_on_plane(
+    catalog: &TaraCatalog,
+    spec: &TaraAnchorSpec,
+    t_centuries: f64,
+    model: PrecessionModel,
+    plane: ReferencePlane,
+) -> Option<f64> {
+    if spec.tara_id == TaraId::GalacticCenter {
+        let icrs = galactic_center_icrs();
+        return Some(icrs_to_longitude_on_plane(&icrs, t_centuries, model, plane));
+    }
+
+    let entry = catalog.get(spec.tara_id)?;
+    let j2000_jd = 2_451_545.0;
+    let days_per_year = 365.25;
+    let epoch_jd = j2000_jd + (catalog.reference_epoch_jy - 2000.0) * days_per_year;
+    let target_jd = j2000_jd + t_centuries * 36525.0;
+    let dt_years = (target_jd - epoch_jd) / days_per_year;
+
+    let icrs_pos = dhruv_tara::propagation::propagate_cartesian_au(
+        entry.ra_deg,
+        entry.dec_deg,
+        entry.parallax_mas,
+        entry.pm_ra_mas_yr,
+        entry.pm_dec_mas_yr,
+        entry.radial_velocity_km_s,
+        dt_years,
+    );
+
+    let r =
+        (icrs_pos[0] * icrs_pos[0] + icrs_pos[1] * icrs_pos[1] + icrs_pos[2] * icrs_pos[2]).sqrt();
+    if r == 0.0 {
+        return None;
+    }
+    let unit = [icrs_pos[0] / r, icrs_pos[1] / r, icrs_pos[2] / r];
+
+    Some(icrs_to_longitude_on_plane(&unit, t_centuries, model, plane))
+}
+
+/// Plane-aware star-ephemeris ayanamsha.
+pub(crate) fn tara_anchor_ayanamsha_deg_on_plane(
+    system: AyanamshaSystem,
+    t_centuries: f64,
+    model: PrecessionModel,
+    catalog: &TaraCatalog,
+    plane: ReferencePlane,
+) -> Option<f64> {
+    let spec = anchor_tara_spec(system)?;
+    let star_lon = star_longitude_deg_on_plane(catalog, &spec, t_centuries, model, plane)?;
     Some(normalize_360(star_lon - spec.target_sidereal_lon_deg))
 }
 

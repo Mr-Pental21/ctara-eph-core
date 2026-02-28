@@ -17,8 +17,8 @@
 
 use dhruv_core::{Body, Engine, Frame, Observer, Query};
 use dhruv_frames::{
-    DEFAULT_PRECESSION_MODEL, PrecessionModel, fundamental_arguments, icrf_to_ecliptic,
-    precess_ecliptic_j2000_to_date_with_model,
+    DEFAULT_PRECESSION_MODEL, PrecessionModel, ReferencePlane, fundamental_arguments,
+    icrf_to_ecliptic, icrf_to_invariable, precess_ecliptic_j2000_to_date_with_model,
 };
 
 use crate::error::VedicError;
@@ -213,6 +213,19 @@ fn osculating_rahu_deg_with_model(
     jd_tdb: f64,
     precession_model: PrecessionModel,
 ) -> Result<f64, VedicError> {
+    osculating_rahu_deg_on_plane(engine, jd_tdb, precession_model, ReferencePlane::Ecliptic)
+}
+
+/// Osculating Rahu longitude on the specified reference plane.
+///
+/// For `Ecliptic`: standard ecliptic-of-date ascending node (existing behavior).
+/// For `Invariable`: ascending node of Moon's orbit relative to the invariable plane.
+fn osculating_rahu_deg_on_plane(
+    engine: &Engine,
+    jd_tdb: f64,
+    precession_model: PrecessionModel,
+    plane: ReferencePlane,
+) -> Result<f64, VedicError> {
     let query = Query {
         target: Body::Moon,
         observer: Observer::Body(Body::Earth),
@@ -221,21 +234,34 @@ fn osculating_rahu_deg_with_model(
     };
     let state = engine.query(query)?;
 
-    let r_ecl_j2000 = icrf_to_ecliptic(&state.position_km);
-    let v_ecl_j2000 = icrf_to_ecliptic(&state.velocity_km_s);
-    let h_j2000 = cross(&r_ecl_j2000, &v_ecl_j2000);
+    // Transform position and velocity to the target reference plane
+    let (r_plane, v_plane) = match plane {
+        ReferencePlane::Ecliptic => {
+            let r = icrf_to_ecliptic(&state.position_km);
+            let v = icrf_to_ecliptic(&state.velocity_km_s);
+            // Precess from J2000 ecliptic to ecliptic-of-date
+            let t = (jd_tdb - 2_451_545.0) / 36525.0;
+            let r_date = precess_ecliptic_j2000_to_date_with_model(&r, t, precession_model);
+            let v_date = precess_ecliptic_j2000_to_date_with_model(&v, t, precession_model);
+            (r_date, v_date)
+        }
+        ReferencePlane::Invariable => {
+            // Invariable plane is fixed — no precession needed
+            let r = icrf_to_invariable(&state.position_km);
+            let v = icrf_to_invariable(&state.velocity_km_s);
+            (r, v)
+        }
+    };
 
-    let h_norm2 = h_j2000[0] * h_j2000[0] + h_j2000[1] * h_j2000[1] + h_j2000[2] * h_j2000[2];
+    let h = cross(&r_plane, &v_plane);
+    let h_norm2 = h[0] * h[0] + h[1] * h[1] + h[2] * h[2];
     if h_norm2 < 1e-30 {
         return Err(VedicError::InvalidInput("moon angular momentum too small"));
     }
 
-    let t = (jd_tdb - 2_451_545.0) / 36525.0;
-    let h_date = precess_ecliptic_j2000_to_date_with_model(&h_j2000, t, precession_model);
-
     // N = k × h = (-hy, hx, 0)
-    let nx = -h_date[1];
-    let ny = h_date[0];
+    let nx = -h[1];
+    let ny = h[0];
     if nx.abs() < 1e-15 && ny.abs() < 1e-15 {
         return Err(VedicError::InvalidInput(
             "ascending node direction ill-defined",
@@ -287,6 +313,35 @@ pub fn lunar_node_deg_for_epoch_with_model(
             mean_rahu_deg(t)
         }
         NodeMode::True => osculating_rahu_deg_with_model(engine, jd_tdb, precession_model)?,
+    };
+
+    let out = match node {
+        LunarNode::Rahu => rahu,
+        LunarNode::Ketu => normalize_deg(rahu + 180.0),
+    };
+    Ok(out)
+}
+
+/// Engine-aware lunar node longitude on a specified reference plane.
+///
+/// For `Ecliptic`: standard ecliptic-of-date ascending node.
+/// For `Invariable`: ascending node of Moon's orbit relative to the invariable plane.
+/// Mean node mode always returns ecliptic longitude regardless of plane (the polynomial
+/// is defined on the ecliptic).
+pub fn lunar_node_deg_for_epoch_on_plane(
+    engine: &Engine,
+    node: LunarNode,
+    jd_tdb: f64,
+    mode: NodeMode,
+    precession_model: PrecessionModel,
+    plane: ReferencePlane,
+) -> Result<f64, VedicError> {
+    let rahu = match mode {
+        NodeMode::Mean => {
+            let t = (jd_tdb - 2_451_545.0) / 36525.0;
+            mean_rahu_deg(t)
+        }
+        NodeMode::True => osculating_rahu_deg_on_plane(engine, jd_tdb, precession_model, plane)?,
     };
 
     let out = match node {

@@ -21,6 +21,8 @@ use dhruv_vedic_base::dasha::{
 use dhruv_vedic_base::riseset::compute_rise_set;
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig, RiseSetEvent, RiseSetResult};
 
+use dhruv_frames::{ReferencePlane, ecliptic_lon_to_invariable_lon};
+
 use crate::error::SearchError;
 use crate::jyotish::graha_sidereal_longitudes_with_model;
 use crate::panchang::moon_sidereal_longitude_at;
@@ -111,14 +113,17 @@ fn assemble_rashi_inputs(
 
     let jd_utc = utc_to_jd_utc(utc);
     let lagna_rad = dhruv_vedic_base::lagna_longitude_rad(engine.lsk(), eop, location, jd_utc)?;
+    let lagna_ecl_deg = lagna_rad.to_degrees();
+
+    // Project lagna to reference plane before subtracting ayanamsha
+    let lagna_on_plane = match aya_config.reference_plane {
+        ReferencePlane::Ecliptic => lagna_ecl_deg,
+        ReferencePlane::Invariable => ecliptic_lon_to_invariable_lon(lagna_ecl_deg),
+    };
+
     let t = dhruv_vedic_base::ayanamsha::jd_tdb_to_centuries(jd_tdb);
-    let aya = dhruv_vedic_base::ayanamsha::ayanamsha_deg_with_model(
-        aya_config.ayanamsha_system,
-        t,
-        aya_config.use_nutation,
-        aya_config.precession_model,
-    );
-    let lagna_sid = dhruv_vedic_base::util::normalize_360(lagna_rad.to_degrees() - aya);
+    let aya = aya_config.ayanamsha_deg_at_centuries(t);
+    let lagna_sid = dhruv_vedic_base::util::normalize_360(lagna_on_plane - aya);
 
     Ok(RashiDashaInputs::new(graha_lons.longitudes, lagna_sid))
 }

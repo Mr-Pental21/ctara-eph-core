@@ -12,10 +12,10 @@
 //! Clean-room implementation: all reference values derived independently from
 //! published system definitions. See `docs/clean_room_ayanamsha.md`.
 
-use crate::ayanamsha_anchor::anchor_relative_ayanamsha_deg;
-use crate::ayanamsha_tara::tara_anchor_ayanamsha_deg;
+use crate::ayanamsha_anchor::{anchor_relative_ayanamsha_deg, anchor_relative_ayanamsha_deg_on_plane};
+use crate::ayanamsha_tara::{tara_anchor_ayanamsha_deg, tara_anchor_ayanamsha_deg_on_plane};
 use dhruv_frames::{
-    DEFAULT_PRECESSION_MODEL, PrecessionModel, nutation_iau2000b,
+    DEFAULT_PRECESSION_MODEL, PrecessionModel, ReferencePlane, nutation_iau2000b,
     precess_ecliptic_j2000_to_date_with_model,
 };
 use dhruv_tara::TaraCatalog;
@@ -160,8 +160,10 @@ impl AyanamshaSystem {
             Self::JnBhasin => 22.376,
             // Chandra Hari: λ Sco at 240° sidereal → J2000 ecl lon 264.586 - 240.0
             Self::ChandraHari => 24.586,
-            // Jagganatha
-            Self::Jagganatha => 23.250,
+            // Jagganatha: Spica at 180° sidereal on invariable plane.
+            // Same Spica J2000 anchor as TrueLahiri (ecl lon ≈ 203.853°, target 180°).
+            // Fallback reference ≈ 203.853 - 180.0 = 23.853 (ecliptic approximation).
+            Self::Jagganatha => 23.853,
             // Surya Siddhanta (IAU precession back-computed)
             Self::SuryaSiddhanta => 22.459,
             // Galactic Center at 0° Sag: J2000 ecl lon 266.840 - 240.0
@@ -184,7 +186,20 @@ impl AyanamshaSystem {
                 | Self::Aldebaran15Tau
                 | Self::GalacticCenter0Sag
                 | Self::ChandraHari
+                | Self::Jagganatha
         )
+    }
+
+    /// Default reference plane for this ayanamsha system.
+    ///
+    /// Most systems use the ecliptic. Jagganatha uses the invariable plane,
+    /// measuring all longitudes on the plane perpendicular to the solar
+    /// system's angular momentum vector.
+    pub const fn default_reference_plane(self) -> ReferencePlane {
+        match self {
+            Self::Jagganatha => ReferencePlane::Invariable,
+            _ => ReferencePlane::Ecliptic,
+        }
     }
 
     /// All 20 defined ayanamsha systems.
@@ -218,6 +233,99 @@ pub fn ayanamsha_mean_deg_with_model(
         aya
     } else {
         ayanamsha_3d(system.reference_j2000_deg(), t_centuries, model)
+    }
+}
+
+/// Compute ayanamsha on a specified reference plane.
+///
+/// When `plane == Invariable`, the sidereal zero point is projected to the
+/// invariable plane (no precession needed — the plane is fixed).
+/// When `plane == Ecliptic`, this is identical to [`ayanamsha_deg_with_model`].
+///
+/// Nutation is skipped when `plane == Invariable` (nutation is an
+/// ecliptic/equatorial concept, not meaningful on the invariable plane).
+pub fn ayanamsha_deg_on_plane(
+    system: AyanamshaSystem,
+    t_centuries: f64,
+    use_nutation: bool,
+    model: PrecessionModel,
+    plane: ReferencePlane,
+) -> f64 {
+    match plane {
+        ReferencePlane::Ecliptic => ayanamsha_deg_with_model(system, t_centuries, use_nutation, model),
+        ReferencePlane::Invariable => {
+            // Nutation not applicable on invariable plane.
+            ayanamsha_mean_deg_on_plane(system, t_centuries, model, plane)
+        }
+    }
+}
+
+/// Plane-aware mean ayanamsha with catalog support.
+pub fn ayanamsha_deg_with_catalog_on_plane(
+    system: AyanamshaSystem,
+    t_centuries: f64,
+    use_nutation: bool,
+    catalog: Option<&TaraCatalog>,
+    model: PrecessionModel,
+    plane: ReferencePlane,
+) -> f64 {
+    match plane {
+        ReferencePlane::Ecliptic => {
+            ayanamsha_deg_with_catalog_and_model(system, t_centuries, use_nutation, catalog, model)
+        }
+        ReferencePlane::Invariable => {
+            // Nutation not applicable on invariable plane.
+            // Try catalog-based star ephemeris first
+            if let Some(aya) = catalog.and_then(|cat| {
+                tara_anchor_ayanamsha_deg_on_plane(system, t_centuries, model, cat, plane)
+            }) {
+                return aya;
+            }
+            ayanamsha_mean_deg_on_plane(system, t_centuries, model, plane)
+        }
+    }
+}
+
+/// Mean ayanamsha on a specified reference plane.
+fn ayanamsha_mean_deg_on_plane(
+    system: AyanamshaSystem,
+    t_centuries: f64,
+    model: PrecessionModel,
+    plane: ReferencePlane,
+) -> f64 {
+    match plane {
+        ReferencePlane::Ecliptic => ayanamsha_mean_deg_with_model(system, t_centuries, model),
+        ReferencePlane::Invariable => {
+            if let Some(aya) =
+                anchor_relative_ayanamsha_deg_on_plane(system, t_centuries, model, plane)
+            {
+                aya
+            } else {
+                ayanamsha_3d_on_plane(system.reference_j2000_deg(), t_centuries, model, plane)
+            }
+        }
+    }
+}
+
+/// Compute ayanamsha on a specified reference plane from a J2000 reference longitude.
+///
+/// - `Ecliptic`: precess J2000 ecliptic direction to ecliptic-of-date.
+/// - `Invariable`: project J2000 ecliptic direction to invariable plane (no precession).
+fn ayanamsha_3d_on_plane(
+    ref_j2000_deg: f64,
+    t_centuries: f64,
+    model: PrecessionModel,
+    plane: ReferencePlane,
+) -> f64 {
+    match plane {
+        ReferencePlane::Ecliptic => ayanamsha_3d(ref_j2000_deg, t_centuries, model),
+        ReferencePlane::Invariable => {
+            use dhruv_frames::{cartesian_to_spherical, ecliptic_to_invariable};
+            let ref_rad = ref_j2000_deg.to_radians();
+            let v = [ref_rad.cos(), ref_rad.sin(), 0.0];
+            let inv = ecliptic_to_invariable(&v);
+            cartesian_to_spherical(&inv).lon_deg.rem_euclid(360.0)
+        }
     }
 }
 

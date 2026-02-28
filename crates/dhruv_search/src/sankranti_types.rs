@@ -1,8 +1,8 @@
 //! Types for Sankranti search results.
 
-use dhruv_frames::{DEFAULT_PRECESSION_MODEL, PrecessionModel};
+use dhruv_frames::{DEFAULT_PRECESSION_MODEL, PrecessionModel, ReferencePlane};
 use dhruv_time::UtcTime;
-use dhruv_vedic_base::{AyanamshaSystem, Rashi, ayanamsha_deg_with_model};
+use dhruv_vedic_base::{AyanamshaSystem, Rashi, ayanamsha_deg_on_plane, ayanamsha_deg_with_model};
 
 /// Configuration for Sankranti search.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -13,6 +13,11 @@ pub struct SankrantiConfig {
     pub use_nutation: bool,
     /// Precession model used by ayanamsha propagation.
     pub precession_model: PrecessionModel,
+    /// Reference plane for longitude measurements.
+    ///
+    /// Derived from `ayanamsha_system.default_reference_plane()` by default.
+    /// Most systems use Ecliptic; Jagganatha uses Invariable.
+    pub reference_plane: ReferencePlane,
     /// Coarse scan step size in days (default: 1.0).
     pub step_size_days: f64,
     /// Maximum bisection iterations (default: 50).
@@ -37,6 +42,7 @@ impl SankrantiConfig {
             ayanamsha_system,
             use_nutation,
             precession_model,
+            reference_plane: ayanamsha_system.default_reference_plane(),
             step_size_days: 1.0,
             max_iterations: 50,
             convergence_days: 1e-8,
@@ -49,14 +55,32 @@ impl SankrantiConfig {
             ayanamsha_system: AyanamshaSystem::Lahiri,
             use_nutation: false,
             precession_model: DEFAULT_PRECESSION_MODEL,
+            reference_plane: ReferencePlane::Ecliptic,
             step_size_days: 1.0,
             max_iterations: 50,
             convergence_days: 1e-8,
         }
     }
 
-    /// Ayanamsha at `t_centuries`, using this configuration's model settings.
+    /// Ayanamsha at `t_centuries`, using this configuration's model and plane settings.
+    ///
+    /// For `Ecliptic` plane, this returns the standard ecliptic ayanamsha.
+    /// For `Invariable` plane, returns the ayanamsha computed on the invariable plane
+    /// (nutation is not applied — it's an ecliptic concept).
     pub fn ayanamsha_deg_at_centuries(&self, t_centuries: f64) -> f64 {
+        ayanamsha_deg_on_plane(
+            self.ayanamsha_system,
+            t_centuries,
+            self.use_nutation,
+            self.precession_model,
+            self.reference_plane,
+        )
+    }
+
+    /// Ayanamsha at `t_centuries` using the ECLIPTIC plane regardless of config.
+    ///
+    /// Used by code paths that always need ecliptic ayanamsha (e.g. tithi, elongation).
+    pub fn ayanamsha_deg_ecliptic(&self, t_centuries: f64) -> f64 {
         ayanamsha_deg_with_model(
             self.ayanamsha_system,
             t_centuries,

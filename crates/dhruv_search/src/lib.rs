@@ -27,7 +27,8 @@ pub mod stationary;
 pub mod stationary_types;
 
 pub use conjunction::{
-    body_ecliptic_lon_lat, next_conjunction, prev_conjunction, search_conjunctions,
+    body_ecliptic_lon_lat, body_lon_lat_on_plane, next_conjunction, prev_conjunction,
+    search_conjunctions,
 };
 pub use conjunction_types::{ConjunctionConfig, ConjunctionEvent, SearchDirection};
 pub use dasha::{

@@ -16,7 +16,7 @@ use dhruv_vedic_base::{
     rashi_from_longitude, samvatsara_from_year, tithi_from_elongation, vaar_from_jd, yoga_from_sum,
 };
 
-use crate::conjunction::body_ecliptic_lon_lat;
+use crate::conjunction::{body_ecliptic_lon_lat, body_lon_lat_on_plane};
 use crate::error::SearchError;
 use crate::lunar_phase::{next_amavasya, prev_amavasya};
 use crate::panchang_types::{
@@ -33,10 +33,16 @@ fn sun_sidereal_rashi_index(
     jd_tdb: f64,
     config: &SankrantiConfig,
 ) -> Result<u8, SearchError> {
-    let (tropical_lon, _lat) = body_ecliptic_lon_lat(engine, dhruv_core::Body::Sun, jd_tdb)?;
+    let (lon, _lat) = body_lon_lat_on_plane(
+        engine,
+        dhruv_core::Body::Sun,
+        jd_tdb,
+        config.precession_model,
+        config.reference_plane,
+    )?;
     let t = jd_tdb_to_centuries(jd_tdb);
     let aya = config.ayanamsha_deg_at_centuries(t);
-    let sid = (tropical_lon - aya).rem_euclid(360.0);
+    let sid = (lon - aya).rem_euclid(360.0);
     Ok(rashi_from_longitude(sid).rashi_index)
 }
 
@@ -46,10 +52,16 @@ fn sun_sidereal_longitude(
     jd_tdb: f64,
     config: &SankrantiConfig,
 ) -> Result<f64, SearchError> {
-    let (tropical_lon, _lat) = body_ecliptic_lon_lat(engine, dhruv_core::Body::Sun, jd_tdb)?;
+    let (lon, _lat) = body_lon_lat_on_plane(
+        engine,
+        dhruv_core::Body::Sun,
+        jd_tdb,
+        config.precession_model,
+        config.reference_plane,
+    )?;
     let t = jd_tdb_to_centuries(jd_tdb);
     let aya = config.ayanamsha_deg_at_centuries(t);
-    Ok((tropical_lon - aya).rem_euclid(360.0))
+    Ok((lon - aya).rem_euclid(360.0))
 }
 
 /// Determine the Masa (lunar month, Amanta system) for a given date.
@@ -215,32 +227,52 @@ pub fn elongation_at(engine: &Engine, jd_tdb: f64) -> Result<f64, SearchError> {
 ///
 /// Returns (Moon_sid + Sun_sid) mod 360 in degrees [0, 360).
 /// Ayanamsha does NOT cancel in the sum, so sidereal coords are needed.
+/// Uses the reference plane from `config` for frame consistency.
 pub fn sidereal_sum_at(
     engine: &Engine,
     jd_tdb: f64,
     config: &SankrantiConfig,
 ) -> Result<f64, SearchError> {
-    let (moon_trop, _) = body_ecliptic_lon_lat(engine, Body::Moon, jd_tdb)?;
-    let (sun_trop, _) = body_ecliptic_lon_lat(engine, Body::Sun, jd_tdb)?;
+    let (moon_lon, _) = body_lon_lat_on_plane(
+        engine,
+        Body::Moon,
+        jd_tdb,
+        config.precession_model,
+        config.reference_plane,
+    )?;
+    let (sun_lon, _) = body_lon_lat_on_plane(
+        engine,
+        Body::Sun,
+        jd_tdb,
+        config.precession_model,
+        config.reference_plane,
+    )?;
     let t = jd_tdb_to_centuries(jd_tdb);
     let aya = config.ayanamsha_deg_at_centuries(t);
-    let moon_sid = (moon_trop - aya).rem_euclid(360.0);
-    let sun_sid = (sun_trop - aya).rem_euclid(360.0);
+    let moon_sid = (moon_lon - aya).rem_euclid(360.0);
+    let sun_sid = (sun_lon - aya).rem_euclid(360.0);
     Ok((moon_sid + sun_sid).rem_euclid(360.0))
 }
 
 /// Moon's sidereal longitude at a given JD TDB.
 ///
 /// Returns Moon_sid mod 360 in degrees [0, 360).
+/// Uses the reference plane from `config` for frame consistency.
 pub fn moon_sidereal_longitude_at(
     engine: &Engine,
     jd_tdb: f64,
     config: &SankrantiConfig,
 ) -> Result<f64, SearchError> {
-    let (moon_trop, _) = body_ecliptic_lon_lat(engine, Body::Moon, jd_tdb)?;
+    let (moon_lon, _) = body_lon_lat_on_plane(
+        engine,
+        Body::Moon,
+        jd_tdb,
+        config.precession_model,
+        config.reference_plane,
+    )?;
     let t = jd_tdb_to_centuries(jd_tdb);
     let aya = config.ayanamsha_deg_at_centuries(t);
-    Ok((moon_trop - aya).rem_euclid(360.0))
+    Ok((moon_lon - aya).rem_euclid(360.0))
 }
 
 /// Determine the Moon's Nakshatra (27-scheme) for a given date.

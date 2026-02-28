@@ -74,11 +74,12 @@ pub use avastha::{
 };
 pub use ayana_type::{ALL_AYANAS, Ayana, ayana_from_sidereal_longitude};
 pub use ayanamsha::{
-    AyanamshaSystem, ayanamsha_deg, ayanamsha_deg_with_catalog,
-    ayanamsha_deg_with_catalog_and_model, ayanamsha_deg_with_model, ayanamsha_mean_deg,
-    ayanamsha_mean_deg_with_catalog, ayanamsha_mean_deg_with_catalog_and_model,
-    ayanamsha_mean_deg_with_model, ayanamsha_true_deg, ayanamsha_true_deg_with_model,
-    jd_tdb_to_centuries, tdb_seconds_to_centuries,
+    AyanamshaSystem, ayanamsha_deg, ayanamsha_deg_on_plane, ayanamsha_deg_with_catalog,
+    ayanamsha_deg_with_catalog_and_model, ayanamsha_deg_with_catalog_on_plane,
+    ayanamsha_deg_with_model, ayanamsha_mean_deg, ayanamsha_mean_deg_with_catalog,
+    ayanamsha_mean_deg_with_catalog_and_model, ayanamsha_mean_deg_with_model,
+    ayanamsha_true_deg, ayanamsha_true_deg_with_model, jd_tdb_to_centuries,
+    tdb_seconds_to_centuries,
 };
 pub use bhava::compute_bhavas;
 pub use bhava_types::{
@@ -115,8 +116,8 @@ pub use karana::{ALL_KARANAS, KARANA_SEGMENT_DEG, Karana, KaranaPosition, karana
 pub use lagna::{lagna_and_mc_rad, lagna_longitude_rad, mc_longitude_rad, ramc_rad};
 pub use lunar_nodes::{
     LunarNode, NodeMode, lunar_node_deg, lunar_node_deg_for_epoch,
-    lunar_node_deg_for_epoch_with_model, mean_ketu_deg, mean_rahu_deg, true_ketu_deg,
-    true_rahu_deg,
+    lunar_node_deg_for_epoch_on_plane, lunar_node_deg_for_epoch_with_model, mean_ketu_deg,
+    mean_rahu_deg, true_ketu_deg, true_rahu_deg,
 };
 pub use masa::{ALL_MASAS, Masa, masa_from_rashi_index};
 pub use nakshatra::{

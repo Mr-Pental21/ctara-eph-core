@@ -10,7 +10,7 @@ use dhruv_core::{Body, Engine};
 use dhruv_time::UtcTime;
 use dhruv_vedic_base::{ALL_RASHIS, Rashi, jd_tdb_to_centuries};
 
-use crate::conjunction::body_ecliptic_lon_lat;
+use crate::conjunction::{body_ecliptic_lon_lat, body_lon_lat_on_plane};
 use crate::error::SearchError;
 use crate::sankranti_types::{SankrantiConfig, SankrantiEvent};
 use crate::search_util::{find_zero_crossing, normalize_to_pm180};
@@ -19,15 +19,24 @@ use crate::search_util::{find_zero_crossing, normalize_to_pm180};
 const MAX_SCAN_DAYS: f64 = 400.0;
 
 /// Get Sun's sidereal longitude at a given JD TDB.
+///
+/// Uses the reference plane configured in `config` for both the body longitude
+/// and the ayanamsha, ensuring frame consistency.
 fn sun_sidereal_longitude(
     engine: &Engine,
     jd_tdb: f64,
     config: &SankrantiConfig,
 ) -> Result<f64, SearchError> {
-    let (tropical_lon, _lat) = body_ecliptic_lon_lat(engine, Body::Sun, jd_tdb)?;
+    let (lon, _lat) = body_lon_lat_on_plane(
+        engine,
+        Body::Sun,
+        jd_tdb,
+        config.precession_model,
+        config.reference_plane,
+    )?;
     let t = jd_tdb_to_centuries(jd_tdb);
     let aya = config.ayanamsha_deg_at_centuries(t);
-    let sid = (tropical_lon - aya).rem_euclid(360.0);
+    let sid = (lon - aya).rem_euclid(360.0);
     Ok(sid)
 }
 
@@ -53,10 +62,19 @@ fn build_event(
     boundary_deg: f64,
     config: &SankrantiConfig,
 ) -> Result<SankrantiEvent, SearchError> {
+    // sun_tropical_longitude_deg is ALWAYS ecliptic tropical (existing semantics).
     let (tropical_lon, _lat) = body_ecliptic_lon_lat(engine, Body::Sun, jd_tdb)?;
+    // Sidereal via reference plane (may be invariable for Jagganatha).
+    let (lon_on_plane, _) = body_lon_lat_on_plane(
+        engine,
+        Body::Sun,
+        jd_tdb,
+        config.precession_model,
+        config.reference_plane,
+    )?;
     let t = jd_tdb_to_centuries(jd_tdb);
     let aya = config.ayanamsha_deg_at_centuries(t);
-    let sid = (tropical_lon - aya).rem_euclid(360.0);
+    let sid = (lon_on_plane - aya).rem_euclid(360.0);
 
     // Rashi being entered = boundary / 30
     let rashi_index = ((boundary_deg / 30.0).round() as u8) % 12;

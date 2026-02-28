@@ -9,8 +9,8 @@
 
 use dhruv_core::{Body, Engine, Frame, Observer, Query};
 use dhruv_frames::{
-    DEFAULT_PRECESSION_MODEL, PrecessionModel, cartesian_to_spherical, icrf_to_ecliptic,
-    precess_ecliptic_j2000_to_date_with_model,
+    DEFAULT_PRECESSION_MODEL, PrecessionModel, ReferencePlane, cartesian_to_spherical,
+    icrf_to_ecliptic, icrf_to_invariable, precess_ecliptic_j2000_to_date_with_model,
 };
 
 use crate::conjunction_types::{ConjunctionConfig, ConjunctionEvent, SearchDirection};
@@ -52,6 +52,36 @@ pub fn body_ecliptic_lon_lat_with_model(
     let ecl_date = precess_ecliptic_j2000_to_date_with_model(&ecl_j2000, t, precession_model);
     let sph = cartesian_to_spherical(&ecl_date);
     Ok((sph.lon_deg.rem_euclid(360.0), sph.lat_deg))
+}
+
+/// Query a body's longitude and latitude on the specified reference plane.
+///
+/// - `Ecliptic`: ICRF → ecliptic J2000 → precess to date → spherical (existing path).
+/// - `Invariable`: ICRF → invariable plane → spherical (no precession needed).
+pub fn body_lon_lat_on_plane(
+    engine: &Engine,
+    body: Body,
+    jd_tdb: f64,
+    precession_model: PrecessionModel,
+    plane: ReferencePlane,
+) -> Result<(f64, f64), SearchError> {
+    match plane {
+        ReferencePlane::Ecliptic => {
+            body_ecliptic_lon_lat_with_model(engine, body, jd_tdb, precession_model)
+        }
+        ReferencePlane::Invariable => {
+            let query = Query {
+                target: body,
+                observer: Observer::Body(Body::Earth),
+                frame: Frame::IcrfJ2000,
+                epoch_tdb_jd: jd_tdb,
+            };
+            let state = engine.query(query)?;
+            let inv = icrf_to_invariable(&state.position_km);
+            let sph = cartesian_to_spherical(&inv);
+            Ok((sph.lon_deg.rem_euclid(360.0), sph.lat_deg))
+        }
+    }
 }
 
 /// Query a body's ecliptic-of-date longitude, latitude, and longitude speed.

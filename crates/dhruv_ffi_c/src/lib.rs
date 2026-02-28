@@ -3242,6 +3242,7 @@ fn sankranti_config_from_ffi(cfg: &DhruvSankrantiConfig) -> Option<SankrantiConf
         ayanamsha_system: system,
         use_nutation: cfg.use_nutation != 0,
         precession_model: dhruv_frames::DEFAULT_PRECESSION_MODEL,
+        reference_plane: system.default_reference_plane(),
         step_size_days: cfg.step_size_days,
         max_iterations: cfg.max_iterations,
         convergence_days: cfg.convergence_days,
