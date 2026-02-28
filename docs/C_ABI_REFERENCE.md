@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 38`
+**ABI version:** `DHRUV_API_VERSION = 39`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -712,6 +712,28 @@ DhruvStatus dhruv_ayanamsha_deg_with_catalog_utc(
     double* out_deg
 );
 ```
+
+---
+
+### Reference Plane
+
+```c
+enum DhruvReferencePlane {
+    DHRUV_REFERENCE_PLANE_ECLIPTIC   = 0,
+    DHRUV_REFERENCE_PLANE_INVARIABLE = 1,
+};
+```
+
+Reference plane for longitude measurements. Most ayanamsha systems use the
+ecliptic (0). The Jagganatha system uses the invariable plane (1).
+
+```c
+int32_t dhruv_reference_plane_default(int32_t system_code);
+```
+
+Returns the default reference plane code for a given ayanamsha system.
+Returns 0 (Ecliptic) for all systems except Jagganatha (code 16), which
+returns 1 (Invariable). Returns -1 for invalid system codes.
 
 ---
 

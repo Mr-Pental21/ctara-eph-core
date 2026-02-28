@@ -172,6 +172,18 @@ pub fn ecliptic_lon_to_invariable_lon(ecl_lon_deg: f64) -> f64 {
     inv_vec[1].atan2(inv_vec[0]).to_degrees().rem_euclid(360.0)
 }
 
+/// Project an invariable-plane longitude (lat=0 on invariable) to ecliptic longitude.
+///
+/// Inverse of [`ecliptic_lon_to_invariable_lon`]. Used to recover ecliptic
+/// tropical longitude from an invariable-plane longitude for bhava matching
+/// (bhava cusps are ecliptic quantities).
+pub fn invariable_lon_to_ecliptic_lon(inv_lon_deg: f64) -> f64 {
+    let rad = inv_lon_deg.to_radians();
+    let inv_vec = [rad.cos(), rad.sin(), 0.0];
+    let ecl_vec = invariable_to_ecliptic(&inv_vec);
+    ecl_vec[1].atan2(ecl_vec[0]).to_degrees().rem_euclid(360.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -322,6 +334,34 @@ mod tests {
     #[test]
     fn default_reference_plane_is_ecliptic() {
         assert_eq!(ReferencePlane::default(), ReferencePlane::Ecliptic);
+    }
+
+    #[test]
+    fn lon_roundtrip_ecl_inv_ecl() {
+        // ecliptic → invariable → ecliptic roundtrip.  Not exact because
+        // each step projects to lat=0 on its plane (discarding the small
+        // out-of-plane component).  With ~1.58° tilt the worst-case error
+        // is ~0.022° (near the antinodes, 90° from Ω).
+        for deg in (0..360).step_by(15) {
+            let ecl = deg as f64;
+            let inv = ecliptic_lon_to_invariable_lon(ecl);
+            let back = invariable_lon_to_ecliptic_lon(inv);
+            let diff = (back - ecl + 180.0).rem_euclid(360.0) - 180.0;
+            assert!(
+                diff.abs() < 0.025,
+                "ecl={ecl}° → inv={inv}° → ecl={back}°, diff={diff:.6}°"
+            );
+        }
+    }
+
+    #[test]
+    fn invariable_lon_to_ecliptic_lon_at_node() {
+        // At the node, both planes intersect → longitude preserved
+        let ecl = invariable_lon_to_ecliptic_lon(INVARIABLE_NODE_DEG);
+        assert!(
+            (ecl - INVARIABLE_NODE_DEG).abs() < 1e-8,
+            "at node: ecl={ecl}°, expected ~{INVARIABLE_NODE_DEG}°"
+        );
     }
 
     #[test]

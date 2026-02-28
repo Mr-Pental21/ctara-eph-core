@@ -7,7 +7,7 @@
 use dhruv_core::{Body, Engine};
 use dhruv_frames::{
     DEFAULT_PRECESSION_MODEL, PrecessionModel, ReferencePlane, ecliptic_lon_to_invariable_lon,
-    mean_obliquity_of_date_rad,
+    invariable_lon_to_ecliptic_lon, mean_obliquity_of_date_rad,
 };
 use dhruv_time::{EopKernel, UtcTime};
 use dhruv_vedic_base::arudha::all_arudha_padas;
@@ -77,6 +77,17 @@ fn ecliptic_to_sidereal(ecl_lon_deg: f64, aya: f64, plane: ReferencePlane) -> f6
     normalize(on_plane - aya)
 }
 
+/// Recover ecliptic tropical longitude from a sidereal longitude on the given
+/// plane.  Used for bhava matching: bhava cusps are ecliptic, so the sidereal
+/// value must be converted back to ecliptic tropical before comparing.
+fn sidereal_to_ecliptic_tropical(sid_lon: f64, aya: f64, plane: ReferencePlane) -> f64 {
+    let tropical_on_plane = normalize(sid_lon + aya);
+    match plane {
+        ReferencePlane::Ecliptic => tropical_on_plane,
+        ReferencePlane::Invariable => invariable_lon_to_ecliptic_lon(tropical_on_plane),
+    }
+}
+
 /// One-shot, function-local cache for shared intermediates.
 ///
 /// This is intentionally not exposed and not persisted across calls.
@@ -130,6 +141,7 @@ impl JyotishContext {
                 aya_config.ayanamsha_system,
                 aya_config.use_nutation,
                 aya_config.precession_model,
+                aya_config.reference_plane,
             )?;
             self.graha_lons = Some(lons);
         }
@@ -304,21 +316,25 @@ pub fn graha_sidereal_longitudes(
         system,
         use_nutation,
         DEFAULT_PRECESSION_MODEL,
+        system.default_reference_plane(),
     )
 }
 
-/// Query all 9 graha sidereal longitudes at a given TDB epoch using a specific precession model.
+/// Query all 9 graha sidereal longitudes at a given TDB epoch using a specific
+/// precession model and reference plane.
 ///
-/// Uses the ayanamsha system's default reference plane. For most systems this is
-/// the ecliptic; for Jagganatha this is the invariable plane.
+/// The `plane` parameter controls which plane body longitudes and the ayanamsha
+/// are measured on.  When the caller holds a `SankrantiConfig` that may carry a
+/// non-default plane, pass `config.reference_plane` here to keep all quantities
+/// in the same frame.
 pub fn graha_sidereal_longitudes_with_model(
     engine: &Engine,
     jd_tdb: f64,
     system: AyanamshaSystem,
     use_nutation: bool,
     precession_model: PrecessionModel,
+    plane: ReferencePlane,
 ) -> Result<GrahaLongitudes, SearchError> {
-    let plane = system.default_reference_plane();
     let t = jd_tdb_to_centuries(jd_tdb);
     let aya = dhruv_vedic_base::ayanamsha_deg_on_plane(
         system,
@@ -597,7 +613,7 @@ fn graha_positions_with_ctx(
     for graha in ALL_GRAHAS {
         let idx = graha.index() as usize;
         let sid_lon = graha_lons.longitude(graha);
-        grahas[idx] = make_graha_entry(sid_lon, config, bhava_result, aya);
+        grahas[idx] = make_graha_entry(sid_lon, config, bhava_result, aya, plane);
     }
 
     let lagna = if config.include_lagna {
@@ -606,6 +622,7 @@ fn graha_positions_with_ctx(
             config,
             bhava_result,
             aya,
+            plane,
         )
     } else {
         GrahaEntry::sentinel()
@@ -623,7 +640,7 @@ fn graha_positions_with_ctx(
                 plane,
             )?;
             let sid_lon = normalize(lon - aya);
-            entries[i] = make_graha_entry(sid_lon, config, bhava_result, aya);
+            entries[i] = make_graha_entry(sid_lon, config, bhava_result, aya, plane);
         }
         entries
     } else {
@@ -643,6 +660,7 @@ fn make_graha_entry(
     config: &GrahaPositionsConfig,
     bhava_result: Option<&dhruv_vedic_base::BhavaResult>,
     aya: f64,
+    plane: ReferencePlane,
 ) -> GrahaEntry {
     let rashi_info = rashi_from_longitude(sid_lon);
     let (nakshatra, nakshatra_index, pada) = if config.include_nakshatra {
@@ -652,9 +670,10 @@ fn make_graha_entry(
         (dhruv_vedic_base::Nakshatra::Ashwini, 255, 0)
     };
     let bhava_number = if let Some(result) = bhava_result {
-        // Determine which bhava this longitude falls in (use tropical for matching bhava cusps)
-        let tropical_lon = normalize(sid_lon + aya);
-        find_bhava_number(tropical_lon, result)
+        // Reconstruct ecliptic tropical longitude for bhava matching.
+        // Bhava cusps are ecliptic; when sidereal is on the invariable plane,
+        // we must reverse-project to ecliptic before matching.
+        find_bhava_number(sidereal_to_ecliptic_tropical(sid_lon, aya, plane), result)
     } else {
         0
     };
@@ -869,18 +888,18 @@ fn core_bindus_with_ctx(
     let arudha_raw = all_arudha_padas(&cusp_sid, &lord_lons);
     let mut arudha_padas = [GrahaEntry::sentinel(); 12];
     for i in 0..12 {
-        arudha_padas[i] = make_graha_entry(arudha_raw[i].longitude_deg, &gp_config, bhava_opt, aya);
+        arudha_padas[i] = make_graha_entry(arudha_raw[i].longitude_deg, &gp_config, bhava_opt, aya, plane);
     }
 
     Ok(BindusResult {
         arudha_padas,
-        bhrigu_bindu: make_graha_entry(bb_lon, &gp_config, bhava_opt, aya),
-        pranapada_lagna: make_graha_entry(pp_lon, &gp_config, bhava_opt, aya),
-        gulika: make_graha_entry(gulika_sid, &gp_config, bhava_opt, aya),
-        maandi: make_graha_entry(maandi_sid, &gp_config, bhava_opt, aya),
-        hora_lagna: make_graha_entry(hl_lon, &gp_config, bhava_opt, aya),
-        ghati_lagna: make_graha_entry(gl_lon, &gp_config, bhava_opt, aya),
-        sree_lagna: make_graha_entry(sl_lon, &gp_config, bhava_opt, aya),
+        bhrigu_bindu: make_graha_entry(bb_lon, &gp_config, bhava_opt, aya, plane),
+        pranapada_lagna: make_graha_entry(pp_lon, &gp_config, bhava_opt, aya, plane),
+        gulika: make_graha_entry(gulika_sid, &gp_config, bhava_opt, aya, plane),
+        maandi: make_graha_entry(maandi_sid, &gp_config, bhava_opt, aya, plane),
+        hora_lagna: make_graha_entry(hl_lon, &gp_config, bhava_opt, aya, plane),
+        ghati_lagna: make_graha_entry(gl_lon, &gp_config, bhava_opt, aya, plane),
+        sree_lagna: make_graha_entry(sl_lon, &gp_config, bhava_opt, aya, plane),
     })
 }
 
@@ -1576,14 +1595,17 @@ fn assemble_shadbala_inputs(
     let graha_lons = *ctx.graha_lons(engine, aya_config)?;
     let sidereal_lons = graha_lons.longitudes;
     let aya = ctx.ayanamsha;
+    let plane = ctx.reference_plane;
 
     // 2. Bhava numbers for sapta grahas
     let bhava_result = *ctx.bhava_result(engine, eop, location, bhava_config)?;
     let mut bhava_numbers = [0u8; 7];
     for graha in SAPTA_GRAHAS {
         let idx = graha.index() as usize;
-        let tropical_lon = normalize(sidereal_lons[idx] + aya);
-        bhava_numbers[idx] = find_bhava_number(tropical_lon, &bhava_result);
+        bhava_numbers[idx] = find_bhava_number(
+            sidereal_to_ecliptic_tropical(sidereal_lons[idx], aya, plane),
+            &bhava_result,
+        );
     }
 
     // 3. Speeds (deg/day) for sapta grahas
@@ -1809,6 +1831,7 @@ fn assemble_avastha_inputs(
     ctx: &mut JyotishContext,
 ) -> Result<AvasthaInputs, SearchError> {
     let aya = ctx.ayanamsha;
+    let plane = ctx.reference_plane;
 
     // 1. Graha longitudes & rashi indices
     let graha_lons = *ctx.graha_lons(engine, aya_config)?;
@@ -1820,8 +1843,10 @@ fn assemble_avastha_inputs(
     let mut bhava_numbers = [0u8; 9];
     for graha in ALL_GRAHAS {
         let idx = graha.index() as usize;
-        let tropical_lon = normalize(sidereal_lons[idx] + aya);
-        bhava_numbers[idx] = find_bhava_number(tropical_lon, &bhava_result);
+        bhava_numbers[idx] = find_bhava_number(
+            sidereal_to_ecliptic_tropical(sidereal_lons[idx], aya, plane),
+            &bhava_result,
+        );
     }
 
     // 3. Speeds → retrograde detection (sapta grahas only; Rahu/Ketu always false)
@@ -2345,9 +2370,11 @@ fn amsha_charts_from_kundali_with_ctx(
     // Bhava cusps (sidereal) from context
     let bhava_cusps_sid = if scope.include_bhava_cusps {
         if let Some(ref bhava_result) = ctx.bhava_result {
+            let aya = ctx.ayanamsha;
+            let plane = ctx.reference_plane;
             let mut cusps = [0.0f64; 12];
             for (i, cusp) in cusps.iter_mut().enumerate() {
-                *cusp = normalize(bhava_result.bhavas[i].cusp_deg - ctx.ayanamsha);
+                *cusp = ecliptic_to_sidereal(bhava_result.bhavas[i].cusp_deg, aya, plane);
             }
             Some(cusps)
         } else {

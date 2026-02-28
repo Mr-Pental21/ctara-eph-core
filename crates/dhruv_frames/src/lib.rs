@@ -30,7 +30,8 @@ pub use precession::{
 pub use invariable::{
     INVARIABLE_INCLINATION_DEG, INVARIABLE_NODE_DEG, ReferencePlane,
     ecliptic_lon_to_invariable_lon, ecliptic_to_invariable, icrf_to_invariable,
-    icrf_to_reference_plane, invariable_to_ecliptic, invariable_to_icrf,
+    icrf_to_reference_plane, invariable_lon_to_ecliptic_lon, invariable_to_ecliptic,
+    invariable_to_icrf,
 };
 pub use rotation::{ecliptic_to_icrf, icrf_to_ecliptic};
 pub use spherical::{

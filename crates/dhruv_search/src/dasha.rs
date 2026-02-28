@@ -109,6 +109,7 @@ fn assemble_rashi_inputs(
         aya_config.ayanamsha_system,
         aya_config.use_nutation,
         aya_config.precession_model,
+        aya_config.reference_plane,
     )?;
 
     let jd_utc = utc_to_jd_utc(utc);
