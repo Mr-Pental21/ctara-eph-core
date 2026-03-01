@@ -67,6 +67,7 @@ pub use convenience::{
     graha_drishti_matrix,
     graha_longitudes,
     graha_positions,
+    graha_tropical_longitudes,
     hora,
     hora_at,
     hora_lagna,
@@ -177,6 +178,7 @@ pub use dhruv_frames::{ReferencePlane, SphericalCoords, SphericalState};
 pub use dhruv_search::{
     AmshaChart, AmshaChartScope, AmshaEntry, AmshaResult, AmshaSelectionConfig, DrishtiConfig,
     DrishtiResult, FullKundaliConfig, FullKundaliResult, GrahaLongitudes,
+    GrahaTropicalLongitudes,
 };
 pub use dhruv_vedic_base::riseset_types::GeoLocation;
 pub use dhruv_vedic_base::riseset_types::{RiseSetConfig, RiseSetEvent, RiseSetResult, SunLimb};

@@ -36,6 +36,20 @@ impl GrahaLongitudes {
     }
 }
 
+/// Tropical (ecliptic-of-date) longitudes of all 9 grahas.
+#[derive(Debug, Clone, Copy)]
+pub struct GrahaTropicalLongitudes {
+    /// Tropical longitudes indexed by `Graha::index()` (0-8).
+    pub longitudes: [f64; 9],
+}
+
+impl GrahaTropicalLongitudes {
+    /// Get the tropical longitude for a specific graha.
+    pub fn longitude(&self, graha: Graha) -> f64 {
+        self.longitudes[graha.index() as usize]
+    }
+}
+
 /// Configuration flags for graha_positions computation.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GrahaPositionsConfig {

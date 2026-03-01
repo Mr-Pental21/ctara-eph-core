@@ -34,6 +34,7 @@ Complete reference for the `dhruv_ffi_c` C-compatible API surface.
    - [RAMC](#ramc)
    - [Pure-Math Panchang Classifiers](#pure-math-panchang-classifiers)
    - [Graha Sidereal Longitudes](#graha-sidereal-longitudes)
+   - [Graha Tropical Longitudes](#graha-tropical-longitudes)
    - [Nakshatra At](#nakshatra-at)
    - [Time Upagraha JD](#time-upagraha-jd)
    - [Pure-Math Ashtakavarga](#pure-math-ashtakavarga)
@@ -1311,6 +1312,20 @@ Query sidereal longitudes (degrees, 0..360) of all 9 grahas at a given JD (TDB).
 
 ---
 
+### Graha Tropical Longitudes
+
+```c
+DhruvStatus dhruv_graha_tropical_longitudes(
+    const Engine*           engine,
+    double                  jd_tdb,
+    DhruvGrahaLongitudes*   out
+);
+```
+
+Query tropical (ecliptic-of-date) longitudes (degrees, 0..360) of all 9 grahas at a given JD (TDB). Returns raw ecliptic-of-date longitudes without ayanamsha subtraction. No `ayanamsha_system` or `use_nutation` parameters — tropical is frame-only. Uses the same `DhruvGrahaLongitudes` output struct as `dhruv_graha_sidereal_longitudes`.
+
+---
+
 ### Nakshatra At
 
 ```c
@@ -1525,52 +1540,53 @@ Determine the hora lord for a given weekday and hora position. Returns the lord'
 | 47 | `dhruv_prev_max_speed` | yes | | | |
 | 48 | `dhruv_search_max_speed` | yes | | | |
 | 49 | `dhruv_graha_sidereal_longitudes` | yes | | | |
-| 50 | `dhruv_nakshatra_at` | yes | | | |
-| 51 | `dhruv_ramc_deg` | | yes | yes | |
-| 52 | `dhruv_ramc_deg_utc` | | yes | yes | |
-| 53 | `dhruv_tithi_from_elongation` | | | | yes |
-| 54 | `dhruv_karana_from_elongation` | | | | yes |
-| 55 | `dhruv_yoga_from_sum` | | | | yes |
-| 56 | `dhruv_vaar_from_jd` | | | | yes |
-| 57 | `dhruv_masa_from_rashi_index` | | | | yes |
-| 58 | `dhruv_ayana_from_sidereal_longitude` | | | | yes |
-| 59 | `dhruv_samvatsara_from_year` | | | | yes |
-| 60 | `dhruv_nth_rashi_from` | | | | yes |
-| 61 | `dhruv_time_upagraha_jd` | | | | yes |
-| 62 | `dhruv_time_upagraha_jd_utc` | yes | | yes | |
-| 63 | `dhruv_calculate_bav` | | | | yes |
-| 64 | `dhruv_calculate_all_bav` | | | | yes |
-| 65 | `dhruv_calculate_sav` | | | | yes |
-| 66 | `dhruv_trikona_sodhana` | | | | yes |
-| 67 | `dhruv_ekadhipatya_sodhana` | | | | yes |
-| 68 | `dhruv_graha_drishti` | | | | yes |
-| 69 | `dhruv_graha_drishti_matrix` | | | | yes |
-| 70 | `dhruv_ghatika_from_elapsed` | | | | yes |
-| 71 | `dhruv_ghatikas_since_sunrise` | | | | yes |
-| 72 | `dhruv_hora_at` | | | | yes |
-| 73 | `dhruv_dasha_selection_config_default` | | | | yes |
-| 74 | `dhruv_dasha_hierarchy_utc` | yes | | | |
-| 75 | `dhruv_dasha_snapshot_utc` | yes | | | |
-| 76 | `dhruv_dasha_hierarchy_level_count` | | | | yes |
-| 77 | `dhruv_dasha_hierarchy_period_count` | | | | yes |
-| 78 | `dhruv_dasha_hierarchy_period_at` | | | | yes |
-| 79 | `dhruv_dasha_hierarchy_free` | | | | yes |
-| 80 | `dhruv_full_kundali_result_free` | | | | yes |
-| 81 | `dhruv_full_kundali_config_default` | | | | yes |
-| 82 | `dhruv_tara_catalog_load` | | | | yes |
-| 83 | `dhruv_tara_catalog_free` | | | | yes |
-| 84 | `dhruv_tara_position_equatorial` | | | | yes |
-| 85 | `dhruv_tara_position_equatorial_ex` | | | | yes |
-| 86 | `dhruv_tara_position_ecliptic` | | | | yes |
-| 87 | `dhruv_tara_position_ecliptic_ex` | | | | yes |
-| 88 | `dhruv_tara_sidereal_longitude` | | | | yes |
-| 89 | `dhruv_tara_sidereal_longitude_ex` | | | | yes |
-| 90 | `dhruv_tara_galactic_center_ecliptic` | | | | yes |
-| 91 | `dhruv_ayanamsha_mean_deg_with_catalog` | | | | yes |
-| 92 | `dhruv_ayanamsha_deg_with_catalog` | | | | yes |
-| 93 | `dhruv_ayanamsha_deg_with_catalog_utc` | | yes | | |
+| 50 | `dhruv_graha_tropical_longitudes` | yes | | | |
+| 51 | `dhruv_nakshatra_at` | yes | | | |
+| 52 | `dhruv_ramc_deg` | | yes | yes | |
+| 53 | `dhruv_ramc_deg_utc` | | yes | yes | |
+| 54 | `dhruv_tithi_from_elongation` | | | | yes |
+| 55 | `dhruv_karana_from_elongation` | | | | yes |
+| 56 | `dhruv_yoga_from_sum` | | | | yes |
+| 57 | `dhruv_vaar_from_jd` | | | | yes |
+| 58 | `dhruv_masa_from_rashi_index` | | | | yes |
+| 59 | `dhruv_ayana_from_sidereal_longitude` | | | | yes |
+| 60 | `dhruv_samvatsara_from_year` | | | | yes |
+| 61 | `dhruv_nth_rashi_from` | | | | yes |
+| 62 | `dhruv_time_upagraha_jd` | | | | yes |
+| 63 | `dhruv_time_upagraha_jd_utc` | yes | | yes | |
+| 64 | `dhruv_calculate_bav` | | | | yes |
+| 65 | `dhruv_calculate_all_bav` | | | | yes |
+| 66 | `dhruv_calculate_sav` | | | | yes |
+| 67 | `dhruv_trikona_sodhana` | | | | yes |
+| 68 | `dhruv_ekadhipatya_sodhana` | | | | yes |
+| 69 | `dhruv_graha_drishti` | | | | yes |
+| 70 | `dhruv_graha_drishti_matrix` | | | | yes |
+| 71 | `dhruv_ghatika_from_elapsed` | | | | yes |
+| 72 | `dhruv_ghatikas_since_sunrise` | | | | yes |
+| 73 | `dhruv_hora_at` | | | | yes |
+| 74 | `dhruv_dasha_selection_config_default` | | | | yes |
+| 75 | `dhruv_dasha_hierarchy_utc` | yes | | | |
+| 76 | `dhruv_dasha_snapshot_utc` | yes | | | |
+| 77 | `dhruv_dasha_hierarchy_level_count` | | | | yes |
+| 78 | `dhruv_dasha_hierarchy_period_count` | | | | yes |
+| 79 | `dhruv_dasha_hierarchy_period_at` | | | | yes |
+| 80 | `dhruv_dasha_hierarchy_free` | | | | yes |
+| 81 | `dhruv_full_kundali_result_free` | | | | yes |
+| 82 | `dhruv_full_kundali_config_default` | | | | yes |
+| 83 | `dhruv_tara_catalog_load` | | | | yes |
+| 84 | `dhruv_tara_catalog_free` | | | | yes |
+| 85 | `dhruv_tara_position_equatorial` | | | | yes |
+| 86 | `dhruv_tara_position_equatorial_ex` | | | | yes |
+| 87 | `dhruv_tara_position_ecliptic` | | | | yes |
+| 88 | `dhruv_tara_position_ecliptic_ex` | | | | yes |
+| 89 | `dhruv_tara_sidereal_longitude` | | | | yes |
+| 90 | `dhruv_tara_sidereal_longitude_ex` | | | | yes |
+| 91 | `dhruv_tara_galactic_center_ecliptic` | | | | yes |
+| 92 | `dhruv_ayanamsha_mean_deg_with_catalog` | | | | yes |
+| 93 | `dhruv_ayanamsha_deg_with_catalog` | | | | yes |
+| 94 | `dhruv_ayanamsha_deg_with_catalog_utc` | | yes | | |
 
-**Total exported symbols: 81 functions**
+**Total exported symbols: 82 functions**
 
 ---
 

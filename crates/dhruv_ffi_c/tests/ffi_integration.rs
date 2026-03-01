@@ -3152,3 +3152,84 @@ fn ffi_lunar_node_fitted_tracks_osculating_utc() {
     // SAFETY: Handle created in this test and not yet freed.
     unsafe { dhruv_engine_free(engine_ptr) };
 }
+
+// ---------------------------------------------------------------------------
+// Graha Tropical Longitudes FFI
+// ---------------------------------------------------------------------------
+
+#[test]
+fn ffi_graha_tropical_longitudes_basic() {
+    let config = match real_config() {
+        Some(c) => c,
+        None => return,
+    };
+    let mut engine_ptr: *mut DhruvEngineHandle = ptr::null_mut();
+    let s = unsafe { dhruv_engine_new(&config, &mut engine_ptr) };
+    assert_eq!(s, DhruvStatus::Ok);
+
+    let jd = 2_451_545.0; // J2000
+    let mut out = DhruvGrahaLongitudes {
+        longitudes: [0.0; 9],
+    };
+    let s = unsafe {
+        dhruv_graha_tropical_longitudes(engine_ptr.cast::<dhruv_core::Engine>(), jd, &mut out)
+    };
+    assert_eq!(s, DhruvStatus::Ok);
+
+    for (i, &lon) in out.longitudes.iter().enumerate() {
+        assert!(
+            (0.0..360.0).contains(&lon),
+            "graha {i}: tropical longitude {lon} not in [0, 360)"
+        );
+    }
+
+    unsafe { dhruv_engine_free(engine_ptr) };
+}
+
+#[test]
+fn ffi_tropical_equals_sidereal_plus_ayanamsha() {
+    let config = match real_config() {
+        Some(c) => c,
+        None => return,
+    };
+    let mut engine_ptr: *mut DhruvEngineHandle = ptr::null_mut();
+    let s = unsafe { dhruv_engine_new(&config, &mut engine_ptr) };
+    assert_eq!(s, DhruvStatus::Ok);
+
+    let jd = 2_451_545.0;
+    let engine_raw = engine_ptr.cast::<dhruv_core::Engine>();
+
+    let mut tropical_out = DhruvGrahaLongitudes {
+        longitudes: [0.0; 9],
+    };
+    let s = unsafe { dhruv_graha_tropical_longitudes(engine_raw, jd, &mut tropical_out) };
+    assert_eq!(s, DhruvStatus::Ok);
+
+    let mut sidereal_out = DhruvGrahaLongitudes {
+        longitudes: [0.0; 9],
+    };
+    let s =
+        unsafe { dhruv_graha_sidereal_longitudes(engine_raw, jd, 0, 0, &mut sidereal_out) };
+    assert_eq!(s, DhruvStatus::Ok);
+
+    let t = dhruv_vedic_base::jd_tdb_to_centuries(jd);
+    let aya = dhruv_vedic_base::ayanamsha_deg(
+        dhruv_vedic_base::AyanamshaSystem::Lahiri,
+        t,
+        false,
+    );
+
+    for i in 0..9 {
+        let reconstructed = (sidereal_out.longitudes[i] + aya).rem_euclid(360.0);
+        let diff = (tropical_out.longitudes[i] - reconstructed).rem_euclid(360.0);
+        let diff = if diff > 180.0 { diff - 360.0 } else { diff };
+        assert!(
+            diff.abs() < 1e-10,
+            "graha {i}: tropical={}, sidereal+aya={}, diff={diff:.2e}",
+            tropical_out.longitudes[i],
+            reconstructed,
+        );
+    }
+
+    unsafe { dhruv_engine_free(engine_ptr) };
+}

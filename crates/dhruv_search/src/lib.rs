@@ -49,14 +49,16 @@ pub use jyotish::{
     all_upagrahas_for_date, amsha_charts_for_date, amsha_charts_from_kundali,
     arudha_padas_for_date, ashtakavarga_for_date, avastha_for_date, avastha_for_graha, core_bindus,
     drishti_for_date, full_kundali_for_date, graha_positions, graha_sidereal_longitudes,
-    graha_sidereal_longitudes_with_model, shadbala_for_date, shadbala_for_graha,
+    graha_sidereal_longitudes_with_model, graha_tropical_longitudes,
+    graha_tropical_longitudes_with_model, shadbala_for_date, shadbala_for_graha,
     special_lagnas_for_date, vimsopaka_for_date, vimsopaka_for_graha,
 };
 pub use jyotish_types::{
     AmshaChart, AmshaChartScope, AmshaEntry, AmshaResult, AmshaSelectionConfig, BindusConfig,
     BindusResult, DashaSelectionConfig, DrishtiConfig, DrishtiResult, FullKundaliConfig,
     FullKundaliResult, GrahaEntry, GrahaLongitudes, GrahaPositions, GrahaPositionsConfig,
-    MAX_AMSHA_REQUESTS, ShadbalaEntry, ShadbalaResult, VimsopakaEntry, VimsopakaResult,
+    GrahaTropicalLongitudes, MAX_AMSHA_REQUESTS, ShadbalaEntry, ShadbalaResult, VimsopakaEntry,
+    VimsopakaResult,
 };
 pub use lunar_phase::{
     next_amavasya, next_purnima, prev_amavasya, prev_purnima, search_amavasyas, search_purnimas,

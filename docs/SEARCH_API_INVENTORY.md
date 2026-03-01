@@ -137,6 +137,7 @@ Source: `crates/dhruv_search/src/jyotish.rs`, `crates/dhruv_search/src/jyotish_t
 | Function | Inputs | Output | What it does |
 |---|---|---|---|
 | `graha_sidereal_longitudes` | `engine`, `jd_tdb`, `ayanamsha_system`, `use_nutation` | `Result<GrahaLongitudes, SearchError>` | Computes 9 graha sidereal longitudes (includes node handling for Rahu/Ketu). |
+| `graha_tropical_longitudes` | `engine`, `jd_tdb` | `Result<GrahaTropicalLongitudes, SearchError>` | Computes 9 graha tropical (ecliptic-of-date) longitudes without ayanamsha subtraction. |
 | `special_lagnas_for_date` | `engine`, `eop`, `utc`, `location`, `riseset_config`, `aya_config` | `Result<AllSpecialLagnas, SearchError>` | Computes all special lagnas via engine + pure math orchestration. |
 | `arudha_padas_for_date` | `engine`, `eop`, `utc`, `location`, `bhava_config`, `aya_config` | `Result<[ArudhaResult; 12], SearchError>` | Computes arudha padas for all 12 houses. |
 | `all_upagrahas_for_date` | `engine`, `eop`, `utc`, `location`, `riseset_config`, `aya_config` | `Result<AllUpagrahas, SearchError>` | Computes all 11 upagrahas (time-based and sun-based). |

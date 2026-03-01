@@ -10,7 +10,8 @@ use dhruv_search::{
     StationaryConfig, StationaryEvent, SuryaGrahan, SuryaGrahanType, amsha_charts_for_date,
     avastha_for_date, ayana_for_date, body_ecliptic_lon_lat, dasha_hierarchy_for_birth,
     dasha_snapshot_at, elongation_at, full_kundali_for_date, ghatika_for_date,
-    ghatika_from_sunrises, graha_sidereal_longitudes, hora_for_date, hora_from_sunrises, karana_at,
+    ghatika_from_sunrises, graha_sidereal_longitudes, graha_tropical_longitudes,
+    hora_for_date, hora_from_sunrises, karana_at,
     karana_for_date, masa_for_date, nakshatra_at, nakshatra_for_date, next_amavasya,
     next_chandra_grahan, next_conjunction, next_max_speed, next_purnima, next_sankranti,
     next_specific_sankranti, next_stationary, next_surya_grahan, panchang_for_date, prev_amavasya,
@@ -38,7 +39,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 39;
+pub const DHRUV_API_VERSION: u32 = 40;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -10060,6 +10061,38 @@ pub unsafe extern "C" fn dhruv_graha_sidereal_longitudes(
 }
 
 // ---------------------------------------------------------------------------
+// Graha Tropical Longitudes
+// ---------------------------------------------------------------------------
+
+/// Query tropical (ecliptic-of-date) longitudes of all 9 grahas at a given JD (TDB).
+///
+/// Returns ecliptic-of-date tropical longitudes (degrees, 0..360) without
+/// ayanamsha subtraction. For the 7 physical planets, queries the engine for
+/// ecliptic longitude. For Rahu/Ketu, uses true node formulas.
+///
+/// # Safety
+/// `engine` and `out` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_graha_tropical_longitudes(
+    engine: *const Engine,
+    jd_tdb: f64,
+    out: *mut DhruvGrahaLongitudes,
+) -> DhruvStatus {
+    if engine.is_null() || out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let engine = unsafe { &*engine };
+    match graha_tropical_longitudes(engine, jd_tdb) {
+        Ok(result) => {
+            let out = unsafe { &mut *out };
+            out.longitudes = result.longitudes;
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Nakshatra At (from pre-computed Moon sidereal longitude)
 // ---------------------------------------------------------------------------
 
@@ -11424,8 +11457,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_39() {
-        assert_eq!(dhruv_api_version(), 39);
+    fn ffi_api_version_is_40() {
+        assert_eq!(dhruv_api_version(), 40);
     }
 
     #[test]
@@ -13624,6 +13657,23 @@ mod tests {
             dhruv_graha_sidereal_longitudes(engine_ptr, 2451545.0, 99, 0, out.as_mut_ptr())
         };
         // Null engine is checked first
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_graha_tropical_longitudes_rejects_null_engine() {
+        let mut out = std::mem::MaybeUninit::<DhruvGrahaLongitudes>::uninit();
+        let s = unsafe {
+            dhruv_graha_tropical_longitudes(ptr::null(), 2451545.0, out.as_mut_ptr())
+        };
+        assert_eq!(s, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn ffi_graha_tropical_longitudes_rejects_null_out() {
+        let s = unsafe {
+            dhruv_graha_tropical_longitudes(ptr::null(), 2451545.0, ptr::null_mut())
+        };
         assert_eq!(s, DhruvStatus::NullPointer);
     }
 

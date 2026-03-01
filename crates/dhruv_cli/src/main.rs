@@ -521,6 +521,9 @@ enum Commands {
         /// Include bhava placement
         #[arg(long)]
         bhava: bool,
+        /// Output tropical (ecliptic-of-date) longitudes instead of sidereal
+        #[arg(long, conflicts_with_all = ["nakshatra", "lagna", "outer", "bhava"])]
+        tropical: bool,
         /// Path to SPK kernel
         #[arg(long)]
         bsp: PathBuf,
@@ -2853,99 +2856,132 @@ fn main() {
             lagna,
             outer,
             bhava,
+            tropical,
             bsp,
             lsk,
             eop,
         } => {
-            let system = require_aya_system(ayanamsha);
             let utc = parse_utc(&date).unwrap_or_else(|e| {
                 eprintln!("{e}");
                 std::process::exit(1);
             });
             let engine = load_engine(&bsp, &lsk);
-            let eop_kernel = load_eop(&eop);
-            let location = GeoLocation::new(lat, lon, alt);
-            let bhava_config = BhavaConfig::default();
-            let aya_config = SankrantiConfig::new(system, nutation);
-            let gp_config = dhruv_search::GrahaPositionsConfig {
-                include_nakshatra: nakshatra,
-                include_lagna: lagna,
-                include_outer_planets: outer,
-                include_bhava: bhava,
-            };
 
-            let result = dhruv_search::graha_positions(
-                &engine,
-                &eop_kernel,
-                &utc,
-                &location,
-                &bhava_config,
-                &aya_config,
-                &gp_config,
-            )
-            .unwrap_or_else(|e| {
-                eprintln!("Error: {e}");
-                std::process::exit(1);
-            });
+            if tropical {
+                let jd_tdb = utc.to_jd_tdb(engine.lsk());
+                let result = dhruv_search::graha_tropical_longitudes(&engine, jd_tdb)
+                    .unwrap_or_else(|e| {
+                        eprintln!("Error: {e}");
+                        std::process::exit(1);
+                    });
 
-            println!(
-                "Graha Positions for {} at {:.4}°N, {:.4}°E\n",
-                date, lat, lon
-            );
+                println!(
+                    "Graha Positions for {} at {:.4}°N, {:.4}°E\n",
+                    date, lat, lon
+                );
 
-            // Header
-            let graha_names = [
-                "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu",
-            ];
-            print!("{:<10} {:>10}  {:<10}", "Graha", "Longitude", "Rashi");
-            if nakshatra {
-                print!("  {:<18} {:>4}", "Nakshatra", "Pada");
-            }
-            if bhava {
-                print!("  {:>5}", "Bhava");
-            }
-            println!();
-            let width = 32 + if nakshatra { 24 } else { 0 } + if bhava { 7 } else { 0 };
-            println!("{}", "-".repeat(width));
+                let graha_names = [
+                    "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu",
+                    "Ketu",
+                ];
+                println!("{:<10} {:>10}", "Graha", "Longitude");
+                println!("{}", "-".repeat(22));
 
-            let print_entry =
-                |name: &str, entry: &dhruv_search::GrahaEntry, force_bhava: Option<u8>| {
-                    print!(
-                        "{:<10} {:>9.4}°  {:<10}",
-                        name,
-                        entry.sidereal_longitude,
-                        entry.rashi.name(),
-                    );
-                    if nakshatra {
-                        print!(
-                            "  {:<18} {:>4}",
-                            entry.nakshatra.name(),
-                            if entry.pada > 0 {
-                                entry.pada.to_string()
-                            } else {
-                                "-".into()
-                            },
-                        );
-                    }
-                    if bhava {
-                        let bh = force_bhava.unwrap_or(entry.bhava_number);
-                        print!("  {:>5}", if bh > 0 { bh.to_string() } else { "-".into() },);
-                    }
-                    println!();
+                for graha in ALL_GRAHAS {
+                    let idx = graha.index() as usize;
+                    let lon = result.longitude(graha);
+                    println!("{:<10} {:>9.4}°", graha_names[idx], lon);
+                }
+            } else {
+                let system = require_aya_system(ayanamsha);
+                let eop_kernel = load_eop(&eop);
+                let location = GeoLocation::new(lat, lon, alt);
+                let bhava_config = BhavaConfig::default();
+                let aya_config = SankrantiConfig::new(system, nutation);
+                let gp_config = dhruv_search::GrahaPositionsConfig {
+                    include_nakshatra: nakshatra,
+                    include_lagna: lagna,
+                    include_outer_planets: outer,
+                    include_bhava: bhava,
                 };
 
-            for (i, entry) in result.grahas.iter().enumerate() {
-                print_entry(graha_names[i], entry, None);
-            }
+                let result = dhruv_search::graha_positions(
+                    &engine,
+                    &eop_kernel,
+                    &utc,
+                    &location,
+                    &bhava_config,
+                    &aya_config,
+                    &gp_config,
+                )
+                .unwrap_or_else(|e| {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                });
 
-            if lagna {
-                print_entry("Lagna", &result.lagna, Some(1));
-            }
+                println!(
+                    "Graha Positions for {} at {:.4}°N, {:.4}°E\n",
+                    date, lat, lon
+                );
 
-            if outer {
-                let planet_names = ["Uranus", "Neptune", "Pluto"];
-                for (i, entry) in result.outer_planets.iter().enumerate() {
-                    print_entry(planet_names[i], entry, None);
+                // Header
+                let graha_names = [
+                    "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu",
+                    "Ketu",
+                ];
+                print!("{:<10} {:>10}  {:<10}", "Graha", "Longitude", "Rashi");
+                if nakshatra {
+                    print!("  {:<18} {:>4}", "Nakshatra", "Pada");
+                }
+                if bhava {
+                    print!("  {:>5}", "Bhava");
+                }
+                println!();
+                let width = 32 + if nakshatra { 24 } else { 0 } + if bhava { 7 } else { 0 };
+                println!("{}", "-".repeat(width));
+
+                let print_entry =
+                    |name: &str, entry: &dhruv_search::GrahaEntry, force_bhava: Option<u8>| {
+                        print!(
+                            "{:<10} {:>9.4}°  {:<10}",
+                            name,
+                            entry.sidereal_longitude,
+                            entry.rashi.name(),
+                        );
+                        if nakshatra {
+                            print!(
+                                "  {:<18} {:>4}",
+                                entry.nakshatra.name(),
+                                if entry.pada > 0 {
+                                    entry.pada.to_string()
+                                } else {
+                                    "-".into()
+                                },
+                            );
+                        }
+                        if bhava {
+                            let bh = force_bhava.unwrap_or(entry.bhava_number);
+                            print!(
+                                "  {:>5}",
+                                if bh > 0 { bh.to_string() } else { "-".into() },
+                            );
+                        }
+                        println!();
+                    };
+
+                for (i, entry) in result.grahas.iter().enumerate() {
+                    print_entry(graha_names[i], entry, None);
+                }
+
+                if lagna {
+                    print_entry("Lagna", &result.lagna, Some(1));
+                }
+
+                if outer {
+                    let planet_names = ["Uranus", "Neptune", "Pluto"];
+                    for (i, entry) in result.outer_planets.iter().enumerate() {
+                        print_entry(planet_names[i], entry, None);
+                    }
                 }
             }
         }
@@ -6755,5 +6791,58 @@ mod tests {
             !output.contains("Bhava Cusps:"),
             "should NOT print when bhava_cusps is None"
         );
+    }
+
+    #[test]
+    fn tropical_rejects_incompatible_flags() {
+        let base = [
+            "dhruv",
+            "graha-positions",
+            "--tropical",
+            "--date",
+            "2000-01-01T00:00:00Z",
+            "--lat",
+            "0",
+            "--lon",
+            "0",
+            "--bsp",
+            "x",
+            "--lsk",
+            "x",
+            "--eop",
+            "x",
+        ];
+        for flag in &["--nakshatra", "--lagna", "--outer", "--bhava"] {
+            let mut args: Vec<&str> = base.to_vec();
+            args.push(flag);
+            let result = Cli::try_parse_from(&args);
+            assert!(
+                result.is_err(),
+                "--tropical should conflict with {flag}"
+            );
+        }
+    }
+
+    #[test]
+    fn tropical_alone_parses_ok() {
+        let args = [
+            "dhruv",
+            "graha-positions",
+            "--tropical",
+            "--date",
+            "2000-01-01T00:00:00Z",
+            "--lat",
+            "0",
+            "--lon",
+            "0",
+            "--bsp",
+            "x",
+            "--lsk",
+            "x",
+            "--eop",
+            "x",
+        ];
+        let result = Cli::try_parse_from(&args);
+        assert!(result.is_ok(), "--tropical alone should parse successfully");
     }
 }

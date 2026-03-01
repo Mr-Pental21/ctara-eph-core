@@ -46,7 +46,8 @@ use crate::jyotish_types::{
     AmshaChart, AmshaChartScope, AmshaEntry, AmshaResult, AmshaSelectionConfig, BindusConfig,
     BindusResult, DashaSelectionConfig, DrishtiConfig, DrishtiResult, FullKundaliConfig,
     FullKundaliResult, GrahaEntry, GrahaLongitudes, GrahaPositions, GrahaPositionsConfig,
-    MAX_AMSHA_REQUESTS, ShadbalaEntry, ShadbalaResult, VimsopakaEntry, VimsopakaResult,
+    GrahaTropicalLongitudes, MAX_AMSHA_REQUESTS, ShadbalaEntry, ShadbalaResult, VimsopakaEntry,
+    VimsopakaResult,
 };
 use crate::panchang::{
     hora_from_sunrises, masa_for_date, panchang_for_date, varsha_for_date, vedic_day_sunrises,
@@ -374,6 +375,56 @@ pub fn graha_sidereal_longitudes_with_model(
     }
 
     Ok(GrahaLongitudes { longitudes })
+}
+
+/// Query all 9 graha tropical (ecliptic-of-date) longitudes at a given TDB epoch.
+///
+/// Returns ecliptic-of-date longitudes without ayanamsha subtraction.
+/// For the 7 physical planets, queries the engine for ecliptic longitude.
+/// For Rahu/Ketu, uses true node formulas on the ecliptic plane.
+pub fn graha_tropical_longitudes(
+    engine: &Engine,
+    jd_tdb: f64,
+) -> Result<GrahaTropicalLongitudes, SearchError> {
+    graha_tropical_longitudes_with_model(engine, jd_tdb, DEFAULT_PRECESSION_MODEL)
+}
+
+/// Model-aware variant of [`graha_tropical_longitudes`].
+pub fn graha_tropical_longitudes_with_model(
+    engine: &Engine,
+    jd_tdb: f64,
+    precession_model: PrecessionModel,
+) -> Result<GrahaTropicalLongitudes, SearchError> {
+    let rahu_tropical = lunar_node_deg_for_epoch_on_plane(
+        engine,
+        LunarNode::Rahu,
+        jd_tdb,
+        NodeMode::True,
+        precession_model,
+        ReferencePlane::Ecliptic,
+    )?;
+    let ketu_tropical = normalize(rahu_tropical + 180.0);
+
+    let mut longitudes = [0.0f64; 9];
+    for graha in ALL_GRAHAS {
+        let idx = graha.index() as usize;
+        match graha {
+            Graha::Rahu => longitudes[idx] = rahu_tropical,
+            Graha::Ketu => longitudes[idx] = ketu_tropical,
+            _ => {
+                let body = graha_to_body(graha).expect("sapta graha has body");
+                let (lon, _lat) = body_lon_lat_on_plane(
+                    engine,
+                    body,
+                    jd_tdb,
+                    precession_model,
+                    ReferencePlane::Ecliptic,
+                )?;
+                longitudes[idx] = lon;
+            }
+        }
+    }
+    Ok(GrahaTropicalLongitudes { longitudes })
 }
 
 /// Compute all 8 special lagnas for a given moment and location.

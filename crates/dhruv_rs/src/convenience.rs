@@ -577,6 +577,18 @@ pub fn graha_longitudes(
     )?)
 }
 
+/// Compute tropical (ecliptic-of-date) longitudes for all 9 Vedic grahas.
+///
+/// Returns ecliptic-of-date longitudes without ayanamsha subtraction.
+/// Useful for cross-validation against tropical-mode ephemeris outputs.
+pub fn graha_tropical_longitudes(
+    date: UtcDate,
+) -> Result<dhruv_search::GrahaTropicalLongitudes, DhruvError> {
+    let eng = engine()?;
+    let jd = utc_to_jd_tdb(date)?;
+    Ok(dhruv_search::graha_tropical_longitudes(eng, jd)?)
+}
+
 /// Compute all 16 sphutas for the given inputs.
 ///
 /// This is a thin wrapper over [`dhruv_vedic_base::all_sphutas`].
