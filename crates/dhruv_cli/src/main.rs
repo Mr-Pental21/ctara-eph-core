@@ -2118,7 +2118,7 @@ fn main() {
             let info = rashi_from_longitude(lon);
             let dms = info.dms;
             println!(
-                "{} ({}) - {} deg {} min {:.1} sec ({:.4} deg in rashi)",
+                "{} ({}) - {} deg {} min {:.1} sec ({:.6} deg in rashi)",
                 info.rashi.name(),
                 info.rashi.western_name(),
                 dms.degrees,
@@ -2132,7 +2132,7 @@ fn main() {
             27 => {
                 let info = nakshatra_from_longitude(lon);
                 println!(
-                    "{} (index {}) - Pada {} ({:.4} deg in nakshatra, {:.4} deg in pada)",
+                    "{} (index {}) - Pada {} ({:.6} deg in nakshatra, {:.6} deg in pada)",
                     info.nakshatra.name(),
                     info.nakshatra_index,
                     info.pada,
@@ -2143,7 +2143,7 @@ fn main() {
             28 => {
                 let info = nakshatra28_from_longitude(lon);
                 println!(
-                    "{} (index {}) - Pada {} ({:.4} deg in nakshatra)",
+                    "{} (index {}) - Pada {} ({:.6} deg in nakshatra)",
                     info.nakshatra.name(),
                     info.nakshatra_index,
                     info.pada,
@@ -2162,10 +2162,10 @@ fn main() {
             let aya = ayanamsha_deg(system, t, args.nutation);
             let info = rashi_from_tropical(args.lon, system, args.jd, args.nutation);
             let dms = info.dms;
-            println!("Ayanamsha: {:.4} deg", aya);
-            println!("Sidereal: {:.4} deg", args.lon - aya);
+            println!("Ayanamsha: {:.6} deg", aya);
+            println!("Sidereal: {:.6} deg", args.lon - aya);
             println!(
-                "{} ({}) - {} deg {} min {:.1} sec ({:.4} deg in rashi)",
+                "{} ({}) - {} deg {} min {:.1} sec ({:.6} deg in rashi)",
                 info.rashi.name(),
                 info.rashi.western_name(),
                 dms.degrees,
@@ -2179,13 +2179,13 @@ fn main() {
             let system = require_aya_system(args.ayanamsha);
             let t = jd_tdb_to_centuries(args.jd);
             let aya = ayanamsha_deg(system, t, args.nutation);
-            println!("Ayanamsha: {:.4} deg", aya);
-            println!("Sidereal: {:.4} deg", args.lon - aya);
+            println!("Ayanamsha: {:.6} deg", aya);
+            println!("Sidereal: {:.6} deg", args.lon - aya);
             match args.scheme {
                 27 => {
                     let info = nakshatra_from_tropical(args.lon, system, args.jd, args.nutation);
                     println!(
-                        "{} (index {}) - Pada {} ({:.4} deg in nakshatra, {:.4} deg in pada)",
+                        "{} (index {}) - Pada {} ({:.6} deg in nakshatra, {:.6} deg in pada)",
                         info.nakshatra.name(),
                         info.nakshatra_index,
                         info.pada,
@@ -2196,7 +2196,7 @@ fn main() {
                 28 => {
                     let info = nakshatra28_from_tropical(args.lon, system, args.jd, args.nutation);
                     println!(
-                        "{} (index {}) - Pada {} ({:.4} deg in nakshatra)",
+                        "{} (index {}) - Pada {} ({:.6} deg in nakshatra)",
                         info.nakshatra.name(),
                         info.nakshatra_index,
                         info.pada,
@@ -2225,7 +2225,7 @@ fn main() {
                 Ok(Some(ev)) => {
                     println!("Next Purnima: {}", ev.utc);
                     println!(
-                        "  Moon lon: {:.4} deg  Sun lon: {:.4} deg",
+                        "  Moon lon: {:.6} deg  Sun lon: {:.6} deg",
                         ev.moon_longitude_deg, ev.sun_longitude_deg
                     );
                 }
@@ -2247,7 +2247,7 @@ fn main() {
                 Ok(Some(ev)) => {
                     println!("Next Amavasya: {}", ev.utc);
                     println!(
-                        "  Moon lon: {:.4} deg  Sun lon: {:.4} deg",
+                        "  Moon lon: {:.6} deg  Sun lon: {:.6} deg",
                         ev.moon_longitude_deg, ev.sun_longitude_deg
                     );
                 }
@@ -2276,7 +2276,7 @@ fn main() {
                     );
                     println!("  Time: {}", ev.utc);
                     println!(
-                        "  Sidereal lon: {:.4} deg  Tropical lon: {:.4} deg",
+                        "  Sidereal lon: {:.6} deg  Tropical lon: {:.6} deg",
                         ev.sun_sidereal_longitude_deg, ev.sun_tropical_longitude_deg
                     );
                 }
@@ -2572,21 +2572,21 @@ fn main() {
             };
 
             let results = dhruv_vedic_base::all_sphutas(&inputs);
-            println!("Sphutas for {} at {:.4}°N, {:.4}°E\n", args.date, args.lat, args.lon);
+            println!("Sphutas for {} at {:.6}°N, {:.6}°E\n", args.date, args.lat, args.lon);
             println!(
                 "Graha longitudes (sidereal, aya code={} {}):",
                 args.ayanamsha,
                 if args.nutation { "+nutation" } else { "" }
             );
             for graha in dhruv_vedic_base::graha::ALL_GRAHAS {
-                println!("  {:8} {:>8.4}°", graha.name(), graha_lons.longitude(graha));
+                println!("  {:8} {:>10.6}°", graha.name(), graha_lons.longitude(graha));
             }
-            println!("  {:8} {:>8.4}°\n", "Lagna", lagna_sid);
+            println!("  {:8} {:>10.6}°\n", "Lagna", lagna_sid);
             println!("Sphutas:");
             for (sphuta, lon) in &results {
                 let rashi_info = dhruv_vedic_base::rashi_from_longitude(*lon);
                 println!(
-                    "  {:24} {:>8.4}° ({} {}°{:02}'{:04.1}\")",
+                    "  {:24} {:>10.6}° ({} {}°{:02}'{:04.1}\")",
                     sphuta.name(),
                     lon,
                     rashi_info.rashi.name(),
@@ -2622,17 +2622,17 @@ fn main() {
             .unwrap_or_else(|e| panic!("special_lagnas_for_date failed: {e}"));
 
             println!(
-                "Special Lagnas for {} at {:.4}°N, {:.4}°E\n",
+                "Special Lagnas for {} at {:.6}°N, {:.6}°E\n",
                 args.date, args.lat, args.lon
             );
-            println!("  Bhava Lagna:     {:>10.4}°", result.bhava_lagna);
-            println!("  Hora Lagna:      {:>10.4}°", result.hora_lagna);
-            println!("  Ghati Lagna:     {:>10.4}°", result.ghati_lagna);
-            println!("  Vighati Lagna:   {:>10.4}°", result.vighati_lagna);
-            println!("  Varnada Lagna:   {:>10.4}°", result.varnada_lagna);
-            println!("  Sree Lagna:      {:>10.4}°", result.sree_lagna);
-            println!("  Pranapada Lagna: {:>10.4}°", result.pranapada_lagna);
-            println!("  Indu Lagna:      {:>10.4}°", result.indu_lagna);
+            println!("  Bhava Lagna:     {:>12.6}°", result.bhava_lagna);
+            println!("  Hora Lagna:      {:>12.6}°", result.hora_lagna);
+            println!("  Ghati Lagna:     {:>12.6}°", result.ghati_lagna);
+            println!("  Vighati Lagna:   {:>12.6}°", result.vighati_lagna);
+            println!("  Varnada Lagna:   {:>12.6}°", result.varnada_lagna);
+            println!("  Sree Lagna:      {:>12.6}°", result.sree_lagna);
+            println!("  Pranapada Lagna: {:>12.6}°", result.pranapada_lagna);
+            println!("  Indu Lagna:      {:>12.6}°", result.indu_lagna);
         }
 
         Commands::ArudhaPadas(args) => {
@@ -2660,11 +2660,11 @@ fn main() {
                 std::process::exit(1);
             });
 
-            println!("Arudha Padas for {} at {:.4}°N, {:.4}°E\n", args.date, args.lat, args.lon);
+            println!("Arudha Padas for {} at {:.6}°N, {:.6}°E\n", args.date, args.lat, args.lon);
             for r in &results {
                 let rashi_info = dhruv_vedic_base::rashi_from_longitude(r.longitude_deg);
                 println!(
-                    "  {:16} {:>8.4}° ({} {}°{:02}'{:04.1}\")",
+                    "  {:16} {:>10.6}° ({} {}°{:02}'{:04.1}\")",
                     r.pada.name(),
                     r.longitude_deg,
                     rashi_info.rashi.name(),
@@ -2696,7 +2696,7 @@ fn main() {
                 args.calendar,
             ) {
                 Ok(info) => {
-                    println!("Panchang for {} at {:.4}°N, {:.4}°E\n", args.date, args.lat, args.lon);
+                    println!("Panchang for {} at {:.6}°N, {:.6}°E\n", args.date, args.lat, args.lon);
                     println!(
                         "Tithi:    {} (index {})",
                         info.tithi.tithi.name(),
@@ -2793,7 +2793,7 @@ fn main() {
                 "Mes", "Vrs", "Mit", "Kar", "Sim", "Kan", "Tul", "Vri", "Dha", "Mak", "Kum", "Mee",
             ];
 
-            println!("Ashtakavarga for {} at {:.4}°N, {:.4}°E\n", args.date, args.lat, args.lon);
+            println!("Ashtakavarga for {} at {:.6}°N, {:.6}°E\n", args.date, args.lat, args.lon);
 
             // BAV tables
             println!("Bhinna Ashtakavarga (BAV):\n");
@@ -2869,7 +2869,7 @@ fn main() {
                 std::process::exit(1);
             });
 
-            println!("Upagrahas for {} at {:.4}°N, {:.4}°E\n", args.date, args.lat, args.lon);
+            println!("Upagrahas for {} at {:.6}°N, {:.6}°E\n", args.date, args.lat, args.lon);
             println!("Time-based:");
             for (name, lon) in [
                 ("Gulika", result.gulika),
@@ -2881,7 +2881,7 @@ fn main() {
             ] {
                 let rashi_info = dhruv_vedic_base::rashi_from_longitude(lon);
                 println!(
-                    "  {:16} {:>8.4}° ({} {}°{:02}'{:04.1}\")",
+                    "  {:16} {:>10.6}° ({} {}°{:02}'{:04.1}\")",
                     name,
                     lon,
                     rashi_info.rashi.name(),
@@ -2900,7 +2900,7 @@ fn main() {
             ] {
                 let rashi_info = dhruv_vedic_base::rashi_from_longitude(lon);
                 println!(
-                    "  {:16} {:>8.4}° ({} {}°{:02}'{:04.1}\")",
+                    "  {:16} {:>10.6}° ({} {}°{:02}'{:04.1}\")",
                     name,
                     lon,
                     rashi_info.rashi.name(),
@@ -2932,7 +2932,7 @@ fn main() {
                 });
 
                 println!(
-                    "Graha Positions for {} at {:.4}°N, {:.4}°E\n",
+                    "Graha Positions for {} at {:.6}°N, {:.6}°E\n",
                     args.date, args.lat, args.lon
                 );
 
@@ -2946,7 +2946,7 @@ fn main() {
                 for graha in ALL_GRAHAS {
                     let idx = graha.index() as usize;
                     let lon = result.longitude(graha);
-                    println!("{:<10} {:>9.4}°", graha_names[idx], lon);
+                    println!("{:<10} {:>11.6}°", graha_names[idx], lon);
                 }
             } else {
                 let system = require_aya_system(args.ayanamsha);
@@ -2977,7 +2977,7 @@ fn main() {
                 });
 
                 println!(
-                    "Graha Positions for {} at {:.4}°N, {:.4}°E\n",
+                    "Graha Positions for {} at {:.6}°N, {:.6}°E\n",
                     args.date, args.lat, args.lon
                 );
 
@@ -3000,7 +3000,7 @@ fn main() {
                 let print_entry =
                     |name: &str, entry: &dhruv_search::GrahaEntry, force_bhava: Option<u8>| {
                         print!(
-                            "{:<10} {:>9.4}°  {:<10}",
+                            "{:<10} {:>11.6}°  {:<10}",
                             name,
                             entry.sidereal_longitude,
                             entry.rashi.name(),
@@ -3074,7 +3074,7 @@ fn main() {
                 std::process::exit(1);
             });
 
-            println!("Core Bindus for {} at {:.4}°N, {:.4}°E\n", args.date, args.lat, args.lon);
+            println!("Core Bindus for {} at {:.6}°N, {:.6}°E\n", args.date, args.lat, args.lon);
 
             // Header
             print!("{:<16} {:>10}  {:<10}", "Name", "Longitude", "Rashi");
@@ -3090,7 +3090,7 @@ fn main() {
 
             let print_entry = |name: &str, entry: &dhruv_search::GrahaEntry| {
                 print!(
-                    "{:<16} {:>9.4}°  {:<10}",
+                    "{:<16} {:>11.6}°  {:<10}",
                     name,
                     entry.sidereal_longitude,
                     entry.rashi.name(),
@@ -3184,7 +3184,7 @@ fn main() {
                 "Sun", "Moon", "Mars", "Merc", "Jup", "Ven", "Sat", "Rahu", "Ketu",
             ];
 
-            println!("Graha Drishti for {} at {:.4}°N, {:.4}°E\n", args.date, args.lat, args.lon);
+            println!("Graha Drishti for {} at {:.6}°N, {:.6}°E\n", args.date, args.lat, args.lon);
 
             // 9x9 graha-to-graha matrix
             println!("Graha-to-Graha (total virupa):");
@@ -3334,7 +3334,7 @@ fn main() {
                 std::process::exit(1);
             });
 
-            println!("Kundali for {} at {:.4}°N, {:.4}°E\n", args.date, args.lat, args.lon);
+            println!("Kundali for {} at {:.6}°N, {:.6}°E\n", args.date, args.lat, args.lon);
             print_kundali(&mut std::io::stdout(), &result, &resolved).unwrap_or_else(|e| {
                 eprintln!("Error writing output: {e}");
                 std::process::exit(1);
@@ -3351,7 +3351,7 @@ fn main() {
                 Ok(Some(ev)) => {
                     println!("Previous Purnima: {}", ev.utc);
                     println!(
-                        "  Moon lon: {:.4} deg  Sun lon: {:.4} deg",
+                        "  Moon lon: {:.6} deg  Sun lon: {:.6} deg",
                         ev.moon_longitude_deg, ev.sun_longitude_deg
                     );
                 }
@@ -3373,7 +3373,7 @@ fn main() {
                 Ok(Some(ev)) => {
                     println!("Previous Amavasya: {}", ev.utc);
                     println!(
-                        "  Moon lon: {:.4} deg  Sun lon: {:.4} deg",
+                        "  Moon lon: {:.6} deg  Sun lon: {:.6} deg",
                         ev.moon_longitude_deg, ev.sun_longitude_deg
                     );
                 }
@@ -3402,7 +3402,7 @@ fn main() {
                     );
                     println!("  Time: {}", ev.utc);
                     println!(
-                        "  Sidereal lon: {:.4} deg  Tropical lon: {:.4} deg",
+                        "  Sidereal lon: {:.6} deg  Tropical lon: {:.6} deg",
                         ev.sun_sidereal_longitude_deg, ev.sun_tropical_longitude_deg
                     );
                 }
@@ -3429,7 +3429,7 @@ fn main() {
                     println!("Found {} Purnimas:", events.len());
                     for ev in &events {
                         println!(
-                            "  {}  Moon: {:.4}°  Sun: {:.4}°",
+                            "  {}  Moon: {:.6}°  Sun: {:.6}°",
                             ev.utc, ev.moon_longitude_deg, ev.sun_longitude_deg
                         );
                     }
@@ -3456,7 +3456,7 @@ fn main() {
                     println!("Found {} Amavasyas:", events.len());
                     for ev in &events {
                         println!(
-                            "  {}  Moon: {:.4}°  Sun: {:.4}°",
+                            "  {}  Moon: {:.6}°  Sun: {:.6}°",
                             ev.utc, ev.moon_longitude_deg, ev.sun_longitude_deg
                         );
                     }
@@ -3485,7 +3485,7 @@ fn main() {
                     println!("Found {} Sankrantis:", events.len());
                     for ev in &events {
                         println!(
-                            "  {} ({}) at {}  sid: {:.4}°  trop: {:.4}°",
+                            "  {} ({}) at {}  sid: {:.6}°  trop: {:.6}°",
                             ev.rashi.name(),
                             ev.rashi.western_name(),
                             ev.utc,
@@ -3514,7 +3514,7 @@ fn main() {
                 Ok(Some(ev)) => {
                     println!("Next {} Sankranti: {}", ev.rashi.name(), ev.utc);
                     println!(
-                        "  Sidereal lon: {:.4}°  Tropical lon: {:.4}°",
+                        "  Sidereal lon: {:.6}°  Tropical lon: {:.6}°",
                         ev.sun_sidereal_longitude_deg, ev.sun_tropical_longitude_deg
                     );
                 }
@@ -3539,7 +3539,7 @@ fn main() {
                 Ok(Some(ev)) => {
                     println!("Previous {} Sankranti: {}", ev.rashi.name(), ev.utc);
                     println!(
-                        "  Sidereal lon: {:.4}°  Tropical lon: {:.4}°",
+                        "  Sidereal lon: {:.6}°  Tropical lon: {:.6}°",
                         ev.sun_sidereal_longitude_deg, ev.sun_tropical_longitude_deg
                     );
                 }
@@ -3621,7 +3621,7 @@ fn main() {
             });
 
             println!(
-                "Rise/Set events for {} at {:.4}°N, {:.4}°E:\n",
+                "Rise/Set events for {} at {:.6}°N, {:.6}°E:\n",
                 args.date, args.lat, args.lon
             );
             for result in &events {
@@ -3659,9 +3659,9 @@ fn main() {
                 std::process::exit(1);
             });
 
-            println!("Bhavas for {} at {:.4}°N, {:.4}°E\n", args.date, args.lat, args.lon);
+            println!("Bhavas for {} at {:.6}°N, {:.6}°E\n", args.date, args.lat, args.lon);
             println!(
-                "  Lagna: {:.4}°  MC: {:.4}°\n",
+                "  Lagna: {:.6}°  MC: {:.6}°\n",
                 result.lagna_deg, result.mc_deg
             );
             println!(
@@ -3671,7 +3671,7 @@ fn main() {
             println!("{}", "-".repeat(40));
             for b in &result.bhavas {
                 println!(
-                    "{:>6} {:>9.4}° {:>9.4}° {:>9.4}°",
+                    "{:>6} {:>11.6}° {:>11.6}° {:>11.6}°",
                     b.number, b.cusp_deg, b.start_deg, b.end_deg
                 );
             }
@@ -4184,7 +4184,7 @@ fn main() {
                 let lon = lons.longitudes[i];
                 let rashi_info = dhruv_vedic_base::rashi_from_longitude(lon);
                 println!(
-                    "  {:8} {:>9.4}° ({} {}°{:02}'{:04.1}\")",
+                    "  {:8} {:>11.6}° ({} {}°{:02}'{:04.1}\")",
                     name,
                     lon,
                     rashi_info.rashi.name(),
@@ -4199,49 +4199,49 @@ fn main() {
         // Individual Sphuta Formulas (pure math)
         // -----------------------------------------------------------
         Commands::BhriguBindu { rahu, moon } => {
-            println!("{:.4}°", dhruv_vedic_base::bhrigu_bindu(rahu, moon));
+            println!("{:.6}°", dhruv_vedic_base::bhrigu_bindu(rahu, moon));
         }
 
         Commands::PranaSphuta { lagna, moon } => {
-            println!("{:.4}°", dhruv_vedic_base::prana_sphuta(lagna, moon));
+            println!("{:.6}°", dhruv_vedic_base::prana_sphuta(lagna, moon));
         }
 
         Commands::DehaSphuta { moon, lagna } => {
-            println!("{:.4}°", dhruv_vedic_base::deha_sphuta(moon, lagna));
+            println!("{:.6}°", dhruv_vedic_base::deha_sphuta(moon, lagna));
         }
 
         Commands::MrityuSphuta { eighth_lord, lagna } => {
             println!(
-                "{:.4}°",
+                "{:.6}°",
                 dhruv_vedic_base::mrityu_sphuta(eighth_lord, lagna)
             );
         }
 
         Commands::TithiSphuta { moon, sun, lagna } => {
-            println!("{:.4}°", dhruv_vedic_base::tithi_sphuta(moon, sun, lagna));
+            println!("{:.6}°", dhruv_vedic_base::tithi_sphuta(moon, sun, lagna));
         }
 
         Commands::YogaSphuta { sun, moon } => {
-            println!("{:.4}°", dhruv_vedic_base::yoga_sphuta(sun, moon));
+            println!("{:.6}°", dhruv_vedic_base::yoga_sphuta(sun, moon));
         }
 
         Commands::YogaSphutaNormalized { sun, moon } => {
             println!(
-                "{:.4}°",
+                "{:.6}°",
                 dhruv_vedic_base::yoga_sphuta_normalized(sun, moon)
             );
         }
 
         Commands::RahuTithiSphuta { rahu, sun, lagna } => {
             println!(
-                "{:.4}°",
+                "{:.6}°",
                 dhruv_vedic_base::rahu_tithi_sphuta(rahu, sun, lagna)
             );
         }
 
         Commands::KshetraSphuta(args) => {
             println!(
-                "{:.4}°",
+                "{:.6}°",
                 dhruv_vedic_base::kshetra_sphuta(args.venus, args.moon, args.mars, args.jupiter, args.lagna)
             );
         }
@@ -4252,7 +4252,7 @@ fn main() {
             jupiter,
         } => {
             println!(
-                "{:.4}°",
+                "{:.6}°",
                 dhruv_vedic_base::beeja_sphuta(sun, venus, jupiter)
             );
         }
@@ -4262,45 +4262,45 @@ fn main() {
             moon,
             gulika,
         } => {
-            println!("{:.4}°", dhruv_vedic_base::trisphuta(lagna, moon, gulika));
+            println!("{:.6}°", dhruv_vedic_base::trisphuta(lagna, moon, gulika));
         }
 
         Commands::ChatusSphuta { trisphuta, sun } => {
-            println!("{:.4}°", dhruv_vedic_base::chatussphuta(trisphuta, sun));
+            println!("{:.6}°", dhruv_vedic_base::chatussphuta(trisphuta, sun));
         }
 
         Commands::PanchaSphuta { chatussphuta, rahu } => {
-            println!("{:.4}°", dhruv_vedic_base::panchasphuta(chatussphuta, rahu));
+            println!("{:.6}°", dhruv_vedic_base::panchasphuta(chatussphuta, rahu));
         }
 
         Commands::SookshmaTrisphuta(args) => {
             println!(
-                "{:.4}°",
+                "{:.6}°",
                 dhruv_vedic_base::sookshma_trisphuta(args.lagna, args.moon, args.gulika, args.sun)
             );
         }
 
         Commands::AvayogaSphuta { sun, moon } => {
-            println!("{:.4}°", dhruv_vedic_base::avayoga_sphuta(sun, moon));
+            println!("{:.6}°", dhruv_vedic_base::avayoga_sphuta(sun, moon));
         }
 
         Commands::Kunda { lagna, moon, mars } => {
-            println!("{:.4}°", dhruv_vedic_base::kunda(lagna, moon, mars));
+            println!("{:.6}°", dhruv_vedic_base::kunda(lagna, moon, mars));
         }
 
         // -----------------------------------------------------------
         // Individual Special Lagna Formulas (pure math)
         // -----------------------------------------------------------
         Commands::BhavaLagna { sun_lon, ghatikas } => {
-            println!("{:.4}°", dhruv_vedic_base::bhava_lagna(sun_lon, ghatikas));
+            println!("{:.6}°", dhruv_vedic_base::bhava_lagna(sun_lon, ghatikas));
         }
 
         Commands::HoraLagna { sun_lon, ghatikas } => {
-            println!("{:.4}°", dhruv_vedic_base::hora_lagna(sun_lon, ghatikas));
+            println!("{:.6}°", dhruv_vedic_base::hora_lagna(sun_lon, ghatikas));
         }
 
         Commands::GhatiLagna { sun_lon, ghatikas } => {
-            println!("{:.4}°", dhruv_vedic_base::ghati_lagna(sun_lon, ghatikas));
+            println!("{:.6}°", dhruv_vedic_base::ghati_lagna(sun_lon, ghatikas));
         }
 
         Commands::VighatiLagna {
@@ -4308,7 +4308,7 @@ fn main() {
             vighatikas,
         } => {
             println!(
-                "{:.4}°",
+                "{:.6}°",
                 dhruv_vedic_base::vighati_lagna(lagna_lon, vighatikas)
             );
         }
@@ -4318,7 +4318,7 @@ fn main() {
             hora_lagna_lon,
         } => {
             println!(
-                "{:.4}°",
+                "{:.6}°",
                 dhruv_vedic_base::varnada_lagna(lagna_lon, hora_lagna_lon)
             );
         }
@@ -4327,12 +4327,12 @@ fn main() {
             moon_lon,
             lagna_lon,
         } => {
-            println!("{:.4}°", dhruv_vedic_base::sree_lagna(moon_lon, lagna_lon));
+            println!("{:.6}°", dhruv_vedic_base::sree_lagna(moon_lon, lagna_lon));
         }
 
         Commands::PranapadaLagna { sun_lon, ghatikas } => {
             println!(
-                "{:.4}°",
+                "{:.6}°",
                 dhruv_vedic_base::pranapada_lagna(sun_lon, ghatikas)
             );
         }
@@ -4344,7 +4344,7 @@ fn main() {
         } => {
             let ll = require_graha(lagna_lord);
             let m9l = require_graha(moon_9th_lord);
-            println!("{:.4}°", dhruv_vedic_base::indu_lagna(moon_lon, ll, m9l));
+            println!("{:.6}°", dhruv_vedic_base::indu_lagna(moon_lon, ll, m9l));
         }
 
         // -----------------------------------------------------------
@@ -4353,7 +4353,7 @@ fn main() {
         Commands::TithiFromElongation { elongation } => {
             let pos = dhruv_vedic_base::tithi_from_elongation(elongation);
             println!(
-                "{} ({} {}) - {:.4}° into tithi",
+                "{} ({} {}) - {:.6}° into tithi",
                 pos.tithi.name(),
                 pos.paksha.name(),
                 pos.tithi_in_paksha,
@@ -4364,7 +4364,7 @@ fn main() {
         Commands::KaranaFromElongation { elongation } => {
             let pos = dhruv_vedic_base::karana_from_elongation(elongation);
             println!(
-                "{} (index {}) - {:.4}° into karana",
+                "{} (index {}) - {:.6}° into karana",
                 pos.karana.name(),
                 pos.karana_index,
                 pos.degrees_in_karana
@@ -4374,7 +4374,7 @@ fn main() {
         Commands::YogaFromSum { sum } => {
             let pos = dhruv_vedic_base::yoga_from_sum(sum);
             println!(
-                "{} (index {}) - {:.4}° into yoga",
+                "{} (index {}) - {:.6}° into yoga",
                 pos.yoga.name(),
                 pos.yoga_index,
                 pos.degrees_in_yoga
@@ -4420,22 +4420,22 @@ fn main() {
         },
 
         Commands::Normalize360 { deg } => {
-            println!("{:.4}°", dhruv_vedic_base::normalize_360(deg));
+            println!("{:.6}°", dhruv_vedic_base::normalize_360(deg));
         }
 
         Commands::ArudhaPadaCompute { cusp_lon, lord_lon } => {
             let (lon, rashi_idx) = dhruv_vedic_base::arudha_pada(cusp_lon, lord_lon);
             let ri = rashi_from_index(rashi_idx);
-            println!("{:.4}° ({})", lon, ri.name());
+            println!("{:.6}° ({})", lon, ri.name());
         }
 
         Commands::SunBasedUpagrahas { sun_lon } => {
             let upa = dhruv_vedic_base::sun_based_upagrahas(sun_lon);
-            println!("Dhooma:      {:.4}°", upa.dhooma);
-            println!("Vyatipata:   {:.4}°", upa.vyatipata);
-            println!("Parivesha:   {:.4}°", upa.parivesha);
-            println!("Indra Chapa: {:.4}°", upa.indra_chapa);
-            println!("Upaketu:     {:.4}°", upa.upaketu);
+            println!("Dhooma:      {:.6}°", upa.dhooma);
+            println!("Vyatipata:   {:.6}°", upa.vyatipata);
+            println!("Parivesha:   {:.6}°", upa.parivesha);
+            println!("Indra Chapa: {:.6}°", upa.indra_chapa);
+            println!("Upaketu:     {:.6}°", upa.upaketu);
         }
 
         // -----------------------------------------------------------
@@ -4449,7 +4449,7 @@ fn main() {
             let engine = load_engine(&bsp, &lsk);
             let jd_tdb = utc.to_jd_tdb(engine.lsk());
             match dhruv_search::elongation_at(&engine, jd_tdb) {
-                Ok(val) => println!("{:.4}°", val),
+                Ok(val) => println!("{:.6}°", val),
                 Err(e) => {
                     eprintln!("Error: {e}");
                     std::process::exit(1);
@@ -4467,7 +4467,7 @@ fn main() {
             let jd_tdb = utc.to_jd_tdb(engine.lsk());
             let config = SankrantiConfig::new(system, args.nutation);
             match dhruv_search::sidereal_sum_at(&engine, jd_tdb, &config) {
-                Ok(val) => println!("{:.4}°", val),
+                Ok(val) => println!("{:.6}°", val),
                 Err(e) => {
                     eprintln!("Error: {e}");
                     std::process::exit(1);
@@ -4484,7 +4484,7 @@ fn main() {
             let engine = load_engine(&args.bsp, &args.lsk);
             let jd_tdb = utc.to_jd_tdb(engine.lsk());
             match dhruv_search::body_ecliptic_lon_lat(&engine, b, jd_tdb) {
-                Ok((lon, lat)) => println!("Longitude: {:.4}°  Latitude: {:.4}°", lon, lat),
+                Ok((lon, lat)) => println!("Longitude: {:.6}°  Latitude: {:.6}°", lon, lat),
                 Err(e) => {
                     eprintln!("Error: {e}");
                     std::process::exit(1);
@@ -4735,7 +4735,7 @@ fn main() {
                     std::process::exit(1);
                 });
 
-                println!("Shadbala for {} at {:.4}°N, {:.4}°E\n", args.date, args.lat, args.lon);
+                println!("Shadbala for {} at {:.6}°N, {:.6}°E\n", args.date, args.lat, args.lon);
                 println!(
                     "{:<8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>6}",
                     "Graha",
@@ -4818,7 +4818,7 @@ fn main() {
                 });
 
                 println!(
-                    "Vimsopaka Bala for {} at {:.4}°N, {:.4}°E\n",
+                    "Vimsopaka Bala for {} at {:.6}°N, {:.6}°E\n",
                     args.date, args.lat, args.lon
                 );
                 println!(
@@ -4849,7 +4849,7 @@ fn main() {
                     dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly => " (cancer-leo-only)",
                 };
                 println!(
-                    "{}{}: {:?} {:02}°{:02}'{:05.2}\"  ({:.3}°)",
+                    "{}{}: {:?} {:02}°{:02}'{:05.2}\"  ({:.6}°)",
                     req.amsha.name(),
                     var_label,
                     rashi,
@@ -4914,7 +4914,7 @@ fn main() {
                 });
 
                 println!(
-                    "Graha Avasthas for {} at {:.4}°N, {:.4}°E\n",
+                    "Graha Avasthas for {} at {:.6}°N, {:.6}°E\n",
                     args.date, args.lat, args.lon
                 );
                 println!(
@@ -5361,11 +5361,11 @@ fn parse_amsha_specs(s: &str) -> Vec<dhruv_vedic_base::AmshaRequest> {
 
 fn print_conjunction_event(label: &str, ev: &ConjunctionEvent) {
     println!(
-        "{}: JD TDB {:.6}  sep: {:.4}°",
+        "{}: JD TDB {:.6}  sep: {:.6}°",
         label, ev.jd_tdb, ev.actual_separation_deg
     );
     println!(
-        "  Body1 lon: {:.4}°  Body2 lon: {:.4}°",
+        "  Body1 lon: {:.6}°  Body2 lon: {:.6}°",
         ev.body1_longitude_deg, ev.body2_longitude_deg
     );
 }
@@ -5408,7 +5408,7 @@ fn print_stationary_event(label: &str, ev: &dhruv_search::stationary_types::Stat
         label, ev.body, ev.station_type, ev.jd_tdb
     );
     println!(
-        "  Longitude: {:.4}°  Latitude: {:.4}°",
+        "  Longitude: {:.6}°  Latitude: {:.6}°",
         ev.longitude_deg, ev.latitude_deg
     );
 }
@@ -5485,7 +5485,7 @@ fn print_max_speed_event(label: &str, ev: &dhruv_search::stationary_types::MaxSp
         label, ev.body, ev.speed_type, ev.jd_tdb
     );
     println!(
-        "  Longitude: {:.4}°  Speed: {:.6} deg/day",
+        "  Longitude: {:.6}°  Speed: {:.6} deg/day",
         ev.longitude_deg, ev.speed_deg_per_day
     );
 }
