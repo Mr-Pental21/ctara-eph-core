@@ -2,7 +2,8 @@ use std::path::PathBuf;
 
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use dhruv_rs::{
-    Body, EngineConfig, Observer, UtcDate, init, is_initialized, longitude, next_purnima,
+    Body, EngineConfig, LunarPhaseKind, LunarPhaseRequest, LunarPhaseRequestQuery,
+    LunarPhaseResult, Observer, TimeInput, UtcDate, init, is_initialized, longitude, lunar_phase,
 };
 
 fn ensure_init() -> bool {
@@ -46,8 +47,19 @@ fn rs_search_bench(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("dhruv_rs_search");
     group.sample_size(20);
-    group.bench_function("next_purnima", |b| {
-        b.iter(|| next_purnima(black_box(date)).expect("search should succeed"))
+    group.bench_function("lunar_phase_next_purnima", |b| {
+        b.iter(|| {
+            let req = LunarPhaseRequest {
+                kind: LunarPhaseKind::Purnima,
+                query: LunarPhaseRequestQuery::Next {
+                    at: TimeInput::Utc(black_box(date)),
+                },
+            };
+            match lunar_phase(&req).expect("search should succeed") {
+                LunarPhaseResult::Single(Some(_)) => {}
+                other => panic!("unexpected result shape: {other:?}"),
+            }
+        })
     });
     group.finish();
 }
