@@ -37,7 +37,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 41;
+pub const DHRUV_API_VERSION: u32 = 42;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -1888,7 +1888,6 @@ pub extern "C" fn dhruv_conjunction_config_default() -> DhruvConjunctionConfig {
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_next_conjunction(
     engine: *const DhruvEngineHandle,
     body1_code: i32,
@@ -1939,7 +1938,6 @@ pub unsafe extern "C" fn dhruv_next_conjunction(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_prev_conjunction(
     engine: *const DhruvEngineHandle,
     body1_code: i32,
@@ -1993,7 +1991,6 @@ pub unsafe extern "C" fn dhruv_prev_conjunction(
 /// # Safety
 /// All pointer arguments must be valid and non-null.
 /// `out_events` must point to at least `max_count` contiguous `DhruvConjunctionEvent`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_search_conjunctions(
     engine: *const DhruvEngineHandle,
     body1_code: i32,
@@ -2348,7 +2345,6 @@ impl From<&SuryaGrahan> for DhruvSuryaGrahanResult {
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_next_chandra_grahan(
     engine: *const DhruvEngineHandle,
     jd_tdb: f64,
@@ -2387,7 +2383,6 @@ pub unsafe extern "C" fn dhruv_next_chandra_grahan(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_prev_chandra_grahan(
     engine: *const DhruvEngineHandle,
     jd_tdb: f64,
@@ -2426,7 +2421,6 @@ pub unsafe extern "C" fn dhruv_prev_chandra_grahan(
 /// # Safety
 /// All pointer arguments must be valid and non-null.
 /// `out_results` must point to at least `max_count` contiguous `DhruvChandraGrahanResult`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_search_chandra_grahan(
     engine: *const DhruvEngineHandle,
     jd_start: f64,
@@ -2469,7 +2463,6 @@ pub unsafe extern "C" fn dhruv_search_chandra_grahan(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_next_surya_grahan(
     engine: *const DhruvEngineHandle,
     jd_tdb: f64,
@@ -2507,7 +2500,6 @@ pub unsafe extern "C" fn dhruv_next_surya_grahan(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_prev_surya_grahan(
     engine: *const DhruvEngineHandle,
     jd_tdb: f64,
@@ -2546,7 +2538,6 @@ pub unsafe extern "C" fn dhruv_prev_surya_grahan(
 /// # Safety
 /// All pointer arguments must be valid and non-null.
 /// `out_results` must point to at least `max_count` contiguous `DhruvSuryaGrahanResult`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_search_surya_grahan(
     engine: *const DhruvEngineHandle,
     jd_start: f64,
@@ -2904,7 +2895,6 @@ pub extern "C" fn dhruv_stationary_config_default() -> DhruvStationaryConfig {
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_next_stationary(
     engine: *const DhruvEngineHandle,
     body_code: i32,
@@ -2948,7 +2938,6 @@ pub unsafe extern "C" fn dhruv_next_stationary(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_prev_stationary(
     engine: *const DhruvEngineHandle,
     body_code: i32,
@@ -2993,7 +2982,6 @@ pub unsafe extern "C" fn dhruv_prev_stationary(
 /// # Safety
 /// All pointer arguments must be valid and non-null.
 /// `out_events` must point to at least `max_count` contiguous `DhruvStationaryEvent`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_search_stationary(
     engine: *const DhruvEngineHandle,
     body_code: i32,
@@ -3038,7 +3026,6 @@ pub unsafe extern "C" fn dhruv_search_stationary(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_next_max_speed(
     engine: *const DhruvEngineHandle,
     body_code: i32,
@@ -3082,7 +3069,6 @@ pub unsafe extern "C" fn dhruv_next_max_speed(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_prev_max_speed(
     engine: *const DhruvEngineHandle,
     body_code: i32,
@@ -3127,7 +3113,6 @@ pub unsafe extern "C" fn dhruv_prev_max_speed(
 /// # Safety
 /// All pointer arguments must be valid and non-null.
 /// `out_events` must point to at least `max_count` contiguous `DhruvMaxSpeedEvent`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_search_max_speed(
     engine: *const DhruvEngineHandle,
     body_code: i32,
@@ -4060,7 +4045,6 @@ pub extern "C" fn dhruv_sankranti_config_default() -> DhruvSankrantiConfig {
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_next_purnima(
     engine: *const DhruvEngineHandle,
     utc: *const DhruvUtcTime,
@@ -4100,7 +4084,6 @@ pub unsafe extern "C" fn dhruv_next_purnima(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_prev_purnima(
     engine: *const DhruvEngineHandle,
     utc: *const DhruvUtcTime,
@@ -4139,7 +4122,6 @@ pub unsafe extern "C" fn dhruv_prev_purnima(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_next_amavasya(
     engine: *const DhruvEngineHandle,
     utc: *const DhruvUtcTime,
@@ -4178,7 +4160,6 @@ pub unsafe extern "C" fn dhruv_next_amavasya(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_prev_amavasya(
     engine: *const DhruvEngineHandle,
     utc: *const DhruvUtcTime,
@@ -4218,7 +4199,6 @@ pub unsafe extern "C" fn dhruv_prev_amavasya(
 /// # Safety
 /// All pointer arguments must be valid and non-null.
 /// `out_events` must point to at least `max_count` contiguous `DhruvLunarPhaseEvent`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_search_purnimas(
     engine: *const DhruvEngineHandle,
     start: *const DhruvUtcTime,
@@ -4265,7 +4245,6 @@ pub unsafe extern "C" fn dhruv_search_purnimas(
 /// # Safety
 /// All pointer arguments must be valid and non-null.
 /// `out_events` must point to at least `max_count` contiguous `DhruvLunarPhaseEvent`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_search_amavasyas(
     engine: *const DhruvEngineHandle,
     start: *const DhruvUtcTime,
@@ -4472,7 +4451,6 @@ pub unsafe extern "C" fn dhruv_lunar_phase_search_ex(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_next_sankranti(
     engine: *const DhruvEngineHandle,
     utc: *const DhruvUtcTime,
@@ -4521,7 +4499,6 @@ pub unsafe extern "C" fn dhruv_next_sankranti(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_prev_sankranti(
     engine: *const DhruvEngineHandle,
     utc: *const DhruvUtcTime,
@@ -4570,7 +4547,6 @@ pub unsafe extern "C" fn dhruv_prev_sankranti(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_search_sankrantis(
     engine: *const DhruvEngineHandle,
     start: *const DhruvUtcTime,
@@ -4751,7 +4727,6 @@ pub unsafe extern "C" fn dhruv_sankranti_search_ex(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_next_specific_sankranti(
     engine: *const DhruvEngineHandle,
     utc: *const DhruvUtcTime,
@@ -4806,7 +4781,6 @@ pub unsafe extern "C" fn dhruv_next_specific_sankranti(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_prev_specific_sankranti(
     engine: *const DhruvEngineHandle,
     utc: *const DhruvUtcTime,
@@ -5535,7 +5509,6 @@ fn ffi_utc_to_jd_utc(t: &DhruvUtcTime) -> f64 {
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_next_conjunction_utc(
     engine: *const DhruvEngineHandle,
     body1_code: i32,
@@ -5587,7 +5560,6 @@ pub unsafe extern "C" fn dhruv_next_conjunction_utc(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_prev_conjunction_utc(
     engine: *const DhruvEngineHandle,
     body1_code: i32,
@@ -5640,7 +5612,6 @@ pub unsafe extern "C" fn dhruv_prev_conjunction_utc(
 /// # Safety
 /// All pointer arguments must be valid and non-null.
 /// `out_events` must point to at least `max_count` contiguous `DhruvConjunctionEventUtc`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_search_conjunctions_utc(
     engine: *const DhruvEngineHandle,
     body1_code: i32,
@@ -5694,7 +5665,6 @@ pub unsafe extern "C" fn dhruv_search_conjunctions_utc(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_next_chandra_grahan_utc(
     engine: *const DhruvEngineHandle,
     utc: *const DhruvUtcTime,
@@ -5735,7 +5705,6 @@ pub unsafe extern "C" fn dhruv_next_chandra_grahan_utc(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_prev_chandra_grahan_utc(
     engine: *const DhruvEngineHandle,
     utc: *const DhruvUtcTime,
@@ -5777,7 +5746,6 @@ pub unsafe extern "C" fn dhruv_prev_chandra_grahan_utc(
 /// # Safety
 /// All pointer arguments must be valid and non-null.
 /// `out_results` must point to at least `max_count` contiguous `DhruvChandraGrahanResultUtc`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_search_chandra_grahan_utc(
     engine: *const DhruvEngineHandle,
     start: *const DhruvUtcTime,
@@ -5821,7 +5789,6 @@ pub unsafe extern "C" fn dhruv_search_chandra_grahan_utc(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_next_surya_grahan_utc(
     engine: *const DhruvEngineHandle,
     utc: *const DhruvUtcTime,
@@ -5862,7 +5829,6 @@ pub unsafe extern "C" fn dhruv_next_surya_grahan_utc(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_prev_surya_grahan_utc(
     engine: *const DhruvEngineHandle,
     utc: *const DhruvUtcTime,
@@ -5904,7 +5870,6 @@ pub unsafe extern "C" fn dhruv_prev_surya_grahan_utc(
 /// # Safety
 /// All pointer arguments must be valid and non-null.
 /// `out_results` must point to at least `max_count` contiguous `DhruvSuryaGrahanResultUtc`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_search_surya_grahan_utc(
     engine: *const DhruvEngineHandle,
     start: *const DhruvUtcTime,
@@ -5948,7 +5913,6 @@ pub unsafe extern "C" fn dhruv_search_surya_grahan_utc(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_next_stationary_utc(
     engine: *const DhruvEngineHandle,
     body_code: i32,
@@ -5994,7 +5958,6 @@ pub unsafe extern "C" fn dhruv_next_stationary_utc(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_prev_stationary_utc(
     engine: *const DhruvEngineHandle,
     body_code: i32,
@@ -6041,7 +6004,6 @@ pub unsafe extern "C" fn dhruv_prev_stationary_utc(
 /// # Safety
 /// All pointer arguments must be valid and non-null.
 /// `out_events` must point to at least `max_count` contiguous `DhruvStationaryEventUtc`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_search_stationary_utc(
     engine: *const DhruvEngineHandle,
     body_code: i32,
@@ -6090,7 +6052,6 @@ pub unsafe extern "C" fn dhruv_search_stationary_utc(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_next_max_speed_utc(
     engine: *const DhruvEngineHandle,
     body_code: i32,
@@ -6136,7 +6097,6 @@ pub unsafe extern "C" fn dhruv_next_max_speed_utc(
 ///
 /// # Safety
 /// All pointer arguments must be valid and non-null.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_prev_max_speed_utc(
     engine: *const DhruvEngineHandle,
     body_code: i32,
@@ -6183,7 +6143,6 @@ pub unsafe extern "C" fn dhruv_prev_max_speed_utc(
 /// # Safety
 /// All pointer arguments must be valid and non-null.
 /// `out_events` must point to at least `max_count` contiguous `DhruvMaxSpeedEventUtc`.
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_search_max_speed_utc(
     engine: *const DhruvEngineHandle,
     body_code: i32,
@@ -12807,8 +12766,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_41() {
-        assert_eq!(dhruv_api_version(), 41);
+    fn ffi_api_version_is_42() {
+        assert_eq!(dhruv_api_version(), 42);
     }
 
     #[test]

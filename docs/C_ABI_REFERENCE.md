@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 41`
+**ABI version:** `DHRUV_API_VERSION = 42`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -1753,6 +1753,10 @@ Determine the hora lord for a given weekday and hora position. Returns the lord'
 
 ## Function Summary
 
+Note: as of ABI v42, legacy split `dhruv_next_*` / `dhruv_prev_*` /
+`dhruv_search_*` wrappers are no longer exported C ABI symbols.
+Use the unified `*_search_ex` / `*_compute_ex` entries documented above.
+
 | # | Function | Engine | LSK | EOP | Pure Math |
 |---|----------|--------|-----|-----|-----------|
 | 1 | `dhruv_api_version` | | | | yes |
@@ -2059,6 +2063,8 @@ no proper motion). Equivalent to requesting ecliptic output for
 ---
 
 ## Changelog
+
+**v42**: Removed legacy split `dhruv_next_*`, `dhruv_prev_*`, `dhruv_search_*` (and `_utc`) wrappers from exported C ABI symbols for conjunction/grahan/motion/lunar-phase/sankranti families. Use unified `dhruv_conjunction_search_ex`, `dhruv_grahan_search_ex`, `dhruv_motion_search_ex`, `dhruv_lunar_phase_search_ex`, and `dhruv_sankranti_search_ex`.
 
 **v41**: Removed legacy split Ayanamsha/Tara/Panchang entrypoints in favor of unified request-based APIs. Removed: `dhruv_ayanamsha_mean_deg`, `dhruv_ayanamsha_true_deg`, `dhruv_ayanamsha_deg`, `dhruv_ayanamsha_mean_deg_with_catalog`, `dhruv_ayanamsha_deg_with_catalog`, `dhruv_ayanamsha_mean_deg_utc`, `dhruv_ayanamsha_true_deg_utc`, `dhruv_ayanamsha_deg_utc`, `dhruv_ayanamsha_deg_with_catalog_utc`, `dhruv_tara_position_equatorial`, `dhruv_tara_position_equatorial_ex`, `dhruv_tara_position_ecliptic`, `dhruv_tara_position_ecliptic_ex`, `dhruv_tara_sidereal_longitude`, `dhruv_tara_sidereal_longitude_ex`, `dhruv_panchang_for_date`. Use `dhruv_ayanamsha_compute_ex`, `dhruv_tara_compute_ex`, and `dhruv_panchang_compute_ex`.
 
