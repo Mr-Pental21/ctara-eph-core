@@ -38,6 +38,9 @@ pub use dasha::{
 };
 #[allow(deprecated)]
 pub use dasha::{dasha_hierarchy_with_moon, dasha_snapshot_with_moon};
+pub use dhruv_vedic_base::{
+    CharakarakaEntry, CharakarakaResult, CharakarakaRole, CharakarakaScheme,
+};
 pub use error::SearchError;
 pub use grahan::{
     next_chandra_grahan, next_surya_grahan, prev_chandra_grahan, prev_surya_grahan,
@@ -48,9 +51,9 @@ pub use grahan_types::{
 };
 pub use jyotish::{
     all_upagrahas_for_date, amsha_charts_for_date, amsha_charts_from_kundali,
-    arudha_padas_for_date, ashtakavarga_for_date, avastha_for_date, avastha_for_graha, core_bindus,
-    drishti_for_date, full_kundali_for_date, graha_positions, graha_sidereal_longitudes,
-    graha_sidereal_longitudes_with_model, graha_tropical_longitudes,
+    arudha_padas_for_date, ashtakavarga_for_date, avastha_for_date, avastha_for_graha,
+    charakaraka_for_date, core_bindus, drishti_for_date, full_kundali_for_date, graha_positions,
+    graha_sidereal_longitudes, graha_sidereal_longitudes_with_model, graha_tropical_longitudes,
     graha_tropical_longitudes_with_model, shadbala_for_date, shadbala_for_graha,
     special_lagnas_for_date, vimsopaka_for_date, vimsopaka_for_graha,
 };

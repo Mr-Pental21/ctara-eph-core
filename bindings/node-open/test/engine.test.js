@@ -263,6 +263,11 @@ test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
 
   const avastha = dhruv.avasthaForDate(engine, eop, utc, loc, bhavaCfg, riseCfg, 0, true, 0);
   assert.equal(avastha.entries.length, 9);
+  const charakaraka = dhruv.charakarakaForDate(engine, eop, utc, 0, true, 'parashari');
+  assert.ok(charakaraka.count >= 7);
+  assert.ok(charakaraka.count <= 8);
+  assert.equal(charakaraka.scheme, dhruv.CHARAKARAKA_SCHEME.MIXED_PARASHARA);
+  assert.ok(Array.isArray(charakaraka.entries));
 
   const specialLagnas = dhruv.specialLagnasForDate(engine, eop, utc, loc, riseCfg, 0, true);
   assert.ok(Number.isFinite(specialLagnas.bhavaLagna));
@@ -288,6 +293,7 @@ test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
     second: 0,
   }, loc, 0, true);
   assert.ok(Number.isFinite(kundali.ayanamshaDeg));
+  assert.equal(typeof kundali.charakarakaValid, 'boolean');
   const jdNow = dhruv.utcToTdbJd(lsk, utc);
 
   const elongation = dhruv.elongationAt(engine, jdNow);

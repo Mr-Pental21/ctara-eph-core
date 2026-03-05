@@ -3,6 +3,47 @@
 const { addon } = require('./native');
 const { checkStatus } = require('./errors');
 
+const CHARAKARAKA_SCHEME = Object.freeze({
+  EIGHT: 0,
+  SEVEN_NO_PITRI: 1,
+  SEVEN_PK_MERGED_MK: 2,
+  MIXED_PARASHARA: 3,
+});
+
+const CHARAKARAKA_ROLE = Object.freeze({
+  ATMA: 0,
+  AMATYA: 1,
+  BHRATRI: 2,
+  MATRI: 3,
+  PITRI: 4,
+  PUTRA: 5,
+  GNATI: 6,
+  DARA: 7,
+  MATRI_PUTRA: 8,
+});
+
+function normalizeCharakarakaScheme(scheme) {
+  if (typeof scheme === 'number') {
+    return scheme >>> 0;
+  }
+  if (typeof scheme === 'string') {
+    const k = scheme.trim().toLowerCase().replaceAll('_', '-');
+    if (k === 'eight' || k === '8' || k === '8-charakaraka' || k === 'jaimini' || k === 'jaimini-8') {
+      return CHARAKARAKA_SCHEME.EIGHT;
+    }
+    if (k === 'seven-no-pitri' || k === '7-no-pitri' || k === '7-planet' || k === 'seven-planet') {
+      return CHARAKARAKA_SCHEME.SEVEN_NO_PITRI;
+    }
+    if (k === 'seven-pk-merged-mk' || k === '7-pk-merged-mk' || k === 'pk-merged-mk') {
+      return CHARAKARAKA_SCHEME.SEVEN_PK_MERGED_MK;
+    }
+    if (k === 'mixed-parashara' || k === 'mixed' || k === 'parashari' || k === 'parashara' || k === '7-8-parashara') {
+      return CHARAKARAKA_SCHEME.MIXED_PARASHARA;
+    }
+  }
+  throw new Error(`invalid charakaraka scheme: ${scheme}`);
+}
+
 function grahaSiderealLongitudes(engine, jdTdb, ayanamshaSystem = 0, useNutation = true) {
   const r = addon.grahaSiderealLongitudes(engine._handle, jdTdb, ayanamshaSystem, !!useNutation);
   checkStatus('graha_sidereal_longitudes', r.status);
@@ -31,6 +72,27 @@ function allUpagrahasForDate(engine, eop, utc, location, ayanamshaSystem = 0, us
   const r = addon.allUpagrahasForDate(engine._handle, eop._handle, utc, location, ayanamshaSystem, !!useNutation);
   checkStatus('all_upagrahas_for_date', r.status);
   return r.upagrahas;
+}
+
+function charakarakaForDate(
+  engine,
+  eop,
+  utc,
+  ayanamshaSystem = 0,
+  useNutation = true,
+  scheme = CHARAKARAKA_SCHEME.EIGHT,
+) {
+  const schemeCode = normalizeCharakarakaScheme(scheme);
+  const r = addon.charakarakaForDate(
+    engine._handle,
+    eop._handle,
+    utc,
+    ayanamshaSystem,
+    !!useNutation,
+    schemeCode,
+  );
+  checkStatus('charakaraka_for_date', r.status);
+  return r.result;
 }
 
 function rashiCount() {
@@ -156,6 +218,9 @@ module.exports = {
   specialLagnasForDate,
   arudhaPadasForDate,
   allUpagrahasForDate,
+  charakarakaForDate,
+  CHARAKARAKA_SCHEME,
+  CHARAKARAKA_ROLE,
   rashiCount,
   nakshatraCount,
   rashiFromLongitude,

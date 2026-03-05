@@ -4,7 +4,7 @@ Open-source Node.js bindings for `ctara-dhruv-core`, implemented against the can
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=42`
+- ABI target: `DHRUV_API_VERSION=43`
 - Binding strategy: Native Node-API addon (`native/dhruv_node.cc`) over `crates/dhruv_ffi_c/include/dhruv.h`
 - Package: `bindings/node-open`
 
@@ -66,6 +66,7 @@ Public modules included in this wrapper:
 - unified search APIs (conjunction/grahan/motion/lunar phase/sankranti)
 - panchang/date APIs (`compute_rise_set*`, `compute_all_events*`, `compute_bhavas*`, `lagna/mc/ramc`, `tithi`, `karana`, `yoga`, `nakshatra`, `vaar`, `hora`, `ghatika`, `masa`, `ayana`, `varsha`)
 - jyotish/rashi/nakshatra helpers (`graha_sidereal_longitudes`, longitude classifiers, special lagnas, arudha/upagraha date APIs)
+- charakaraka date API (`charakarakaForDate`) with selectable schemes (`8`, `7-no-pitri`, `7-pk-merged-mk`, `mixed-parashara`)
 - extras/composable APIs (panchang intermediates, sphuta/special-lagna scalar helpers, ashtakavarga, drishti, graha positions, bindus, amsha)
 - shadbala/vimsopaka/avastha and full-kundali summary
 - dasha hierarchy and snapshot

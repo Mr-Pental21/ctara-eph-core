@@ -19,6 +19,8 @@ from .types import (
     BhavaResult,
     BhinnaAshtakavarga,
     BindusResult,
+    CharakarakaEntry,
+    CharakarakaResult,
     DashaPeriod,
     DashaSnapshot,
     DrishtiEntry,
@@ -471,6 +473,25 @@ def _extract_dasha_period(p):
     )
 
 
+def _extract_charakaraka_entry(e):
+    return CharakarakaEntry(
+        role_code=e.role_code,
+        graha_index=e.graha_index,
+        rank=e.rank,
+        longitude_deg=e.longitude_deg,
+        degrees_in_rashi=e.degrees_in_rashi,
+        effective_degrees_in_rashi=e.effective_degrees_in_rashi,
+    )
+
+
+def _extract_charakaraka_result(c):
+    return CharakarakaResult(
+        scheme=c.scheme,
+        used_eight_karakas=bool(c.used_eight_karakas),
+        entries=[_extract_charakaraka_entry(c.entries[i]) for i in range(c.count)],
+    )
+
+
 def _extract_panchang_info(p):
     tithi = TithiInfo(
         tithi_index=p.tithi.tithi_index,
@@ -548,6 +569,46 @@ def _extract_panchang_info(p):
         ayana=ayana,
         varsha=varsha,
     )
+
+
+def charakaraka_for_date(
+    engine,
+    lsk,
+    eop,
+    jd_utc,
+    ayanamsha_system=0,
+    use_nutation=1,
+    scheme=0,
+):
+    """Compute charakaraka assignments for a birth moment.
+
+    Args:
+        engine: Engine instance.
+        lsk: LSK handle (kept for API uniformity).
+        eop: EOP handle.
+        jd_utc: UTC time tuple.
+        ayanamsha_system: Ayanamsha system code.
+        use_nutation: 1=yes, 0=no.
+        scheme: Charakaraka scheme code (0..3).
+
+    Returns:
+        CharakarakaResult with ordered role assignments.
+    """
+    utc = _make_utc(jd_utc)
+    out = ffi.new("DhruvCharakarakaResult *")
+    check(
+        lib.dhruv_charakaraka_for_date(
+            engine._ptr,
+            eop,
+            utc,
+            ayanamsha_system,
+            use_nutation,
+            scheme,
+            out,
+        ),
+        "charakaraka_for_date",
+    )
+    return _extract_charakaraka_result(out[0])
 
 
 def full_kundali(
@@ -741,6 +802,11 @@ def full_kundali(
                 entries=[_extract_graha_avastha(out.avastha.entries[i]) for i in range(9)]
             )
 
+        # Charakaraka
+        charakaraka = None
+        if out.charakaraka_valid:
+            charakaraka = _extract_charakaraka_result(out.charakaraka)
+
         # Panchang
         panchang = None
         if out.panchang_valid:
@@ -772,6 +838,7 @@ def full_kundali(
             shadbala=shadbala,
             vimsopaka=vimsopaka,
             avastha=avastha,
+            charakaraka=charakaraka,
             panchang=panchang,
             dasha_snapshots=dasha_snapshots,
         )

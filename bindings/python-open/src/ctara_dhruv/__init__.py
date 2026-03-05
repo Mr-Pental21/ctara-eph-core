@@ -34,6 +34,8 @@ from ctara_dhruv.enums import (
     SankrantiTargetKind,
     ChandraGrahanType,
     SuryaGrahanType,
+    CharakarakaScheme,
+    CharakarakaRole,
     TaraOutputKind,
 )
 
@@ -59,6 +61,8 @@ from ctara_dhruv.types import (
     SankrantiEvent,
     GrahaEntry,
     GrahaPositions,
+    CharakarakaEntry,
+    CharakarakaResult,
     DashaPeriod,
     DashaSnapshot,
 )
@@ -93,7 +97,7 @@ __all__ = [
     "StationType", "MaxSpeedType", "DashaSystem", "ReferencePlane",
     "SearchQueryMode", "GrahanKind", "MotionKind", "LunarPhaseKind",
     "SankrantiTargetKind", "ChandraGrahanType", "SuryaGrahanType",
-    "TaraOutputKind",
+    "CharakarakaScheme", "CharakarakaRole", "TaraOutputKind",
     # Types
     "StateVector", "SphericalCoords", "SphericalState", "UtcTime",
     "GeoLocation", "Dms", "RashiInfo", "NakshatraInfo", "Nakshatra28Info",
@@ -101,7 +105,7 @@ __all__ = [
     "ChandraGrahanResult", "SuryaGrahanResult",
     "StationaryEvent", "MaxSpeedEvent",
     "LunarPhaseEvent", "SankrantiEvent",
-    "GrahaEntry", "GrahaPositions", "DashaPeriod",
+    "GrahaEntry", "GrahaPositions", "CharakarakaEntry", "CharakarakaResult", "DashaPeriod",
     "DashaSnapshot",
     # Errors
     "DhruvError",

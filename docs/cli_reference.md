@@ -319,6 +319,19 @@ dhruv upagrahas --date 2024-03-20T12:00:00Z --lat 28.6 --lon 77.2 \
   --bsp de442s.bsp --lsk naif0012.tls --eop finals2000A.all
 ```
 
+### `charakaraka` — Chara karaka assignments (7/8 schemes)
+
+```
+dhruv charakaraka --date 2024-03-20T12:00:00Z \
+  --bsp de442s.bsp --lsk naif0012.tls --eop finals2000A.all \
+  --scheme mixed-parashara
+```
+
+| Flag | Description |
+|---|---|
+| `--scheme` | `eight`, `seven-no-pitri`, `seven-pk-merged-mk`, `mixed-parashara` |
+| scheme aliases | `7-planet`, `parashari`, `jaimini`, `7-8-parashara` |
+
 ### `core-bindus` — 19 curated sensitive points
 
 ```

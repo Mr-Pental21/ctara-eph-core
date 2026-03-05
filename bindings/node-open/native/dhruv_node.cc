@@ -644,6 +644,31 @@ napi_value WriteAllGrahaAvasthas(napi_env env, const DhruvAllGrahaAvasthas& a) {
     return obj;
 }
 
+napi_value WriteCharakarakaResult(napi_env env, const DhruvCharakarakaResult& c) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "scheme", MakeUint32(env, c.scheme));
+    SetNamed(env, obj, "usedEightKarakas", MakeBool(env, c.used_eight_karakas != 0));
+    SetNamed(env, obj, "count", MakeUint32(env, c.count));
+
+    napi_value entries;
+    napi_create_array_with_length(env, c.count, &entries);
+    for (uint32_t i = 0; i < c.count && i < DHRUV_MAX_CHARAKARAKA_ENTRIES; ++i) {
+        const DhruvCharakarakaEntry& e = c.entries[i];
+        napi_value eo;
+        napi_create_object(env, &eo);
+        SetNamed(env, eo, "roleCode", MakeUint32(env, e.role_code));
+        SetNamed(env, eo, "grahaIndex", MakeUint32(env, e.graha_index));
+        SetNamed(env, eo, "rank", MakeUint32(env, e.rank));
+        SetNamed(env, eo, "longitudeDeg", MakeDouble(env, e.longitude_deg));
+        SetNamed(env, eo, "degreesInRashi", MakeDouble(env, e.degrees_in_rashi));
+        SetNamed(env, eo, "effectiveDegreesInRashi", MakeDouble(env, e.effective_degrees_in_rashi));
+        napi_set_element(env, entries, i, eo);
+    }
+    SetNamed(env, obj, "entries", entries);
+    return obj;
+}
+
 napi_value WriteSphutalResult(napi_env env, const DhruvSphutalResult& s) {
     napi_value obj;
     napi_create_object(env, &obj);
@@ -4276,6 +4301,43 @@ napi_value AvasthaForDate(napi_env env, napi_callback_info info) {
     return out;
 }
 
+napi_value CharakarakaForDate(napi_env env, napi_callback_info info) {
+    size_t argc = 6;
+    napi_value args[6];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 6) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    void* e_ptr = nullptr;
+    void* ep_ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &e_ptr) || !ReadExternalPtr(env, args[1], &ep_ptr)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvUtcTime utc{};
+    if (!ReadUtcTime(env, args[2], &utc)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    uint32_t ayanamsha = 0;
+    bool use_nutation = false;
+    uint32_t scheme = 0;
+    if (!GetUint32(env, args[3], &ayanamsha) || !GetBool(env, args[4], &use_nutation) || !GetUint32(env, args[5], &scheme)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvCharakarakaResult out_result{};
+    int32_t status = dhruv_charakaraka_for_date(
+        static_cast<const DhruvEngineHandle*>(e_ptr),
+        static_cast<const DhruvEopHandle*>(ep_ptr),
+        &utc,
+        ayanamsha,
+        use_nutation ? 1 : 0,
+        static_cast<uint8_t>(scheme),
+        &out_result);
+
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) SetNamed(env, out, "result", WriteCharakarakaResult(env, out_result));
+    return out;
+}
+
 napi_value FullKundaliSummaryForDate(napi_env env, napi_callback_info info) {
     size_t argc = 6;
     napi_value args[6];
@@ -4323,6 +4385,7 @@ napi_value FullKundaliSummaryForDate(napi_env env, napi_callback_info info) {
     if (status == STATUS_OK) {
         SetNamed(env, out, "ayanamshaDeg", MakeDouble(env, out_result.ayanamsha_deg));
         SetNamed(env, out, "grahaPositionsValid", MakeBool(env, out_result.graha_positions_valid != 0));
+        SetNamed(env, out, "charakarakaValid", MakeBool(env, out_result.charakaraka_valid != 0));
         SetNamed(env, out, "panchangValid", MakeBool(env, out_result.panchang_valid != 0));
         SetNamed(env, out, "dashaSnapshotCount", MakeUint32(env, out_result.dasha_snapshot_count));
         dhruv_full_kundali_result_free(&out_result);
@@ -4930,6 +4993,7 @@ napi_value Init(napi_env env, napi_value exports) {
         {"shadbalaForDate", nullptr, ShadbalaForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"vimsopakaForDate", nullptr, VimsopakaForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"avasthaForDate", nullptr, AvasthaForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"charakarakaForDate", nullptr, CharakarakaForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"fullKundaliSummaryForDate", nullptr, FullKundaliSummaryForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
 
         {"dashaSelectionConfigDefault", nullptr, DashaSelectionConfigDefault, nullptr, nullptr, nullptr, napi_default, nullptr},

@@ -11,10 +11,10 @@ use dhruv_search::{
     ChandraGrahan, ChandraGrahanType, ConjunctionConfig, ConjunctionEvent, GrahanConfig,
     LunarPhase, MaxSpeedEvent, MaxSpeedType, SankrantiConfig, SearchError, StationType,
     StationaryConfig, StationaryEvent, SuryaGrahan, SuryaGrahanType, amsha_charts_for_date,
-    avastha_for_date, ayana_for_date, body_ecliptic_lon_lat, dasha_hierarchy_for_birth,
-    dasha_snapshot_at, elongation_at, full_kundali_for_date, ghatika_for_date,
-    ghatika_from_sunrises, graha_sidereal_longitudes, graha_tropical_longitudes, hora_for_date,
-    hora_from_sunrises, karana_at, karana_for_date, masa_for_date, nakshatra_at,
+    avastha_for_date, ayana_for_date, body_ecliptic_lon_lat, charakaraka_for_date,
+    dasha_hierarchy_for_birth, dasha_snapshot_at, elongation_at, full_kundali_for_date,
+    ghatika_for_date, ghatika_from_sunrises, graha_sidereal_longitudes, graha_tropical_longitudes,
+    hora_for_date, hora_from_sunrises, karana_at, karana_for_date, masa_for_date, nakshatra_at,
     nakshatra_for_date, next_amavasya, next_chandra_grahan, next_conjunction, next_max_speed,
     next_purnima, next_sankranti, next_specific_sankranti, next_stationary, next_surya_grahan,
     prev_amavasya, prev_chandra_grahan, prev_conjunction, prev_max_speed, prev_purnima,
@@ -28,19 +28,19 @@ use dhruv_tara::{TaraAccuracy, TaraCatalog, TaraConfig, TaraError, TaraId};
 use dhruv_time::UtcTime;
 use dhruv_vedic_base::{
     Amsha, AmshaRequest, AmshaVariation, AyanamshaSystem, BhavaConfig, BhavaReferenceMode,
-    BhavaStartingPoint, BhavaSystem, GeoLocation, LunarNode, NodeMode, RiseSetConfig, RiseSetEvent,
-    RiseSetResult, SunLimb, VedicError, amsha_longitude, amsha_rashi_info,
-    approximate_local_noon_jd, ayana_from_sidereal_longitude, ayanamsha_deg_with_catalog,
-    ayanamsha_mean_deg_with_catalog, ayanamsha_true_deg, compute_all_events, compute_bhavas,
-    compute_rise_set, deg_to_dms, jd_tdb_to_centuries, karana_from_elongation, lunar_node_deg,
-    lunar_node_deg_for_epoch, masa_from_rashi_index, nakshatra_from_longitude,
-    nakshatra_from_tropical, nakshatra28_from_longitude, nakshatra28_from_tropical, nth_rashi_from,
-    rashi_from_longitude, rashi_from_tropical, samvatsara_from_year, time_upagraha_jd,
-    tithi_from_elongation, vaar_from_jd, yoga_from_sum,
+    BhavaStartingPoint, BhavaSystem, CharakarakaScheme, GeoLocation, LunarNode, NodeMode,
+    RiseSetConfig, RiseSetEvent, RiseSetResult, SunLimb, VedicError, amsha_longitude,
+    amsha_rashi_info, approximate_local_noon_jd, ayana_from_sidereal_longitude,
+    ayanamsha_deg_with_catalog, ayanamsha_mean_deg_with_catalog, ayanamsha_true_deg,
+    compute_all_events, compute_bhavas, compute_rise_set, deg_to_dms, jd_tdb_to_centuries,
+    karana_from_elongation, lunar_node_deg, lunar_node_deg_for_epoch, masa_from_rashi_index,
+    nakshatra_from_longitude, nakshatra_from_tropical, nakshatra28_from_longitude,
+    nakshatra28_from_tropical, nth_rashi_from, rashi_from_longitude, rashi_from_tropical,
+    samvatsara_from_year, time_upagraha_jd, tithi_from_elongation, vaar_from_jd, yoga_from_sum,
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 42;
+pub const DHRUV_API_VERSION: u32 = 43;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -428,6 +428,10 @@ fn full_kundali_config_from_ffi(
         1 => dhruv_vedic_base::NodeDignityPolicy::AlwaysSama,
         _ => return Err(DhruvStatus::InvalidSearchConfig),
     };
+    let charakaraka_scheme = match CharakarakaScheme::from_u8(cfg.charakaraka_scheme) {
+        Some(v) => v,
+        None => return Err(DhruvStatus::InvalidSearchConfig),
+    };
     Ok(dhruv_search::FullKundaliConfig {
         include_bhava_cusps: cfg.include_bhava_cusps != 0,
         include_graha_positions: cfg.include_graha_positions != 0,
@@ -440,6 +444,8 @@ fn full_kundali_config_from_ffi(
         include_shadbala: cfg.include_shadbala != 0,
         include_vimsopaka: cfg.include_vimsopaka != 0,
         include_avastha: cfg.include_avastha != 0,
+        include_charakaraka: cfg.include_charakaraka != 0,
+        charakaraka_scheme,
         node_dignity_policy,
         graha_positions_config: graha_positions_config_from_ffi(&cfg.graha_positions_config),
         bindus_config: bindus_config_from_ffi(&cfg.bindus_config),
@@ -8149,6 +8155,80 @@ fn amsha_chart_to_ffi(chart: &dhruv_search::AmshaChart) -> DhruvAmshaChart {
 }
 
 // ---------------------------------------------------------------------------
+// Charakaraka FFI types
+// ---------------------------------------------------------------------------
+
+/// Maximum number of charakaraka assignments in one result.
+pub const DHRUV_MAX_CHARAKARAKA_ENTRIES: usize = 8;
+
+/// C-compatible charakaraka entry.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvCharakarakaEntry {
+    /// Charakaraka role code.
+    pub role_code: u8,
+    /// Graha index (0=Sun..8=Ketu).
+    pub graha_index: u8,
+    /// 1-based rank within selected scheme.
+    pub rank: u8,
+    /// Sidereal longitude in [0,360).
+    pub longitude_deg: f64,
+    /// Degrees within rashi [0,30).
+    pub degrees_in_rashi: f64,
+    /// Ranking degree (Rahu-reversed where applicable).
+    pub effective_degrees_in_rashi: f64,
+}
+
+impl DhruvCharakarakaEntry {
+    fn zeroed() -> Self {
+        Self {
+            role_code: 0,
+            graha_index: 0,
+            rank: 0,
+            longitude_deg: 0.0,
+            degrees_in_rashi: 0.0,
+            effective_degrees_in_rashi: 0.0,
+        }
+    }
+}
+
+/// C-compatible charakaraka result.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvCharakarakaResult {
+    /// Input scheme code.
+    pub scheme: u8,
+    /// For mixed scheme: 1 if resolved to 8-karaka mode.
+    pub used_eight_karakas: u8,
+    /// Number of populated entries (7 or 8).
+    pub count: u8,
+    /// Ordered assignments.
+    pub entries: [DhruvCharakarakaEntry; DHRUV_MAX_CHARAKARAKA_ENTRIES],
+}
+
+impl DhruvCharakarakaResult {
+    fn zeroed() -> Self {
+        Self {
+            scheme: 0,
+            used_eight_karakas: 0,
+            count: 0,
+            entries: [DhruvCharakarakaEntry::zeroed(); DHRUV_MAX_CHARAKARAKA_ENTRIES],
+        }
+    }
+}
+
+fn charakaraka_entry_to_ffi(entry: &dhruv_vedic_base::CharakarakaEntry) -> DhruvCharakarakaEntry {
+    DhruvCharakarakaEntry {
+        role_code: entry.role.code(),
+        graha_index: entry.graha.index(),
+        rank: entry.rank,
+        longitude_deg: entry.longitude_deg,
+        degrees_in_rashi: entry.degrees_in_rashi,
+        effective_degrees_in_rashi: entry.effective_degrees_in_rashi,
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Shadbala & Vimsopaka FFI types
 // ---------------------------------------------------------------------------
 
@@ -8285,6 +8365,10 @@ pub struct DhruvFullKundaliConfig {
     pub include_vimsopaka: u8,
     /// Include avastha (planetary state) section.
     pub include_avastha: u8,
+    /// Include charakaraka section.
+    pub include_charakaraka: u8,
+    /// Charakaraka scheme code (0..3).
+    pub charakaraka_scheme: u8,
     /// Node dignity policy for vimsopaka/avastha: 0=SignLordBased (default), 1=AlwaysSama.
     pub node_dignity_policy: u32,
     /// Graha positions config.
@@ -8351,6 +8435,8 @@ pub struct DhruvFullKundaliResult {
     pub vimsopaka: DhruvVimsopakaResult,
     pub avastha_valid: u8,
     pub avastha: DhruvAllGrahaAvasthas,
+    pub charakaraka_valid: u8,
+    pub charakaraka: DhruvCharakarakaResult,
     pub panchang_valid: u8,
     pub panchang: DhruvPanchangInfo,
     /// Number of valid dasha hierarchies (0..=8).
@@ -8422,6 +8508,8 @@ pub extern "C" fn dhruv_full_kundali_config_default() -> DhruvFullKundaliConfig 
         include_shadbala: 0,
         include_vimsopaka: 0,
         include_avastha: 0,
+        include_charakaraka: 0,
+        charakaraka_scheme: CharakarakaScheme::default() as u8,
         node_dignity_policy: 0, // SignLordBased
         graha_positions_config: DhruvGrahaPositionsConfig {
             include_nakshatra: 0,
@@ -8716,6 +8804,17 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
                 }
             }
 
+            if let Some(ref ck) = result.charakaraka {
+                out.charakaraka_valid = 1;
+                out.charakaraka.scheme = ck.scheme as u8;
+                out.charakaraka.used_eight_karakas = ck.used_eight_karakas as u8;
+                let count = ck.entries.len().min(DHRUV_MAX_CHARAKARAKA_ENTRIES);
+                out.charakaraka.count = count as u8;
+                for i in 0..count {
+                    out.charakaraka.entries[i] = charakaraka_entry_to_ffi(&ck.entries[i]);
+                }
+            }
+
             if let Some(ref p) = result.panchang {
                 out.panchang_valid = 1;
                 out.panchang = panchang_info_to_ffi(p);
@@ -8968,6 +9067,75 @@ pub unsafe extern "C" fn dhruv_amsha_chart_for_date(
         Ok(result) => {
             if let Some(chart) = result.charts.first() {
                 unsafe { *out = amsha_chart_to_ffi(chart) };
+            }
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Charakaraka FFI functions (date-based)
+// ---------------------------------------------------------------------------
+
+/// Compute Chara Karakas for a given date.
+///
+/// `scheme`:
+/// - 0 = Eight
+/// - 1 = SevenNoPitri
+/// - 2 = SevenPkMergedMk
+/// - 3 = MixedParashara
+///
+/// # Safety
+/// All pointers must be valid. `out` must point to a valid `DhruvCharakarakaResult`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_charakaraka_for_date(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    utc: *const DhruvUtcTime,
+    ayanamsha_system: u32,
+    use_nutation: u8,
+    scheme: u8,
+    out: *mut DhruvCharakarakaResult,
+) -> DhruvStatus {
+    if engine.is_null() || eop.is_null() || utc.is_null() || out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+
+    let scheme = match CharakarakaScheme::from_u8(scheme) {
+        Some(v) => v,
+        None => return DhruvStatus::InvalidSearchConfig,
+    };
+
+    let engine = unsafe { &*engine };
+    let eop = unsafe { &*eop };
+    let utc_c = unsafe { &*utc };
+
+    let utc_time = UtcTime {
+        year: utc_c.year,
+        month: utc_c.month,
+        day: utc_c.day,
+        hour: utc_c.hour,
+        minute: utc_c.minute,
+        second: utc_c.second,
+    };
+
+    let system = match ayanamsha_system_from_code(ayanamsha_system as i32) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidQuery,
+    };
+    let aya_config = SankrantiConfig::new(system, use_nutation != 0);
+
+    match charakaraka_for_date(engine, eop, &utc_time, &aya_config, scheme) {
+        Ok(result) => {
+            let out = unsafe { &mut *out };
+            *out = DhruvCharakarakaResult::zeroed();
+            out.scheme = scheme as u8;
+            out.used_eight_karakas = result.used_eight_karakas as u8;
+            let count = result.entries.len().min(DHRUV_MAX_CHARAKARAKA_ENTRIES);
+            out.count = count as u8;
+            for i in 0..count {
+                out.entries[i] = charakaraka_entry_to_ffi(&result.entries[i]);
             }
             DhruvStatus::Ok
         }
@@ -10888,8 +11056,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_42() {
-        assert_eq!(dhruv_api_version(), 42);
+    fn ffi_api_version_is_43() {
+        assert_eq!(dhruv_api_version(), 43);
     }
 
     #[test]
@@ -10906,6 +11074,8 @@ mod tests {
         assert_eq!(cfg.include_shadbala, 0);
         assert_eq!(cfg.include_vimsopaka, 0);
         assert_eq!(cfg.include_avastha, 0);
+        assert_eq!(cfg.include_charakaraka, 0);
+        assert_eq!(cfg.charakaraka_scheme, CharakarakaScheme::default() as u8);
         assert_eq!(cfg.include_panchang, 0);
         assert_eq!(cfg.include_calendar, 0);
         assert_eq!(cfg.include_dasha, 0);

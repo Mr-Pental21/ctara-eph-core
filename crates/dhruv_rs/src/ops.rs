@@ -14,7 +14,10 @@ use dhruv_search::{
 };
 use dhruv_tara::{EarthState, TaraCatalog, TaraConfig, TaraId};
 use dhruv_time::{EopKernel, UtcTime, calendar_to_jd, jd_to_tdb_seconds, tdb_seconds_to_jd};
-use dhruv_vedic_base::{AyanamshaSystem, GeoLocation, LunarNode, NodeMode, RiseSetConfig};
+use dhruv_vedic_base::{
+    AyanamshaSystem, CharakarakaResult, CharakarakaScheme, GeoLocation, LunarNode, NodeMode,
+    RiseSetConfig,
+};
 
 use crate::context::DhruvContext;
 use crate::date::UtcDate;
@@ -486,4 +489,30 @@ pub fn tara_op(
         earth_state: request.earth_state,
     };
     Ok(dhruv_search::tara(catalog, &op)?)
+}
+
+/// Unified charakaraka request.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CharakarakaRequest {
+    pub at: TimeInput,
+    pub system: AyanamshaSystem,
+    pub use_nutation: bool,
+    pub scheme: CharakarakaScheme,
+}
+
+/// Compute Chara Karakas for the requested time.
+pub fn charakaraka(
+    ctx: &DhruvContext,
+    eop: &EopKernel,
+    request: &CharakarakaRequest,
+) -> Result<CharakarakaResult, DhruvError> {
+    let utc = time_input_to_utc_for_context(ctx, request.at);
+    let aya_cfg = SankrantiConfig::new(request.system, request.use_nutation);
+    Ok(dhruv_search::charakaraka_for_date(
+        ctx.engine(),
+        eop,
+        &utc,
+        &aya_cfg,
+        request.scheme,
+    )?)
 }

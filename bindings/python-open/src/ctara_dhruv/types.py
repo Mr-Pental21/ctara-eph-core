@@ -968,6 +968,32 @@ class DashaSnapshot:
 
 
 # ---------------------------------------------------------------------------
+# Charakaraka
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CharakarakaEntry:
+    """Single charakaraka assignment entry."""
+
+    role_code: int
+    graha_index: int
+    rank: int
+    longitude_deg: float
+    degrees_in_rashi: float
+    effective_degrees_in_rashi: float
+
+
+@dataclass(frozen=True)
+class CharakarakaResult:
+    """Charakaraka assignment result for one scheme."""
+
+    scheme: int
+    used_eight_karakas: bool
+    entries: list[CharakarakaEntry]
+
+
+# ---------------------------------------------------------------------------
 # Tara (Fixed Stars)
 # ---------------------------------------------------------------------------
 
@@ -1043,5 +1069,6 @@ class FullKundaliResult:
     shadbala: Optional[ShadbalaResult] = None
     vimsopaka: Optional[VimsopakaResult] = None
     avastha: Optional[AllGrahaAvasthas] = None
+    charakaraka: Optional[CharakarakaResult] = None
     panchang: Optional[PanchangInfo] = None
     dasha_snapshots: Optional[list[DashaSnapshot]] = None

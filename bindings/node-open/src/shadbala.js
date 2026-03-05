@@ -80,6 +80,7 @@ function fullKundaliSummaryForDate(engine, eop, utc, location, ayanamshaSystem =
   return {
     ayanamshaDeg: r.ayanamshaDeg,
     grahaPositionsValid: !!r.grahaPositionsValid,
+    charakarakaValid: !!r.charakarakaValid,
     panchangValid: !!r.panchangValid,
     dashaSnapshotCount: r.dashaSnapshotCount,
   };

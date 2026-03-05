@@ -712,6 +712,12 @@ struct KundaliArgs {
     /// Include graha avasthas
     #[arg(long)]
     include_avastha: bool,
+    /// Include charakaraka section
+    #[arg(long)]
+    include_charakaraka: bool,
+    /// Charakaraka scheme used when charakaraka is included
+    #[arg(long, default_value = "mixed-parashara")]
+    charakaraka_scheme: String,
     /// Include panchang (tithi, karana, yoga, vaar, hora, ghatika, nakshatra)
     #[arg(long)]
     include_panchang: bool,
@@ -1492,6 +1498,31 @@ struct AvasthaArgs {
 }
 
 #[derive(clap::Args)]
+struct CharakarakaArgs {
+    /// UTC datetime (YYYY-MM-DDThh:mm:ssZ)
+    #[arg(long)]
+    date: String,
+    /// Ayanamsha system code (0-19, default 0=Lahiri)
+    #[arg(long, default_value = "0")]
+    ayanamsha: i32,
+    /// Apply nutation correction
+    #[arg(long)]
+    nutation: bool,
+    /// Charakaraka scheme: eight, seven-no-pitri, seven-pk-merged-mk, mixed-parashara
+    #[arg(long, default_value = "mixed-parashara")]
+    scheme: String,
+    /// Path to SPK kernel
+    #[arg(long)]
+    bsp: Option<PathBuf>,
+    /// Path to leap second kernel
+    #[arg(long)]
+    lsk: Option<PathBuf>,
+    /// Path to IERS EOP file (finals2000A.all)
+    #[arg(long)]
+    eop: PathBuf,
+}
+
+#[derive(clap::Args)]
 struct DashaArgs {
     /// Dasha system (vimshottari)
     #[arg(long, default_value = "vimshottari")]
@@ -2122,6 +2153,8 @@ enum Commands {
     Shadbala(ShadbalaArgs),
     /// Compute Vimsopaka Bala (20-point varga dignity strength) for a date and location
     Vimsopaka(VimsopakaArgs),
+    /// Compute Chara Karaka assignments for a date
+    Charakaraka(CharakarakaArgs),
     /// Transform a sidereal longitude through amsha (divisional chart) mappings
     Amsha {
         /// Sidereal longitude in degrees
@@ -4030,6 +4063,7 @@ fn main() {
                 args.include_shadbala,
                 args.include_vimsopaka,
                 args.include_avastha,
+                args.include_charakaraka,
                 args.include_panchang,
                 args.include_calendar,
             );
@@ -4048,6 +4082,7 @@ fn main() {
                 args.dasha_max_level,
                 snapshot_jd,
                 node_dignity_policy,
+                parse_charakaraka_scheme(&args.charakaraka_scheme),
             );
 
             let result = dhruv_search::full_kundali_for_date(
@@ -6372,6 +6407,50 @@ fn main() {
                 }
             }
         }
+        Commands::Charakaraka(args) => {
+            let system = require_aya_system(args.ayanamsha);
+            let utc = parse_utc(&args.date).unwrap_or_else(|e| {
+                eprintln!("{e}");
+                std::process::exit(1);
+            });
+            let scheme = parse_charakaraka_scheme(&args.scheme);
+            let engine = load_engine(&args.bsp, &args.lsk);
+            let eop_kernel = load_eop(&args.eop);
+            let aya_config = SankrantiConfig::new(system, args.nutation);
+
+            let result =
+                dhruv_search::charakaraka_for_date(&engine, &eop_kernel, &utc, &aya_config, scheme)
+                    .unwrap_or_else(|e| {
+                        eprintln!("Error: {e}");
+                        std::process::exit(1);
+                    });
+
+            println!(
+                "Charakaraka ({:?}, ayanamsha={:?}, nutation={}) for {}\n",
+                result.scheme, system, args.nutation, args.date
+            );
+            println!(
+                "{:<4} {:<14} {:<8} {:<26} {:>8}",
+                "Rank", "Role", "Graha", "Longitude", "Eff°"
+            );
+            println!("{}", "-".repeat(68));
+            for e in &result.entries {
+                println!(
+                    "{:<4} {:<14} {:<8} {:<26} {:>8.3}",
+                    e.rank,
+                    charakaraka_role_name(e.role),
+                    e.graha.english_name(),
+                    format_rashi_dms(e.longitude_deg),
+                    e.effective_degrees_in_rashi
+                );
+            }
+            if result.scheme == dhruv_vedic_base::CharakarakaScheme::MixedParashara {
+                println!(
+                    "\nMixed mode resolved to {}-karaka set",
+                    if result.used_eight_karakas { 8 } else { 7 }
+                );
+            }
+        }
         Commands::Vimsopaka(args) => {
             let system = require_aya_system(args.ayanamsha);
             let utc = parse_utc(&args.date).unwrap_or_else(|e| {
@@ -6903,6 +6982,45 @@ fn parse_dasha_system(s: &str) -> dhruv_vedic_base::dasha::DashaSystem {
     }
 }
 
+fn parse_charakaraka_scheme(s: &str) -> dhruv_vedic_base::CharakarakaScheme {
+    match s.to_ascii_lowercase().replace('_', "-").as_str() {
+        "eight" | "8" | "8-chara" | "8-charakaraka" | "jaimini-8" => {
+            dhruv_vedic_base::CharakarakaScheme::Eight
+        }
+        "seven-no-pitri" | "7-no-pitri" | "7-planet" | "seven-planet" => {
+            dhruv_vedic_base::CharakarakaScheme::SevenNoPitri
+        }
+        "seven-pk-merged-mk" | "7-pk-merged-mk" | "pk-merged-mk" => {
+            dhruv_vedic_base::CharakarakaScheme::SevenPkMergedMk
+        }
+        "mixed-parashara" | "mixed" | "parashari" | "parashara" | "7-8-parashara" => {
+            dhruv_vedic_base::CharakarakaScheme::MixedParashara
+        }
+        "jaimini" => dhruv_vedic_base::CharakarakaScheme::Eight,
+        other => {
+            eprintln!("Unknown charakaraka scheme: {other}");
+            eprintln!(
+                "Valid: eight, seven-no-pitri, seven-pk-merged-mk, mixed-parashara (aliases: 7-planet, parashari, jaimini)"
+            );
+            std::process::exit(1);
+        }
+    }
+}
+
+fn charakaraka_role_name(role: dhruv_vedic_base::CharakarakaRole) -> &'static str {
+    match role {
+        dhruv_vedic_base::CharakarakaRole::Atma => "Atma",
+        dhruv_vedic_base::CharakarakaRole::Amatya => "Amatya",
+        dhruv_vedic_base::CharakarakaRole::Bhratri => "Bhratri",
+        dhruv_vedic_base::CharakarakaRole::Matri => "Matri",
+        dhruv_vedic_base::CharakarakaRole::Pitri => "Pitri",
+        dhruv_vedic_base::CharakarakaRole::Putra => "Putra",
+        dhruv_vedic_base::CharakarakaRole::Gnati => "Gnati",
+        dhruv_vedic_base::CharakarakaRole::Dara => "Dara",
+        dhruv_vedic_base::CharakarakaRole::MatriPutra => "Matri/Putra",
+    }
+}
+
 fn format_dasha_entity(entity: &dhruv_vedic_base::dasha::DashaEntity) -> String {
     match entity {
         dhruv_vedic_base::dasha::DashaEntity::Graha(g) => g.english_name().to_string(),
@@ -7110,6 +7228,7 @@ struct ResolvedKundaliFlags {
     include_shadbala: bool,
     include_vimsopaka: bool,
     include_avastha: bool,
+    include_charakaraka: bool,
     include_panchang: bool,
     include_calendar: bool,
 }
@@ -7127,6 +7246,7 @@ fn resolve_kundali_flags(
     include_shadbala: bool,
     include_vimsopaka: bool,
     include_avastha: bool,
+    include_charakaraka: bool,
     include_panchang: bool,
     include_calendar: bool,
 ) -> ResolvedKundaliFlags {
@@ -7140,6 +7260,7 @@ fn resolve_kundali_flags(
         || include_shadbala
         || include_vimsopaka
         || include_avastha
+        || include_charakaraka
         || include_panchang
         || include_calendar;
 
@@ -7156,6 +7277,7 @@ fn resolve_kundali_flags(
             include_shadbala: true,
             include_vimsopaka: true,
             include_avastha: true,
+            include_charakaraka: true,
             include_panchang: true,
             include_calendar: true,
         }
@@ -7172,6 +7294,7 @@ fn resolve_kundali_flags(
             include_shadbala,
             include_vimsopaka,
             include_avastha,
+            include_charakaraka,
             include_panchang: include_panchang || include_calendar,
             include_calendar,
         }
@@ -7189,6 +7312,7 @@ fn resolve_kundali_flags(
             include_shadbala: false,
             include_vimsopaka: false,
             include_avastha: false,
+            include_charakaraka: false,
             include_panchang: false,
             include_calendar: false,
         }
@@ -7213,6 +7337,7 @@ fn build_kundali_config(
     dasha_max_level: u8,
     dasha_snapshot_jd: Option<f64>,
     node_policy: NodeDignityPolicy,
+    charakaraka_scheme: dhruv_vedic_base::CharakarakaScheme,
 ) -> dhruv_search::FullKundaliConfig {
     // Compute-vs-print: force graha_positions + lagna when amshas need it
     let compute_graha = resolved.include_graha || resolved.include_amshas;
@@ -7260,6 +7385,8 @@ fn build_kundali_config(
         include_shadbala: resolved.include_shadbala,
         include_vimsopaka: resolved.include_vimsopaka,
         include_avastha: resolved.include_avastha,
+        include_charakaraka: resolved.include_charakaraka,
+        charakaraka_scheme,
         include_panchang: resolved.include_panchang,
         include_calendar: resolved.include_calendar,
         include_dasha,
@@ -7591,6 +7718,37 @@ fn print_kundali(
                 e.deeptadi.name(),
                 e.lajjitadi.name(),
                 e.sayanadi.avastha.name(),
+            )?;
+        }
+        writeln!(w)?;
+    }
+
+    if flags.include_charakaraka
+        && let Some(ref ck) = result.charakaraka
+    {
+        writeln!(w, "Charakaraka:")?;
+        writeln!(
+            w,
+            "  {:<4} {:<14} {:<8} {:<26} {:>8}",
+            "Rank", "Role", "Graha", "Longitude", "Eff°"
+        )?;
+        writeln!(w, "  {}", "-".repeat(70))?;
+        for e in &ck.entries {
+            writeln!(
+                w,
+                "  {:<4} {:<14} {:<8} {:<26} {:>8.3}",
+                e.rank,
+                charakaraka_role_name(e.role),
+                e.graha.english_name(),
+                format_rashi_dms(e.longitude_deg),
+                e.effective_degrees_in_rashi
+            )?;
+        }
+        if ck.scheme == dhruv_vedic_base::CharakarakaScheme::MixedParashara {
+            writeln!(
+                w,
+                "  Mixed resolved to {}-karaka set",
+                if ck.used_eight_karakas { 8 } else { 7 }
             )?;
         }
         writeln!(w)?;

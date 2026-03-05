@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 42`
+**ABI version:** `DHRUV_API_VERSION = 43`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -1876,6 +1876,8 @@ no proper motion). Equivalent to requesting ecliptic output for
 ---
 
 ## Changelog
+
+**v43**: Added charakaraka API surface. New constants: `DHRUV_MAX_CHARAKARAKA_ENTRIES`, `DHRUV_CHARAKARAKA_SCHEME_*`, `DHRUV_CHARAKARAKA_ROLE_*`. New types: `DhruvCharakarakaEntry`, `DhruvCharakarakaResult`. New function: `dhruv_charakaraka_for_date`. Extended `DhruvFullKundaliConfig` with `include_charakaraka` and `charakaraka_scheme`; extended `DhruvFullKundaliResult` with `charakaraka_valid` and `charakaraka`.
 
 **v42**: Removed legacy split `dhruv_next_*`, `dhruv_prev_*`, `dhruv_search_*` (and `_utc`) wrappers from exported C ABI symbols for conjunction/grahan/motion/lunar-phase/sankranti families. Use unified `dhruv_conjunction_search_ex`, `dhruv_grahan_search_ex`, `dhruv_motion_search_ex`, `dhruv_lunar_phase_search_ex`, and `dhruv_sankranti_search_ex`.
 

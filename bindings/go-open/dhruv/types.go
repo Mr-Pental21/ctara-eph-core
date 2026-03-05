@@ -2,12 +2,32 @@ package dhruv
 
 import "ctara-dhruv-core/bindings/go-open/internal/cabi"
 
-const ExpectedAPIVersion = 42
+const ExpectedAPIVersion = 43
 
 const (
-	PathCapacity = cabi.PathCapacity
-	MaxSpkPaths  = cabi.MaxSpkPaths
-	GrahaCount   = cabi.GrahaCount
+	PathCapacity          = cabi.PathCapacity
+	MaxSpkPaths           = cabi.MaxSpkPaths
+	GrahaCount            = cabi.GrahaCount
+	MaxCharakarakaEntries = cabi.MaxCharakarakaEntries
+)
+
+const (
+	CharakarakaSchemeEight           = cabi.CharakarakaSchemeEight
+	CharakarakaSchemeSevenNoPitri    = cabi.CharakarakaSchemeSevenNoPitri
+	CharakarakaSchemeSevenPkMergedMk = cabi.CharakarakaSchemeSevenPkMergedMk
+	CharakarakaSchemeMixedParashara  = cabi.CharakarakaSchemeMixedParashara
+)
+
+const (
+	CharakarakaRoleAtma       = cabi.CharakarakaRoleAtma
+	CharakarakaRoleAmatya     = cabi.CharakarakaRoleAmatya
+	CharakarakaRoleBhratri    = cabi.CharakarakaRoleBhratri
+	CharakarakaRoleMatri      = cabi.CharakarakaRoleMatri
+	CharakarakaRolePitri      = cabi.CharakarakaRolePitri
+	CharakarakaRolePutra      = cabi.CharakarakaRolePutra
+	CharakarakaRoleGnati      = cabi.CharakarakaRoleGnati
+	CharakarakaRoleDara       = cabi.CharakarakaRoleDara
+	CharakarakaRoleMatriPutra = cabi.CharakarakaRoleMatriPutra
 )
 
 type (
@@ -84,6 +104,8 @@ type (
 	SayanadiResult      = cabi.SayanadiResult
 	GrahaAvasthas       = cabi.GrahaAvasthas
 	AllGrahaAvasthas    = cabi.AllGrahaAvasthas
+	CharakarakaEntry    = cabi.CharakarakaEntry
+	CharakarakaResult   = cabi.CharakarakaResult
 	FullKundaliSummary  = cabi.FullKundaliSummary
 
 	Dms             = cabi.Dms

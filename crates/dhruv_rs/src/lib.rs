@@ -12,11 +12,11 @@ pub use context::DhruvContext;
 pub use date::UtcDate;
 pub use error::DhruvError;
 pub use ops::{
-    AyanamshaRequest, AyanamshaRequestMode, ConjunctionRequest, ConjunctionRequestQuery,
-    GrahanRequest, GrahanRequestQuery, LunarPhaseRequest, LunarPhaseRequestQuery, MotionRequest,
-    MotionRequestQuery, NodeRequest, PanchangRequest, SankrantiRequest, SankrantiRequestQuery,
-    TaraRequest, TimeInput, ayanamsha_op, conjunction, grahan, lunar_node_op, lunar_phase, motion,
-    panchang_op, sankranti, tara_op,
+    AyanamshaRequest, AyanamshaRequestMode, CharakarakaRequest, ConjunctionRequest,
+    ConjunctionRequestQuery, GrahanRequest, GrahanRequestQuery, LunarPhaseRequest,
+    LunarPhaseRequestQuery, MotionRequest, MotionRequestQuery, NodeRequest, PanchangRequest,
+    SankrantiRequest, SankrantiRequestQuery, TaraRequest, TimeInput, ayanamsha_op, charakaraka,
+    conjunction, grahan, lunar_node_op, lunar_phase, motion, panchang_op, sankranti, tara_op,
 };
 
 // Re-export core types so callers don't need to depend on dhruv_core directly.
@@ -33,13 +33,13 @@ pub use dhruv_search::stationary_types::{
     MaxSpeedEvent, MaxSpeedType, StationType, StationaryConfig, StationaryEvent,
 };
 pub use dhruv_search::{
-    ConjunctionResult, GrahanKind, GrahanResult, LunarPhaseKind, LunarPhaseResult, MotionKind,
-    MotionResult, NodeBackend, PANCHANG_INCLUDE_ALL, PANCHANG_INCLUDE_ALL_CALENDAR,
-    PANCHANG_INCLUDE_ALL_CORE, PANCHANG_INCLUDE_AYANA, PANCHANG_INCLUDE_GHATIKA,
-    PANCHANG_INCLUDE_HORA, PANCHANG_INCLUDE_KARANA, PANCHANG_INCLUDE_MASA,
-    PANCHANG_INCLUDE_NAKSHATRA, PANCHANG_INCLUDE_TITHI, PANCHANG_INCLUDE_VAAR,
-    PANCHANG_INCLUDE_VARSHA, PANCHANG_INCLUDE_YOGA, PanchangResult, SankrantiResult,
-    SankrantiTarget, TaraOutputKind, TaraResult,
+    CharakarakaEntry, CharakarakaResult, CharakarakaRole, CharakarakaScheme, ConjunctionResult,
+    GrahanKind, GrahanResult, LunarPhaseKind, LunarPhaseResult, MotionKind, MotionResult,
+    NodeBackend, PANCHANG_INCLUDE_ALL, PANCHANG_INCLUDE_ALL_CALENDAR, PANCHANG_INCLUDE_ALL_CORE,
+    PANCHANG_INCLUDE_AYANA, PANCHANG_INCLUDE_GHATIKA, PANCHANG_INCLUDE_HORA,
+    PANCHANG_INCLUDE_KARANA, PANCHANG_INCLUDE_MASA, PANCHANG_INCLUDE_NAKSHATRA,
+    PANCHANG_INCLUDE_TITHI, PANCHANG_INCLUDE_VAAR, PANCHANG_INCLUDE_VARSHA, PANCHANG_INCLUDE_YOGA,
+    PanchangResult, SankrantiResult, SankrantiTarget, TaraOutputKind, TaraResult,
 };
 pub use dhruv_tara::{
     EarthState, EquatorialPosition, TaraAccuracy, TaraCatalog, TaraConfig, TaraError, TaraId,

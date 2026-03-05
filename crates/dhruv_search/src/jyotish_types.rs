@@ -3,8 +3,9 @@
 use crate::panchang_types::PanchangInfo;
 use dhruv_vedic_base::{
     AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AmshaVariation, AshtakavargaResult,
-    BhavaResult, Dms, DrishtiEntry, Graha, GrahaDrishtiMatrix, KalaBalaBreakdown, Nakshatra,
-    NodeDignityPolicy, Rashi, ShadbalaBreakdown, SthanaBalaBreakdown,
+    BhavaResult, CharakarakaResult, CharakarakaScheme, Dms, DrishtiEntry, Graha,
+    GrahaDrishtiMatrix, KalaBalaBreakdown, Nakshatra, NodeDignityPolicy, Rashi, ShadbalaBreakdown,
+    SthanaBalaBreakdown,
 };
 
 /// Sidereal longitudes of all 9 grahas.
@@ -435,6 +436,10 @@ pub struct FullKundaliConfig {
     pub include_vimsopaka: bool,
     /// Include avastha (planetary state) section.
     pub include_avastha: bool,
+    /// Include charakaraka (chara karaka) section.
+    pub include_charakaraka: bool,
+    /// Charakaraka scheme.
+    pub charakaraka_scheme: CharakarakaScheme,
     /// Include panchang (tithi, karana, yoga, vaar, hora, ghatika, nakshatra).
     pub include_panchang: bool,
     /// Include calendar elements (masa, ayana, varsha). Implies include_panchang.
@@ -471,6 +476,8 @@ impl Default for FullKundaliConfig {
             include_shadbala: false,
             include_vimsopaka: false,
             include_avastha: false,
+            include_charakaraka: false,
+            charakaraka_scheme: CharakarakaScheme::default(),
             include_panchang: false,
             include_calendar: false,
             include_dasha: false,
@@ -512,6 +519,8 @@ pub struct FullKundaliResult {
     pub vimsopaka: Option<VimsopakaResult>,
     /// Present when `FullKundaliConfig::include_avastha` is true.
     pub avastha: Option<AllGrahaAvasthas>,
+    /// Present when `FullKundaliConfig::include_charakaraka` is true.
+    pub charakaraka: Option<CharakarakaResult>,
     /// Present when `FullKundaliConfig::include_panchang` or `include_calendar` is true.
     pub panchang: Option<PanchangInfo>,
     /// Present when `FullKundaliConfig::include_dasha` is true.

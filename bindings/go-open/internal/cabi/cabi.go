@@ -1239,6 +1239,36 @@ func AvasthaForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLoca
 	return res, st
 }
 
+func CharakarakaForDate(engine EngineHandle, eop EopHandle, utc UtcTime, ayanamshaSystem uint32, useNutation bool, scheme uint8) (CharakarakaResult, Status) {
+	cutc := cUTC(utc)
+	var out C.DhruvCharakarakaResult
+	st := Status(C.dhruv_charakaraka_for_date(
+		engine.ptr,
+		eop.ptr,
+		&cutc,
+		C.uint32_t(ayanamshaSystem),
+		boolU8(useNutation),
+		C.uint8_t(scheme),
+		&out,
+	))
+	var res CharakarakaResult
+	res.Scheme = uint8(out.scheme)
+	res.UsedEightKarakas = out.used_eight_karakas != 0
+	res.Count = uint8(out.count)
+	for i := 0; i < MaxCharakarakaEntries; i++ {
+		e := out.entries[i]
+		res.Entries[i] = CharakarakaEntry{
+			RoleCode:                uint8(e.role_code),
+			GrahaIndex:              uint8(e.graha_index),
+			Rank:                    uint8(e.rank),
+			LongitudeDeg:            float64(e.longitude_deg),
+			DegreesInRashi:          float64(e.degrees_in_rashi),
+			EffectiveDegreesInRashi: float64(e.effective_degrees_in_rashi),
+		}
+	}
+	return res, st
+}
+
 func FullKundaliForDateSummary(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool) (FullKundaliSummary, Status) {
 	cutc, cloc := cUTC(utc), cGeo(loc)
 	cbhava, crise := cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
@@ -1274,6 +1304,7 @@ func FullKundaliForDateSummary(engine EngineHandle, eop EopHandle, utc UtcTime, 
 		ShadbalaValid:       out.shadbala_valid != 0,
 		VimsopakaValid:      out.vimsopaka_valid != 0,
 		AvasthaValid:        out.avastha_valid != 0,
+		CharakarakaValid:    out.charakaraka_valid != 0,
 		PanchangValid:       out.panchang_valid != 0,
 		DashaCount:          uint8(out.dasha_count),
 		DashaSnapshotCount:  uint8(out.dasha_snapshot_count),

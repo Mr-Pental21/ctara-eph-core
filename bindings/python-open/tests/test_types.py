@@ -110,3 +110,12 @@ class TestEnums:
         from ctara_dhruv.enums import ReferencePlane
         assert ReferencePlane.ECLIPTIC == 0
         assert ReferencePlane.INVARIABLE == 1
+
+    def test_charakaraka_enums(self):
+        from ctara_dhruv.enums import CharakarakaScheme, CharakarakaRole
+        assert CharakarakaScheme.EIGHT == 0
+        assert CharakarakaScheme.SEVEN_NO_PITRI == 1
+        assert CharakarakaScheme.SEVEN_PK_MERGED_MK == 2
+        assert CharakarakaScheme.MIXED_PARASHARA == 3
+        assert CharakarakaRole.ATMA == 0
+        assert CharakarakaRole.MATRI_PUTRA == 8

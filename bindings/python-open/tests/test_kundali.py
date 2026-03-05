@@ -97,3 +97,38 @@ class TestFullKundali:
             sav = result.ashtakavarga.sav
             assert len(sav.total_points) == 12
             assert sum(sav.total_points) == 337  # SAV constant
+
+    def test_charakaraka_for_date(self, engine_handles):
+        """Direct charakaraka call should return non-empty assignments."""
+        from ctara_dhruv.kundali import charakaraka_for_date
+        from ctara_dhruv.engine import engine, lsk, eop
+        result = charakaraka_for_date(
+            engine(), lsk(), eop(),
+            jd_utc=(2024, 1, 15, 6, 0, 0.0),
+            ayanamsha_system=0,
+            use_nutation=1,
+            scheme=3,  # mixed parashara
+        )
+        assert result.scheme == 3
+        assert len(result.entries) >= 7
+        assert len(result.entries) <= 8
+        assert result.entries[0].rank == 1
+
+    def test_full_kundali_charakaraka_section(self, engine_handles):
+        """Full kundali should include charakaraka when enabled in config."""
+        from ctara_dhruv.kundali import full_kundali, full_kundali_config_default
+        from ctara_dhruv.engine import engine, lsk, eop
+
+        cfg = full_kundali_config_default()
+        cfg.include_charakaraka = 1
+        cfg.charakaraka_scheme = 2  # seven-pk-merged-mk
+
+        result = full_kundali(
+            engine(), lsk(), eop(),
+            jd_utc=(2024, 1, 15, 6, 0, 0.0),
+            location=(28.6139, 77.2090),
+            config=cfg,
+        )
+        assert result.charakaraka is not None
+        assert result.charakaraka.scheme == 2
+        assert len(result.charakaraka.entries) == 7

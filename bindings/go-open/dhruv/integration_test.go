@@ -155,6 +155,9 @@ func TestSearchAndPanchangSmoke(t *testing.T) {
 	if _, err := eng.ShadbalaForDate(eop, utc, loc, bhava, riseset, 0, true); err != nil {
 		t.Fatalf("ShadbalaForDate: %v", err)
 	}
+	if _, err := eng.CharakarakaForDate(eop, utc, 0, true, CharakarakaSchemeMixedParashara); err != nil {
+		t.Fatalf("CharakarakaForDate: %v", err)
+	}
 
 	if _, err := eng.FullKundaliForDateSummary(eop, utc, loc, bhava, riseset, 0, true); err != nil {
 		t.Fatalf("FullKundaliForDateSummary: %v", err)

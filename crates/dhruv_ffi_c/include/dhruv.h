@@ -23,7 +23,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       42
+#define DHRUV_API_VERSION       43
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 
@@ -220,6 +220,24 @@ typedef int32_t DhruvStatus;
 #define DHRUV_UPAGRAHA_COUNT          11
 #define DHRUV_ASHTAKAVARGA_GRAHA_COUNT 7
 #define DHRUV_MAX_AMSHA_REQUESTS      40
+#define DHRUV_MAX_CHARAKARAKA_ENTRIES 8
+
+/* Charakaraka schemes */
+#define DHRUV_CHARAKARAKA_SCHEME_EIGHT             0
+#define DHRUV_CHARAKARAKA_SCHEME_SEVEN_NO_PITRI    1
+#define DHRUV_CHARAKARAKA_SCHEME_SEVEN_PK_MERGED_MK 2
+#define DHRUV_CHARAKARAKA_SCHEME_MIXED_PARASHARA   3
+
+/* Charakaraka role codes */
+#define DHRUV_CHARAKARAKA_ROLE_ATMA         0
+#define DHRUV_CHARAKARAKA_ROLE_AMATYA       1
+#define DHRUV_CHARAKARAKA_ROLE_BHRATRI      2
+#define DHRUV_CHARAKARAKA_ROLE_MATRI        3
+#define DHRUV_CHARAKARAKA_ROLE_PITRI        4
+#define DHRUV_CHARAKARAKA_ROLE_PUTRA        5
+#define DHRUV_CHARAKARAKA_ROLE_GNATI        6
+#define DHRUV_CHARAKARAKA_ROLE_DARA         7
+#define DHRUV_CHARAKARAKA_ROLE_MATRI_PUTRA  8
 
 /* Tara output selectors */
 #define DHRUV_TARA_OUTPUT_EQUATORIAL 0
@@ -922,6 +940,24 @@ typedef struct {
     DhruvAmshaEntry special_lagnas[8];
 } DhruvAmshaChart;
 
+/* --- Charakaraka --- */
+
+typedef struct {
+    uint8_t role_code;
+    uint8_t graha_index;
+    uint8_t rank;
+    double  longitude_deg;
+    double  degrees_in_rashi;
+    double  effective_degrees_in_rashi;
+} DhruvCharakarakaEntry;
+
+typedef struct {
+    uint8_t              scheme;
+    uint8_t              used_eight_karakas;
+    uint8_t              count;
+    DhruvCharakarakaEntry entries[8];
+} DhruvCharakarakaResult;
+
 /* --- Shadbala & Vimsopaka --- */
 
 typedef struct {
@@ -1039,6 +1075,8 @@ typedef struct {
     uint8_t  include_shadbala;
     uint8_t  include_vimsopaka;
     uint8_t  include_avastha;
+    uint8_t  include_charakaraka;
+    uint8_t  charakaraka_scheme;
     uint32_t node_dignity_policy;
     DhruvGrahaPositionsConfig graha_positions_config;
     DhruvBindusConfig         bindus_config;
@@ -1076,6 +1114,8 @@ typedef struct {
     DhruvVimsopakaResult      vimsopaka;
     uint8_t                   avastha_valid;
     DhruvAllGrahaAvasthas     avastha;
+    uint8_t                   charakaraka_valid;
+    DhruvCharakarakaResult    charakaraka;
     uint8_t                   panchang_valid;
     DhruvPanchangInfo         panchang;
     uint8_t                   dasha_count;
@@ -1784,6 +1824,16 @@ DhruvStatus dhruv_amsha_chart_for_date(
     uint8_t variation_code,
     const DhruvAmshaChartScope *scope,
     DhruvAmshaChart *out);
+
+/* --- Charakaraka --- */
+DhruvStatus dhruv_charakaraka_for_date(
+    const DhruvEngineHandle *engine,
+    const DhruvEopHandle *eop,
+    const DhruvUtcTime *utc,
+    uint32_t ayanamsha_system,
+    uint8_t use_nutation,
+    uint8_t scheme,
+    DhruvCharakarakaResult *out);
 
 /* --- Shadbala --- */
 DhruvStatus dhruv_shadbala_for_date(

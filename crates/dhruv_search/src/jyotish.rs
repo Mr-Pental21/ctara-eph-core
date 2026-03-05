@@ -19,11 +19,12 @@ use dhruv_vedic_base::vaar::vaar_from_jd;
 use dhruv_vedic_base::{
     ALL_GRAHAS, AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AmshaRequest,
     AmshaVariation, ArudhaResult, AshtakavargaResult, AvasthaInputs, AyanamshaSystem, BhavaConfig,
-    BhavaResult, Dignity, DrishtiEntry, Graha, GrahaAvasthas, KalaBalaInputs, LajjitadiInputs,
-    LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS, SayanadiInputs, ShadbalaInputs, Upagraha,
-    all_avasthas, all_combustion_status, all_dashavarga_vimsopaka, all_saptavarga_vimsopaka,
-    all_shadbalas_from_inputs, all_shadvarga_vimsopaka, all_shodasavarga_vimsopaka,
-    amsha_longitude, bhrigu_bindu, calculate_ashtakavarga, compute_bhavas,
+    BhavaResult, CharakarakaResult, CharakarakaScheme, Dignity, DrishtiEntry, Graha, GrahaAvasthas,
+    KalaBalaInputs, LajjitadiInputs, LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS,
+    SayanadiInputs, ShadbalaInputs, Upagraha, all_avasthas, all_combustion_status,
+    all_dashavarga_vimsopaka, all_saptavarga_vimsopaka, all_shadbalas_from_inputs,
+    all_shadvarga_vimsopaka, all_shodasavarga_vimsopaka, amsha_longitude, bhrigu_bindu,
+    calculate_ashtakavarga, charakarakas_from_longitudes, compute_bhavas,
     dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise, graha_drishti,
     graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord, jd_tdb_to_centuries,
     lagna_longitude_rad, lost_planetary_war, lunar_node_deg_for_epoch_on_plane,
@@ -1095,6 +1096,19 @@ fn drishti_for_date_with_ctx(
     })
 }
 
+/// Compute Chara Karakas for a given date.
+pub fn charakaraka_for_date(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    aya_config: &SankrantiConfig,
+    scheme: CharakarakaScheme,
+) -> Result<CharakarakaResult, SearchError> {
+    let mut ctx = JyotishContext::new(engine, Some(eop), utc, aya_config);
+    let lons = ctx.graha_lons(engine, aya_config)?;
+    Ok(charakarakas_from_longitudes(&lons.longitudes, scheme))
+}
+
 /// Compute a full kundali in one shot, sharing intermediates across sections.
 #[allow(clippy::too_many_arguments)]
 pub fn full_kundali_for_date(
@@ -1277,6 +1291,16 @@ pub fn full_kundali_for_date(
         None
     };
 
+    let charakaraka = if config.include_charakaraka {
+        let graha_lons = *ctx.graha_lons(engine, aya_config)?;
+        Some(charakarakas_from_longitudes(
+            &graha_lons.longitudes,
+            config.charakaraka_scheme,
+        ))
+    } else {
+        None
+    };
+
     let panchang = if config.include_panchang || config.include_calendar {
         Some(panchang_for_date(
             engine,
@@ -1319,6 +1343,7 @@ pub fn full_kundali_for_date(
         shadbala,
         vimsopaka,
         avastha,
+        charakaraka,
         panchang,
         dasha,
         dasha_snapshots,

@@ -25,6 +25,8 @@ __all__ = [
     "LunarPhaseKind",
     "SankrantiTargetKind",
     "NakshatraScheme",
+    "CharakarakaScheme",
+    "CharakarakaRole",
     "ChandraGrahanType",
     "SuryaGrahanType",
     "LunarNodeType",
@@ -279,6 +281,37 @@ class DashaSystem(IntEnum):
     KENDRADI = 20
     KARAKA_KENDRADI = 21
     KARAKA_KENDRADI_GRAHA = 22
+
+
+# ---------------------------------------------------------------------------
+# Charakaraka scheme  (DHRUV_CHARAKARAKA_SCHEME_*)
+# ---------------------------------------------------------------------------
+
+class CharakarakaScheme(IntEnum):
+    """Charakaraka assignment scheme."""
+
+    EIGHT = 0
+    SEVEN_NO_PITRI = 1
+    SEVEN_PK_MERGED_MK = 2
+    MIXED_PARASHARA = 3
+
+
+# ---------------------------------------------------------------------------
+# Charakaraka role  (DHRUV_CHARAKARAKA_ROLE_*)
+# ---------------------------------------------------------------------------
+
+class CharakarakaRole(IntEnum):
+    """Charakaraka role code."""
+
+    ATMA = 0
+    AMATYA = 1
+    BHRATRI = 2
+    MATRI = 3
+    PITRI = 4
+    PUTRA = 5
+    GNATI = 6
+    DARA = 7
+    MATRI_PUTRA = 8
 
 
 # ---------------------------------------------------------------------------

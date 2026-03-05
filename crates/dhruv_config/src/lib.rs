@@ -280,6 +280,8 @@ pub struct FullKundaliConfigPatch {
     pub include_shadbala: Option<bool>,
     pub include_vimsopaka: Option<bool>,
     pub include_avastha: Option<bool>,
+    pub include_charakaraka: Option<bool>,
+    pub charakaraka_scheme: Option<EnumInput>,
     pub include_panchang: Option<bool>,
     pub include_calendar: Option<bool>,
     pub include_dasha: Option<bool>,
@@ -1018,6 +1020,13 @@ impl ConfigResolver {
             "include_avastha",
             &mut source,
         );
+        let include_charakaraka = layered_bool(
+            explicit.include_charakaraka,
+            op.include_charakaraka,
+            defaults.include_charakaraka,
+            "include_charakaraka",
+            &mut source,
+        );
         let include_panchang = layered_bool(
             explicit.include_panchang,
             op.include_panchang,
@@ -1052,6 +1061,20 @@ impl ConfigResolver {
                 ConfigSource::RecommendedDefault,
             );
             defaults.node_dignity_policy
+        };
+
+        let charakaraka_scheme = if let Some(v) = explicit.charakaraka_scheme {
+            source.insert("charakaraka_scheme".to_string(), ConfigSource::Explicit);
+            parse_charakaraka_scheme(&v, "full_kundali.charakaraka_scheme")?
+        } else if let Some(v) = &op.charakaraka_scheme {
+            source.insert("charakaraka_scheme".to_string(), ConfigSource::Operation);
+            parse_charakaraka_scheme(v, "full_kundali.charakaraka_scheme")?
+        } else {
+            source.insert(
+                "charakaraka_scheme".to_string(),
+                ConfigSource::RecommendedDefault,
+            );
+            defaults.charakaraka_scheme
         };
 
         let graha_positions_cfg = self
@@ -1089,6 +1112,8 @@ impl ConfigResolver {
                 include_shadbala,
                 include_vimsopaka,
                 include_avastha,
+                include_charakaraka,
+                charakaraka_scheme,
                 include_panchang,
                 include_calendar,
                 include_dasha,
@@ -1412,6 +1437,28 @@ fn parse_node_dignity_policy(
     match input.as_lower().replace('_', "-").as_str() {
         "0" | "sign-lord-based" => Ok(NodeDignityPolicy::SignLordBased),
         "1" | "always-sama" => Ok(NodeDignityPolicy::AlwaysSama),
+        other => Err(ConfigError::InvalidEnumValue {
+            field,
+            value: other.to_string(),
+        }),
+    }
+}
+
+fn parse_charakaraka_scheme(
+    input: &EnumInput,
+    field: &'static str,
+) -> Result<dhruv_vedic_base::CharakarakaScheme, ConfigError> {
+    match input.as_lower().replace('_', "-").as_str() {
+        "0" | "8" | "eight" => Ok(dhruv_vedic_base::CharakarakaScheme::Eight),
+        "1" | "seven-no-pitri" | "7-no-pitri" => {
+            Ok(dhruv_vedic_base::CharakarakaScheme::SevenNoPitri)
+        }
+        "2" | "seven-pk-merged-mk" | "7-pk-merged-mk" | "pk-merged-mk" => {
+            Ok(dhruv_vedic_base::CharakarakaScheme::SevenPkMergedMk)
+        }
+        "3" | "mixed-parashara" | "mixed" | "7-8-parashara" => {
+            Ok(dhruv_vedic_base::CharakarakaScheme::MixedParashara)
+        }
         other => Err(ConfigError::InvalidEnumValue {
             field,
             value: other.to_string(),

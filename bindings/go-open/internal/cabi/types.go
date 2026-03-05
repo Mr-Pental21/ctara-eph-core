@@ -1,12 +1,32 @@
 package cabi
 
 const (
-	PathCapacity    = 512
-	MaxSpkPaths     = 8
-	GrahaCount      = 9
-	SaptaGrahaCount = 7
-	SphutaCount     = 16
-	UpagrahaCount   = 11
+	PathCapacity          = 512
+	MaxSpkPaths           = 8
+	GrahaCount            = 9
+	SaptaGrahaCount       = 7
+	SphutaCount           = 16
+	UpagrahaCount         = 11
+	MaxCharakarakaEntries = 8
+)
+
+const (
+	CharakarakaSchemeEight           uint8 = 0
+	CharakarakaSchemeSevenNoPitri    uint8 = 1
+	CharakarakaSchemeSevenPkMergedMk uint8 = 2
+	CharakarakaSchemeMixedParashara  uint8 = 3
+)
+
+const (
+	CharakarakaRoleAtma       uint8 = 0
+	CharakarakaRoleAmatya     uint8 = 1
+	CharakarakaRoleBhratri    uint8 = 2
+	CharakarakaRoleMatri      uint8 = 3
+	CharakarakaRolePitri      uint8 = 4
+	CharakarakaRolePutra      uint8 = 5
+	CharakarakaRoleGnati      uint8 = 6
+	CharakarakaRoleDara       uint8 = 7
+	CharakarakaRoleMatriPutra uint8 = 8
 )
 
 type Status int32
@@ -702,6 +722,22 @@ type AllGrahaAvasthas struct {
 	Entries [GrahaCount]GrahaAvasthas
 }
 
+type CharakarakaEntry struct {
+	RoleCode                uint8
+	GrahaIndex              uint8
+	Rank                    uint8
+	LongitudeDeg            float64
+	DegreesInRashi          float64
+	EffectiveDegreesInRashi float64
+}
+
+type CharakarakaResult struct {
+	Scheme           uint8
+	UsedEightKarakas bool
+	Count            uint8
+	Entries          [MaxCharakarakaEntries]CharakarakaEntry
+}
+
 type FullKundaliSummary struct {
 	AyanamshaDeg        float64
 	BhavaCuspsValid     bool
@@ -716,6 +752,7 @@ type FullKundaliSummary struct {
 	ShadbalaValid       bool
 	VimsopakaValid      bool
 	AvasthaValid        bool
+	CharakarakaValid    bool
 	PanchangValid       bool
 	DashaCount          uint8
 	DashaSnapshotCount  uint8

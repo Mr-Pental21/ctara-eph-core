@@ -25,6 +25,7 @@ mod ayanamsha_anchor;
 mod ayanamsha_tara;
 pub mod bhava;
 pub mod bhava_types;
+pub mod charakaraka;
 pub mod combustion;
 pub mod dasha;
 pub mod drishti;
@@ -86,6 +87,10 @@ pub use ayanamsha::{
 pub use bhava::compute_bhavas;
 pub use bhava_types::{
     Bhava, BhavaConfig, BhavaReferenceMode, BhavaResult, BhavaStartingPoint, BhavaSystem,
+};
+pub use charakaraka::{
+    CharakarakaEntry, CharakarakaResult, CharakarakaRole, CharakarakaScheme,
+    charakarakas_from_longitudes,
 };
 pub use combustion::{all_combustion_status, combustion_threshold, is_combust};
 pub use dasha::{
