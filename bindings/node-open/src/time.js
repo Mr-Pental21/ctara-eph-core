@@ -21,6 +21,36 @@ function nutationIau2000b(jdTdb) {
   return { dpsi: r.dpsi, deps: r.deps };
 }
 
+function ayanamshaSystemCount() {
+  return addon.ayanamshaSystemCount();
+}
+
+function referencePlaneDefault(systemCode) {
+  return addon.referencePlaneDefault(systemCode);
+}
+
+function ayanamshaComputeEx(lsk, request, eop) {
+  const r = addon.ayanamshaComputeEx(lsk._handle, request, eop._handle, 0);
+  checkStatus('ayanamsha_compute_ex', r.status);
+  return r.ayanamshaDeg;
+}
+
+function lunarNodeCount() {
+  return addon.lunarNodeCount();
+}
+
+function lunarNodeDeg(nodeCode, modeCode, jdTdb) {
+  const r = addon.lunarNodeDeg(nodeCode, modeCode, jdTdb);
+  checkStatus('lunar_node_deg', r.status);
+  return r.longitudeDeg;
+}
+
+function lunarNodeDegWithEngine(engine, nodeCode, modeCode, jdTdb) {
+  const r = addon.lunarNodeDegWithEngine(engine._handle, nodeCode, modeCode, jdTdb);
+  checkStatus('lunar_node_deg_with_engine', r.status);
+  return r.longitudeDeg;
+}
+
 function riseSetConfigDefault() {
   return addon.riseSetConfigDefault();
 }
@@ -37,6 +67,12 @@ module.exports = {
   utcToTdbJd,
   jdTdbToUtc,
   nutationIau2000b,
+  ayanamshaSystemCount,
+  referencePlaneDefault,
+  ayanamshaComputeEx,
+  lunarNodeCount,
+  lunarNodeDeg,
+  lunarNodeDegWithEngine,
   riseSetConfigDefault,
   bhavaConfigDefault,
   sankrantiConfigDefault,

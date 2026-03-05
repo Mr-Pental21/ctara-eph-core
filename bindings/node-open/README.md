@@ -62,10 +62,10 @@ engine.close();
 Public modules included in this wrapper:
 
 - engine/config/LSK/EOP lifecycle
-- time conversions and nutation
-- search (lunar phase unified search)
-- panchang (`tithi_for_date`, `vaar_for_date`)
-- jyotish (`graha_sidereal_longitudes`)
+- time conversions, nutation, ayanamsha, and lunar-node APIs
+- unified search APIs (conjunction/grahan/motion/lunar phase/sankranti)
+- panchang/date APIs (`tithi`, `karana`, `yoga`, `nakshatra`, `vaar`, `hora`, `ghatika`, `masa`, `ayana`, `varsha`)
+- jyotish/rashi/nakshatra helpers (`graha_sidereal_longitudes`, longitude classifiers)
 - shadbala and full-kundali summary
 - dasha snapshot
 - tara catalog load/compute helpers

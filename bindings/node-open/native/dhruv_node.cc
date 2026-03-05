@@ -78,6 +78,16 @@ napi_value MakeDouble(napi_env env, double value) {
     return out;
 }
 
+napi_value MakeString(napi_env env, const char* value) {
+    napi_value out;
+    if (value == nullptr) {
+        napi_get_null(env, &out);
+        return out;
+    }
+    napi_create_string_utf8(env, value, NAPI_AUTO_LENGTH, &out);
+    return out;
+}
+
 napi_value MakeStatusResult(napi_env env, int32_t status) {
     napi_value obj;
     napi_create_object(env, &obj);
@@ -224,6 +234,196 @@ napi_value WriteVaarInfo(napi_env env, const DhruvVaarInfo& v) {
     SetNamed(env, obj, "vaarIndex", MakeInt32(env, v.vaar_index));
     SetNamed(env, obj, "start", WriteUtcTime(env, v.start));
     SetNamed(env, obj, "end", WriteUtcTime(env, v.end));
+    return obj;
+}
+
+napi_value WriteKaranaInfo(napi_env env, const DhruvKaranaInfo& k) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "karanaIndex", MakeInt32(env, k.karana_index));
+    SetNamed(env, obj, "karanaNameIndex", MakeInt32(env, k.karana_name_index));
+    SetNamed(env, obj, "start", WriteUtcTime(env, k.start));
+    SetNamed(env, obj, "end", WriteUtcTime(env, k.end));
+    return obj;
+}
+
+napi_value WriteYogaInfo(napi_env env, const DhruvYogaInfo& y) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "yogaIndex", MakeInt32(env, y.yoga_index));
+    SetNamed(env, obj, "start", WriteUtcTime(env, y.start));
+    SetNamed(env, obj, "end", WriteUtcTime(env, y.end));
+    return obj;
+}
+
+napi_value WriteHoraInfo(napi_env env, const DhruvHoraInfo& h) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "horaIndex", MakeInt32(env, h.hora_index));
+    SetNamed(env, obj, "horaPosition", MakeInt32(env, h.hora_position));
+    SetNamed(env, obj, "start", WriteUtcTime(env, h.start));
+    SetNamed(env, obj, "end", WriteUtcTime(env, h.end));
+    return obj;
+}
+
+napi_value WriteGhatikaInfo(napi_env env, const DhruvGhatikaInfo& g) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "value", MakeInt32(env, g.value));
+    SetNamed(env, obj, "start", WriteUtcTime(env, g.start));
+    SetNamed(env, obj, "end", WriteUtcTime(env, g.end));
+    return obj;
+}
+
+napi_value WritePanchangNakshatraInfo(napi_env env, const DhruvPanchangNakshatraInfo& n) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "nakshatraIndex", MakeInt32(env, n.nakshatra_index));
+    SetNamed(env, obj, "pada", MakeInt32(env, n.pada));
+    SetNamed(env, obj, "start", WriteUtcTime(env, n.start));
+    SetNamed(env, obj, "end", WriteUtcTime(env, n.end));
+    return obj;
+}
+
+napi_value WriteMasaInfo(napi_env env, const DhruvMasaInfo& m) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "masaIndex", MakeInt32(env, m.masa_index));
+    SetNamed(env, obj, "adhika", MakeBool(env, m.adhika != 0));
+    SetNamed(env, obj, "start", WriteUtcTime(env, m.start));
+    SetNamed(env, obj, "end", WriteUtcTime(env, m.end));
+    return obj;
+}
+
+napi_value WriteAyanaInfo(napi_env env, const DhruvAyanaInfo& a) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "ayana", MakeInt32(env, a.ayana));
+    SetNamed(env, obj, "start", WriteUtcTime(env, a.start));
+    SetNamed(env, obj, "end", WriteUtcTime(env, a.end));
+    return obj;
+}
+
+napi_value WriteVarshaInfo(napi_env env, const DhruvVarshaInfo& v) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "samvatsaraIndex", MakeInt32(env, v.samvatsara_index));
+    SetNamed(env, obj, "order", MakeInt32(env, v.order));
+    SetNamed(env, obj, "start", WriteUtcTime(env, v.start));
+    SetNamed(env, obj, "end", WriteUtcTime(env, v.end));
+    return obj;
+}
+
+napi_value WriteConjunctionEvent(napi_env env, const DhruvConjunctionEvent& ev) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "jdTdb", MakeDouble(env, ev.jd_tdb));
+    SetNamed(env, obj, "actualSeparationDeg", MakeDouble(env, ev.actual_separation_deg));
+    SetNamed(env, obj, "body1LongitudeDeg", MakeDouble(env, ev.body1_longitude_deg));
+    SetNamed(env, obj, "body2LongitudeDeg", MakeDouble(env, ev.body2_longitude_deg));
+    SetNamed(env, obj, "body1LatitudeDeg", MakeDouble(env, ev.body1_latitude_deg));
+    SetNamed(env, obj, "body2LatitudeDeg", MakeDouble(env, ev.body2_latitude_deg));
+    SetNamed(env, obj, "body1Code", MakeInt32(env, ev.body1_code));
+    SetNamed(env, obj, "body2Code", MakeInt32(env, ev.body2_code));
+    return obj;
+}
+
+napi_value WriteSankrantiEvent(napi_env env, const DhruvSankrantiEvent& ev) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "utc", WriteUtcTime(env, ev.utc));
+    SetNamed(env, obj, "rashiIndex", MakeInt32(env, ev.rashi_index));
+    SetNamed(env, obj, "sunSiderealLongitudeDeg", MakeDouble(env, ev.sun_sidereal_longitude_deg));
+    SetNamed(env, obj, "sunTropicalLongitudeDeg", MakeDouble(env, ev.sun_tropical_longitude_deg));
+    return obj;
+}
+
+napi_value WriteStationaryEvent(napi_env env, const DhruvStationaryEvent& ev) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "jdTdb", MakeDouble(env, ev.jd_tdb));
+    SetNamed(env, obj, "bodyCode", MakeInt32(env, ev.body_code));
+    SetNamed(env, obj, "longitudeDeg", MakeDouble(env, ev.longitude_deg));
+    SetNamed(env, obj, "latitudeDeg", MakeDouble(env, ev.latitude_deg));
+    SetNamed(env, obj, "stationType", MakeInt32(env, ev.station_type));
+    return obj;
+}
+
+napi_value WriteMaxSpeedEvent(napi_env env, const DhruvMaxSpeedEvent& ev) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "jdTdb", MakeDouble(env, ev.jd_tdb));
+    SetNamed(env, obj, "bodyCode", MakeInt32(env, ev.body_code));
+    SetNamed(env, obj, "longitudeDeg", MakeDouble(env, ev.longitude_deg));
+    SetNamed(env, obj, "latitudeDeg", MakeDouble(env, ev.latitude_deg));
+    SetNamed(env, obj, "speedDegPerDay", MakeDouble(env, ev.speed_deg_per_day));
+    SetNamed(env, obj, "speedType", MakeInt32(env, ev.speed_type));
+    return obj;
+}
+
+napi_value WriteChandraGrahanResult(napi_env env, const DhruvChandraGrahanResult& g) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "grahanType", MakeInt32(env, g.grahan_type));
+    SetNamed(env, obj, "magnitude", MakeDouble(env, g.magnitude));
+    SetNamed(env, obj, "penumbralMagnitude", MakeDouble(env, g.penumbral_magnitude));
+    SetNamed(env, obj, "greatestGrahanJd", MakeDouble(env, g.greatest_grahan_jd));
+    SetNamed(env, obj, "p1Jd", MakeDouble(env, g.p1_jd));
+    SetNamed(env, obj, "u1Jd", MakeDouble(env, g.u1_jd));
+    SetNamed(env, obj, "u2Jd", MakeDouble(env, g.u2_jd));
+    SetNamed(env, obj, "u3Jd", MakeDouble(env, g.u3_jd));
+    SetNamed(env, obj, "u4Jd", MakeDouble(env, g.u4_jd));
+    SetNamed(env, obj, "p4Jd", MakeDouble(env, g.p4_jd));
+    SetNamed(env, obj, "moonEclipticLatDeg", MakeDouble(env, g.moon_ecliptic_lat_deg));
+    SetNamed(env, obj, "angularSeparationDeg", MakeDouble(env, g.angular_separation_deg));
+    return obj;
+}
+
+napi_value WriteSuryaGrahanResult(napi_env env, const DhruvSuryaGrahanResult& g) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "grahanType", MakeInt32(env, g.grahan_type));
+    SetNamed(env, obj, "magnitude", MakeDouble(env, g.magnitude));
+    SetNamed(env, obj, "greatestGrahanJd", MakeDouble(env, g.greatest_grahan_jd));
+    SetNamed(env, obj, "c1Jd", MakeDouble(env, g.c1_jd));
+    SetNamed(env, obj, "c2Jd", MakeDouble(env, g.c2_jd));
+    SetNamed(env, obj, "c3Jd", MakeDouble(env, g.c3_jd));
+    SetNamed(env, obj, "c4Jd", MakeDouble(env, g.c4_jd));
+    SetNamed(env, obj, "moonEclipticLatDeg", MakeDouble(env, g.moon_ecliptic_lat_deg));
+    SetNamed(env, obj, "angularSeparationDeg", MakeDouble(env, g.angular_separation_deg));
+    return obj;
+}
+
+napi_value WriteRashiInfo(napi_env env, const DhruvRashiInfo& r) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "rashiIndex", MakeUint32(env, r.rashi_index));
+    SetNamed(env, obj, "degreesInRashi", MakeDouble(env, r.degrees_in_rashi));
+    napi_value dms;
+    napi_create_object(env, &dms);
+    SetNamed(env, dms, "degrees", MakeUint32(env, r.dms.degrees));
+    SetNamed(env, dms, "minutes", MakeUint32(env, r.dms.minutes));
+    SetNamed(env, dms, "seconds", MakeDouble(env, r.dms.seconds));
+    SetNamed(env, obj, "dms", dms);
+    return obj;
+}
+
+napi_value WriteNakshatraInfo(napi_env env, const DhruvNakshatraInfo& n) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "nakshatraIndex", MakeUint32(env, n.nakshatra_index));
+    SetNamed(env, obj, "pada", MakeUint32(env, n.pada));
+    SetNamed(env, obj, "degreesInNakshatra", MakeDouble(env, n.degrees_in_nakshatra));
+    SetNamed(env, obj, "degreesInPada", MakeDouble(env, n.degrees_in_pada));
+    return obj;
+}
+
+napi_value WriteNakshatra28Info(napi_env env, const DhruvNakshatra28Info& n) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "nakshatraIndex", MakeUint32(env, n.nakshatra_index));
+    SetNamed(env, obj, "pada", MakeUint32(env, n.pada));
+    SetNamed(env, obj, "degreesInNakshatra", MakeDouble(env, n.degrees_in_nakshatra));
     return obj;
 }
 
@@ -654,6 +854,371 @@ napi_value NutationIau2000b(napi_env env, napi_callback_info info) {
     return out;
 }
 
+napi_value AyanamshaSystemCount(napi_env env, napi_callback_info info) {
+    (void)info;
+    return MakeUint32(env, dhruv_ayanamsha_system_count());
+}
+
+napi_value ReferencePlaneDefault(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeInt32(env, STATUS_INVALID_INPUT);
+    int32_t system_code = 0;
+    if (!GetInt32(env, args[0], &system_code)) return MakeInt32(env, STATUS_INVALID_INPUT);
+    return MakeInt32(env, dhruv_reference_plane_default(system_code));
+}
+
+napi_value AyanamshaComputeEx(napi_env env, napi_callback_info info) {
+    size_t argc = 4;
+    napi_value args[4];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 4) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    void* lsk_ptr = nullptr;
+    void* eop_ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &lsk_ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!ReadExternalPtr(env, args[2], &eop_ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvAyanamshaComputeRequest req{};
+    napi_value v;
+    if (!GetNamedProperty(env, args[1], "systemCode", &v) || !GetInt32(env, v, &req.system_code)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "mode", &v) || !GetInt32(env, v, &req.mode)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "timeKind", &v) || !GetInt32(env, v, &req.time_kind)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "jdTdb", &v) || !GetDouble(env, v, &req.jd_tdb)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "utc", &v) || !ReadUtcTime(env, v, &req.utc)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "useNutation", &v)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    bool use_nutation = false;
+    if (!GetBool(env, v, &use_nutation)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    req.use_nutation = use_nutation ? 1 : 0;
+    bool has_dpsi = false;
+    if (!GetOptionalNamedProperty(env, args[1], "deltaPsiArcsec", &v, &has_dpsi)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    req.delta_psi_arcsec = 0.0;
+    if (has_dpsi && !GetDouble(env, v, &req.delta_psi_arcsec)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    double out_val = 0.0;
+    int32_t status = dhruv_ayanamsha_compute_ex(
+        static_cast<const DhruvLskHandle*>(lsk_ptr),
+        &req,
+        static_cast<const DhruvEopHandle*>(eop_ptr),
+        &out_val);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) SetNamed(env, out, "ayanamshaDeg", MakeDouble(env, out_val));
+    return out;
+}
+
+napi_value LunarNodeCount(napi_env env, napi_callback_info info) {
+    (void)info;
+    return MakeUint32(env, dhruv_lunar_node_count());
+}
+
+napi_value LunarNodeDeg(napi_env env, napi_callback_info info) {
+    size_t argc = 3;
+    napi_value args[3];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 3) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    int32_t node_code = 0;
+    int32_t mode_code = 0;
+    double jd = 0.0;
+    if (!GetInt32(env, args[0], &node_code) || !GetInt32(env, args[1], &mode_code) || !GetDouble(env, args[2], &jd)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    double out_val = 0.0;
+    int32_t status = dhruv_lunar_node_deg(node_code, mode_code, jd, &out_val);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) SetNamed(env, out, "longitudeDeg", MakeDouble(env, out_val));
+    return out;
+}
+
+napi_value LunarNodeDegWithEngine(napi_env env, napi_callback_info info) {
+    size_t argc = 4;
+    napi_value args[4];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 4) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    void* e_ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &e_ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    int32_t node_code = 0;
+    int32_t mode_code = 0;
+    double jd = 0.0;
+    if (!GetInt32(env, args[1], &node_code) || !GetInt32(env, args[2], &mode_code) || !GetDouble(env, args[3], &jd)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    double out_val = 0.0;
+    int32_t status = dhruv_lunar_node_deg_with_engine(static_cast<const DhruvEngineHandle*>(e_ptr), node_code, mode_code, jd, &out_val);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) SetNamed(env, out, "longitudeDeg", MakeDouble(env, out_val));
+    return out;
+}
+
+napi_value RashiCount(napi_env env, napi_callback_info info) {
+    (void)info;
+    return MakeUint32(env, dhruv_rashi_count());
+}
+
+napi_value NakshatraCount(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeUint32(env, 0);
+    uint32_t scheme = 0;
+    if (!GetUint32(env, args[0], &scheme)) return MakeUint32(env, 0);
+    return MakeUint32(env, dhruv_nakshatra_count(scheme));
+}
+
+napi_value RashiFromLongitude(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    double lon = 0.0;
+    if (!GetDouble(env, args[0], &lon)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvRashiInfo info_out{};
+    int32_t status = dhruv_rashi_from_longitude(lon, &info_out);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) SetNamed(env, out, "rashi", WriteRashiInfo(env, info_out));
+    return out;
+}
+
+napi_value NakshatraFromLongitude(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    double lon = 0.0;
+    if (!GetDouble(env, args[0], &lon)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvNakshatraInfo info_out{};
+    int32_t status = dhruv_nakshatra_from_longitude(lon, &info_out);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) SetNamed(env, out, "nakshatra", WriteNakshatraInfo(env, info_out));
+    return out;
+}
+
+napi_value Nakshatra28FromLongitude(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    double lon = 0.0;
+    if (!GetDouble(env, args[0], &lon)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvNakshatra28Info info_out{};
+    int32_t status = dhruv_nakshatra28_from_longitude(lon, &info_out);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) SetNamed(env, out, "nakshatra28", WriteNakshatra28Info(env, info_out));
+    return out;
+}
+
+napi_value GrahaTropicalLongitudes(napi_env env, napi_callback_info info) {
+    size_t argc = 2;
+    napi_value args[2];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 2) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    void* ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    double jd = 0.0;
+    if (!GetDouble(env, args[1], &jd)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvGrahaLongitudes out_lons{};
+    int32_t status = dhruv_graha_tropical_longitudes(static_cast<const DhruvEngineHandle*>(ptr), jd, &out_lons);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        napi_value arr;
+        napi_create_array_with_length(env, DHRUV_GRAHA_COUNT, &arr);
+        for (uint32_t i = 0; i < DHRUV_GRAHA_COUNT; ++i) {
+            napi_set_element(env, arr, i, MakeDouble(env, out_lons.longitudes[i]));
+        }
+        SetNamed(env, out, "longitudes", arr);
+    }
+    return out;
+}
+
+napi_value NameLookup(napi_env env, napi_callback_info info, const char* (*fn)(uint32_t)) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeString(env, nullptr);
+    uint32_t idx = 0;
+    if (!GetUint32(env, args[0], &idx)) return MakeString(env, nullptr);
+    return MakeString(env, fn(idx));
+}
+
+napi_value RashiName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_rashi_name); }
+napi_value NakshatraName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_nakshatra_name); }
+napi_value Nakshatra28Name(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_nakshatra28_name); }
+napi_value MasaName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_masa_name); }
+napi_value AyanaName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_ayana_name); }
+napi_value SamvatsaraName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_samvatsara_name); }
+napi_value TithiName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_tithi_name); }
+napi_value KaranaName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_karana_name); }
+napi_value YogaName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_yoga_name); }
+napi_value VaarName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_vaar_name); }
+napi_value HoraName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_hora_name); }
+napi_value GrahaName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_graha_name); }
+napi_value GrahaEnglishName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_graha_english_name); }
+napi_value SphutaName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_sphuta_name); }
+napi_value SpecialLagnaName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_special_lagna_name); }
+napi_value ArudhaPadaName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_arudha_pada_name); }
+napi_value UpagrahaName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_upagraha_name); }
+
+napi_value DegToDms(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    double deg = 0.0;
+    if (!GetDouble(env, args[0], &deg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvDms dms{};
+    int32_t status = dhruv_deg_to_dms(deg, &dms);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        napi_value d;
+        napi_create_object(env, &d);
+        SetNamed(env, d, "degrees", MakeUint32(env, dms.degrees));
+        SetNamed(env, d, "minutes", MakeUint32(env, dms.minutes));
+        SetNamed(env, d, "seconds", MakeDouble(env, dms.seconds));
+        SetNamed(env, out, "dms", d);
+    }
+    return out;
+}
+
+napi_value TithiFromElongation(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    double e = 0.0;
+    if (!GetDouble(env, args[0], &e)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvTithiPosition out_t{};
+    int32_t status = dhruv_tithi_from_elongation(e, &out_t);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        napi_value t;
+        napi_create_object(env, &t);
+        SetNamed(env, t, "tithiIndex", MakeInt32(env, out_t.tithi_index));
+        SetNamed(env, t, "paksha", MakeInt32(env, out_t.paksha));
+        SetNamed(env, t, "tithiInPaksha", MakeInt32(env, out_t.tithi_in_paksha));
+        SetNamed(env, t, "degreesInTithi", MakeDouble(env, out_t.degrees_in_tithi));
+        SetNamed(env, out, "tithiPosition", t);
+    }
+    return out;
+}
+
+napi_value KaranaFromElongation(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    double e = 0.0;
+    if (!GetDouble(env, args[0], &e)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvKaranaPosition out_k{};
+    int32_t status = dhruv_karana_from_elongation(e, &out_k);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        napi_value k;
+        napi_create_object(env, &k);
+        SetNamed(env, k, "karanaIndex", MakeInt32(env, out_k.karana_index));
+        SetNamed(env, k, "degreesInKarana", MakeDouble(env, out_k.degrees_in_karana));
+        SetNamed(env, out, "karanaPosition", k);
+    }
+    return out;
+}
+
+napi_value YogaFromSum(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    double s = 0.0;
+    if (!GetDouble(env, args[0], &s)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvYogaPosition out_y{};
+    int32_t status = dhruv_yoga_from_sum(s, &out_y);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        napi_value y;
+        napi_create_object(env, &y);
+        SetNamed(env, y, "yogaIndex", MakeInt32(env, out_y.yoga_index));
+        SetNamed(env, y, "degreesInYoga", MakeDouble(env, out_y.degrees_in_yoga));
+        SetNamed(env, out, "yogaPosition", y);
+    }
+    return out;
+}
+
+napi_value VaarFromJd(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeInt32(env, -1);
+    double jd = 0.0;
+    if (!GetDouble(env, args[0], &jd)) return MakeInt32(env, -1);
+    return MakeInt32(env, dhruv_vaar_from_jd(jd));
+}
+
+napi_value MasaFromRashiIndex(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeInt32(env, -1);
+    uint32_t rashi = 0;
+    if (!GetUint32(env, args[0], &rashi)) return MakeInt32(env, -1);
+    return MakeInt32(env, dhruv_masa_from_rashi_index(rashi));
+}
+
+napi_value AyanaFromSiderealLongitude(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeInt32(env, -1);
+    double lon = 0.0;
+    if (!GetDouble(env, args[0], &lon)) return MakeInt32(env, -1);
+    return MakeInt32(env, dhruv_ayana_from_sidereal_longitude(lon));
+}
+
+napi_value SamvatsaraFromYear(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    int32_t year = 0;
+    if (!GetInt32(env, args[0], &year)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvSamvatsaraResult out_s{};
+    int32_t status = dhruv_samvatsara_from_year(year, &out_s);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        napi_value s;
+        napi_create_object(env, &s);
+        SetNamed(env, s, "samvatsaraIndex", MakeInt32(env, out_s.samvatsara_index));
+        SetNamed(env, s, "cyclePosition", MakeInt32(env, out_s.cycle_position));
+        SetNamed(env, out, "samvatsara", s);
+    }
+    return out;
+}
+
+napi_value NthRashiFrom(napi_env env, napi_callback_info info) {
+    size_t argc = 2;
+    napi_value args[2];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 2) return MakeInt32(env, -1);
+    uint32_t rashi = 0;
+    uint32_t offset = 0;
+    if (!GetUint32(env, args[0], &rashi) || !GetUint32(env, args[1], &offset)) return MakeInt32(env, -1);
+    return MakeInt32(env, dhruv_nth_rashi_from(rashi, offset));
+}
+
+napi_value RashiLord(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeInt32(env, -1);
+    uint32_t rashi = 0;
+    if (!GetUint32(env, args[0], &rashi)) return MakeInt32(env, -1);
+    return MakeInt32(env, dhruv_rashi_lord(rashi));
+}
+
+napi_value HoraAt(napi_env env, napi_callback_info info) {
+    size_t argc = 2;
+    napi_value args[2];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 2) return MakeInt32(env, -1);
+    uint32_t v = 0;
+    uint32_t h = 0;
+    if (!GetUint32(env, args[0], &v) || !GetUint32(env, args[1], &h)) return MakeInt32(env, -1);
+    return MakeInt32(env, dhruv_hora_at(v, h));
+}
+
 napi_value RiseSetConfigDefault(napi_env env, napi_callback_info info) {
     (void)info;
     DhruvRiseSetConfig cfg = dhruv_riseset_config_default();
@@ -688,6 +1253,341 @@ napi_value SankrantiConfigDefault(napi_env env, napi_callback_info info) {
     SetNamed(env, out, "stepSizeDays", MakeDouble(env, cfg.step_size_days));
     SetNamed(env, out, "maxIterations", MakeUint32(env, cfg.max_iterations));
     SetNamed(env, out, "convergenceDays", MakeDouble(env, cfg.convergence_days));
+    return out;
+}
+
+napi_value ConjunctionConfigDefault(napi_env env, napi_callback_info info) {
+    (void)info;
+    DhruvConjunctionConfig cfg = dhruv_conjunction_config_default();
+    napi_value out;
+    napi_create_object(env, &out);
+    SetNamed(env, out, "targetSeparationDeg", MakeDouble(env, cfg.target_separation_deg));
+    SetNamed(env, out, "stepSizeDays", MakeDouble(env, cfg.step_size_days));
+    SetNamed(env, out, "maxIterations", MakeUint32(env, cfg.max_iterations));
+    SetNamed(env, out, "convergenceDays", MakeDouble(env, cfg.convergence_days));
+    return out;
+}
+
+napi_value GrahanConfigDefault(napi_env env, napi_callback_info info) {
+    (void)info;
+    DhruvGrahanConfig cfg = dhruv_grahan_config_default();
+    napi_value out;
+    napi_create_object(env, &out);
+    SetNamed(env, out, "includePenumbral", MakeBool(env, cfg.include_penumbral != 0));
+    SetNamed(env, out, "includePeakDetails", MakeBool(env, cfg.include_peak_details != 0));
+    return out;
+}
+
+napi_value StationaryConfigDefault(napi_env env, napi_callback_info info) {
+    (void)info;
+    DhruvStationaryConfig cfg = dhruv_stationary_config_default();
+    napi_value out;
+    napi_create_object(env, &out);
+    SetNamed(env, out, "stepSizeDays", MakeDouble(env, cfg.step_size_days));
+    SetNamed(env, out, "maxIterations", MakeUint32(env, cfg.max_iterations));
+    SetNamed(env, out, "convergenceDays", MakeDouble(env, cfg.convergence_days));
+    SetNamed(env, out, "numericalStepDays", MakeDouble(env, cfg.numerical_step_days));
+    return out;
+}
+
+napi_value ConjunctionSearch(napi_env env, napi_callback_info info) {
+    size_t argc = 3;
+    napi_value args[3];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 3) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    void* ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &ptr)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvConjunctionSearchRequest req{};
+    DhruvConjunctionConfig cfg = dhruv_conjunction_config_default();
+    napi_value v;
+    if (!GetNamedProperty(env, args[1], "body1Code", &v) || !GetInt32(env, v, &req.body1_code)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "body2Code", &v) || !GetInt32(env, v, &req.body2_code)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "queryMode", &v) || !GetInt32(env, v, &req.query_mode)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "atJdTdb", &v) || !GetDouble(env, v, &req.at_jd_tdb)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "startJdTdb", &v) || !GetDouble(env, v, &req.start_jd_tdb)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "endJdTdb", &v) || !GetDouble(env, v, &req.end_jd_tdb)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    bool has_cfg = false;
+    napi_value cfg_obj;
+    if (!GetOptionalNamedProperty(env, args[1], "config", &cfg_obj, &has_cfg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (has_cfg) {
+        bool present = false;
+        if (!GetOptionalNamedProperty(env, cfg_obj, "targetSeparationDeg", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present && !GetDouble(env, v, &cfg.target_separation_deg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (!GetOptionalNamedProperty(env, cfg_obj, "stepSizeDays", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present && !GetDouble(env, v, &cfg.step_size_days)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (!GetOptionalNamedProperty(env, cfg_obj, "maxIterations", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present && !GetUint32(env, v, &cfg.max_iterations)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (!GetOptionalNamedProperty(env, cfg_obj, "convergenceDays", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present && !GetDouble(env, v, &cfg.convergence_days)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+    req.config = cfg;
+
+    uint32_t capacity = 0;
+    if (!GetUint32(env, args[2], &capacity)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvConjunctionEvent out_event{};
+    uint8_t found = 0;
+    uint32_t out_count = 0;
+    std::vector<DhruvConjunctionEvent> events(capacity > 0 ? capacity : 1);
+    int32_t status = dhruv_conjunction_search_ex(
+        static_cast<const DhruvEngineHandle*>(ptr),
+        &req,
+        &out_event,
+        &found,
+        capacity > 0 ? events.data() : nullptr,
+        capacity,
+        &out_count);
+
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        SetNamed(env, out, "found", MakeBool(env, found != 0));
+        SetNamed(env, out, "count", MakeUint32(env, out_count));
+        if (found != 0) SetNamed(env, out, "event", WriteConjunctionEvent(env, out_event));
+        napi_value arr;
+        napi_create_array_with_length(env, out_count, &arr);
+        for (uint32_t i = 0; i < out_count; ++i) {
+            napi_set_element(env, arr, i, WriteConjunctionEvent(env, events[i]));
+        }
+        SetNamed(env, out, "events", arr);
+    }
+    return out;
+}
+
+napi_value GrahanSearch(napi_env env, napi_callback_info info) {
+    size_t argc = 3;
+    napi_value args[3];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 3) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    void* ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvGrahanSearchRequest req{};
+    DhruvGrahanConfig cfg = dhruv_grahan_config_default();
+    napi_value v;
+    if (!GetNamedProperty(env, args[1], "grahanKind", &v) || !GetInt32(env, v, &req.grahan_kind)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "queryMode", &v) || !GetInt32(env, v, &req.query_mode)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "atJdTdb", &v) || !GetDouble(env, v, &req.at_jd_tdb)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "startJdTdb", &v) || !GetDouble(env, v, &req.start_jd_tdb)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "endJdTdb", &v) || !GetDouble(env, v, &req.end_jd_tdb)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    bool has_cfg = false;
+    napi_value cfg_obj;
+    if (!GetOptionalNamedProperty(env, args[1], "config", &cfg_obj, &has_cfg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (has_cfg) {
+        bool present = false;
+        if (!GetOptionalNamedProperty(env, cfg_obj, "includePenumbral", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present) {
+            bool b = false;
+            if (!GetBool(env, v, &b)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+            cfg.include_penumbral = b ? 1 : 0;
+        }
+        if (!GetOptionalNamedProperty(env, cfg_obj, "includePeakDetails", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present) {
+            bool b = false;
+            if (!GetBool(env, v, &b)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+            cfg.include_peak_details = b ? 1 : 0;
+        }
+    }
+    req.config = cfg;
+
+    uint32_t capacity = 0;
+    if (!GetUint32(env, args[2], &capacity)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvChandraGrahanResult out_chandra{};
+    DhruvSuryaGrahanResult out_surya{};
+    uint8_t found = 0;
+    uint32_t out_count = 0;
+    std::vector<DhruvChandraGrahanResult> ch_events(capacity > 0 ? capacity : 1);
+    std::vector<DhruvSuryaGrahanResult> su_events(capacity > 0 ? capacity : 1);
+
+    int32_t status = dhruv_grahan_search_ex(
+        static_cast<const DhruvEngineHandle*>(ptr),
+        &req,
+        &out_chandra,
+        &out_surya,
+        &found,
+        capacity > 0 ? ch_events.data() : nullptr,
+        capacity > 0 ? su_events.data() : nullptr,
+        capacity,
+        &out_count);
+
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        SetNamed(env, out, "found", MakeBool(env, found != 0));
+        SetNamed(env, out, "count", MakeUint32(env, out_count));
+        SetNamed(env, out, "chandra", WriteChandraGrahanResult(env, out_chandra));
+        SetNamed(env, out, "surya", WriteSuryaGrahanResult(env, out_surya));
+
+        napi_value ch_arr;
+        napi_create_array_with_length(env, out_count, &ch_arr);
+        napi_value su_arr;
+        napi_create_array_with_length(env, out_count, &su_arr);
+        for (uint32_t i = 0; i < out_count; ++i) {
+            napi_set_element(env, ch_arr, i, WriteChandraGrahanResult(env, ch_events[i]));
+            napi_set_element(env, su_arr, i, WriteSuryaGrahanResult(env, su_events[i]));
+        }
+        SetNamed(env, out, "chandraEvents", ch_arr);
+        SetNamed(env, out, "suryaEvents", su_arr);
+    }
+    return out;
+}
+
+napi_value MotionSearch(napi_env env, napi_callback_info info) {
+    size_t argc = 3;
+    napi_value args[3];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 3) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    void* ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvMotionSearchRequest req{};
+    DhruvStationaryConfig cfg = dhruv_stationary_config_default();
+    napi_value v;
+    if (!GetNamedProperty(env, args[1], "bodyCode", &v) || !GetInt32(env, v, &req.body_code)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "motionKind", &v) || !GetInt32(env, v, &req.motion_kind)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "queryMode", &v) || !GetInt32(env, v, &req.query_mode)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "atJdTdb", &v) || !GetDouble(env, v, &req.at_jd_tdb)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "startJdTdb", &v) || !GetDouble(env, v, &req.start_jd_tdb)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "endJdTdb", &v) || !GetDouble(env, v, &req.end_jd_tdb)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    bool has_cfg = false;
+    napi_value cfg_obj;
+    if (!GetOptionalNamedProperty(env, args[1], "config", &cfg_obj, &has_cfg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (has_cfg) {
+        bool present = false;
+        if (!GetOptionalNamedProperty(env, cfg_obj, "stepSizeDays", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present && !GetDouble(env, v, &cfg.step_size_days)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (!GetOptionalNamedProperty(env, cfg_obj, "maxIterations", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present && !GetUint32(env, v, &cfg.max_iterations)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (!GetOptionalNamedProperty(env, cfg_obj, "convergenceDays", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present && !GetDouble(env, v, &cfg.convergence_days)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (!GetOptionalNamedProperty(env, cfg_obj, "numericalStepDays", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present && !GetDouble(env, v, &cfg.numerical_step_days)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+    req.config = cfg;
+
+    uint32_t capacity = 0;
+    if (!GetUint32(env, args[2], &capacity)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvStationaryEvent out_stationary{};
+    DhruvMaxSpeedEvent out_max_speed{};
+    uint8_t found = 0;
+    uint32_t out_count = 0;
+    std::vector<DhruvStationaryEvent> st_events(capacity > 0 ? capacity : 1);
+    std::vector<DhruvMaxSpeedEvent> mx_events(capacity > 0 ? capacity : 1);
+
+    int32_t status = dhruv_motion_search_ex(
+        static_cast<const DhruvEngineHandle*>(ptr),
+        &req,
+        &out_stationary,
+        &out_max_speed,
+        &found,
+        capacity > 0 ? st_events.data() : nullptr,
+        capacity > 0 ? mx_events.data() : nullptr,
+        capacity,
+        &out_count);
+
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        SetNamed(env, out, "found", MakeBool(env, found != 0));
+        SetNamed(env, out, "count", MakeUint32(env, out_count));
+        SetNamed(env, out, "stationary", WriteStationaryEvent(env, out_stationary));
+        SetNamed(env, out, "maxSpeed", WriteMaxSpeedEvent(env, out_max_speed));
+
+        napi_value st_arr;
+        napi_create_array_with_length(env, out_count, &st_arr);
+        napi_value mx_arr;
+        napi_create_array_with_length(env, out_count, &mx_arr);
+        for (uint32_t i = 0; i < out_count; ++i) {
+            napi_set_element(env, st_arr, i, WriteStationaryEvent(env, st_events[i]));
+            napi_set_element(env, mx_arr, i, WriteMaxSpeedEvent(env, mx_events[i]));
+        }
+        SetNamed(env, out, "stationaryEvents", st_arr);
+        SetNamed(env, out, "maxSpeedEvents", mx_arr);
+    }
+    return out;
+}
+
+napi_value SankrantiSearch(napi_env env, napi_callback_info info) {
+    size_t argc = 3;
+    napi_value args[3];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 3) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    void* ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvSankrantiSearchRequest req{};
+    DhruvSankrantiConfig cfg = dhruv_sankranti_config_default();
+    napi_value v;
+    if (!GetNamedProperty(env, args[1], "targetKind", &v) || !GetInt32(env, v, &req.target_kind)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "queryMode", &v) || !GetInt32(env, v, &req.query_mode)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "rashiIndex", &v) || !GetInt32(env, v, &req.rashi_index)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "atJdTdb", &v) || !GetDouble(env, v, &req.at_jd_tdb)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "startJdTdb", &v) || !GetDouble(env, v, &req.start_jd_tdb)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!GetNamedProperty(env, args[1], "endJdTdb", &v) || !GetDouble(env, v, &req.end_jd_tdb)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    bool has_cfg = false;
+    napi_value cfg_obj;
+    if (!GetOptionalNamedProperty(env, args[1], "config", &cfg_obj, &has_cfg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (has_cfg) {
+        bool present = false;
+        if (!GetOptionalNamedProperty(env, cfg_obj, "ayanamshaSystem", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present && !GetInt32(env, v, &cfg.ayanamsha_system)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (!GetOptionalNamedProperty(env, cfg_obj, "useNutation", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present) {
+            bool b = false;
+            if (!GetBool(env, v, &b)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+            cfg.use_nutation = b ? 1 : 0;
+        }
+        if (!GetOptionalNamedProperty(env, cfg_obj, "referencePlane", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present && !GetInt32(env, v, &cfg.reference_plane)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (!GetOptionalNamedProperty(env, cfg_obj, "stepSizeDays", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present && !GetDouble(env, v, &cfg.step_size_days)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (!GetOptionalNamedProperty(env, cfg_obj, "maxIterations", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present && !GetUint32(env, v, &cfg.max_iterations)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (!GetOptionalNamedProperty(env, cfg_obj, "convergenceDays", &v, &present)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        if (present && !GetDouble(env, v, &cfg.convergence_days)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+    req.config = cfg;
+
+    uint32_t capacity = 0;
+    if (!GetUint32(env, args[2], &capacity)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvSankrantiEvent out_event{};
+    uint8_t found = 0;
+    uint32_t out_count = 0;
+    std::vector<DhruvSankrantiEvent> events(capacity > 0 ? capacity : 1);
+    int32_t status = dhruv_sankranti_search_ex(
+        static_cast<const DhruvEngineHandle*>(ptr),
+        &req,
+        &out_event,
+        &found,
+        capacity > 0 ? events.data() : nullptr,
+        capacity,
+        &out_count);
+
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        SetNamed(env, out, "found", MakeBool(env, found != 0));
+        SetNamed(env, out, "count", MakeUint32(env, out_count));
+        if (found != 0) SetNamed(env, out, "event", WriteSankrantiEvent(env, out_event));
+        napi_value arr;
+        napi_create_array_with_length(env, out_count, &arr);
+        for (uint32_t i = 0; i < out_count; ++i) {
+            napi_set_element(env, arr, i, WriteSankrantiEvent(env, events[i]));
+        }
+        SetNamed(env, out, "events", arr);
+    }
     return out;
 }
 
@@ -776,6 +1676,71 @@ napi_value TithiForDate(napi_env env, napi_callback_info info) {
     return out;
 }
 
+napi_value KaranaForDate(napi_env env, napi_callback_info info) {
+    size_t argc = 2;
+    napi_value args[2];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 2) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    void* ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvUtcTime utc{};
+    if (!ReadUtcTime(env, args[1], &utc)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvKaranaInfo out_karana{};
+    int32_t status = dhruv_karana_for_date(static_cast<const DhruvEngineHandle*>(ptr), &utc, &out_karana);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        SetNamed(env, out, "karana", WriteKaranaInfo(env, out_karana));
+    }
+    return out;
+}
+
+napi_value YogaForDate(napi_env env, napi_callback_info info) {
+    size_t argc = 2;
+    napi_value args[2];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 2) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    void* ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvUtcTime utc{};
+    if (!ReadUtcTime(env, args[1], &utc)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvSankrantiConfig cfg = dhruv_sankranti_config_default();
+    DhruvYogaInfo out_yoga{};
+    int32_t status = dhruv_yoga_for_date(static_cast<const DhruvEngineHandle*>(ptr), &utc, &cfg, &out_yoga);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        SetNamed(env, out, "yoga", WriteYogaInfo(env, out_yoga));
+    }
+    return out;
+}
+
+napi_value NakshatraForDate(napi_env env, napi_callback_info info) {
+    size_t argc = 2;
+    napi_value args[2];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 2) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    void* ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvUtcTime utc{};
+    if (!ReadUtcTime(env, args[1], &utc)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvSankrantiConfig cfg = dhruv_sankranti_config_default();
+    DhruvPanchangNakshatraInfo out_nak{};
+    int32_t status = dhruv_nakshatra_for_date(static_cast<const DhruvEngineHandle*>(ptr), &utc, &cfg, &out_nak);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        SetNamed(env, out, "nakshatra", WritePanchangNakshatraInfo(env, out_nak));
+    }
+    return out;
+}
+
 napi_value VaarForDate(napi_env env, napi_callback_info info) {
     size_t argc = 4;
     napi_value args[4];
@@ -813,6 +1778,132 @@ napi_value VaarForDate(napi_env env, napi_callback_info info) {
     napi_value out = MakeStatusResult(env, status);
     if (status == STATUS_OK) {
         SetNamed(env, out, "vaar", WriteVaarInfo(env, info_out));
+    }
+    return out;
+}
+
+napi_value HoraForDate(napi_env env, napi_callback_info info) {
+    size_t argc = 4;
+    napi_value args[4];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 4) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    void* e_ptr = nullptr;
+    void* ep_ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &e_ptr) || !ReadExternalPtr(env, args[1], &ep_ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvUtcTime utc{};
+    DhruvGeoLocation loc{};
+    if (!ReadUtcTime(env, args[2], &utc) || !ReadGeoLocation(env, args[3], &loc)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvRiseSetConfig rise_cfg = dhruv_riseset_config_default();
+    DhruvHoraInfo out_hora{};
+    int32_t status = dhruv_hora_for_date(
+        static_cast<const DhruvEngineHandle*>(e_ptr),
+        static_cast<const DhruvEopHandle*>(ep_ptr),
+        &utc,
+        &loc,
+        &rise_cfg,
+        &out_hora);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        SetNamed(env, out, "hora", WriteHoraInfo(env, out_hora));
+    }
+    return out;
+}
+
+napi_value GhatikaForDate(napi_env env, napi_callback_info info) {
+    size_t argc = 4;
+    napi_value args[4];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 4) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    void* e_ptr = nullptr;
+    void* ep_ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &e_ptr) || !ReadExternalPtr(env, args[1], &ep_ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvUtcTime utc{};
+    DhruvGeoLocation loc{};
+    if (!ReadUtcTime(env, args[2], &utc) || !ReadGeoLocation(env, args[3], &loc)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvRiseSetConfig rise_cfg = dhruv_riseset_config_default();
+    DhruvGhatikaInfo out_ghatika{};
+    int32_t status = dhruv_ghatika_for_date(
+        static_cast<const DhruvEngineHandle*>(e_ptr),
+        static_cast<const DhruvEopHandle*>(ep_ptr),
+        &utc,
+        &loc,
+        &rise_cfg,
+        &out_ghatika);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        SetNamed(env, out, "ghatika", WriteGhatikaInfo(env, out_ghatika));
+    }
+    return out;
+}
+
+napi_value MasaForDate(napi_env env, napi_callback_info info) {
+    size_t argc = 2;
+    napi_value args[2];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 2) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    void* ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvUtcTime utc{};
+    if (!ReadUtcTime(env, args[1], &utc)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvSankrantiConfig cfg = dhruv_sankranti_config_default();
+    DhruvMasaInfo out_masa{};
+    int32_t status = dhruv_masa_for_date(static_cast<const DhruvEngineHandle*>(ptr), &utc, &cfg, &out_masa);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        SetNamed(env, out, "masa", WriteMasaInfo(env, out_masa));
+    }
+    return out;
+}
+
+napi_value AyanaForDate(napi_env env, napi_callback_info info) {
+    size_t argc = 2;
+    napi_value args[2];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 2) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    void* ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvUtcTime utc{};
+    if (!ReadUtcTime(env, args[1], &utc)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvSankrantiConfig cfg = dhruv_sankranti_config_default();
+    DhruvAyanaInfo out_ayana{};
+    int32_t status = dhruv_ayana_for_date(static_cast<const DhruvEngineHandle*>(ptr), &utc, &cfg, &out_ayana);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        SetNamed(env, out, "ayana", WriteAyanaInfo(env, out_ayana));
+    }
+    return out;
+}
+
+napi_value VarshaForDate(napi_env env, napi_callback_info info) {
+    size_t argc = 2;
+    napi_value args[2];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 2) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    void* ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvUtcTime utc{};
+    if (!ReadUtcTime(env, args[1], &utc)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvSankrantiConfig cfg = dhruv_sankranti_config_default();
+    DhruvVarshaInfo out_varsha{};
+    int32_t status = dhruv_varsha_for_date(static_cast<const DhruvEngineHandle*>(ptr), &utc, &cfg, &out_varsha);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        SetNamed(env, out, "varsha", WriteVarshaInfo(env, out_varsha));
     }
     return out;
 }
@@ -1244,14 +2335,69 @@ napi_value Init(napi_env env, napi_value exports) {
         {"utcToTdbJd", nullptr, UtcToTdbJd, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"jdTdbToUtc", nullptr, JdTdbToUtc, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"nutationIau2000b", nullptr, NutationIau2000b, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"ayanamshaSystemCount", nullptr, AyanamshaSystemCount, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"referencePlaneDefault", nullptr, ReferencePlaneDefault, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"ayanamshaComputeEx", nullptr, AyanamshaComputeEx, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"lunarNodeCount", nullptr, LunarNodeCount, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"lunarNodeDeg", nullptr, LunarNodeDeg, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"lunarNodeDegWithEngine", nullptr, LunarNodeDegWithEngine, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"rashiCount", nullptr, RashiCount, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"nakshatraCount", nullptr, NakshatraCount, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"rashiFromLongitude", nullptr, RashiFromLongitude, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"nakshatraFromLongitude", nullptr, NakshatraFromLongitude, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"nakshatra28FromLongitude", nullptr, Nakshatra28FromLongitude, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"grahaTropicalLongitudes", nullptr, GrahaTropicalLongitudes, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"rashiName", nullptr, RashiName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"nakshatraName", nullptr, NakshatraName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"nakshatra28Name", nullptr, Nakshatra28Name, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"masaName", nullptr, MasaName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"ayanaName", nullptr, AyanaName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"samvatsaraName", nullptr, SamvatsaraName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"tithiName", nullptr, TithiName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"karanaName", nullptr, KaranaName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"yogaName", nullptr, YogaName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"vaarName", nullptr, VaarName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"horaName", nullptr, HoraName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"grahaName", nullptr, GrahaName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"grahaEnglishName", nullptr, GrahaEnglishName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"sphutaName", nullptr, SphutaName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"specialLagnaName", nullptr, SpecialLagnaName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"arudhaPadaName", nullptr, ArudhaPadaName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"upagrahaName", nullptr, UpagrahaName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"degToDms", nullptr, DegToDms, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"tithiFromElongation", nullptr, TithiFromElongation, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"karanaFromElongation", nullptr, KaranaFromElongation, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"yogaFromSum", nullptr, YogaFromSum, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"vaarFromJd", nullptr, VaarFromJd, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"masaFromRashiIndex", nullptr, MasaFromRashiIndex, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"ayanaFromSiderealLongitude", nullptr, AyanaFromSiderealLongitude, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"samvatsaraFromYear", nullptr, SamvatsaraFromYear, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"nthRashiFrom", nullptr, NthRashiFrom, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"rashiLord", nullptr, RashiLord, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"horaAt", nullptr, HoraAt, nullptr, nullptr, nullptr, napi_default, nullptr},
 
         {"riseSetConfigDefault", nullptr, RiseSetConfigDefault, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"bhavaConfigDefault", nullptr, BhavaConfigDefault, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"sankrantiConfigDefault", nullptr, SankrantiConfigDefault, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"conjunctionConfigDefault", nullptr, ConjunctionConfigDefault, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"grahanConfigDefault", nullptr, GrahanConfigDefault, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"stationaryConfigDefault", nullptr, StationaryConfigDefault, nullptr, nullptr, nullptr, napi_default, nullptr},
 
+        {"conjunctionSearch", nullptr, ConjunctionSearch, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"grahanSearch", nullptr, GrahanSearch, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"motionSearch", nullptr, MotionSearch, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"lunarPhaseSearch", nullptr, LunarPhaseSearch, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"sankrantiSearch", nullptr, SankrantiSearch, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"tithiForDate", nullptr, TithiForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"karanaForDate", nullptr, KaranaForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"yogaForDate", nullptr, YogaForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"nakshatraForDate", nullptr, NakshatraForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"vaarForDate", nullptr, VaarForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"horaForDate", nullptr, HoraForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"ghatikaForDate", nullptr, GhatikaForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"masaForDate", nullptr, MasaForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"ayanaForDate", nullptr, AyanaForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"varshaForDate", nullptr, VarshaForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"grahaSiderealLongitudes", nullptr, GrahaSiderealLongitudes, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"shadbalaForDate", nullptr, ShadbalaForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"fullKundaliSummaryForDate", nullptr, FullKundaliSummaryForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
