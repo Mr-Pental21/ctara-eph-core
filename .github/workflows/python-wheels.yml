@@ -1,0 +1,90 @@
+name: Python Wheels
+
+on:
+  push:
+    tags:
+      - "python-v*"
+  workflow_dispatch:
+
+jobs:
+  build-wheels:
+    name: Build wheels (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU (Linux aarch64)
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.22
+        with:
+          package-dir: bindings/python-open
+        env:
+          CIBW_BEFORE_BUILD_LINUX: >
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
+            source $HOME/.cargo/env &&
+            cargo build -p dhruv_ffi_c --release --manifest-path {project}/../../Cargo.toml &&
+            cp {project}/../../target/release/libdhruv_ffi_c.so {project}/src/ctara_dhruv/
+          CIBW_BEFORE_BUILD_MACOS: >
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
+            source $HOME/.cargo/env &&
+            cargo build -p dhruv_ffi_c --release --manifest-path {project}/../../Cargo.toml &&
+            cp {project}/../../target/release/libdhruv_ffi_c.dylib {project}/src/ctara_dhruv/
+          CIBW_BEFORE_BUILD_WINDOWS: >
+            rustup default stable &&
+            cargo build -p dhruv_ffi_c --release --manifest-path {project}\..\..\Cargo.toml &&
+            copy {project}\..\..\target\release\dhruv_ffi_c.dll {project}\src\ctara_dhruv\
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+          CIBW_SKIP: "*-musllinux_*"
+          CIBW_ARCHS_LINUX: "x86_64 aarch64"
+          CIBW_ARCHS_MACOS: "x86_64 arm64"
+          CIBW_ARCHS_WINDOWS: "AMD64"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+
+  build-sdist:
+    name: Build sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build
+      - run: python -m build --sdist bindings/python-open
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: bindings/python-open/dist/*.tar.gz
+
+  test-wheels:
+    name: Test wheels (${{ matrix.os }}, py${{ matrix.python }})
+    needs: build-wheels
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.10", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse
+      - run: pip install ./wheelhouse/*.whl pytest
+      - run: python -c "from ctara_dhruv._ffi import lib; print('ABI version:', lib.dhruv_api_version())"
+      - run: pytest bindings/python-open/tests/ -v --tb=short

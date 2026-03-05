@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ctara-dhruv"
+version = "0.1.0"
+description = "Python bindings for ctara-dhruv-core ephemeris engine"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+dependencies = ["cffi>=1.16"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ctara_dhruv = ["*.so", "*.dylib", "*.dll"]

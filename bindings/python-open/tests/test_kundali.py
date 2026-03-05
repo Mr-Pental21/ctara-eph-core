@@ -1,0 +1,99 @@
+"""Tests for graha positions, core bindus, and full kundali."""
+
+import pytest
+from conftest import skip_no_kernels, skip_no_eop
+
+
+J2000 = 2451545.0
+
+
+@skip_no_kernels
+class TestGrahaLongitudes:
+    def test_graha_sidereal_longitudes(self, engine_handles):
+        """Sidereal longitudes for all 9 grahas should be in [0, 360)."""
+        from ctara_dhruv.kundali import graha_longitudes
+        from ctara_dhruv.engine import engine
+        result = graha_longitudes(engine(), jd_tdb=J2000, ayanamsha_system=0)
+        assert len(result.longitudes) == 9
+        for lon in result.longitudes:
+            assert 0 <= lon < 360
+
+    def test_graha_tropical_longitudes(self, engine_handles):
+        """Tropical longitudes should differ from sidereal by ~ayanamsha."""
+        from ctara_dhruv.kundali import graha_longitudes, graha_tropical_longitudes
+        from ctara_dhruv.engine import engine
+        sid = graha_longitudes(engine(), jd_tdb=J2000, ayanamsha_system=0)
+        trop = graha_tropical_longitudes(engine(), jd_tdb=J2000)
+        # Difference should be approximately the ayanamsha (~23.85 at J2000)
+        diff = (trop.longitudes[0] - sid.longitudes[0]) % 360
+        assert 23.0 < diff < 25.0
+
+
+@skip_no_kernels
+@skip_no_eop
+class TestGrahaPositions:
+    def test_graha_positions_basic(self, engine_handles):
+        """Compute graha positions with default config."""
+        from ctara_dhruv.kundali import graha_positions
+        from ctara_dhruv.engine import engine, lsk, eop
+        result = graha_positions(
+            engine(), lsk(), eop(),
+            jd_utc=(2024, 1, 15, 6, 0, 0.0),
+            location=(28.6139, 77.2090),
+        )
+        assert len(result.grahas) == 9
+        for g in result.grahas:
+            assert 0 <= g.sidereal_longitude < 360
+            assert 0 <= g.rashi_index <= 11
+
+    def test_graha_positions_with_lagna(self, engine_handles):
+        """Compute with include_lagna flag."""
+        from ctara_dhruv.kundali import graha_positions
+        from ctara_dhruv.engine import engine, lsk, eop
+        result = graha_positions(
+            engine(), lsk(), eop(),
+            jd_utc=(2024, 1, 15, 6, 0, 0.0),
+            location=(28.6139, 77.2090),
+            config={"include_lagna": 1},
+        )
+        # Lagna should have a valid longitude
+        assert 0 <= result.lagna.sidereal_longitude < 360
+
+
+@skip_no_kernels
+@skip_no_eop
+class TestFullKundali:
+    def test_full_kundali_default(self, engine_handles):
+        """Full kundali with default config should have core sections."""
+        from ctara_dhruv.kundali import full_kundali
+        from ctara_dhruv.engine import engine, lsk, eop
+        result = full_kundali(
+            engine(), lsk(), eop(),
+            jd_utc=(2024, 1, 15, 6, 0, 0.0),
+            location=(28.6139, 77.2090),
+        )
+        assert result.ayanamsha_deg > 0
+        # Default config should include bhava, graha, etc.
+        if result.graha_positions is not None:
+            assert len(result.graha_positions.grahas) == 9
+        if result.bhava_cusps is not None:
+            assert len(result.bhava_cusps.bhavas) == 12
+
+    def test_full_kundali_ashtakavarga(self, engine_handles):
+        """Ashtakavarga in full kundali should have 7 BAVs."""
+        from ctara_dhruv.kundali import full_kundali
+        from ctara_dhruv.engine import engine, lsk, eop
+        result = full_kundali(
+            engine(), lsk(), eop(),
+            jd_utc=(2024, 1, 15, 6, 0, 0.0),
+            location=(28.6139, 77.2090),
+        )
+        if result.ashtakavarga is not None:
+            assert len(result.ashtakavarga.bavs) == 7
+            for bav in result.ashtakavarga.bavs:
+                assert len(bav.points) == 12
+                for p in bav.points:
+                    assert 0 <= p <= 8
+            sav = result.ashtakavarga.sav
+            assert len(sav.total_points) == 12
+            assert sum(sav.total_points) == 337  # SAV constant
