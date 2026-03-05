@@ -30,4 +30,7 @@ kernels/data/*.all
 docs/benchmarks/ffi_bench_*.txt
 docs/benchmarks/ffi_bench_*_sorted.tsv
 
-.playwright-mcp/bindings/python-open/src/ctara_dhruv.egg-info/
+.playwright-mcp/
+
+# Python build artifacts
+*.egg-info/
