@@ -630,10 +630,13 @@ class BhinnaAshtakavarga:
 
     ``graha_index``: 0=Sun through 6=Saturn.
     ``points``: benefic points per rashi (12 entries, max 8 each).
+    ``contributors``: attribution matrix ``[rashi][contributor]`` (12x8, 0/1).
+      Contributor order: Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, Lagna.
     """
 
     graha_index: int
     points: list[int]
+    contributors: list[list[int]] = field(default_factory=lambda: [[0] * 8 for _ in range(12)])
 
 
 @dataclass(frozen=True)

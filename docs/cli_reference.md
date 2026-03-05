@@ -312,6 +312,11 @@ dhruv ashtakavarga --date 2024-03-20T12:00:00Z --lat 28.6 --lon 77.2 \
   --bsp de442s.bsp --lsk naif0012.tls --eop finals2000A.all
 ```
 
+Output includes:
+- BAV points table per graha/rashi
+- BAV contributor matrix per graha (`[rashi][Sun Moon Mars Mercury Jupiter Venus Saturn Lagna]`, 0/1)
+- SAV totals + Trikona + Ekadhipatya rows
+
 ### `upagrahas` — All 11 upagrahas
 
 ```
@@ -529,6 +534,8 @@ dhruv calculate-ashtakavarga --graha-rashis 0,3,7,10,4,2,9 --lagna-rashi 0
 ```
 
 `--graha-rashis`: comma-separated rashi indices (0-11) for Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn.
+
+Prints both BAV points and BAV contributor matrix (`[rashi][Sun..Lagna]`) for each graha.
 
 ### `graha-drishti-compute` — Single drishti between two points (no engine)
 

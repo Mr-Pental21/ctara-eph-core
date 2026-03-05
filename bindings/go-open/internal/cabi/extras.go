@@ -448,6 +448,9 @@ func goBhinna(v C.DhruvBhinnaAshtakavarga) BhinnaAshtakavarga {
 	out := BhinnaAshtakavarga{GrahaIndex: uint8(v.graha_index)}
 	for i := 0; i < 12; i++ {
 		out.Points[i] = uint8(v.points[i])
+		for j := 0; j < 8; j++ {
+			out.Contributors[i][j] = uint8(v.contributors[i][j])
+		}
 	}
 	return out
 }
@@ -499,6 +502,9 @@ func CalculateSAV(bavs [SaptaGrahaCount]BhinnaAshtakavarga) (SarvaAshtakavarga, 
 		cbavs[i].graha_index = C.uint8_t(bavs[i].GrahaIndex)
 		for j := 0; j < 12; j++ {
 			cbavs[i].points[j] = C.uint8_t(bavs[i].Points[j])
+			for k := 0; k < 8; k++ {
+				cbavs[i].contributors[j][k] = C.uint8_t(bavs[i].Contributors[j][k])
+			}
 		}
 	}
 	var out C.DhruvSarvaAshtakavarga

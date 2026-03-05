@@ -1116,6 +1116,7 @@ def calculate_bav(graha_index: int, graha_rashis: list[int],
     return BhinnaAshtakavarga(
         graha_index=out.graha_index,
         points=[out.points[i] for i in range(12)],
+        contributors=[[out.contributors[i][j] for j in range(8)] for i in range(12)],
     )
 
 
@@ -1130,6 +1131,7 @@ def calculate_all_bav(graha_rashis: list[int],
         BhinnaAshtakavarga(
             graha_index=out[i].graha_index,
             points=[out[i].points[j] for j in range(12)],
+            contributors=[[out[i].contributors[r][c] for c in range(8)] for r in range(12)],
         )
         for i in range(7)
     ]
@@ -1142,6 +1144,8 @@ def calculate_sav(bavs: list[BhinnaAshtakavarga]) -> SarvaAshtakavarga:
         bav_buf[i].graha_index = bav.graha_index
         for j in range(12):
             bav_buf[i].points[j] = bav.points[j]
+            for k in range(8):
+                bav_buf[i].contributors[j][k] = bav.contributors[j][k]
     out = ffi.new("DhruvSarvaAshtakavarga *")
     status = lib.dhruv_calculate_sav(bav_buf, out)
     check(status, "dhruv_calculate_sav")
@@ -1163,6 +1167,7 @@ def calculate_ashtakavarga(graha_rashis: list[int],
         BhinnaAshtakavarga(
             graha_index=out.bavs[i].graha_index,
             points=[out.bavs[i].points[j] for j in range(12)],
+            contributors=[[out.bavs[i].contributors[r][c] for c in range(8)] for r in range(12)],
         )
         for i in range(7)
     ]
@@ -1208,6 +1213,7 @@ def ashtakavarga_for_date(engine, eop, utc: UtcTime,
         BhinnaAshtakavarga(
             graha_index=out.bavs[i].graha_index,
             points=[out.bavs[i].points[j] for j in range(12)],
+            contributors=[[out.bavs[i].contributors[r][c] for c in range(8)] for r in range(12)],
         )
         for i in range(7)
     ]

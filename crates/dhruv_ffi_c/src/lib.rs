@@ -40,7 +40,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 43;
+pub const DHRUV_API_VERSION: u32 = 44;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -7193,6 +7193,11 @@ pub struct DhruvBhinnaAshtakavarga {
     pub graha_index: u8,
     /// Benefic points per rashi (12 entries, 0-based index, max 8 each).
     pub points: [u8; 12],
+    /// Contributor attribution matrix `[rashi][contributor]` with 0/1 values.
+    ///
+    /// contributor index: 0=Sun, 1=Moon, 2=Mars, 3=Mercury,
+    /// 4=Jupiter, 5=Venus, 6=Saturn, 7=Lagna.
+    pub contributors: [[u8; 8]; 12],
 }
 
 /// C-compatible Sarva Ashtakavarga result.
@@ -7241,6 +7246,7 @@ pub unsafe extern "C" fn dhruv_calculate_ashtakavarga(
         out.bavs[i] = DhruvBhinnaAshtakavarga {
             graha_index: bav.graha_index,
             points: bav.points,
+            contributors: bav.contributors,
         };
     }
     out.sav = DhruvSarvaAshtakavarga {
@@ -7281,6 +7287,7 @@ pub unsafe extern "C" fn dhruv_calculate_bav(
     let out = unsafe { &mut *out };
     out.graha_index = bav.graha_index;
     out.points = bav.points;
+    out.contributors = bav.contributors;
     DhruvStatus::Ok
 }
 
@@ -7312,6 +7319,7 @@ pub unsafe extern "C" fn dhruv_calculate_all_bav(
         out_slice[i] = DhruvBhinnaAshtakavarga {
             graha_index: bav.graha_index,
             points: bav.points,
+            contributors: bav.contributors,
         };
     }
     DhruvStatus::Ok
@@ -7336,11 +7344,13 @@ pub unsafe extern "C" fn dhruv_calculate_sav(
     let mut rust_bavs = [dhruv_vedic_base::BhinnaAshtakavarga {
         graha_index: 0,
         points: [0; 12],
+        contributors: [[0; 8]; 12],
     }; 7];
     for (i, b) in bav_slice.iter().enumerate() {
         rust_bavs[i] = dhruv_vedic_base::BhinnaAshtakavarga {
             graha_index: b.graha_index,
             points: b.points,
+            contributors: b.contributors,
         };
     }
 
@@ -7588,6 +7598,7 @@ pub unsafe extern "C" fn dhruv_ashtakavarga_for_date(
                 out.bavs[i] = DhruvBhinnaAshtakavarga {
                     graha_index: bav.graha_index,
                     points: bav.points,
+                    contributors: bav.contributors,
                 };
             }
             out.sav = DhruvSarvaAshtakavarga {
@@ -8684,6 +8695,7 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
                     out.ashtakavarga.bavs[i] = DhruvBhinnaAshtakavarga {
                         graha_index: bav.graha_index,
                         points: bav.points,
+                        contributors: bav.contributors,
                     };
                 }
                 out.ashtakavarga.sav = DhruvSarvaAshtakavarga {
@@ -12696,6 +12708,10 @@ mod tests {
         // SAV total should be 337
         let sav_total: u16 = result.sav.total_points.iter().map(|&p| p as u16).sum();
         assert_eq!(sav_total, 337);
+        for rashi in 0..12 {
+            let row_sum: u8 = result.bavs[0].contributors[rashi].iter().sum();
+            assert_eq!(row_sum, result.bavs[0].points[rashi]);
+        }
     }
 
     #[test]
@@ -12746,6 +12762,8 @@ mod tests {
         assert_eq!(bav.graha_index, 0);
         let total: u8 = bav.points.iter().sum();
         assert_eq!(total, 48); // Sun BAV total is always 48
+        let matrix_total: u8 = bav.contributors.iter().flatten().sum();
+        assert_eq!(matrix_total, total);
     }
 
     // --- calculate_all_bav ---
@@ -12755,6 +12773,7 @@ mod tests {
         let mut out = [DhruvBhinnaAshtakavarga {
             graha_index: 0,
             points: [0; 12],
+            contributors: [[0; 8]; 12],
         }; 7];
         let s = unsafe { dhruv_calculate_all_bav(ptr::null(), 0, out.as_mut_ptr()) };
         assert_eq!(s, DhruvStatus::NullPointer);
@@ -12770,6 +12789,7 @@ mod tests {
         let mut out = [DhruvBhinnaAshtakavarga {
             graha_index: 0,
             points: [0; 12],
+            contributors: [[0; 8]; 12],
         }; 7];
         let s = unsafe { dhruv_calculate_all_bav(rashis.as_ptr(), 0, out.as_mut_ptr()) };
         assert_eq!(s, DhruvStatus::Ok);
@@ -12793,6 +12813,7 @@ mod tests {
         let bavs = [DhruvBhinnaAshtakavarga {
             graha_index: 0,
             points: [0; 12],
+            contributors: [[0; 8]; 12],
         }; 7];
         let s = unsafe { dhruv_calculate_sav(bavs.as_ptr(), ptr::null_mut()) };
         assert_eq!(s, DhruvStatus::NullPointer);
@@ -12805,6 +12826,7 @@ mod tests {
         let mut bavs = [DhruvBhinnaAshtakavarga {
             graha_index: 0,
             points: [0; 12],
+            contributors: [[0; 8]; 12],
         }; 7];
         let s = unsafe { dhruv_calculate_all_bav(rashis.as_ptr(), 0, bavs.as_mut_ptr()) };
         assert_eq!(s, DhruvStatus::Ok);

@@ -48,4 +48,22 @@ pub use dhruv_time::{EopKernel, TimeConversionOptions, TimeConversionPolicy};
 pub use dhruv_vedic_base::riseset_types::{
     GeoLocation, RiseSetConfig, RiseSetEvent, RiseSetResult,
 };
-pub use dhruv_vedic_base::{AyanamshaSystem, BhavaConfig, LunarNode, NodeDignityPolicy, NodeMode};
+pub use dhruv_vedic_base::{
+    AshtakavargaResult, AyanamshaSystem, BhavaConfig, BhinnaAshtakavarga, LunarNode,
+    NodeDignityPolicy, NodeMode, SarvaAshtakavarga, calculate_all_bav, calculate_ashtakavarga,
+    calculate_bav, calculate_sav,
+};
+
+#[cfg(test)]
+mod tests {
+    use super::calculate_bav;
+
+    #[test]
+    fn ashtakavarga_bav_includes_contributors() {
+        let bav = calculate_bav(0, &[0, 1, 2, 3, 4, 5, 6], 0);
+        for rashi in 0..12 {
+            let row_sum: u8 = bav.contributors[rashi].iter().sum();
+            assert_eq!(row_sum, bav.points[rashi]);
+        }
+    }
+}

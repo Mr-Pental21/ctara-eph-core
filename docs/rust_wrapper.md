@@ -142,7 +142,7 @@ let d: UtcDate = "2024-03-20T12:30:45.5Z".parse().unwrap();
 | `sphutas(inputs)` | `[(Sphuta, f64); 16]` | All 16 sphutas |
 | `special_lagnas(date, eop, location, system, nutation)` | `AllSpecialLagnas` | All 8 special lagnas |
 | `arudha_padas(date, eop, location, system, nutation)` | `[ArudhaResult; 12]` | All 12 arudha padas |
-| `ashtakavarga(date, system, nutation)` | `AshtakavargaResult` | Full BAV + SAV |
+| `ashtakavarga(date, system, nutation)` | `AshtakavargaResult` | Full BAV + SAV (+ BAV contributor matrix) |
 | `upagrahas(date, eop, location, system, nutation)` | `AllUpagrahas` | All 11 upagrahas |
 | `core_bindus(date, eop, location, system, nutation, nak, bhava)` | `Vec<CoreBindu>` | 19 curated sensitive points |
 | `drishti(date, eop, location, system, nutation, config)` | `DrishtiResult` | Graha drishti with optional bhava/lagna/bindus |
@@ -260,9 +260,9 @@ Array-based computation on rashi positions. No engine required.
 
 | Function | Returns | Description |
 |---|---|---|
-| `calculate_ashtakavarga(graha_rashis, lagna_rashi)` | `AshtakavargaResult` | Full BAV + SAV from rashi positions |
-| `calculate_bav(graha_index, graha_rashis, lagna_rashi)` | `BhinnaAshtakavarga` | Single BAV for one graha |
-| `calculate_all_bav(graha_rashis, lagna_rashi)` | `[BhinnaAshtakavarga; 7]` | All 7 BAVs |
+| `calculate_ashtakavarga(graha_rashis, lagna_rashi)` | `AshtakavargaResult` | Full BAV + SAV from rashi positions (with contributors) |
+| `calculate_bav(graha_index, graha_rashis, lagna_rashi)` | `BhinnaAshtakavarga` | Single BAV for one graha (`points` + `contributors[12][8]`) |
+| `calculate_all_bav(graha_rashis, lagna_rashi)` | `[BhinnaAshtakavarga; 7]` | All 7 BAVs with contributor matrices |
 | `calculate_sav(bavs)` | `SarvaAshtakavarga` | SAV from all BAVs |
 | `trikona_sodhana(totals)` | `[u8; 12]` | Trine reduction |
 | `ekadhipatya_sodhana(after_trikona)` | `[u8; 12]` | Same-lord reduction |

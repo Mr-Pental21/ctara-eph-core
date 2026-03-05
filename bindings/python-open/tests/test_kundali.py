@@ -92,8 +92,12 @@ class TestFullKundali:
             assert len(result.ashtakavarga.bavs) == 7
             for bav in result.ashtakavarga.bavs:
                 assert len(bav.points) == 12
+                assert len(bav.contributors) == 12
                 for p in bav.points:
                     assert 0 <= p <= 8
+                for i in range(12):
+                    assert len(bav.contributors[i]) == 8
+                    assert sum(bav.contributors[i]) == bav.points[i]
             sav = result.ashtakavarga.sav
             assert len(sav.total_points) == 12
             assert sum(sav.total_points) == 337  # SAV constant

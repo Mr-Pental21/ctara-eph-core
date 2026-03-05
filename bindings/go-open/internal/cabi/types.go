@@ -609,8 +609,9 @@ type BindusResult struct {
 }
 
 type BhinnaAshtakavarga struct {
-	GrahaIndex uint8
-	Points     [12]uint8
+	GrahaIndex   uint8
+	Points       [12]uint8
+	Contributors [12][8]uint8
 }
 
 type SarvaAshtakavarga struct {

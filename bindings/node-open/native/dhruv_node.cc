@@ -295,6 +295,29 @@ bool ReadBhinnaAshtakavarga(napi_env env, napi_value obj, DhruvBhinnaAshtakavarg
     if (!GetNamedProperty(env, obj, "grahaIndex", &v) || !GetUint32(env, v, &idx)) return false;
     out->graha_index = static_cast<uint8_t>(idx);
     if (!GetNamedProperty(env, obj, "points", &v) || !ReadUint8ArrayFixed(env, v, out->points, 12)) return false;
+    for (uint32_t i = 0; i < 12; ++i) {
+        for (uint32_t j = 0; j < 8; ++j) {
+            out->contributors[i][j] = 0;
+        }
+    }
+    bool hasContributors = false;
+    if (!GetOptionalNamedProperty(env, obj, "contributors", &v, &hasContributors)) return false;
+    if (!hasContributors) return true;
+
+    uint32_t rows = 0;
+    if (napi_get_array_length(env, v, &rows) != napi_ok || rows != 12) return false;
+    for (uint32_t i = 0; i < 12; ++i) {
+        napi_value row;
+        if (napi_get_element(env, v, i, &row) != napi_ok) return false;
+        uint32_t cols = 0;
+        if (napi_get_array_length(env, row, &cols) != napi_ok || cols != 8) return false;
+        for (uint32_t j = 0; j < 8; ++j) {
+            napi_value item;
+            uint32_t val = 0;
+            if (napi_get_element(env, row, j, &item) != napi_ok || !GetUint32(env, item, &val)) return false;
+            out->contributors[i][j] = static_cast<uint8_t>(val);
+        }
+    }
     return true;
 }
 
@@ -712,6 +735,17 @@ napi_value WriteBhinnaAshtakavarga(napi_env env, const DhruvBhinnaAshtakavarga& 
         napi_set_element(env, points, i, MakeUint32(env, b.points[i]));
     }
     SetNamed(env, obj, "points", points);
+    napi_value contributors;
+    napi_create_array_with_length(env, 12, &contributors);
+    for (uint32_t i = 0; i < 12; ++i) {
+        napi_value row;
+        napi_create_array_with_length(env, 8, &row);
+        for (uint32_t j = 0; j < 8; ++j) {
+            napi_set_element(env, row, j, MakeUint32(env, b.contributors[i][j]));
+        }
+        napi_set_element(env, contributors, i, row);
+    }
+    SetNamed(env, obj, "contributors", contributors);
     return obj;
 }
 

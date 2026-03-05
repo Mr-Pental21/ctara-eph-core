@@ -745,6 +745,7 @@ def full_kundali(
                 bavs.append(BhinnaAshtakavarga(
                     graha_index=b.graha_index,
                     points=[b.points[j] for j in range(12)],
+                    contributors=[[b.contributors[r][c] for c in range(8)] for r in range(12)],
                 ))
             sav = SarvaAshtakavarga(
                 total_points=[out.ashtakavarga.sav.total_points[j] for j in range(12)],

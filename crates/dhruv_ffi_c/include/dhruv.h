@@ -23,7 +23,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       43
+#define DHRUV_API_VERSION       44
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 
@@ -812,6 +812,7 @@ typedef struct {
 typedef struct {
     uint8_t graha_index;
     uint8_t points[12];
+    uint8_t contributors[12][8];
 } DhruvBhinnaAshtakavarga;
 
 typedef struct {

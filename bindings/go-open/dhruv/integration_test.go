@@ -163,3 +163,22 @@ func TestSearchAndPanchangSmoke(t *testing.T) {
 		t.Fatalf("FullKundaliForDateSummary: %v", err)
 	}
 }
+
+func TestAshtakavargaContributors(t *testing.T) {
+	bav, err := CalculateBAV(0, [7]uint8{0, 1, 2, 3, 4, 5, 6}, 0)
+	if err != nil {
+		t.Fatalf("CalculateBAV: %v", err)
+	}
+	for i := 0; i < 12; i++ {
+		row := 0
+		for j := 0; j < 8; j++ {
+			if bav.Contributors[i][j] > 1 {
+				t.Fatalf("invalid contributor value %d at rashi=%d contributor=%d", bav.Contributors[i][j], i, j)
+			}
+			row += int(bav.Contributors[i][j])
+		}
+		if row != int(bav.Points[i]) {
+			t.Fatalf("contributor row sum mismatch at rashi=%d: got=%d want=%d", i, row, bav.Points[i])
+		}
+	}
+}

@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 43`
+**ABI version:** `DHRUV_API_VERSION = 44`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -1479,7 +1479,10 @@ DhruvStatus dhruv_calculate_bav(
 );
 ```
 
-Calculate BAV (Bhinna Ashtakavarga) for a single graha. Returns `DHRUV_STATUS_INVALID_QUERY` for `graha_index > 6`.
+Calculate BAV (Bhinna Ashtakavarga) for a single graha. The `DhruvBhinnaAshtakavarga`
+output includes both aggregate `points[12]` and contributor attribution matrix
+`contributors[12][8]` (Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, Lagna).
+Returns `DHRUV_STATUS_INVALID_QUERY` for `graha_index > 6`.
 
 ```c
 DhruvStatus dhruv_calculate_all_bav(
@@ -1876,6 +1879,12 @@ no proper motion). Equivalent to requesting ecliptic output for
 ---
 
 ## Changelog
+
+**v44**: Extended `DhruvBhinnaAshtakavarga` with contributor attribution matrix
+`contributors[12][8]` (0/1 flags per rashi and contributor). Affects all APIs
+that produce/consume BAV values: `dhruv_calculate_bav`,
+`dhruv_calculate_all_bav`, `dhruv_calculate_ashtakavarga`,
+`dhruv_ashtakavarga_for_date`, and full-kundali ashtakavarga fields.
 
 **v43**: Added charakaraka API surface. New constants: `DHRUV_MAX_CHARAKARAKA_ENTRIES`, `DHRUV_CHARAKARAKA_SCHEME_*`, `DHRUV_CHARAKARAKA_ROLE_*`. New types: `DhruvCharakarakaEntry`, `DhruvCharakarakaResult`. New function: `dhruv_charakaraka_for_date`. Extended `DhruvFullKundaliConfig` with `include_charakaraka` and `charakaraka_scheme`; extended `DhruvFullKundaliResult` with `charakaraka_valid` and `charakaraka`.
 

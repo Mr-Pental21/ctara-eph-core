@@ -66,6 +66,19 @@ class TestGeoLocation:
         assert loc.alt_m == 0.0
 
 
+class TestAshtakavargaTypes:
+    def test_bhinna_has_contributors(self):
+        from ctara_dhruv.types import BhinnaAshtakavarga
+        b = BhinnaAshtakavarga(
+            graha_index=0,
+            points=[0] * 12,
+            contributors=[[0] * 8 for _ in range(12)],
+        )
+        assert len(b.points) == 12
+        assert len(b.contributors) == 12
+        assert len(b.contributors[0]) == 8
+
+
 class TestEnums:
     def test_body_codes(self):
         from ctara_dhruv.enums import Body

@@ -133,6 +133,11 @@ pub struct BhinnaAshtakavarga {
     pub graha_index: u8,
     /// Benefic points per rashi (0-based index, max 8 points each).
     pub points: [u8; 12],
+    /// Contributor attribution matrix `[rashi][contributor]` (0/1 values).
+    ///
+    /// Contributor order:
+    /// 0=Sun, 1=Moon, 2=Mars, 3=Mercury, 4=Jupiter, 5=Venus, 6=Saturn, 7=Lagna.
+    pub contributors: [[u8; 8]; 12],
 }
 
 impl BhinnaAshtakavarga {
@@ -155,6 +160,7 @@ pub fn calculate_bav(
 ) -> BhinnaAshtakavarga {
     let rules = &RULES[graha_index as usize];
     let mut points = [0u8; 12];
+    let mut contributors = [[0u8; 8]; 12];
 
     for rashi in 0u8..12 {
         for contributor in 0u8..8 {
@@ -170,6 +176,7 @@ pub fn calculate_bav(
             // Check if this offset gives a point
             if (rules[contributor as usize] >> offset) & 1 == 1 {
                 points[rashi as usize] += 1;
+                contributors[rashi as usize][contributor as usize] = 1;
             }
         }
     }
@@ -177,6 +184,7 @@ pub fn calculate_bav(
     BhinnaAshtakavarga {
         graha_index,
         points,
+        contributors,
     }
 }
 
@@ -185,6 +193,7 @@ pub fn calculate_all_bav(graha_rashis: &[u8; 7], lagna_rashi: u8) -> [BhinnaAsht
     let mut bavs = [BhinnaAshtakavarga {
         graha_index: 0,
         points: [0; 12],
+        contributors: [[0; 8]; 12],
     }; 7];
     for i in 0..7u8 {
         bavs[i as usize] = calculate_bav(i, graha_rashis, lagna_rashi);
@@ -431,6 +440,32 @@ mod tests {
             for &p in &bav.points {
                 assert!(p <= 8, "BAV point {} exceeds max 8", p);
             }
+        }
+    }
+
+    #[test]
+    fn bav_contributors_binary_and_match_points() {
+        let rashis = [1, 4, 7, 10, 2, 5, 8];
+        let bavs = calculate_all_bav(&rashis, 11);
+        for bav in &bavs {
+            for rashi in 0..12 {
+                let row_sum: u8 = bav.contributors[rashi].iter().sum();
+                assert_eq!(row_sum, bav.points[rashi]);
+                for &c in &bav.contributors[rashi] {
+                    assert!(c <= 1);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn bav_contributors_total_matches_invariants() {
+        let rashis = [3, 0, 9, 6, 2, 10, 5];
+        let bavs = calculate_all_bav(&rashis, 4);
+        for (i, bav) in bavs.iter().enumerate() {
+            let matrix_total: u8 = bav.contributors.iter().flatten().sum();
+            assert_eq!(matrix_total, bav.total());
+            assert_eq!(matrix_total, BAV_TOTALS[i]);
         }
     }
 

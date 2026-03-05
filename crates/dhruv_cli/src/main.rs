@@ -3567,6 +3567,21 @@ fn main() {
                 println!("{:>7}", total);
             }
 
+            println!(
+                "\nBAV Contributor Matrix (row=rashi, cols=Sun Moon Mars Mercury Jupiter Venus Saturn Lagna):\n"
+            );
+            for (i, bav) in result.bavs.iter().enumerate() {
+                println!("{:>10}", graha_names[i]);
+                for (rashi_idx, row) in bav.contributors.iter().enumerate() {
+                    print!("  {:>3} {:>2}:", rashi_names[rashi_idx], rashi_idx);
+                    for &v in row {
+                        print!(" {:>1}", v);
+                    }
+                    let row_sum: u8 = row.iter().sum();
+                    println!("  | points={}", row_sum);
+                }
+            }
+
             // SAV
             println!("\nSarva Ashtakavarga (SAV):\n");
             print!("{:>10}", "");
@@ -6282,6 +6297,18 @@ fn main() {
                     bav.points,
                     bav.total()
                 );
+                println!("           contributors [rashi][Sun..Lagna]:");
+                for (rashi_idx, row) in bav.contributors.iter().enumerate() {
+                    print!("             {:>2}: [", rashi_idx);
+                    for (j, &v) in row.iter().enumerate() {
+                        if j > 0 {
+                            print!(", ");
+                        }
+                        print!("{v}");
+                    }
+                    let row_sum: u8 = row.iter().sum();
+                    println!("] -> {}", row_sum);
+                }
             }
             println!("\nSAV (Sarva Ashtakavarga):");
             println!("  Total:       {:?}", result.sav.total_points);

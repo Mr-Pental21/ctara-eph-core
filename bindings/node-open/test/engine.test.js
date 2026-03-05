@@ -384,8 +384,14 @@ test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
 
   const ashtakavarga = dhruv.calculateAshtakavarga([0, 1, 2, 3, 4, 5, 6], 0);
   assert.equal(ashtakavarga.bavs.length, 7);
+  assert.equal(ashtakavarga.bavs[0].contributors.length, 12);
   const bav = dhruv.calculateBav(0, [0, 1, 2, 3, 4, 5, 6], 0);
   assert.equal(bav.points.length, 12);
+  assert.equal(bav.contributors.length, 12);
+  for (let i = 0; i < 12; i += 1) {
+    assert.equal(bav.contributors[i].length, 8);
+    assert.equal(bav.contributors[i].reduce((a, b) => a + b, 0), bav.points[i]);
+  }
   const allBav = dhruv.calculateAllBav([0, 1, 2, 3, 4, 5, 6], 0);
   assert.equal(allBav.length, 7);
   const sav = dhruv.calculateSav(allBav);
