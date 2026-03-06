@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from ._ffi import ffi, lib
 from ._check import check
+from .dasha import DashaHierarchy, DashaLevel
 from .types import (
     AmshaChart,
     AmshaEntry,
@@ -41,6 +42,7 @@ from .types import (
     ShadbalaEntry,
     ShadbalaResult,
     SpecialLagnas,
+    SphutalResult,
     SthanaBalaBreakdown,
     KalaBalaBreakdown,
     TithiInfo,
@@ -473,6 +475,31 @@ def _extract_dasha_period(p):
     )
 
 
+def _extract_dasha_hierarchy(handle, system):
+    level_count_out = ffi.new("uint8_t *")
+    check(lib.dhruv_dasha_hierarchy_level_count(handle, level_count_out), "level_count")
+    level_count = level_count_out[0]
+
+    levels = []
+    period_out = ffi.new("DhruvDashaPeriod *")
+    for lvl in range(level_count):
+        period_count_out = ffi.new("uint32_t *")
+        check(
+            lib.dhruv_dasha_hierarchy_period_count(handle, lvl, period_count_out),
+            "period_count",
+        )
+        periods = []
+        for idx in range(period_count_out[0]):
+            check(
+                lib.dhruv_dasha_hierarchy_period_at(handle, lvl, idx, period_out),
+                "period_at",
+            )
+            periods.append(_extract_dasha_period(period_out))
+        levels.append(DashaLevel(level=lvl, periods=periods))
+
+    return DashaHierarchy(levels=levels, system=system)
+
+
 def _extract_charakaraka_entry(e):
     return CharakarakaEntry(
         role_code=e.role_code,
@@ -766,6 +793,13 @@ def full_kundali(
                 indra_chapa=u.indra_chapa, upaketu=u.upaketu,
             )
 
+        # Root sphutas
+        sphutas = None
+        if out.sphutas_valid:
+            sphutas = SphutalResult(
+                longitudes=[out.sphutas.longitudes[i] for i in range(16)]
+            )
+
         # Special lagnas
         special_lagnas = None
         if out.special_lagnas_valid:
@@ -813,6 +847,13 @@ def full_kundali(
         if out.panchang_valid:
             panchang = _extract_panchang_info(out.panchang)
 
+        # Dasha hierarchies (owned by full_kundali_result_free; decode before finally)
+        dasha = None
+        if out.dasha_count > 0:
+            dasha = []
+            for i in range(out.dasha_count):
+                dasha.append(_extract_dasha_hierarchy(out.dasha_handles[i], out.dasha_systems[i]))
+
         # Dasha snapshots (from the full kundali result, not hierarchy handles)
         dasha_snapshots = None
         if out.dasha_snapshot_count > 0:
@@ -834,6 +875,7 @@ def full_kundali(
             drishti=drishti,
             ashtakavarga=ashtakavarga,
             upagrahas=upagrahas,
+            sphutas=sphutas,
             special_lagnas=special_lagnas,
             amshas=amshas,
             shadbala=shadbala,
@@ -841,6 +883,7 @@ def full_kundali(
             avastha=avastha,
             charakaraka=charakaraka,
             panchang=panchang,
+            dasha=dasha,
             dasha_snapshots=dasha_snapshots,
         )
     finally:

@@ -294,6 +294,21 @@ test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
   }, loc, 0, true);
   assert.ok(Number.isFinite(kundali.ayanamshaDeg));
   assert.equal(typeof kundali.charakarakaValid, 'boolean');
+
+  const fullCfg = dhruv.fullKundaliConfigDefault();
+  fullCfg.includeDasha = true;
+  fullCfg.dashaConfig.count = 2;
+  fullCfg.dashaConfig.systems[0] = 0;
+  fullCfg.dashaConfig.systems[1] = 1;
+  fullCfg.dashaConfig.maxLevels[0] = 0;
+  fullCfg.dashaConfig.maxLevels[1] = 1;
+  const kundaliFull = dhruv.fullKundaliForDate(engine, eop, utc, loc, bhavaCfg, riseCfg, 0, true, fullCfg);
+  assert.equal(kundaliFull.sphutas.longitudes.length, 16);
+  assert.equal(kundaliFull.dasha.length, 2);
+  assert.equal(kundaliFull.dasha[0].system, 0);
+  assert.equal(kundaliFull.dasha[1].system, 1);
+  assert.equal(kundaliFull.dasha[0].levels.length, 1);
+  assert.equal(kundaliFull.dasha[1].levels.length, 2);
   const jdNow = dhruv.utcToTdbJd(lsk, utc);
 
   const elongation = dhruv.elongationAt(engine, jdNow);

@@ -309,7 +309,9 @@ pub struct DashaSelectionConfig {
     pub count: u8,
     /// Which dasha systems to compute (DashaSystem repr(u8), 0xFF=unused).
     pub systems: [u8; dhruv_vedic_base::dasha::MAX_DASHA_SYSTEMS],
-    /// Max level depth for hierarchy computation (0-4, default 2).
+    /// Per-system max level depth for hierarchy computation (0-4, 0xFF=use `max_level`).
+    pub max_levels: [u8; dhruv_vedic_base::dasha::MAX_DASHA_SYSTEMS],
+    /// Shared max level depth fallback for hierarchy computation (0-4, default 2).
     pub max_level: u8,
     /// Per-level sub-period method overrides (0xFF = use system default).
     pub level_methods: [u8; 5],
@@ -327,6 +329,7 @@ impl Default for DashaSelectionConfig {
         Self {
             count: 0,
             systems: [0xFF; dhruv_vedic_base::dasha::MAX_DASHA_SYSTEMS],
+            max_levels: [0xFF; dhruv_vedic_base::dasha::MAX_DASHA_SYSTEMS],
             max_level: dhruv_vedic_base::dasha::DEFAULT_DASHA_LEVEL,
             level_methods: [0xFF; 5],
             yogini_scheme: 0,
@@ -341,6 +344,11 @@ impl DashaSelectionConfig {
     pub fn sanitize(&mut self) {
         if self.max_level > dhruv_vedic_base::dasha::MAX_DASHA_LEVEL {
             self.max_level = dhruv_vedic_base::dasha::MAX_DASHA_LEVEL;
+        }
+        for max_level in &mut self.max_levels {
+            if *max_level != 0xFF && *max_level > dhruv_vedic_base::dasha::MAX_DASHA_LEVEL {
+                *max_level = dhruv_vedic_base::dasha::MAX_DASHA_LEVEL;
+            }
         }
     }
 
@@ -390,6 +398,16 @@ impl DashaSelectionConfig {
         Ok(())
     }
 
+    /// Effective max level for the active system at `index`.
+    pub fn effective_max_level(&self, index: usize) -> u8 {
+        let max_level = self.max_levels[index];
+        if max_level == 0xFF {
+            self.max_level
+        } else {
+            max_level
+        }
+    }
+
     /// Convert to a DashaVariationConfig.
     pub fn to_variation_config(&self) -> dhruv_vedic_base::dasha::DashaVariationConfig {
         let mut level_methods = [None; 5];
@@ -426,6 +444,8 @@ pub struct FullKundaliConfig {
     pub include_ashtakavarga: bool,
     /// Include upagrahas section.
     pub include_upagrahas: bool,
+    /// Include root sphutas section.
+    pub include_sphutas: bool,
     /// Include special lagnas section.
     pub include_special_lagnas: bool,
     /// Include amsha (divisional chart) section.
@@ -471,6 +491,7 @@ impl Default for FullKundaliConfig {
             include_drishti: true,
             include_ashtakavarga: true,
             include_upagrahas: true,
+            include_sphutas: true,
             include_special_lagnas: true,
             include_amshas: false,
             include_shadbala: false,
@@ -494,6 +515,13 @@ impl Default for FullKundaliConfig {
 
 /// One-shot full kundali result.
 #[derive(Debug, Clone)]
+pub struct SphutalResult {
+    /// Longitudes for each sphuta (indexed 0-15 matching `ALL_SPHUTAS` order).
+    pub longitudes: [f64; 16],
+}
+
+/// One-shot full kundali result.
+#[derive(Debug, Clone)]
 pub struct FullKundaliResult {
     /// Ayanamsha in degrees used for this kundali.
     pub ayanamsha_deg: f64,
@@ -509,6 +537,8 @@ pub struct FullKundaliResult {
     pub ashtakavarga: Option<AshtakavargaResult>,
     /// Present when `FullKundaliConfig::include_upagrahas` is true.
     pub upagrahas: Option<AllUpagrahas>,
+    /// Present when `FullKundaliConfig::include_sphutas` is true.
+    pub sphutas: Option<SphutalResult>,
     /// Present when `FullKundaliConfig::include_special_lagnas` is true.
     pub special_lagnas: Option<AllSpecialLagnas>,
     /// Present when `FullKundaliConfig::include_amshas` is true.

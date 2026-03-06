@@ -1026,8 +1026,143 @@ func AllUpagrahasForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc Ge
 	}, st
 }
 
-func DashaSelectionConfigDefault() C.DhruvDashaSelectionConfig {
-	return C.dhruv_dasha_selection_config_default()
+func goDashaSelectionConfig(v C.DhruvDashaSelectionConfig) DashaSelectionConfig {
+	var out DashaSelectionConfig
+	out.Count = uint8(v.count)
+	out.MaxLevel = uint8(v.max_level)
+	out.YoginiScheme = uint8(v.yogini_scheme)
+	out.UseAbhijit = v.use_abhijit != 0
+	out.HasSnapshotJd = v.has_snapshot_jd != 0
+	out.SnapshotJd = float64(v.snapshot_jd)
+	for i := 0; i < MaxDashaSystems; i++ {
+		out.Systems[i] = uint8(v.systems[i])
+		out.MaxLevels[i] = uint8(v.max_levels[i])
+	}
+	for i := 0; i < len(out.LevelMethods); i++ {
+		out.LevelMethods[i] = uint8(v.level_methods[i])
+	}
+	return out
+}
+
+func cDashaSelectionConfig(cfg DashaSelectionConfig) C.DhruvDashaSelectionConfig {
+	var out C.DhruvDashaSelectionConfig
+	out.count = C.uint8_t(cfg.Count)
+	out.max_level = C.uint8_t(cfg.MaxLevel)
+	out.yogini_scheme = C.uint8_t(cfg.YoginiScheme)
+	out.use_abhijit = boolU8(cfg.UseAbhijit)
+	out.has_snapshot_jd = boolU8(cfg.HasSnapshotJd)
+	out.snapshot_jd = C.double(cfg.SnapshotJd)
+	for i := 0; i < MaxDashaSystems; i++ {
+		out.systems[i] = C.uint8_t(cfg.Systems[i])
+		out.max_levels[i] = C.uint8_t(cfg.MaxLevels[i])
+	}
+	for i := 0; i < len(cfg.LevelMethods); i++ {
+		out.level_methods[i] = C.uint8_t(cfg.LevelMethods[i])
+	}
+	return out
+}
+
+func DashaSelectionConfigDefault() DashaSelectionConfig {
+	return goDashaSelectionConfig(C.dhruv_dasha_selection_config_default())
+}
+
+func cAmshaSelectionConfig(cfg AmshaSelectionConfig) C.DhruvAmshaSelectionConfig {
+	var out C.DhruvAmshaSelectionConfig
+	out.count = C.uint8_t(cfg.Count)
+	for i := 0; i < len(cfg.Codes); i++ {
+		out.codes[i] = C.uint16_t(cfg.Codes[i])
+		out.variations[i] = C.uint8_t(cfg.Variations[i])
+	}
+	return out
+}
+
+func FullKundaliConfigDefault() FullKundaliConfig {
+	cfg := C.dhruv_full_kundali_config_default()
+	return FullKundaliConfig{
+		IncludeBhavaCusps:     cfg.include_bhava_cusps != 0,
+		IncludeGrahaPositions: cfg.include_graha_positions != 0,
+		IncludeBindus:         cfg.include_bindus != 0,
+		IncludeDrishti:        cfg.include_drishti != 0,
+		IncludeAshtakavarga:   cfg.include_ashtakavarga != 0,
+		IncludeUpagrahas:      cfg.include_upagrahas != 0,
+		IncludeSphutas:        cfg.include_sphutas != 0,
+		IncludeSpecialLagnas:  cfg.include_special_lagnas != 0,
+		IncludeAmshas:         cfg.include_amshas != 0,
+		IncludeShadbala:       cfg.include_shadbala != 0,
+		IncludeVimsopaka:      cfg.include_vimsopaka != 0,
+		IncludeAvastha:        cfg.include_avastha != 0,
+		IncludeCharakaraka:    cfg.include_charakaraka != 0,
+		CharakarakaScheme:     uint8(cfg.charakaraka_scheme),
+		NodeDignityPolicy:     uint32(cfg.node_dignity_policy),
+		GrahaPositionsConfig: GrahaPositionsConfig{
+			IncludeNakshatra:    cfg.graha_positions_config.include_nakshatra != 0,
+			IncludeLagna:        cfg.graha_positions_config.include_lagna != 0,
+			IncludeOuterPlanets: cfg.graha_positions_config.include_outer_planets != 0,
+			IncludeBhava:        cfg.graha_positions_config.include_bhava != 0,
+		},
+		BindusConfig: BindusConfig{
+			IncludeNakshatra: cfg.bindus_config.include_nakshatra != 0,
+			IncludeBhava:     cfg.bindus_config.include_bhava != 0,
+		},
+		DrishtiConfig: DrishtiConfig{
+			IncludeBhava:  cfg.drishti_config.include_bhava != 0,
+			IncludeLagna:  cfg.drishti_config.include_lagna != 0,
+			IncludeBindus: cfg.drishti_config.include_bindus != 0,
+		},
+		AmshaScope: AmshaChartScope{
+			IncludeBhavaCusps:    cfg.amsha_scope.include_bhava_cusps != 0,
+			IncludeArudhaPadas:   cfg.amsha_scope.include_arudha_padas != 0,
+			IncludeUpagrahas:     cfg.amsha_scope.include_upagrahas != 0,
+			IncludeSphutas:       cfg.amsha_scope.include_sphutas != 0,
+			IncludeSpecialLagnas: cfg.amsha_scope.include_special_lagnas != 0,
+		},
+		AmshaSelection:  AmshaSelectionConfig{Count: uint8(cfg.amsha_selection.count)},
+		IncludePanchang: cfg.include_panchang != 0,
+		IncludeCalendar: cfg.include_calendar != 0,
+		IncludeDasha:    cfg.include_dasha != 0,
+		DashaConfig:     goDashaSelectionConfig(cfg.dasha_config),
+	}
+}
+
+func cFullKundaliConfig(cfg FullKundaliConfig) C.DhruvFullKundaliConfig {
+	out := C.dhruv_full_kundali_config_default()
+	out.include_bhava_cusps = boolU8(cfg.IncludeBhavaCusps)
+	out.include_graha_positions = boolU8(cfg.IncludeGrahaPositions)
+	out.include_bindus = boolU8(cfg.IncludeBindus)
+	out.include_drishti = boolU8(cfg.IncludeDrishti)
+	out.include_ashtakavarga = boolU8(cfg.IncludeAshtakavarga)
+	out.include_upagrahas = boolU8(cfg.IncludeUpagrahas)
+	out.include_sphutas = boolU8(cfg.IncludeSphutas)
+	out.include_special_lagnas = boolU8(cfg.IncludeSpecialLagnas)
+	out.include_amshas = boolU8(cfg.IncludeAmshas)
+	out.include_shadbala = boolU8(cfg.IncludeShadbala)
+	out.include_vimsopaka = boolU8(cfg.IncludeVimsopaka)
+	out.include_avastha = boolU8(cfg.IncludeAvastha)
+	out.include_charakaraka = boolU8(cfg.IncludeCharakaraka)
+	out.charakaraka_scheme = C.uint8_t(cfg.CharakarakaScheme)
+	out.node_dignity_policy = C.uint32_t(cfg.NodeDignityPolicy)
+	out.graha_positions_config = C.DhruvGrahaPositionsConfig{
+		include_nakshatra:     boolU8(cfg.GrahaPositionsConfig.IncludeNakshatra),
+		include_lagna:         boolU8(cfg.GrahaPositionsConfig.IncludeLagna),
+		include_outer_planets: boolU8(cfg.GrahaPositionsConfig.IncludeOuterPlanets),
+		include_bhava:         boolU8(cfg.GrahaPositionsConfig.IncludeBhava),
+	}
+	out.bindus_config = C.DhruvBindusConfig{
+		include_nakshatra: boolU8(cfg.BindusConfig.IncludeNakshatra),
+		include_bhava:     boolU8(cfg.BindusConfig.IncludeBhava),
+	}
+	out.drishti_config = C.DhruvDrishtiConfig{
+		include_bhava:  boolU8(cfg.DrishtiConfig.IncludeBhava),
+		include_lagna:  boolU8(cfg.DrishtiConfig.IncludeLagna),
+		include_bindus: boolU8(cfg.DrishtiConfig.IncludeBindus),
+	}
+	out.amsha_scope = cAmshaScope(cfg.AmshaScope)
+	out.amsha_selection = cAmshaSelectionConfig(cfg.AmshaSelection)
+	out.include_panchang = boolU8(cfg.IncludePanchang)
+	out.include_calendar = boolU8(cfg.IncludeCalendar)
+	out.include_dasha = boolU8(cfg.IncludeDasha)
+	out.dasha_config = cDashaSelectionConfig(cfg.DashaConfig)
+	return out
 }
 
 func DashaHierarchyUTC(engine EngineHandle, eop EopHandle, birthUTC UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, system uint8, maxLevel uint8) (DashaHierarchyHandle, Status) {
@@ -1309,4 +1444,308 @@ func FullKundaliForDateSummary(engine EngineHandle, eop EopHandle, utc UtcTime, 
 		DashaCount:          uint8(out.dasha_count),
 		DashaSnapshotCount:  uint8(out.dasha_snapshot_count),
 	}, st
+}
+
+func goFullPanchangInfo(v C.DhruvPanchangInfo) FullPanchangInfo {
+	out := FullPanchangInfo{
+		Tithi: TithiInfo{
+			TithiIndex:    int32(v.tithi.tithi_index),
+			Paksha:        int32(v.tithi.paksha),
+			TithiInPaksha: int32(v.tithi.tithi_in_paksha),
+			Start:         goUTC(v.tithi.start),
+			End:           goUTC(v.tithi.end),
+		},
+		Karana: KaranaInfo{
+			KaranaIndex:     int32(v.karana.karana_index),
+			KaranaNameIndex: int32(v.karana.karana_name_index),
+			Start:           goUTC(v.karana.start),
+			End:             goUTC(v.karana.end),
+		},
+		Yoga: YogaInfo{
+			YogaIndex: int32(v.yoga.yoga_index),
+			Start:     goUTC(v.yoga.start),
+			End:       goUTC(v.yoga.end),
+		},
+		Vaar: VaarInfo{
+			VaarIndex: int32(v.vaar.vaar_index),
+			Start:     goUTC(v.vaar.start),
+			End:       goUTC(v.vaar.end),
+		},
+		Hora: HoraInfo{
+			HoraIndex:    int32(v.hora.hora_index),
+			HoraPosition: int32(v.hora.hora_position),
+			Start:        goUTC(v.hora.start),
+			End:          goUTC(v.hora.end),
+		},
+		Ghatika: GhatikaInfo{
+			Value: int32(v.ghatika.value),
+			Start: goUTC(v.ghatika.start),
+			End:   goUTC(v.ghatika.end),
+		},
+		Nakshatra: PanchangNakshatraInfo{
+			NakshatraIndex: int32(v.nakshatra.nakshatra_index),
+			Pada:           int32(v.nakshatra.pada),
+			Start:          goUTC(v.nakshatra.start),
+			End:            goUTC(v.nakshatra.end),
+		},
+		CalendarValid: v.calendar_valid != 0,
+	}
+	if v.calendar_valid != 0 {
+		out.Masa = &MasaInfo{
+			MasaIndex: int32(v.masa.masa_index),
+			Adhika:    v.masa.adhika != 0,
+			Start:     goUTC(v.masa.start),
+			End:       goUTC(v.masa.end),
+		}
+		out.Ayana = &AyanaInfo{
+			Ayana: int32(v.ayana.ayana),
+			Start: goUTC(v.ayana.start),
+			End:   goUTC(v.ayana.end),
+		}
+		out.Varsha = &VarshaInfo{
+			SamvatsaraIndex: int32(v.varsha.samvatsara_index),
+			Order:           int32(v.varsha.order),
+			Start:           goUTC(v.varsha.start),
+			End:             goUTC(v.varsha.end),
+		}
+	}
+	return out
+}
+
+func goFullKundaliDashaHierarchy(handle C.DhruvDashaHierarchyHandle, system uint8) (FullKundaliDashaHierarchy, Status) {
+	var levelCount C.uint8_t
+	st := Status(C.dhruv_dasha_hierarchy_level_count(handle, &levelCount))
+	if st != StatusOK {
+		return FullKundaliDashaHierarchy{}, st
+	}
+	out := FullKundaliDashaHierarchy{System: system, Levels: make([]FullKundaliDashaLevel, int(levelCount))}
+	for lvl := 0; lvl < int(levelCount); lvl++ {
+		var periodCount C.uint32_t
+		st = Status(C.dhruv_dasha_hierarchy_period_count(handle, C.uint8_t(lvl), &periodCount))
+		if st != StatusOK {
+			return FullKundaliDashaHierarchy{}, st
+		}
+		level := FullKundaliDashaLevel{Level: uint8(lvl), Periods: make([]DashaPeriod, int(periodCount))}
+		for idx := 0; idx < int(periodCount); idx++ {
+			var period C.DhruvDashaPeriod
+			st = Status(C.dhruv_dasha_hierarchy_period_at(handle, C.uint8_t(lvl), C.uint32_t(idx), &period))
+			if st != StatusOK {
+				return FullKundaliDashaHierarchy{}, st
+			}
+			level.Periods[idx] = DashaPeriod{
+				EntityType:  uint8(period.entity_type),
+				EntityIndex: uint8(period.entity_index),
+				StartJD:     float64(period.start_jd),
+				EndJD:       float64(period.end_jd),
+				Level:       uint8(period.level),
+				Order:       uint16(period.order),
+				ParentIdx:   uint32(period.parent_idx),
+			}
+		}
+		out.Levels[lvl] = level
+	}
+	return out, StatusOK
+}
+
+func FullKundaliForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, cfg FullKundaliConfig) (FullKundaliResult, Status) {
+	cutc, cloc := cUTC(utc), cGeo(loc)
+	cbhava, crise := cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
+	ccfg := cFullKundaliConfig(cfg)
+	var out C.DhruvFullKundaliResult
+	st := Status(C.dhruv_full_kundali_for_date(
+		engine.ptr,
+		eop.ptr,
+		&cutc,
+		&cloc,
+		&cbhava,
+		&crise,
+		C.uint32_t(ayanamshaSystem),
+		boolU8(useNutation),
+		&ccfg,
+		&out,
+	))
+	if st != StatusOK {
+		return FullKundaliResult{}, st
+	}
+	defer C.dhruv_full_kundali_result_free(&out)
+
+	res := FullKundaliResult{AyanamshaDeg: float64(out.ayanamsha_deg)}
+	if out.bhava_cusps_valid != 0 {
+		v := goBhavaResult(out.bhava_cusps)
+		res.BhavaCusps = &v
+	}
+	if out.graha_positions_valid != 0 {
+		v := GrahaPositions{Lagna: goGrahaEntry(out.graha_positions.lagna)}
+		for i := 0; i < GrahaCount; i++ {
+			v.Grahas[i] = goGrahaEntry(out.graha_positions.grahas[i])
+		}
+		for i := 0; i < len(v.OuterPlanets); i++ {
+			v.OuterPlanets[i] = goGrahaEntry(out.graha_positions.outer_planets[i])
+		}
+		res.GrahaPositions = &v
+	}
+	if out.bindus_valid != 0 {
+		v := BindusResult{
+			BhriguBindu:    goGrahaEntry(out.bindus.bhrigu_bindu),
+			PranapadaLagna: goGrahaEntry(out.bindus.pranapada_lagna),
+			Gulika:         goGrahaEntry(out.bindus.gulika),
+			Maandi:         goGrahaEntry(out.bindus.maandi),
+			HoraLagna:      goGrahaEntry(out.bindus.hora_lagna),
+			GhatiLagna:     goGrahaEntry(out.bindus.ghati_lagna),
+			SreeLagna:      goGrahaEntry(out.bindus.sree_lagna),
+		}
+		for i := 0; i < 12; i++ {
+			v.ArudhaPadas[i] = goGrahaEntry(out.bindus.arudha_padas[i])
+		}
+		res.Bindus = &v
+	}
+	if out.drishti_valid != 0 {
+		var v DrishtiResult
+		for i := 0; i < GrahaCount; i++ {
+			v.GrahaToLagna[i] = goDrishtiEntry(out.drishti.graha_to_lagna[i])
+			for j := 0; j < GrahaCount; j++ {
+				v.GrahaToGraha[i][j] = goDrishtiEntry(out.drishti.graha_to_graha[i][j])
+			}
+			for j := 0; j < 12; j++ {
+				v.GrahaToBhava[i][j] = goDrishtiEntry(out.drishti.graha_to_bhava[i][j])
+			}
+			for j := 0; j < 19; j++ {
+				v.GrahaToBindus[i][j] = goDrishtiEntry(out.drishti.graha_to_bindus[i][j])
+			}
+		}
+		res.Drishti = &v
+	}
+	if out.ashtakavarga_valid != 0 {
+		v := goAshtakavarga(out.ashtakavarga)
+		res.Ashtakavarga = &v
+	}
+	if out.upagrahas_valid != 0 {
+		v := AllUpagrahas{
+			Gulika: float64(out.upagrahas.gulika), Maandi: float64(out.upagrahas.maandi), Kaala: float64(out.upagrahas.kaala), Mrityu: float64(out.upagrahas.mrityu),
+			ArthaPrahara: float64(out.upagrahas.artha_prahara), YamaGhantaka: float64(out.upagrahas.yama_ghantaka), Dhooma: float64(out.upagrahas.dhooma),
+			Vyatipata: float64(out.upagrahas.vyatipata), Parivesha: float64(out.upagrahas.parivesha), IndraChapa: float64(out.upagrahas.indra_chapa), Upaketu: float64(out.upagrahas.upaketu),
+		}
+		res.Upagrahas = &v
+	}
+	if out.sphutas_valid != 0 {
+		var v SphutalResult
+		for i := 0; i < SphutaCount; i++ {
+			v.Longitudes[i] = float64(out.sphutas.longitudes[i])
+		}
+		res.Sphutas = &v
+	}
+	if out.special_lagnas_valid != 0 {
+		v := SpecialLagnas{
+			BhavaLagna: float64(out.special_lagnas.bhava_lagna), HoraLagna: float64(out.special_lagnas.hora_lagna),
+			GhatiLagna: float64(out.special_lagnas.ghati_lagna), VighatiLagna: float64(out.special_lagnas.vighati_lagna),
+			VarnadaLagna: float64(out.special_lagnas.varnada_lagna), SreeLagna: float64(out.special_lagnas.sree_lagna),
+			PranapadaLagna: float64(out.special_lagnas.pranapada_lagna), InduLagna: float64(out.special_lagnas.indu_lagna),
+		}
+		res.SpecialLagnas = &v
+	}
+	if out.amshas_valid != 0 && out.amshas_count > 0 {
+		res.Amshas = make([]AmshaChart, int(out.amshas_count))
+		for i := 0; i < int(out.amshas_count); i++ {
+			chart := AmshaChart{
+				AmshaCode:          uint16(out.amshas[i].amsha_code),
+				VariationCode:      uint8(out.amshas[i].variation_code),
+				Lagna:              goAmshaEntry(out.amshas[i].lagna),
+				BhavaCuspsValid:    out.amshas[i].bhava_cusps_valid != 0,
+				ArudhaPadasValid:   out.amshas[i].arudha_padas_valid != 0,
+				UpagrahasValid:     out.amshas[i].upagrahas_valid != 0,
+				SphutasValid:       out.amshas[i].sphutas_valid != 0,
+				SpecialLagnasValid: out.amshas[i].special_lagnas_valid != 0,
+			}
+			for j := 0; j < GrahaCount; j++ {
+				chart.Grahas[j] = goAmshaEntry(out.amshas[i].grahas[j])
+			}
+			res.Amshas[i] = chart
+		}
+	}
+	if out.shadbala_valid != 0 {
+		var v ShadbalaResult
+		for i := 0; i < SaptaGrahaCount; i++ {
+			e := out.shadbala.entries[i]
+			v.Entries[i] = ShadbalaEntry{
+				GrahaIndex: uint8(e.graha_index),
+				Sthana: SthanaBalaBreakdown{
+					Uchcha: float64(e.sthana.uchcha), Saptavargaja: float64(e.sthana.saptavargaja), Ojhayugma: float64(e.sthana.ojhayugma),
+					Kendradi: float64(e.sthana.kendradi), Drekkana: float64(e.sthana.drekkana), Total: float64(e.sthana.total),
+				},
+				Dig: float64(e.dig),
+				Kala: KalaBalaBreakdown{
+					Nathonnatha: float64(e.kala.nathonnatha), Paksha: float64(e.kala.paksha), Tribhaga: float64(e.kala.tribhaga),
+					Abda: float64(e.kala.abda), Masa: float64(e.kala.masa), Vara: float64(e.kala.vara), Hora: float64(e.kala.hora),
+					Ayana: float64(e.kala.ayana), Yuddha: float64(e.kala.yuddha), Total: float64(e.kala.total),
+				},
+				Cheshta: float64(e.cheshta), Naisargika: float64(e.naisargika), Drik: float64(e.drik),
+				TotalShashtiamsas: float64(e.total_shashtiamsas), TotalRupas: float64(e.total_rupas), RequiredStrength: float64(e.required_strength),
+				IsStrong: e.is_strong != 0,
+			}
+		}
+		res.Shadbala = &v
+	}
+	if out.vimsopaka_valid != 0 {
+		var v VimsopakaResult
+		for i := 0; i < GrahaCount; i++ {
+			e := out.vimsopaka.entries[i]
+			v.Entries[i] = VimsopakaEntry{
+				GrahaIndex: uint8(e.graha_index), Shadvarga: float64(e.shadvarga), Saptavarga: float64(e.saptavarga),
+				Dashavarga: float64(e.dashavarga), Shodasavarga: float64(e.shodasavarga),
+			}
+		}
+		res.Vimsopaka = &v
+	}
+	if out.avastha_valid != 0 {
+		var v AllGrahaAvasthas
+		for i := 0; i < GrahaCount; i++ {
+			e := out.avastha.entries[i]
+			v.Entries[i] = GrahaAvasthas{
+				Baladi: uint8(e.baladi), Jagradadi: uint8(e.jagradadi), Deeptadi: uint8(e.deeptadi), Lajjitadi: uint8(e.lajjitadi),
+				Sayanadi: SayanadiResult{Avastha: uint8(e.sayanadi.avastha), SubStates: [5]uint8{uint8(e.sayanadi.sub_states[0]), uint8(e.sayanadi.sub_states[1]), uint8(e.sayanadi.sub_states[2]), uint8(e.sayanadi.sub_states[3]), uint8(e.sayanadi.sub_states[4])}},
+			}
+		}
+		res.Avastha = &v
+	}
+	if out.charakaraka_valid != 0 {
+		v := CharakarakaResult{Scheme: uint8(out.charakaraka.scheme), UsedEightKarakas: out.charakaraka.used_eight_karakas != 0, Count: uint8(out.charakaraka.count)}
+		for i := 0; i < MaxCharakarakaEntries; i++ {
+			e := out.charakaraka.entries[i]
+			v.Entries[i] = CharakarakaEntry{
+				RoleCode: uint8(e.role_code), GrahaIndex: uint8(e.graha_index), Rank: uint8(e.rank),
+				LongitudeDeg: float64(e.longitude_deg), DegreesInRashi: float64(e.degrees_in_rashi), EffectiveDegreesInRashi: float64(e.effective_degrees_in_rashi),
+			}
+		}
+		res.Charakaraka = &v
+	}
+	if out.panchang_valid != 0 {
+		v := goFullPanchangInfo(out.panchang)
+		res.Panchang = &v
+	}
+	if out.dasha_count > 0 {
+		res.Dasha = make([]FullKundaliDashaHierarchy, int(out.dasha_count))
+		for i := 0; i < int(out.dasha_count); i++ {
+			hierarchy, dst := goFullKundaliDashaHierarchy(out.dasha_handles[i], uint8(out.dasha_systems[i]))
+			if dst != StatusOK {
+				return FullKundaliResult{}, dst
+			}
+			res.Dasha[i] = hierarchy
+		}
+	}
+	if out.dasha_snapshot_count > 0 {
+		res.DashaSnapshots = make([]DashaSnapshot, int(out.dasha_snapshot_count))
+		for i := 0; i < int(out.dasha_snapshot_count); i++ {
+			s := out.dasha_snapshots[i]
+			snap := DashaSnapshot{System: uint8(s.system), QueryJD: float64(s.query_jd), Count: uint8(s.count)}
+			for j := 0; j < len(snap.Periods); j++ {
+				p := s.periods[j]
+				snap.Periods[j] = DashaPeriod{
+					EntityType: uint8(p.entity_type), EntityIndex: uint8(p.entity_index), StartJD: float64(p.start_jd),
+					EndJD: float64(p.end_jd), Level: uint8(p.level), Order: uint16(p.order), ParentIdx: uint32(p.parent_idx),
+				}
+			}
+			res.DashaSnapshots[i] = snap
+		}
+	}
+	return res, StatusOK
 }

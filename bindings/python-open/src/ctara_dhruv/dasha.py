@@ -38,6 +38,7 @@ class DashaHierarchy:
     """
 
     levels: list[DashaLevel]
+    system: Optional[int] = None
 
 
 # ---------------------------------------------------------------------------
@@ -198,7 +199,7 @@ def dasha_hierarchy(
 
             levels.append(DashaLevel(level=lvl, periods=periods))
 
-        return DashaHierarchy(levels=levels)
+        return DashaHierarchy(levels=levels, system=system)
     finally:
         lib.dhruv_dasha_hierarchy_free(h)
 

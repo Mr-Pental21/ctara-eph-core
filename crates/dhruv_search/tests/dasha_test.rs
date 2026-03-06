@@ -702,6 +702,7 @@ fn kundali_config_with_dasha(dasha_config: DashaSelectionConfig) -> FullKundaliC
         include_drishti: false,
         include_ashtakavarga: false,
         include_upagrahas: false,
+        include_sphutas: false,
         include_special_lagnas: false,
         include_amshas: false,
         include_shadbala: false,
@@ -817,6 +818,46 @@ fn full_kundali_dasha_multiple_systems() {
     assert_eq!(dashas[0].system, DashaSystem::Vimshottari);
     assert_eq!(dashas[1].system, DashaSystem::Chara);
     assert_eq!(dashas[2].system, DashaSystem::Kala);
+}
+
+/// Per-system max_levels should override the shared fallback depth.
+#[test]
+fn full_kundali_dasha_per_system_max_levels() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = birth_utc();
+    let location = new_delhi();
+    let bhava_config = BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+
+    let mut dasha_config = DashaSelectionConfig::default();
+    dasha_config.count = 2;
+    dasha_config.systems[0] = DashaSystem::Vimshottari as u8;
+    dasha_config.systems[1] = DashaSystem::Chara as u8;
+    dasha_config.max_level = 4;
+    dasha_config.max_levels[0] = 0;
+    dasha_config.max_levels[1] = 1;
+    let config = kundali_config_with_dasha(dasha_config);
+
+    let r = full_kundali_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
+    )
+    .unwrap();
+
+    let dashas = r.dasha.unwrap();
+    assert_eq!(dashas.len(), 2);
+    assert_eq!(dashas[0].system, DashaSystem::Vimshottari);
+    assert_eq!(dashas[1].system, DashaSystem::Chara);
+    assert_eq!(dashas[0].levels.len(), 1);
+    assert_eq!(dashas[1].levels.len(), 2);
 }
 
 /// Partial failure: Kala fails at polar location, Vimshottari succeeds.

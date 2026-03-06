@@ -6,6 +6,7 @@ const (
 	GrahaCount            = 9
 	SaptaGrahaCount       = 7
 	SphutaCount           = 16
+	MaxDashaSystems       = 23
 	UpagrahaCount         = 11
 	MaxCharakarakaEntries = 8
 )
@@ -757,4 +758,93 @@ type FullKundaliSummary struct {
 	PanchangValid       bool
 	DashaCount          uint8
 	DashaSnapshotCount  uint8
+}
+
+type DashaSelectionConfig struct {
+	Count         uint8
+	Systems       [MaxDashaSystems]uint8
+	MaxLevels     [MaxDashaSystems]uint8
+	MaxLevel      uint8
+	LevelMethods  [5]uint8
+	YoginiScheme  uint8
+	UseAbhijit    bool
+	HasSnapshotJd bool
+	SnapshotJd    float64
+}
+
+type AmshaSelectionConfig struct {
+	Count      uint8
+	Codes      [40]uint16
+	Variations [40]uint8
+}
+
+type FullKundaliConfig struct {
+	IncludeBhavaCusps     bool
+	IncludeGrahaPositions bool
+	IncludeBindus         bool
+	IncludeDrishti        bool
+	IncludeAshtakavarga   bool
+	IncludeUpagrahas      bool
+	IncludeSphutas        bool
+	IncludeSpecialLagnas  bool
+	IncludeAmshas         bool
+	IncludeShadbala       bool
+	IncludeVimsopaka      bool
+	IncludeAvastha        bool
+	IncludeCharakaraka    bool
+	CharakarakaScheme     uint8
+	NodeDignityPolicy     uint32
+	GrahaPositionsConfig  GrahaPositionsConfig
+	BindusConfig          BindusConfig
+	DrishtiConfig         DrishtiConfig
+	AmshaScope            AmshaChartScope
+	AmshaSelection        AmshaSelectionConfig
+	IncludePanchang       bool
+	IncludeCalendar       bool
+	IncludeDasha          bool
+	DashaConfig           DashaSelectionConfig
+}
+
+type FullPanchangInfo struct {
+	Tithi         TithiInfo
+	Karana        KaranaInfo
+	Yoga          YogaInfo
+	Vaar          VaarInfo
+	Hora          HoraInfo
+	Ghatika       GhatikaInfo
+	Nakshatra     PanchangNakshatraInfo
+	CalendarValid bool
+	Masa          *MasaInfo
+	Ayana         *AyanaInfo
+	Varsha        *VarshaInfo
+}
+
+type FullKundaliDashaLevel struct {
+	Level   uint8
+	Periods []DashaPeriod
+}
+
+type FullKundaliDashaHierarchy struct {
+	System uint8
+	Levels []FullKundaliDashaLevel
+}
+
+type FullKundaliResult struct {
+	AyanamshaDeg   float64
+	BhavaCusps     *BhavaResult
+	GrahaPositions *GrahaPositions
+	Bindus         *BindusResult
+	Drishti        *DrishtiResult
+	Ashtakavarga   *AshtakavargaResult
+	Upagrahas      *AllUpagrahas
+	Sphutas        *SphutalResult
+	SpecialLagnas  *SpecialLagnas
+	Amshas         []AmshaChart
+	Shadbala       *ShadbalaResult
+	Vimsopaka      *VimsopakaResult
+	Avastha        *AllGrahaAvasthas
+	Charakaraka    *CharakarakaResult
+	Panchang       *FullPanchangInfo
+	Dasha          []FullKundaliDashaHierarchy
+	DashaSnapshots []DashaSnapshot
 }

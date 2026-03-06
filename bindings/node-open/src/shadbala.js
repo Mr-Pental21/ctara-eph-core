@@ -86,9 +86,41 @@ function fullKundaliSummaryForDate(engine, eop, utc, location, ayanamshaSystem =
   };
 }
 
+function fullKundaliConfigDefault() {
+  return addon.fullKundaliConfigDefault();
+}
+
+function fullKundaliForDate(
+  engine,
+  eop,
+  utc,
+  location,
+  bhavaConfig = addon.bhavaConfigDefault(),
+  riseSetConfig = addon.riseSetConfigDefault(),
+  ayanamshaSystem = 0,
+  useNutation = true,
+  config = addon.fullKundaliConfigDefault(),
+) {
+  const r = addon.fullKundaliForDate(
+    engine._handle,
+    eop._handle,
+    utc,
+    location,
+    bhavaConfig,
+    riseSetConfig,
+    ayanamshaSystem,
+    !!useNutation,
+    config,
+  );
+  checkStatus('full_kundali_for_date', r.status);
+  return r.result;
+}
+
 module.exports = {
   shadbalaForDate,
   vimsopakaForDate,
   avasthaForDate,
+  fullKundaliConfigDefault,
+  fullKundaliForDate,
   fullKundaliSummaryForDate,
 };

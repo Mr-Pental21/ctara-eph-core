@@ -23,7 +23,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       44
+#define DHRUV_API_VERSION       45
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 
@@ -220,6 +220,7 @@ typedef int32_t DhruvStatus;
 #define DHRUV_UPAGRAHA_COUNT          11
 #define DHRUV_ASHTAKAVARGA_GRAHA_COUNT 7
 #define DHRUV_MAX_AMSHA_REQUESTS      40
+#define DHRUV_MAX_DASHA_SYSTEMS       23
 #define DHRUV_MAX_CHARAKARAKA_ENTRIES 8
 
 /* Charakaraka schemes */
@@ -1053,7 +1054,8 @@ typedef struct {
 
 typedef struct {
     uint8_t count;
-    uint8_t systems[8];
+    uint8_t systems[DHRUV_MAX_DASHA_SYSTEMS];
+    uint8_t max_levels[DHRUV_MAX_DASHA_SYSTEMS];
     uint8_t max_level;
     uint8_t level_methods[5];
     uint8_t yogini_scheme;
@@ -1071,6 +1073,7 @@ typedef struct {
     uint8_t  include_drishti;
     uint8_t  include_ashtakavarga;
     uint8_t  include_upagrahas;
+    uint8_t  include_sphutas;
     uint8_t  include_special_lagnas;
     uint8_t  include_amshas;
     uint8_t  include_shadbala;
@@ -1104,6 +1107,8 @@ typedef struct {
     DhruvAshtakavargaResult   ashtakavarga;
     uint8_t                   upagrahas_valid;
     DhruvAllUpagrahas         upagrahas;
+    uint8_t                   sphutas_valid;
+    DhruvSphutalResult        sphutas;
     uint8_t                   special_lagnas_valid;
     DhruvSpecialLagnas        special_lagnas;
     uint8_t                   amshas_valid;
@@ -1120,10 +1125,10 @@ typedef struct {
     uint8_t                   panchang_valid;
     DhruvPanchangInfo         panchang;
     uint8_t                   dasha_count;
-    DhruvDashaHierarchyHandle dasha_handles[8];
-    uint8_t                   dasha_systems[8];
+    DhruvDashaHierarchyHandle dasha_handles[DHRUV_MAX_DASHA_SYSTEMS];
+    uint8_t                   dasha_systems[DHRUV_MAX_DASHA_SYSTEMS];
     uint8_t                   dasha_snapshot_count;
-    DhruvDashaSnapshot        dasha_snapshots[8];
+    DhruvDashaSnapshot        dasha_snapshots[DHRUV_MAX_DASHA_SYSTEMS];
 } DhruvFullKundaliResult;
 
 /* --- Tara (fixed star) --- */

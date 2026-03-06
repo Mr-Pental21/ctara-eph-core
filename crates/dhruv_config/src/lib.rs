@@ -259,6 +259,7 @@ pub struct AmshaSelectionConfigPatch {
 pub struct DashaSelectionConfigPatch {
     pub count: Option<u8>,
     pub systems: Option<Vec<u8>>,
+    pub max_levels: Option<Vec<u8>>,
     pub max_level: Option<u8>,
     pub level_methods: Option<Vec<u8>>,
     pub yogini_scheme: Option<u8>,
@@ -275,6 +276,7 @@ pub struct FullKundaliConfigPatch {
     pub include_drishti: Option<bool>,
     pub include_ashtakavarga: Option<bool>,
     pub include_upagrahas: Option<bool>,
+    pub include_sphutas: Option<bool>,
     pub include_special_lagnas: Option<bool>,
     pub include_amshas: Option<bool>,
     pub include_shadbala: Option<bool>,
@@ -985,6 +987,13 @@ impl ConfigResolver {
             "include_upagrahas",
             &mut source,
         );
+        let include_sphutas = layered_bool(
+            explicit.include_sphutas,
+            op.include_sphutas,
+            defaults.include_sphutas,
+            "include_sphutas",
+            &mut source,
+        );
         let include_special_lagnas = layered_bool(
             explicit.include_special_lagnas,
             op.include_special_lagnas,
@@ -1107,6 +1116,7 @@ impl ConfigResolver {
                 include_drishti,
                 include_ashtakavarga,
                 include_upagrahas,
+                include_sphutas,
                 include_special_lagnas,
                 include_amshas,
                 include_shadbala,
@@ -1557,8 +1567,22 @@ fn apply_dasha_selection_patch(
             )));
         }
         base.systems = [0xFF; MAX_DASHA_SYSTEMS];
+        base.max_levels = [0xFF; MAX_DASHA_SYSTEMS];
         for (i, v) in systems.into_iter().enumerate() {
             base.systems[i] = v;
+        }
+    }
+    if let Some(max_levels) = patch.max_levels {
+        if max_levels.len() > MAX_DASHA_SYSTEMS {
+            return Err(ConfigError::InvalidConfig(format!(
+                "dasha.max_levels length {} exceeds max {}",
+                max_levels.len(),
+                MAX_DASHA_SYSTEMS
+            )));
+        }
+        base.max_levels = [0xFF; MAX_DASHA_SYSTEMS];
+        for (i, v) in max_levels.into_iter().enumerate() {
+            base.max_levels[i] = v;
         }
     }
     if let Some(v) = patch.max_level {

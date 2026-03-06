@@ -19,7 +19,7 @@ pub const DEFAULT_DASHA_LEVEL: u8 = 2;
 pub const MAX_PERIODS_PER_LEVEL: usize = 100_000;
 
 /// Maximum dasha systems selectable in FullKundaliConfig.
-pub const MAX_DASHA_SYSTEMS: usize = 8;
+pub const MAX_DASHA_SYSTEMS: usize = 23;
 
 /// 5 hierarchical dasha levels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

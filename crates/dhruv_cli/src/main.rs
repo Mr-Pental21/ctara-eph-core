@@ -6940,7 +6940,7 @@ fn main() {
 
 fn parse_dasha_systems_config(s: &str, max_level: u8) -> dhruv_search::DashaSelectionConfig {
     let mut seen = std::collections::HashSet::new();
-    let mut systems = [0xFFu8; 8];
+    let mut systems = [0xFFu8; dhruv_vedic_base::dasha::MAX_DASHA_SYSTEMS];
     let mut count = 0usize;
 
     for token in s.split(',') {
@@ -6955,8 +6955,11 @@ fn parse_dasha_systems_config(s: &str, max_level: u8) -> dhruv_search::DashaSele
             eprintln!("Warning: ignoring duplicate system: {trimmed}");
             continue;
         }
-        if count >= 8 {
-            eprintln!("Error: too many dasha systems (max 8)");
+        if count >= dhruv_vedic_base::dasha::MAX_DASHA_SYSTEMS {
+            eprintln!(
+                "Error: too many dasha systems (max {})",
+                dhruv_vedic_base::dasha::MAX_DASHA_SYSTEMS
+            );
             std::process::exit(1);
         }
         systems[count] = code;
@@ -7406,6 +7409,7 @@ fn build_kundali_config(
         include_drishti: resolved.include_drishti,
         include_ashtakavarga: resolved.include_ashtakavarga,
         include_upagrahas: resolved.include_upagrahas,
+        include_sphutas: resolved.include_bindus,
         include_special_lagnas: resolved.include_special_lagnas,
         include_amshas: resolved.include_amshas,
         amsha_selection,
@@ -7644,6 +7648,19 @@ fn print_kundali(
             ("Upaketu", u.upaketu),
         ] {
             writeln!(w, "  {:<13} {}", name, format_rashi_dms(lon))?;
+        }
+        writeln!(w)?;
+    }
+
+    if let Some(ref sphutas) = result.sphutas {
+        writeln!(w, "Sphutas:")?;
+        for (i, sphuta) in dhruv_vedic_base::ALL_SPHUTAS.iter().enumerate() {
+            writeln!(
+                w,
+                "  {:<22} {}",
+                sphuta.name(),
+                format_rashi_dms(sphutas.longitudes[i])
+            )?;
         }
         writeln!(w)?;
     }
@@ -8164,6 +8181,7 @@ mod tests {
             drishti: None,
             ashtakavarga: None,
             upagrahas: None,
+            sphutas: None,
             special_lagnas: None,
             amshas: None,
             shadbala: None,

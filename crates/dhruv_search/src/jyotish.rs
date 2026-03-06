@@ -23,8 +23,8 @@ use dhruv_vedic_base::{
     KalaBalaInputs, LajjitadiInputs, LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS,
     SayanadiInputs, ShadbalaInputs, Upagraha, all_avasthas, all_combustion_status,
     all_dashavarga_vimsopaka, all_saptavarga_vimsopaka, all_shadbalas_from_inputs,
-    all_shadvarga_vimsopaka, all_shodasavarga_vimsopaka, amsha_longitude, bhrigu_bindu,
-    calculate_ashtakavarga, charakarakas_from_longitudes, compute_bhavas,
+    all_shadvarga_vimsopaka, all_shodasavarga_vimsopaka, all_sphutas, amsha_longitude,
+    bhrigu_bindu, calculate_ashtakavarga, charakarakas_from_longitudes, compute_bhavas,
     dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise, graha_drishti,
     graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord, jd_tdb_to_centuries,
     lagna_longitude_rad, lost_planetary_war, lunar_node_deg_for_epoch_on_plane,
@@ -44,8 +44,8 @@ use crate::jyotish_types::{
     AmshaChart, AmshaChartScope, AmshaEntry, AmshaResult, AmshaSelectionConfig, BindusConfig,
     BindusResult, DashaSelectionConfig, DrishtiConfig, DrishtiResult, FullKundaliConfig,
     FullKundaliResult, GrahaEntry, GrahaLongitudes, GrahaPositions, GrahaPositionsConfig,
-    GrahaTropicalLongitudes, MAX_AMSHA_REQUESTS, ShadbalaEntry, ShadbalaResult, VimsopakaEntry,
-    VimsopakaResult,
+    GrahaTropicalLongitudes, MAX_AMSHA_REQUESTS, ShadbalaEntry, ShadbalaResult, SphutalResult,
+    VimsopakaEntry, VimsopakaResult,
 };
 use crate::panchang::{
     hora_from_sunrises, masa_for_date, panchang_for_date, varsha_for_date, vedic_day_sunrises,
@@ -1219,6 +1219,22 @@ pub fn full_kundali_for_date(
         None
     };
 
+    let sphutas = if config.include_sphutas {
+        Some(SphutalResult {
+            longitudes: all_sphuta_lons_with_ctx(
+                engine,
+                eop,
+                utc,
+                location,
+                riseset_config,
+                aya_config,
+                &mut ctx,
+            )?,
+        })
+    } else {
+        None
+    };
+
     let special_lagnas = if config.include_special_lagnas {
         Some(special_lagnas_for_date_with_ctx(
             engine,
@@ -1338,6 +1354,7 @@ pub fn full_kundali_for_date(
         drishti,
         ashtakavarga,
         upagrahas,
+        sphutas,
         special_lagnas,
         amshas,
         shadbala,
@@ -1407,6 +1424,68 @@ type KundaliDashaResults = (
 );
 
 #[allow(clippy::too_many_arguments)]
+fn all_sphuta_lons_with_ctx(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    riseset_config: &RiseSetConfig,
+    aya_config: &SankrantiConfig,
+    ctx: &mut JyotishContext,
+) -> Result<[f64; 16], SearchError> {
+    let gl = *ctx.graha_lons(engine, aya_config)?;
+    let sun_sid = gl.longitude(Graha::Surya);
+    let moon_sid = gl.longitude(Graha::Chandra);
+    let rahu_sid = gl.longitude(Graha::Rahu);
+    let mars_sid = gl.longitude(Graha::Mangal);
+    let jupiter_sid = gl.longitude(Graha::Guru);
+    let venus_sid = gl.longitude(Graha::Shukra);
+    let lagna_sid = ctx.lagna_sid(engine, eop, location)?;
+
+    let aya = ctx.ayanamsha;
+    let plane = ctx.reference_plane;
+    let (jd_sunrise, jd_next_sunrise) =
+        ctx.sunrise_pair(engine, eop, utc, location, riseset_config)?;
+    let jd_sunset = ctx.sunset_jd(engine, eop, location, riseset_config)?;
+    let is_day = ctx.jd_tdb >= jd_sunrise && ctx.jd_tdb < jd_sunset;
+    let weekday = vaar_from_jd(jd_sunrise).index();
+
+    let gulika_jd = time_upagraha_jd(
+        Upagraha::Gulika,
+        weekday,
+        is_day,
+        jd_sunrise,
+        jd_sunset,
+        jd_next_sunrise,
+    );
+    let gulika_rad = lagna_longitude_rad(engine.lsk(), eop, location, gulika_jd)?;
+    let gulika_sid = ecliptic_to_sidereal(gulika_rad.to_degrees(), aya, plane);
+
+    let eighth_cusp_sid = normalize(lagna_sid + 210.0);
+    let eighth_rashi_idx = (eighth_cusp_sid / 30.0).floor().min(11.0) as u8;
+    let eighth_lord = rashi_lord_by_index(eighth_rashi_idx).unwrap_or(Graha::Surya);
+    let eighth_lord_lon = gl.longitude(eighth_lord);
+
+    let inputs = dhruv_vedic_base::SphutalInputs {
+        sun: sun_sid,
+        moon: moon_sid,
+        mars: mars_sid,
+        jupiter: jupiter_sid,
+        venus: venus_sid,
+        rahu: rahu_sid,
+        lagna: lagna_sid,
+        eighth_lord: eighth_lord_lon,
+        gulika: gulika_sid,
+    };
+    let all = all_sphutas(&inputs);
+    let mut lons = [0.0f64; 16];
+    for (i, (_sphuta, lon)) in all.iter().enumerate() {
+        lons[i] = *lon;
+    }
+    Ok(lons)
+}
+
+#[allow(clippy::too_many_arguments)]
 fn compute_kundali_dashas(
     engine: &Engine,
     eop: &EopKernel,
@@ -1424,7 +1503,6 @@ fn compute_kundali_dashas(
 
     let birth_jd = utc_to_jd_utc(utc);
     let variation = config.to_variation_config();
-    let max_level = config.max_level;
 
     let mut hierarchies = Vec::new();
     let mut snapshots = Vec::new();
@@ -1456,6 +1534,7 @@ fn compute_kundali_dashas(
             }
         };
 
+        let max_level = config.effective_max_level(i);
         match dasha_hierarchy_with_inputs(birth_jd, system, max_level, &variation, &inputs) {
             Ok(hierarchy) => {
                 hierarchies.push(hierarchy);
@@ -2268,55 +2347,15 @@ pub fn amsha_charts_for_date(
 
     // Sphutas
     let sphuta_lons = if scope.include_sphutas {
-        let gl = *ctx.graha_lons(engine, aya_config)?;
-        let sun_sid = gl.longitude(Graha::Surya);
-        let moon_sid = gl.longitude(Graha::Chandra);
-        let rahu_sid = gl.longitude(Graha::Rahu);
-        let mars_sid = gl.longitude(Graha::Mangal);
-        let jupiter_sid = gl.longitude(Graha::Guru);
-        let venus_sid = gl.longitude(Graha::Shukra);
-        let lagna_sid_v = ctx.lagna_sid(engine, eop, location)?;
-
-        let (jd_sunrise, jd_next_sunrise) =
-            ctx.sunrise_pair(engine, eop, utc, location, riseset_config)?;
-        let jd_sunset = ctx.sunset_jd(engine, eop, location, riseset_config)?;
-        let is_day = ctx.jd_tdb >= jd_sunrise && ctx.jd_tdb < jd_sunset;
-        let weekday = vaar_from_jd(jd_sunrise).index();
-
-        let gulika_jd = time_upagraha_jd(
-            Upagraha::Gulika,
-            weekday,
-            is_day,
-            jd_sunrise,
-            jd_sunset,
-            jd_next_sunrise,
-        );
-        let gulika_rad = lagna_longitude_rad(engine.lsk(), eop, location, gulika_jd)?;
-        let gulika_sid = ecliptic_to_sidereal(gulika_rad.to_degrees(), aya, plane);
-
-        // 8th lord: lord of the rashi containing the 8th cusp (lagna + 210 deg approx)
-        let eighth_cusp_sid = normalize(lagna_sid_v + 210.0);
-        let eighth_rashi_idx = (eighth_cusp_sid / 30.0).floor().min(11.0) as u8;
-        let eighth_lord = rashi_lord_by_index(eighth_rashi_idx).unwrap_or(Graha::Surya);
-        let eighth_lord_lon = gl.longitude(eighth_lord);
-
-        let inputs = dhruv_vedic_base::SphutalInputs {
-            sun: sun_sid,
-            moon: moon_sid,
-            mars: mars_sid,
-            jupiter: jupiter_sid,
-            venus: venus_sid,
-            rahu: rahu_sid,
-            lagna: lagna_sid_v,
-            eighth_lord: eighth_lord_lon,
-            gulika: gulika_sid,
-        };
-        let all = dhruv_vedic_base::all_sphutas(&inputs);
-        let mut lons = [0.0f64; 16];
-        for (i, (_sphuta, lon)) in all.iter().enumerate() {
-            lons[i] = *lon;
-        }
-        Some(lons)
+        Some(all_sphuta_lons_with_ctx(
+            engine,
+            eop,
+            utc,
+            location,
+            riseset_config,
+            aya_config,
+            &mut ctx,
+        )?)
     } else {
         None
     };

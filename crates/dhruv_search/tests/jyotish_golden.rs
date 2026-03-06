@@ -748,6 +748,14 @@ fn full_kundali_has_bhava_cusps() {
     }
     assert!(bh.lagna_deg >= 0.0 && bh.lagna_deg < 360.0);
     assert!(bh.mc_deg >= 0.0 && bh.mc_deg < 360.0);
+    let sphutas = result.sphutas.as_ref().expect("sphutas should be Some");
+    assert_eq!(sphutas.longitudes.len(), 16);
+    for lon in sphutas.longitudes {
+        assert!(
+            (0.0..360.0).contains(&lon),
+            "sphuta longitude out of range: {lon}"
+        );
+    }
 }
 
 /// Verify bhava_cusps is None when include_bhava_cusps is false.

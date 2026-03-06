@@ -9,7 +9,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from .dasha import DashaHierarchy
 
 
 # ---------------------------------------------------------------------------
@@ -1067,6 +1070,7 @@ class FullKundaliResult:
     drishti: Optional[DrishtiResult] = None
     ashtakavarga: Optional[AshtakavargaResult] = None
     upagrahas: Optional[AllUpagrahas] = None
+    sphutas: Optional[SphutalResult] = None
     special_lagnas: Optional[SpecialLagnas] = None
     amshas: Optional[list[AmshaChart]] = None
     shadbala: Optional[ShadbalaResult] = None
@@ -1074,4 +1078,5 @@ class FullKundaliResult:
     avastha: Optional[AllGrahaAvasthas] = None
     charakaraka: Optional[CharakarakaResult] = None
     panchang: Optional[PanchangInfo] = None
+    dasha: Optional[list[DashaHierarchy]] = None
     dasha_snapshots: Optional[list[DashaSnapshot]] = None

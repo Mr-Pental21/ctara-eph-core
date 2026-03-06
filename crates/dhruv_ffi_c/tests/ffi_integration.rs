@@ -2096,7 +2096,8 @@ fn ffi_utc_nutation_roundtrip() {
 fn ffi_dasha_selection_config_default_values() {
     let cfg = dhruv_dasha_selection_config_default();
     assert_eq!(cfg.count, 0);
-    assert_eq!(cfg.systems, [0xFF; 8]);
+    assert_eq!(cfg.systems, [0xFF; DHRUV_MAX_DASHA_SYSTEMS]);
+    assert_eq!(cfg.max_levels, [0xFF; DHRUV_MAX_DASHA_SYSTEMS]);
     assert_eq!(cfg.max_level, 2);
     assert_eq!(cfg.level_methods, [0xFF; 5]);
     assert_eq!(cfg.yogini_scheme, 0);
@@ -2167,6 +2168,7 @@ fn ffi_full_kundali_result_free_double_free_same_pointer() {
         include_drishti: 0,
         include_ashtakavarga: 0,
         include_upagrahas: 0,
+        include_sphutas: 0,
         include_special_lagnas: 0,
         include_amshas: 0,
         include_shadbala: 0,
@@ -2261,6 +2263,7 @@ fn ffi_full_kundali_error_path_free_safety() {
         include_drishti: 0,
         include_ashtakavarga: 0,
         include_upagrahas: 0,
+        include_sphutas: 0,
         include_special_lagnas: 0,
         include_amshas: 0,
         include_shadbala: 0,
@@ -2345,6 +2348,7 @@ fn ffi_full_kundali_dasha_overflow_rejection() {
         include_drishti: 0,
         include_ashtakavarga: 0,
         include_upagrahas: 0,
+        include_sphutas: 0,
         include_special_lagnas: 0,
         include_amshas: 0,
         include_shadbala: 0,
@@ -2433,6 +2437,7 @@ fn ffi_full_kundali_dasha_partial_success_contract() {
         include_drishti: 0,
         include_ashtakavarga: 0,
         include_upagrahas: 0,
+        include_sphutas: 0,
         include_special_lagnas: 0,
         include_amshas: 0,
         include_shadbala: 0,
@@ -2534,6 +2539,7 @@ fn ffi_full_kundali_panchang_only() {
         include_drishti: 0,
         include_ashtakavarga: 0,
         include_upagrahas: 0,
+        include_sphutas: 0,
         include_special_lagnas: 0,
         include_amshas: 0,
         include_shadbala: 0,
@@ -2619,6 +2625,7 @@ fn ffi_full_kundali_panchang_disabled() {
         include_drishti: 0,
         include_ashtakavarga: 0,
         include_upagrahas: 0,
+        include_sphutas: 0,
         include_special_lagnas: 0,
         include_amshas: 0,
         include_shadbala: 0,
@@ -2700,6 +2707,7 @@ fn ffi_full_kundali_calendar_implies_panchang() {
         include_drishti: 0,
         include_ashtakavarga: 0,
         include_upagrahas: 0,
+        include_sphutas: 0,
         include_special_lagnas: 0,
         include_amshas: 0,
         include_shadbala: 0,
@@ -2788,6 +2796,7 @@ fn ffi_full_kundali_panchang_and_calendar() {
         include_drishti: 0,
         include_ashtakavarga: 0,
         include_upagrahas: 0,
+        include_sphutas: 0,
         include_special_lagnas: 0,
         include_amshas: 0,
         include_shadbala: 0,
@@ -2877,6 +2886,7 @@ fn ffi_full_kundali_bhava_cusps_enabled() {
         include_drishti: 0,
         include_ashtakavarga: 0,
         include_upagrahas: 0,
+        include_sphutas: 0,
         include_special_lagnas: 0,
         include_amshas: 0,
         include_shadbala: 0,
@@ -2969,6 +2979,7 @@ fn ffi_full_kundali_bhava_cusps_disabled() {
         include_drishti: 0,
         include_ashtakavarga: 0,
         include_upagrahas: 0,
+        include_sphutas: 0,
         include_special_lagnas: 0,
         include_amshas: 0,
         include_shadbala: 0,
@@ -3078,6 +3089,112 @@ fn ffi_full_kundali_bhava_off_calendar_on() {
 
     assert_eq!(r.bhava_cusps_valid, 0, "bhava cusps should be off");
     assert_eq!(r.panchang_valid, 1, "calendar implies panchang");
+
+    unsafe { dhruv_full_kundali_result_free(result.as_mut_ptr()) };
+    unsafe { dhruv_engine_free(engine_ptr) };
+    unsafe { dhruv_eop_free(eop_ptr) };
+}
+
+#[test]
+fn ffi_full_kundali_exposes_root_sphutas() {
+    let (engine_ptr, eop_ptr) = match make_kundali_fixtures() {
+        Some(f) => f,
+        None => return,
+    };
+    let (utc, loc, bhava, rs) = kundali_test_params();
+
+    let mut fk_config = dhruv_full_kundali_config_default();
+    fk_config.include_bhava_cusps = 0;
+    fk_config.include_graha_positions = 0;
+    fk_config.include_bindus = 0;
+    fk_config.include_drishti = 0;
+    fk_config.include_ashtakavarga = 0;
+    fk_config.include_upagrahas = 0;
+    fk_config.include_special_lagnas = 0;
+    fk_config.include_panchang = 0;
+    fk_config.include_calendar = 0;
+    fk_config.include_dasha = 0;
+    fk_config.include_sphutas = 1;
+
+    let mut result = std::mem::MaybeUninit::<DhruvFullKundaliResult>::uninit();
+    let status = unsafe {
+        dhruv_full_kundali_for_date(
+            engine_ptr as *const _,
+            eop_ptr as *const _,
+            &utc,
+            &loc,
+            &bhava,
+            &rs,
+            0,
+            1,
+            &fk_config,
+            result.as_mut_ptr(),
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    let r = unsafe { &*result.as_ptr() };
+    assert_eq!(r.sphutas_valid, 1);
+    assert!(r.sphutas.longitudes.iter().all(|lon| lon.is_finite()));
+    unsafe { dhruv_full_kundali_result_free(result.as_mut_ptr()) };
+    unsafe { dhruv_engine_free(engine_ptr) };
+    unsafe { dhruv_eop_free(eop_ptr) };
+}
+
+#[test]
+fn ffi_full_kundali_dasha_per_system_max_levels() {
+    let (engine_ptr, eop_ptr) = match make_kundali_fixtures() {
+        Some(f) => f,
+        None => return,
+    };
+    let (utc, loc, bhava, rs) = kundali_test_params();
+
+    let mut fk_config = dhruv_full_kundali_config_default();
+    fk_config.include_bhava_cusps = 0;
+    fk_config.include_graha_positions = 0;
+    fk_config.include_bindus = 0;
+    fk_config.include_drishti = 0;
+    fk_config.include_ashtakavarga = 0;
+    fk_config.include_upagrahas = 0;
+    fk_config.include_special_lagnas = 0;
+    fk_config.include_panchang = 0;
+    fk_config.include_calendar = 0;
+    fk_config.include_sphutas = 0;
+    fk_config.include_dasha = 1;
+    fk_config.dasha_config.count = 2;
+    fk_config.dasha_config.systems[0] = 0;
+    fk_config.dasha_config.systems[1] = 1;
+    fk_config.dasha_config.max_level = 4;
+    fk_config.dasha_config.max_levels[0] = 0;
+    fk_config.dasha_config.max_levels[1] = 1;
+
+    let mut result = std::mem::MaybeUninit::<DhruvFullKundaliResult>::uninit();
+    let status = unsafe {
+        dhruv_full_kundali_for_date(
+            engine_ptr as *const _,
+            eop_ptr as *const _,
+            &utc,
+            &loc,
+            &bhava,
+            &rs,
+            0,
+            1,
+            &fk_config,
+            result.as_mut_ptr(),
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    let r = unsafe { &*result.as_ptr() };
+    assert_eq!(r.dasha_count, 2);
+    assert_eq!(r.dasha_systems[0], 0);
+    assert_eq!(r.dasha_systems[1], 1);
+
+    let mut level_count = 0_u8;
+    let status = unsafe { dhruv_dasha_hierarchy_level_count(r.dasha_handles[0], &mut level_count) };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(level_count, 1);
+    let status = unsafe { dhruv_dasha_hierarchy_level_count(r.dasha_handles[1], &mut level_count) };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(level_count, 2);
 
     unsafe { dhruv_full_kundali_result_free(result.as_mut_ptr()) };
     unsafe { dhruv_engine_free(engine_ptr) };

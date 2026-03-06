@@ -40,7 +40,7 @@ use dhruv_vedic_base::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 44;
+pub const DHRUV_API_VERSION: u32 = 45;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -439,6 +439,7 @@ fn full_kundali_config_from_ffi(
         include_drishti: cfg.include_drishti != 0,
         include_ashtakavarga: cfg.include_ashtakavarga != 0,
         include_upagrahas: cfg.include_upagrahas != 0,
+        include_sphutas: cfg.include_sphutas != 0,
         include_special_lagnas: cfg.include_special_lagnas != 0,
         include_amshas: cfg.include_amshas != 0,
         include_shadbala: cfg.include_shadbala != 0,
@@ -8366,6 +8367,8 @@ pub struct DhruvFullKundaliConfig {
     pub include_ashtakavarga: u8,
     /// Include upagrahas section.
     pub include_upagrahas: u8,
+    /// Include root sphutas section.
+    pub include_sphutas: u8,
     /// Include special lagnas section.
     pub include_special_lagnas: u8,
     /// Include amsha (divisional chart) section.
@@ -8404,6 +8407,8 @@ pub struct DhruvFullKundaliConfig {
 
 /// Maximum number of amsha charts in a single FFI batch.
 pub const DHRUV_MAX_AMSHA_REQUESTS: usize = 40;
+/// Maximum number of dasha systems in a single FFI batch.
+pub const DHRUV_MAX_DASHA_SYSTEMS: usize = dhruv_vedic_base::dasha::MAX_DASHA_SYSTEMS;
 
 /// C-compatible full kundali result.
 ///
@@ -8433,6 +8438,8 @@ pub struct DhruvFullKundaliResult {
     pub ashtakavarga: DhruvAshtakavargaResult,
     pub upagrahas_valid: u8,
     pub upagrahas: DhruvAllUpagrahas,
+    pub sphutas_valid: u8,
+    pub sphutas: DhruvSphutalResult,
     pub special_lagnas_valid: u8,
     pub special_lagnas: DhruvSpecialLagnas,
     pub amshas_valid: u8,
@@ -8450,18 +8457,18 @@ pub struct DhruvFullKundaliResult {
     pub charakaraka: DhruvCharakarakaResult,
     pub panchang_valid: u8,
     pub panchang: DhruvPanchangInfo,
-    /// Number of valid dasha hierarchies (0..=8).
+    /// Number of valid dasha hierarchies (0..=DHRUV_MAX_DASHA_SYSTEMS).
     pub dasha_count: u8,
     /// Opaque hierarchy handles. Read via `dhruv_dasha_hierarchy_*` accessors.
     /// Freed by `dhruv_full_kundali_result_free`. Do NOT call
     /// `dhruv_dasha_hierarchy_free` on these.
-    pub dasha_handles: [DhruvDashaHierarchyHandle; 8],
+    pub dasha_handles: [DhruvDashaHierarchyHandle; DHRUV_MAX_DASHA_SYSTEMS],
     /// System codes for each hierarchy (DashaSystem repr(u8)).
-    pub dasha_systems: [u8; 8],
+    pub dasha_systems: [u8; DHRUV_MAX_DASHA_SYSTEMS],
     /// Number of valid dasha snapshots (may be < dasha_count).
     pub dasha_snapshot_count: u8,
     /// Inline snapshots matched by `.system` field, not by index.
-    pub dasha_snapshots: [DhruvDashaSnapshot; 8],
+    pub dasha_snapshots: [DhruvDashaSnapshot; DHRUV_MAX_DASHA_SYSTEMS],
 }
 
 /// Free resources owned by a `DhruvFullKundaliResult`.
@@ -8481,7 +8488,7 @@ pub unsafe extern "C" fn dhruv_full_kundali_result_free(result: *mut DhruvFullKu
         return;
     }
     let r = unsafe { &mut *result };
-    // Iterate all 8 slots — don't trust dasha_count which may be corrupt.
+    // Iterate all slots — don't trust dasha_count which may be corrupt.
     for handle in &mut r.dasha_handles {
         if !handle.is_null() {
             let _ =
@@ -8491,14 +8498,14 @@ pub unsafe extern "C" fn dhruv_full_kundali_result_free(result: *mut DhruvFullKu
     }
     r.dasha_count = 0;
     r.dasha_snapshot_count = 0;
-    r.dasha_systems = [0; 8];
+    r.dasha_systems = [0; DHRUV_MAX_DASHA_SYSTEMS];
 }
 
 /// Returns default full kundali configuration.
 ///
 /// All core include flags (`include_bhava_cusps`, `include_graha_positions`,
 /// `include_bindus`, `include_drishti`, `include_ashtakavarga`,
-/// `include_upagrahas`, `include_special_lagnas`) are set to 1.
+/// `include_upagrahas`, `include_sphutas`, `include_special_lagnas`) are set to 1.
 /// Optional sections (`include_amshas`, `include_shadbala`, `include_vimsopaka`,
 /// `include_avastha`, `include_panchang`, `include_calendar`, `include_dasha`)
 /// are set to 0.
@@ -8514,6 +8521,7 @@ pub extern "C" fn dhruv_full_kundali_config_default() -> DhruvFullKundaliConfig 
         include_drishti: 1,
         include_ashtakavarga: 1,
         include_upagrahas: 1,
+        include_sphutas: 1,
         include_special_lagnas: 1,
         include_amshas: 0,
         include_shadbala: 0,
@@ -8720,6 +8728,11 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
                 out.upagrahas.upaketu = u.upaketu;
             }
 
+            if let Some(s) = result.sphutas {
+                out.sphutas_valid = 1;
+                out.sphutas.longitudes = s.longitudes;
+            }
+
             if let Some(s) = result.special_lagnas {
                 out.special_lagnas_valid = 1;
                 out.special_lagnas.bhava_lagna = s.bhava_lagna;
@@ -8833,7 +8846,7 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
             }
 
             if let Some(ref dasha_vec) = result.dasha {
-                if dasha_vec.len() > 8 {
+                if dasha_vec.len() > DHRUV_MAX_DASHA_SYSTEMS {
                     return DhruvStatus::InvalidSearchConfig;
                 }
                 out.dasha_count = dasha_vec.len() as u8;
@@ -8844,7 +8857,7 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
                 }
 
                 if let Some(ref snap_vec) = result.dasha_snapshots {
-                    if snap_vec.len() > 8 {
+                    if snap_vec.len() > DHRUV_MAX_DASHA_SYSTEMS {
                         return DhruvStatus::InvalidSearchConfig;
                     }
                     out.dasha_snapshot_count = snap_vec.len() as u8;
@@ -9686,11 +9699,13 @@ pub unsafe extern "C" fn dhruv_dasha_hierarchy_free(handle: DhruvDashaHierarchyH
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct DhruvDashaSelectionConfig {
-    /// Number of valid entries in `systems` (0..=8).
+    /// Number of valid entries in `systems` (0..=DHRUV_MAX_DASHA_SYSTEMS).
     pub count: u8,
     /// Dasha system codes (DashaSystem repr(u8), 0xFF=unused).
-    pub systems: [u8; 8],
-    /// Max level depth (0-4, default 2).
+    pub systems: [u8; DHRUV_MAX_DASHA_SYSTEMS],
+    /// Per-system max level depth (0-4, 0xFF=use `max_level`).
+    pub max_levels: [u8; DHRUV_MAX_DASHA_SYSTEMS],
+    /// Shared max level depth fallback (0-4, default 2).
     pub max_level: u8,
     /// Per-level sub-period method overrides (0xFF=system default).
     pub level_methods: [u8; 5],
@@ -9708,6 +9723,7 @@ fn dasha_selection_from_ffi(c: &DhruvDashaSelectionConfig) -> dhruv_search::Dash
     dhruv_search::DashaSelectionConfig {
         count: c.count,
         systems: c.systems,
+        max_levels: c.max_levels,
         max_level: c.max_level,
         level_methods: c.level_methods,
         yogini_scheme: c.yogini_scheme,
@@ -9727,7 +9743,8 @@ fn dasha_selection_from_ffi(c: &DhruvDashaSelectionConfig) -> dhruv_search::Dash
 pub extern "C" fn dhruv_dasha_selection_config_default() -> DhruvDashaSelectionConfig {
     DhruvDashaSelectionConfig {
         count: 0,
-        systems: [0xFF; 8],
+        systems: [0xFF; DHRUV_MAX_DASHA_SYSTEMS],
+        max_levels: [0xFF; DHRUV_MAX_DASHA_SYSTEMS],
         max_level: dhruv_vedic_base::dasha::DEFAULT_DASHA_LEVEL,
         level_methods: [0xFF; 5],
         yogini_scheme: 0,

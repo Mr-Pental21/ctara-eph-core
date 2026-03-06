@@ -2,12 +2,14 @@ package dhruv
 
 import "ctara-dhruv-core/bindings/go-open/internal/cabi"
 
-const ExpectedAPIVersion = 44
+const ExpectedAPIVersion = 45
 
 const (
 	PathCapacity          = cabi.PathCapacity
 	MaxSpkPaths           = cabi.MaxSpkPaths
 	GrahaCount            = cabi.GrahaCount
+	SphutaCount           = cabi.SphutaCount
+	MaxDashaSystems       = cabi.MaxDashaSystems
 	MaxCharakarakaEntries = cabi.MaxCharakarakaEntries
 )
 
@@ -86,6 +88,9 @@ type (
 	DrishtiConfig        = cabi.DrishtiConfig
 	GrahaPositionsConfig = cabi.GrahaPositionsConfig
 	BindusConfig         = cabi.BindusConfig
+	DashaSelectionConfig = cabi.DashaSelectionConfig
+	AmshaSelectionConfig = cabi.AmshaSelectionConfig
+	FullKundaliConfig    = cabi.FullKundaliConfig
 
 	TaraConfig         = cabi.TaraConfig
 	EarthState         = cabi.EarthState
@@ -95,18 +100,22 @@ type (
 	DashaPeriod   = cabi.DashaPeriod
 	DashaSnapshot = cabi.DashaSnapshot
 
-	SthanaBalaBreakdown = cabi.SthanaBalaBreakdown
-	KalaBalaBreakdown   = cabi.KalaBalaBreakdown
-	ShadbalaEntry       = cabi.ShadbalaEntry
-	ShadbalaResult      = cabi.ShadbalaResult
-	VimsopakaEntry      = cabi.VimsopakaEntry
-	VimsopakaResult     = cabi.VimsopakaResult
-	SayanadiResult      = cabi.SayanadiResult
-	GrahaAvasthas       = cabi.GrahaAvasthas
-	AllGrahaAvasthas    = cabi.AllGrahaAvasthas
-	CharakarakaEntry    = cabi.CharakarakaEntry
-	CharakarakaResult   = cabi.CharakarakaResult
-	FullKundaliSummary  = cabi.FullKundaliSummary
+	SthanaBalaBreakdown       = cabi.SthanaBalaBreakdown
+	KalaBalaBreakdown         = cabi.KalaBalaBreakdown
+	ShadbalaEntry             = cabi.ShadbalaEntry
+	ShadbalaResult            = cabi.ShadbalaResult
+	VimsopakaEntry            = cabi.VimsopakaEntry
+	VimsopakaResult           = cabi.VimsopakaResult
+	SayanadiResult            = cabi.SayanadiResult
+	GrahaAvasthas             = cabi.GrahaAvasthas
+	AllGrahaAvasthas          = cabi.AllGrahaAvasthas
+	CharakarakaEntry          = cabi.CharakarakaEntry
+	CharakarakaResult         = cabi.CharakarakaResult
+	FullKundaliSummary        = cabi.FullKundaliSummary
+	FullPanchangInfo          = cabi.FullPanchangInfo
+	FullKundaliDashaLevel     = cabi.FullKundaliDashaLevel
+	FullKundaliDashaHierarchy = cabi.FullKundaliDashaHierarchy
+	FullKundaliResult         = cabi.FullKundaliResult
 
 	Dms             = cabi.Dms
 	RashiInfo       = cabi.RashiInfo

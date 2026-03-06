@@ -178,6 +178,20 @@ bool ReadUint8ArrayFixed(napi_env env, napi_value arr, uint8_t* out, uint32_t co
     return true;
 }
 
+bool ReadUint16ArrayFixed(napi_env env, napi_value arr, uint16_t* out, uint32_t count) {
+    bool is_array = false;
+    if (napi_is_array(env, arr, &is_array) != napi_ok || !is_array) return false;
+    uint32_t len = 0;
+    if (napi_get_array_length(env, arr, &len) != napi_ok || len < count) return false;
+    for (uint32_t i = 0; i < count; ++i) {
+        napi_value v;
+        uint32_t x = 0;
+        if (napi_get_element(env, arr, i, &v) != napi_ok || !GetUint32(env, v, &x)) return false;
+        out[i] = static_cast<uint16_t>(x);
+    }
+    return true;
+}
+
 bool ReadDoubleArrayFixed(napi_env env, napi_value arr, double* out, uint32_t count) {
     bool is_array = false;
     if (napi_is_array(env, arr, &is_array) != napi_ok || !is_array) return false;
@@ -272,6 +286,85 @@ bool ReadAmshaChartScope(napi_env env, napi_value obj, DhruvAmshaChartScope* out
     out->include_sphutas = b ? 1 : 0;
     if (!GetNamedProperty(env, obj, "includeSpecialLagnas", &v) || !GetBool(env, v, &b)) return false;
     out->include_special_lagnas = b ? 1 : 0;
+    return true;
+}
+
+bool ReadAmshaSelectionConfig(napi_env env, napi_value obj, DhruvAmshaSelectionConfig* out) {
+    napi_value v;
+    uint32_t count = 0;
+    if (!GetNamedProperty(env, obj, "count", &v) || !GetUint32(env, v, &count)) return false;
+    out->count = static_cast<uint8_t>(count);
+    if (!GetNamedProperty(env, obj, "codes", &v) || !ReadUint16ArrayFixed(env, v, out->codes, DHRUV_MAX_AMSHA_REQUESTS)) return false;
+    if (!GetNamedProperty(env, obj, "variations", &v) || !ReadUint8ArrayFixed(env, v, out->variations, DHRUV_MAX_AMSHA_REQUESTS)) return false;
+    return true;
+}
+
+bool ReadDashaSelectionConfig(napi_env env, napi_value obj, DhruvDashaSelectionConfig* out) {
+    napi_value v;
+    uint32_t count = 0;
+    bool b = false;
+    if (!GetNamedProperty(env, obj, "count", &v) || !GetUint32(env, v, &count)) return false;
+    out->count = static_cast<uint8_t>(count);
+    if (!GetNamedProperty(env, obj, "systems", &v) || !ReadUint8ArrayFixed(env, v, out->systems, DHRUV_MAX_DASHA_SYSTEMS)) return false;
+    if (!GetNamedProperty(env, obj, "maxLevels", &v) || !ReadUint8ArrayFixed(env, v, out->max_levels, DHRUV_MAX_DASHA_SYSTEMS)) return false;
+    if (!GetNamedProperty(env, obj, "maxLevel", &v) || !GetUint32(env, v, &count)) return false;
+    out->max_level = static_cast<uint8_t>(count);
+    if (!GetNamedProperty(env, obj, "levelMethods", &v) || !ReadUint8ArrayFixed(env, v, out->level_methods, 5)) return false;
+    if (!GetNamedProperty(env, obj, "yoginiScheme", &v) || !GetUint32(env, v, &count)) return false;
+    out->yogini_scheme = static_cast<uint8_t>(count);
+    if (!GetNamedProperty(env, obj, "useAbhijit", &v) || !GetBool(env, v, &b)) return false;
+    out->use_abhijit = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "hasSnapshotJd", &v) || !GetBool(env, v, &b)) return false;
+    out->has_snapshot_jd = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "snapshotJd", &v) || !GetDouble(env, v, &out->snapshot_jd)) return false;
+    return true;
+}
+
+bool ReadFullKundaliConfig(napi_env env, napi_value obj, DhruvFullKundaliConfig* out) {
+    napi_value v;
+    bool b = false;
+    uint32_t u32 = 0;
+    if (!GetNamedProperty(env, obj, "includeBhavaCusps", &v) || !GetBool(env, v, &b)) return false;
+    out->include_bhava_cusps = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "includeGrahaPositions", &v) || !GetBool(env, v, &b)) return false;
+    out->include_graha_positions = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "includeBindus", &v) || !GetBool(env, v, &b)) return false;
+    out->include_bindus = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "includeDrishti", &v) || !GetBool(env, v, &b)) return false;
+    out->include_drishti = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "includeAshtakavarga", &v) || !GetBool(env, v, &b)) return false;
+    out->include_ashtakavarga = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "includeUpagrahas", &v) || !GetBool(env, v, &b)) return false;
+    out->include_upagrahas = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "includeSphutas", &v) || !GetBool(env, v, &b)) return false;
+    out->include_sphutas = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "includeSpecialLagnas", &v) || !GetBool(env, v, &b)) return false;
+    out->include_special_lagnas = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "includeAmshas", &v) || !GetBool(env, v, &b)) return false;
+    out->include_amshas = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "includeShadbala", &v) || !GetBool(env, v, &b)) return false;
+    out->include_shadbala = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "includeVimsopaka", &v) || !GetBool(env, v, &b)) return false;
+    out->include_vimsopaka = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "includeAvastha", &v) || !GetBool(env, v, &b)) return false;
+    out->include_avastha = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "includeCharakaraka", &v) || !GetBool(env, v, &b)) return false;
+    out->include_charakaraka = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "charakarakaScheme", &v) || !GetUint32(env, v, &u32)) return false;
+    out->charakaraka_scheme = static_cast<uint8_t>(u32);
+    if (!GetNamedProperty(env, obj, "nodeDignityPolicy", &v) || !GetUint32(env, v, &out->node_dignity_policy)) return false;
+    if (!GetNamedProperty(env, obj, "grahaPositionsConfig", &v) || !ReadGrahaPositionsConfig(env, v, &out->graha_positions_config)) return false;
+    if (!GetNamedProperty(env, obj, "bindusConfig", &v) || !ReadBindusConfig(env, v, &out->bindus_config)) return false;
+    if (!GetNamedProperty(env, obj, "drishtiConfig", &v) || !ReadDrishtiConfig(env, v, &out->drishti_config)) return false;
+    if (!GetNamedProperty(env, obj, "amshaScope", &v) || !ReadAmshaChartScope(env, v, &out->amsha_scope)) return false;
+    if (!GetNamedProperty(env, obj, "amshaSelection", &v) || !ReadAmshaSelectionConfig(env, v, &out->amsha_selection)) return false;
+    if (!GetNamedProperty(env, obj, "includePanchang", &v) || !GetBool(env, v, &b)) return false;
+    out->include_panchang = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "includeCalendar", &v) || !GetBool(env, v, &b)) return false;
+    out->include_calendar = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "includeDasha", &v) || !GetBool(env, v, &b)) return false;
+    out->include_dasha = b ? 1 : 0;
+    if (!GetNamedProperty(env, obj, "dashaConfig", &v) || !ReadDashaSelectionConfig(env, v, &out->dasha_config)) return false;
     return true;
 }
 
@@ -520,6 +613,75 @@ napi_value WriteDashaPeriod(napi_env env, const DhruvDashaPeriod& p) {
     SetNamed(env, po, "order", MakeUint32(env, p.order));
     SetNamed(env, po, "parentIdx", MakeUint32(env, p.parent_idx));
     return po;
+}
+
+napi_value WriteFullPanchangInfo(napi_env env, const DhruvPanchangInfo& p) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "tithi", WriteTithiInfo(env, p.tithi));
+    SetNamed(env, obj, "karana", WriteKaranaInfo(env, p.karana));
+    SetNamed(env, obj, "yoga", WriteYogaInfo(env, p.yoga));
+    SetNamed(env, obj, "vaar", WriteVaarInfo(env, p.vaar));
+    SetNamed(env, obj, "hora", WriteHoraInfo(env, p.hora));
+    SetNamed(env, obj, "ghatika", WriteGhatikaInfo(env, p.ghatika));
+    SetNamed(env, obj, "nakshatra", WritePanchangNakshatraInfo(env, p.nakshatra));
+    SetNamed(env, obj, "calendarValid", MakeBool(env, p.calendar_valid != 0));
+    SetNamed(env, obj, "masa", WriteMasaInfo(env, p.masa));
+    SetNamed(env, obj, "ayana", WriteAyanaInfo(env, p.ayana));
+    SetNamed(env, obj, "varsha", WriteVarshaInfo(env, p.varsha));
+    return obj;
+}
+
+int32_t WriteDashaHierarchyFromHandle(
+    napi_env env,
+    DhruvDashaHierarchyHandle handle,
+    uint8_t system,
+    napi_value* out) {
+    uint8_t level_count = 0;
+    int32_t status = dhruv_dasha_hierarchy_level_count(handle, &level_count);
+    if (status != STATUS_OK) {
+        return status;
+    }
+
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "system", MakeUint32(env, system));
+
+    napi_value levels;
+    napi_create_array_with_length(env, level_count, &levels);
+    for (uint32_t lvl = 0; lvl < level_count; ++lvl) {
+        uint32_t period_count = 0;
+        status = dhruv_dasha_hierarchy_period_count(handle, static_cast<uint8_t>(lvl), &period_count);
+        if (status != STATUS_OK) {
+            return status;
+        }
+
+        napi_value level_obj;
+        napi_create_object(env, &level_obj);
+        SetNamed(env, level_obj, "level", MakeUint32(env, lvl));
+
+        napi_value periods;
+        napi_create_array_with_length(env, period_count, &periods);
+        for (uint32_t idx = 0; idx < period_count; ++idx) {
+            DhruvDashaPeriod period{};
+            status = dhruv_dasha_hierarchy_period_at(
+                handle,
+                static_cast<uint8_t>(lvl),
+                idx,
+                &period);
+            if (status != STATUS_OK) {
+                return status;
+            }
+            napi_set_element(env, periods, idx, WriteDashaPeriod(env, period));
+        }
+
+        SetNamed(env, level_obj, "periods", periods);
+        napi_set_element(env, levels, lvl, level_obj);
+    }
+
+    SetNamed(env, obj, "levels", levels);
+    *out = obj;
+    return STATUS_OK;
 }
 
 napi_value WriteSpecialLagnas(napi_env env, const DhruvSpecialLagnas& s) {
@@ -4428,6 +4590,105 @@ napi_value FullKundaliSummaryForDate(napi_env env, napi_callback_info info) {
     return out;
 }
 
+napi_value FullKundaliConfigDefault(napi_env env, napi_callback_info info) {
+    (void)info;
+    DhruvFullKundaliConfig cfg = dhruv_full_kundali_config_default();
+    napi_value obj;
+    napi_create_object(env, &obj);
+
+    SetNamed(env, obj, "includeBhavaCusps", MakeBool(env, cfg.include_bhava_cusps != 0));
+    SetNamed(env, obj, "includeGrahaPositions", MakeBool(env, cfg.include_graha_positions != 0));
+    SetNamed(env, obj, "includeBindus", MakeBool(env, cfg.include_bindus != 0));
+    SetNamed(env, obj, "includeDrishti", MakeBool(env, cfg.include_drishti != 0));
+    SetNamed(env, obj, "includeAshtakavarga", MakeBool(env, cfg.include_ashtakavarga != 0));
+    SetNamed(env, obj, "includeUpagrahas", MakeBool(env, cfg.include_upagrahas != 0));
+    SetNamed(env, obj, "includeSphutas", MakeBool(env, cfg.include_sphutas != 0));
+    SetNamed(env, obj, "includeSpecialLagnas", MakeBool(env, cfg.include_special_lagnas != 0));
+    SetNamed(env, obj, "includeAmshas", MakeBool(env, cfg.include_amshas != 0));
+    SetNamed(env, obj, "includeShadbala", MakeBool(env, cfg.include_shadbala != 0));
+    SetNamed(env, obj, "includeVimsopaka", MakeBool(env, cfg.include_vimsopaka != 0));
+    SetNamed(env, obj, "includeAvastha", MakeBool(env, cfg.include_avastha != 0));
+    SetNamed(env, obj, "includeCharakaraka", MakeBool(env, cfg.include_charakaraka != 0));
+    SetNamed(env, obj, "charakarakaScheme", MakeUint32(env, cfg.charakaraka_scheme));
+    SetNamed(env, obj, "nodeDignityPolicy", MakeUint32(env, cfg.node_dignity_policy));
+
+    napi_value graha_cfg;
+    napi_create_object(env, &graha_cfg);
+    SetNamed(env, graha_cfg, "includeNakshatra", MakeBool(env, cfg.graha_positions_config.include_nakshatra != 0));
+    SetNamed(env, graha_cfg, "includeLagna", MakeBool(env, cfg.graha_positions_config.include_lagna != 0));
+    SetNamed(env, graha_cfg, "includeOuterPlanets", MakeBool(env, cfg.graha_positions_config.include_outer_planets != 0));
+    SetNamed(env, graha_cfg, "includeBhava", MakeBool(env, cfg.graha_positions_config.include_bhava != 0));
+    SetNamed(env, obj, "grahaPositionsConfig", graha_cfg);
+
+    napi_value bindus_cfg;
+    napi_create_object(env, &bindus_cfg);
+    SetNamed(env, bindus_cfg, "includeNakshatra", MakeBool(env, cfg.bindus_config.include_nakshatra != 0));
+    SetNamed(env, bindus_cfg, "includeBhava", MakeBool(env, cfg.bindus_config.include_bhava != 0));
+    SetNamed(env, obj, "bindusConfig", bindus_cfg);
+
+    napi_value drishti_cfg;
+    napi_create_object(env, &drishti_cfg);
+    SetNamed(env, drishti_cfg, "includeBhava", MakeBool(env, cfg.drishti_config.include_bhava != 0));
+    SetNamed(env, drishti_cfg, "includeLagna", MakeBool(env, cfg.drishti_config.include_lagna != 0));
+    SetNamed(env, drishti_cfg, "includeBindus", MakeBool(env, cfg.drishti_config.include_bindus != 0));
+    SetNamed(env, obj, "drishtiConfig", drishti_cfg);
+
+    napi_value amsha_scope;
+    napi_create_object(env, &amsha_scope);
+    SetNamed(env, amsha_scope, "includeBhavaCusps", MakeBool(env, cfg.amsha_scope.include_bhava_cusps != 0));
+    SetNamed(env, amsha_scope, "includeArudhaPadas", MakeBool(env, cfg.amsha_scope.include_arudha_padas != 0));
+    SetNamed(env, amsha_scope, "includeUpagrahas", MakeBool(env, cfg.amsha_scope.include_upagrahas != 0));
+    SetNamed(env, amsha_scope, "includeSphutas", MakeBool(env, cfg.amsha_scope.include_sphutas != 0));
+    SetNamed(env, amsha_scope, "includeSpecialLagnas", MakeBool(env, cfg.amsha_scope.include_special_lagnas != 0));
+    SetNamed(env, obj, "amshaScope", amsha_scope);
+
+    napi_value amsha_selection;
+    napi_create_object(env, &amsha_selection);
+    SetNamed(env, amsha_selection, "count", MakeUint32(env, cfg.amsha_selection.count));
+    napi_value amsha_codes;
+    napi_create_array_with_length(env, DHRUV_MAX_AMSHA_REQUESTS, &amsha_codes);
+    napi_value amsha_variations;
+    napi_create_array_with_length(env, DHRUV_MAX_AMSHA_REQUESTS, &amsha_variations);
+    for (uint32_t i = 0; i < DHRUV_MAX_AMSHA_REQUESTS; ++i) {
+        napi_set_element(env, amsha_codes, i, MakeUint32(env, cfg.amsha_selection.codes[i]));
+        napi_set_element(env, amsha_variations, i, MakeUint32(env, cfg.amsha_selection.variations[i]));
+    }
+    SetNamed(env, amsha_selection, "codes", amsha_codes);
+    SetNamed(env, amsha_selection, "variations", amsha_variations);
+    SetNamed(env, obj, "amshaSelection", amsha_selection);
+
+    SetNamed(env, obj, "includePanchang", MakeBool(env, cfg.include_panchang != 0));
+    SetNamed(env, obj, "includeCalendar", MakeBool(env, cfg.include_calendar != 0));
+    SetNamed(env, obj, "includeDasha", MakeBool(env, cfg.include_dasha != 0));
+
+    napi_value dasha_cfg;
+    napi_create_object(env, &dasha_cfg);
+    SetNamed(env, dasha_cfg, "count", MakeUint32(env, cfg.dasha_config.count));
+    napi_value systems;
+    napi_create_array_with_length(env, DHRUV_MAX_DASHA_SYSTEMS, &systems);
+    napi_value max_levels;
+    napi_create_array_with_length(env, DHRUV_MAX_DASHA_SYSTEMS, &max_levels);
+    for (uint32_t i = 0; i < DHRUV_MAX_DASHA_SYSTEMS; ++i) {
+        napi_set_element(env, systems, i, MakeUint32(env, cfg.dasha_config.systems[i]));
+        napi_set_element(env, max_levels, i, MakeUint32(env, cfg.dasha_config.max_levels[i]));
+    }
+    SetNamed(env, dasha_cfg, "systems", systems);
+    SetNamed(env, dasha_cfg, "maxLevels", max_levels);
+    SetNamed(env, dasha_cfg, "maxLevel", MakeUint32(env, cfg.dasha_config.max_level));
+    napi_value methods;
+    napi_create_array_with_length(env, 5, &methods);
+    for (uint32_t i = 0; i < 5; ++i) {
+        napi_set_element(env, methods, i, MakeUint32(env, cfg.dasha_config.level_methods[i]));
+    }
+    SetNamed(env, dasha_cfg, "levelMethods", methods);
+    SetNamed(env, dasha_cfg, "yoginiScheme", MakeUint32(env, cfg.dasha_config.yogini_scheme));
+    SetNamed(env, dasha_cfg, "useAbhijit", MakeBool(env, cfg.dasha_config.use_abhijit != 0));
+    SetNamed(env, dasha_cfg, "hasSnapshotJd", MakeBool(env, cfg.dasha_config.has_snapshot_jd != 0));
+    SetNamed(env, dasha_cfg, "snapshotJd", MakeDouble(env, cfg.dasha_config.snapshot_jd));
+    SetNamed(env, obj, "dashaConfig", dasha_cfg);
+    return obj;
+}
+
 napi_value DashaSelectionConfigDefault(napi_env env, napi_callback_info info) {
     (void)info;
     DhruvDashaSelectionConfig cfg = dhruv_dasha_selection_config_default();
@@ -4436,11 +4697,18 @@ napi_value DashaSelectionConfigDefault(napi_env env, napi_callback_info info) {
     SetNamed(env, obj, "count", MakeUint32(env, cfg.count));
 
     napi_value systems;
-    napi_create_array_with_length(env, 8, &systems);
-    for (uint32_t i = 0; i < 8; ++i) {
+    napi_create_array_with_length(env, DHRUV_MAX_DASHA_SYSTEMS, &systems);
+    for (uint32_t i = 0; i < DHRUV_MAX_DASHA_SYSTEMS; ++i) {
         napi_set_element(env, systems, i, MakeUint32(env, cfg.systems[i]));
     }
     SetNamed(env, obj, "systems", systems);
+
+    napi_value max_levels;
+    napi_create_array_with_length(env, DHRUV_MAX_DASHA_SYSTEMS, &max_levels);
+    for (uint32_t i = 0; i < DHRUV_MAX_DASHA_SYSTEMS; ++i) {
+        napi_set_element(env, max_levels, i, MakeUint32(env, cfg.max_levels[i]));
+    }
+    SetNamed(env, obj, "maxLevels", max_levels);
 
     SetNamed(env, obj, "maxLevel", MakeUint32(env, cfg.max_level));
     napi_value methods;
@@ -4454,6 +4722,127 @@ napi_value DashaSelectionConfigDefault(napi_env env, napi_callback_info info) {
     SetNamed(env, obj, "hasSnapshotJd", MakeBool(env, cfg.has_snapshot_jd != 0));
     SetNamed(env, obj, "snapshotJd", MakeDouble(env, cfg.snapshot_jd));
     return obj;
+}
+
+napi_value FullKundaliForDate(napi_env env, napi_callback_info info) {
+    size_t argc = 9;
+    napi_value args[9];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 9) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    void* e_ptr = nullptr;
+    void* ep_ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &e_ptr) || !ReadExternalPtr(env, args[1], &ep_ptr)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvUtcTime utc{};
+    DhruvGeoLocation loc{};
+    DhruvBhavaConfig bhava_cfg{};
+    DhruvRiseSetConfig rise_cfg{};
+    DhruvFullKundaliConfig full_cfg{};
+    if (!ReadUtcTime(env, args[2], &utc) ||
+        !ReadGeoLocation(env, args[3], &loc) ||
+        !ReadBhavaConfig(env, args[4], &bhava_cfg) ||
+        !ReadRiseSetConfig(env, args[5], &rise_cfg) ||
+        !ReadFullKundaliConfig(env, args[8], &full_cfg)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    uint32_t ayanamsha = 0;
+    bool use_nutation = false;
+    if (!GetUint32(env, args[6], &ayanamsha) || !GetBool(env, args[7], &use_nutation)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvFullKundaliResult result{};
+    int32_t status = dhruv_full_kundali_for_date(
+        static_cast<const DhruvEngineHandle*>(e_ptr),
+        static_cast<const DhruvEopHandle*>(ep_ptr),
+        &utc,
+        &loc,
+        &bhava_cfg,
+        &rise_cfg,
+        ayanamsha,
+        use_nutation ? 1 : 0,
+        &full_cfg,
+        &result);
+
+    napi_value out = MakeStatusResult(env, status);
+    if (status != STATUS_OK) {
+        return out;
+    }
+
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "ayanamshaDeg", MakeDouble(env, result.ayanamsha_deg));
+    if (result.bhava_cusps_valid != 0) SetNamed(env, obj, "bhavaCusps", WriteBhavaResult(env, result.bhava_cusps));
+    if (result.graha_positions_valid != 0) SetNamed(env, obj, "grahaPositions", WriteGrahaPositions(env, result.graha_positions));
+    if (result.bindus_valid != 0) SetNamed(env, obj, "bindus", WriteBindusResult(env, result.bindus));
+    if (result.drishti_valid != 0) SetNamed(env, obj, "drishti", WriteDrishtiResult(env, result.drishti));
+    if (result.ashtakavarga_valid != 0) SetNamed(env, obj, "ashtakavarga", WriteAshtakavargaResult(env, result.ashtakavarga));
+    if (result.upagrahas_valid != 0) SetNamed(env, obj, "upagrahas", WriteAllUpagrahas(env, result.upagrahas));
+    if (result.sphutas_valid != 0) SetNamed(env, obj, "sphutas", WriteSphutalResult(env, result.sphutas));
+    if (result.special_lagnas_valid != 0) SetNamed(env, obj, "specialLagnas", WriteSpecialLagnas(env, result.special_lagnas));
+    if (result.amshas_valid != 0) {
+        napi_value amshas;
+        napi_create_array_with_length(env, result.amshas_count, &amshas);
+        for (uint32_t i = 0; i < result.amshas_count; ++i) {
+            napi_set_element(env, amshas, i, WriteAmshaChart(env, result.amshas[i]));
+        }
+        SetNamed(env, obj, "amshas", amshas);
+    }
+    if (result.shadbala_valid != 0) SetNamed(env, obj, "shadbala", WriteShadbalaResult(env, result.shadbala));
+    if (result.vimsopaka_valid != 0) SetNamed(env, obj, "vimsopaka", WriteVimsopakaResult(env, result.vimsopaka));
+    if (result.avastha_valid != 0) SetNamed(env, obj, "avastha", WriteAllGrahaAvasthas(env, result.avastha));
+    if (result.charakaraka_valid != 0) SetNamed(env, obj, "charakaraka", WriteCharakarakaResult(env, result.charakaraka));
+    if (result.panchang_valid != 0) SetNamed(env, obj, "panchang", WriteFullPanchangInfo(env, result.panchang));
+
+    if (result.dasha_count > 0) {
+        napi_value dashas;
+        napi_create_array_with_length(env, result.dasha_count, &dashas);
+        for (uint32_t i = 0; i < result.dasha_count; ++i) {
+            napi_value hierarchy;
+            status = WriteDashaHierarchyFromHandle(
+                env,
+                result.dasha_handles[i],
+                result.dasha_systems[i],
+                &hierarchy);
+            if (status != STATUS_OK) {
+                dhruv_full_kundali_result_free(&result);
+                return MakeStatusResult(env, status);
+            }
+            napi_set_element(env, dashas, i, hierarchy);
+        }
+        SetNamed(env, obj, "dasha", dashas);
+    }
+
+    if (result.dasha_snapshot_count > 0) {
+        napi_value snapshots;
+        napi_create_array_with_length(env, result.dasha_snapshot_count, &snapshots);
+        for (uint32_t i = 0; i < result.dasha_snapshot_count; ++i) {
+            const DhruvDashaSnapshot& snapshot = result.dasha_snapshots[i];
+            napi_value so;
+            napi_create_object(env, &so);
+            SetNamed(env, so, "system", MakeUint32(env, snapshot.system));
+            SetNamed(env, so, "queryJd", MakeDouble(env, snapshot.query_jd));
+            SetNamed(env, so, "count", MakeUint32(env, snapshot.count));
+            napi_value periods;
+            napi_create_array_with_length(env, snapshot.count, &periods);
+            for (uint32_t j = 0; j < snapshot.count && j < 5; ++j) {
+                napi_set_element(env, periods, j, WriteDashaPeriod(env, snapshot.periods[j]));
+            }
+            SetNamed(env, so, "periods", periods);
+            napi_set_element(env, snapshots, i, so);
+        }
+        SetNamed(env, obj, "dashaSnapshots", snapshots);
+    }
+
+    dhruv_full_kundali_result_free(&result);
+    SetNamed(env, out, "result", obj);
+    return out;
 }
 
 napi_value DashaHierarchyUtc(napi_env env, napi_callback_info info) {
@@ -5029,6 +5418,8 @@ napi_value Init(napi_env env, napi_value exports) {
         {"avasthaForDate", nullptr, AvasthaForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"charakarakaForDate", nullptr, CharakarakaForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"fullKundaliSummaryForDate", nullptr, FullKundaliSummaryForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"fullKundaliConfigDefault", nullptr, FullKundaliConfigDefault, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"fullKundaliForDate", nullptr, FullKundaliForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
 
         {"dashaSelectionConfigDefault", nullptr, DashaSelectionConfigDefault, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"dashaHierarchyUtc", nullptr, DashaHierarchyUtc, nullptr, nullptr, nullptr, napi_default, nullptr},

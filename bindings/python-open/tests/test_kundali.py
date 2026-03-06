@@ -78,6 +78,35 @@ class TestFullKundali:
             assert len(result.graha_positions.grahas) == 9
         if result.bhava_cusps is not None:
             assert len(result.bhava_cusps.bhavas) == 12
+        assert result.sphutas is not None
+        assert len(result.sphutas.longitudes) == 16
+
+    def test_full_kundali_dasha_hierarchies(self, engine_handles):
+        """Full kundali should expose decoded dasha hierarchies with per-system depth."""
+        from ctara_dhruv.kundali import full_kundali, full_kundali_config_default
+        from ctara_dhruv.engine import engine, lsk, eop
+
+        cfg = full_kundali_config_default()
+        cfg.include_dasha = 1
+        cfg.dasha_config.count = 2
+        cfg.dasha_config.systems[0] = 0
+        cfg.dasha_config.systems[1] = 1
+        cfg.dasha_config.max_levels[0] = 0
+        cfg.dasha_config.max_levels[1] = 1
+
+        result = full_kundali(
+            engine(), lsk(), eop(),
+            jd_utc=(2024, 1, 15, 6, 0, 0.0),
+            location=(28.6139, 77.2090),
+            config=cfg,
+        )
+
+        assert result.dasha is not None
+        assert len(result.dasha) == 2
+        assert result.dasha[0].system == 0
+        assert result.dasha[1].system == 1
+        assert len(result.dasha[0].levels) == 1
+        assert len(result.dasha[1].levels) == 2
 
     def test_full_kundali_ashtakavarga(self, engine_handles):
         """Ashtakavarga in full kundali should have 7 BAVs."""

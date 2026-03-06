@@ -162,6 +162,27 @@ func TestSearchAndPanchangSmoke(t *testing.T) {
 	if _, err := eng.FullKundaliForDateSummary(eop, utc, loc, bhava, riseset, 0, true); err != nil {
 		t.Fatalf("FullKundaliForDateSummary: %v", err)
 	}
+
+	cfg := FullKundaliConfigDefault()
+	cfg.IncludeDasha = true
+	cfg.DashaConfig.Count = 2
+	cfg.DashaConfig.Systems[0] = 0
+	cfg.DashaConfig.Systems[1] = 1
+	cfg.DashaConfig.MaxLevels[0] = 0
+	cfg.DashaConfig.MaxLevels[1] = 1
+	kundali, err := eng.FullKundaliForDate(eop, utc, loc, bhava, riseset, 0, true, cfg)
+	if err != nil {
+		t.Fatalf("FullKundaliForDate: %v", err)
+	}
+	if kundali.Sphutas == nil || len(kundali.Sphutas.Longitudes) != SphutaCount {
+		t.Fatalf("expected root sphutas in full kundali")
+	}
+	if len(kundali.Dasha) != 2 {
+		t.Fatalf("expected 2 dasha hierarchies, got %d", len(kundali.Dasha))
+	}
+	if len(kundali.Dasha[0].Levels) != 1 || len(kundali.Dasha[1].Levels) != 2 {
+		t.Fatalf("unexpected per-system dasha depths: %d %d", len(kundali.Dasha[0].Levels), len(kundali.Dasha[1].Levels))
+	}
 }
 
 func TestAshtakavargaContributors(t *testing.T) {
