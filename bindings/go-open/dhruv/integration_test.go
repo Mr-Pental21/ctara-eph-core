@@ -203,3 +203,74 @@ func TestAshtakavargaContributors(t *testing.T) {
 		}
 	}
 }
+
+func TestLowTierDashaWrappers(t *testing.T) {
+	spk, lskPath, eopPath, ok := kernelPaths(t)
+	if !ok {
+		t.Skip("kernel files missing; skipping integration test")
+	}
+
+	eng, err := NewEngine(EngineConfig{
+		SpkPaths:         []string{spk},
+		LskPath:          lskPath,
+		CacheCapacity:    64,
+		StrictValidation: false,
+	})
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+	defer eng.Close()
+
+	eop, err := LoadEOP(eopPath)
+	if err != nil {
+		t.Fatalf("LoadEOP: %v", err)
+	}
+	defer eop.Close()
+
+	birthUTC := UtcTime{Year: 1990, Month: 1, Day: 1, Hour: 12, Minute: 0, Second: 0}
+	loc := GeoLocation{LatitudeDeg: 12.9716, LongitudeDeg: 77.5946, AltitudeM: 920}
+	bhava := BhavaConfigDefault()
+	riseset := RiseSetConfigDefault()
+
+	level0, err := eng.DashaLevel0UTC(eop, birthUTC, loc, bhava, riseset, 0, true, 0)
+	if err != nil {
+		t.Fatalf("DashaLevel0UTC: %v", err)
+	}
+	if len(level0) == 0 {
+		t.Fatalf("expected level0 periods")
+	}
+
+	first := level0[0]
+	same, found, err := eng.DashaLevel0EntityUTC(eop, birthUTC, loc, bhava, riseset, 0, true, 0, first.EntityType, first.EntityIndex)
+	if err != nil {
+		t.Fatalf("DashaLevel0EntityUTC: %v", err)
+	}
+	if !found || same.EntityIndex != first.EntityIndex {
+		t.Fatalf("unexpected level0 entity lookup: found=%v same=%+v first=%+v", found, same, first)
+	}
+
+	variation := DashaVariationConfigDefault()
+	children, err := eng.DashaChildrenUTC(eop, birthUTC, loc, bhava, riseset, 0, true, 0, variation, first)
+	if err != nil {
+		t.Fatalf("DashaChildrenUTC: %v", err)
+	}
+	if len(children) == 0 {
+		t.Fatalf("expected child periods")
+	}
+
+	child, found, err := eng.DashaChildPeriodUTC(eop, birthUTC, loc, bhava, riseset, 0, true, 0, variation, first, children[0].EntityType, children[0].EntityIndex)
+	if err != nil {
+		t.Fatalf("DashaChildPeriodUTC: %v", err)
+	}
+	if !found || child.EntityIndex != children[0].EntityIndex {
+		t.Fatalf("unexpected child lookup: found=%v child=%+v firstChild=%+v", found, child, children[0])
+	}
+
+	complete, err := eng.DashaCompleteLevelUTC(eop, birthUTC, loc, bhava, riseset, 0, true, 0, variation, level0, 1)
+	if err != nil {
+		t.Fatalf("DashaCompleteLevelUTC: %v", err)
+	}
+	if len(complete) < len(children) {
+		t.Fatalf("expected complete child level, got=%d children=%d", len(complete), len(children))
+	}
+}

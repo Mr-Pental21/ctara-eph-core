@@ -1527,6 +1527,9 @@ struct DashaArgs {
     /// Dasha system (vimshottari)
     #[arg(long, default_value = "vimshottari")]
     system: String,
+    /// Dasha mode: hierarchy, snapshot, level0, level0-entity, children, child-period, complete-level
+    #[arg(long)]
+    mode: Option<String>,
     /// Birth UTC datetime (YYYY-MM-DDThh:mm:ssZ)
     #[arg(long)]
     birth_date: String,
@@ -1545,6 +1548,15 @@ struct DashaArgs {
     /// Maximum dasha depth (0-4, default 2)
     #[arg(long, default_value = "2")]
     max_level: u8,
+    /// Parent level index for children/child-period/complete-level (0-4)
+    #[arg(long)]
+    parent_level: Option<u8>,
+    /// Parent index within the selected level for children/child-period
+    #[arg(long)]
+    parent_index: Option<u32>,
+    /// Entity selector for level0-entity/child-period: graha:0..8, rashi:0..11, yogini:0..7
+    #[arg(long)]
+    entity: Option<String>,
     /// Ayanamsha system code (0-19, default 0=Lahiri)
     #[arg(long, default_value = "0")]
     ayanamsha: i32,
@@ -6661,97 +6673,252 @@ fn main() {
             let dasha_system = parse_dasha_system(&args.system);
             let variation = dhruv_vedic_base::dasha::DashaVariationConfig::default();
             let clamped_level = args.max_level.min(dhruv_vedic_base::dasha::MAX_DASHA_LEVEL);
-
-            if let Some(q_date) = args.query_date {
-                let query_utc = parse_utc(&q_date).unwrap_or_else(|e| {
-                    eprintln!("{e}");
-                    std::process::exit(1);
-                });
-                let snapshot = dhruv_search::dasha_snapshot_at(
-                    &engine,
-                    &eop_kernel,
-                    &birth_utc,
-                    &query_utc,
-                    &location,
-                    dasha_system,
-                    clamped_level,
-                    &bhava_config,
-                    &rs_config,
-                    &aya_config,
-                    &variation,
-                )
-                .unwrap_or_else(|e| {
-                    eprintln!("Error: {e}");
-                    std::process::exit(1);
-                });
-                println!(
-                    "Dasha Snapshot ({}) at {} for birth {}\n",
-                    dasha_system.name(),
-                    q_date,
-                    args.birth_date
-                );
-                for period in &snapshot.periods {
-                    let indent = "  ".repeat(period.level as usize);
-                    println!(
-                        "{}{}: {} (JD {:.4} - {:.4}, {:.1} days)",
-                        indent,
-                        period.level.name(),
-                        format_dasha_entity(&period.entity),
-                        period.start_jd,
-                        period.end_jd,
-                        period.duration_days(),
-                    );
-                }
+            let mode = args.mode.as_deref().unwrap_or(if args.query_date.is_some() {
+                "snapshot"
             } else {
-                let hierarchy = dhruv_search::dasha_hierarchy_for_birth(
-                    &engine,
-                    &eop_kernel,
-                    &birth_utc,
-                    &location,
-                    dasha_system,
-                    clamped_level,
-                    &bhava_config,
-                    &rs_config,
-                    &aya_config,
-                    &variation,
-                )
-                .unwrap_or_else(|e| {
-                    eprintln!("Error: {e}");
-                    std::process::exit(1);
-                });
-                println!(
-                    "Dasha Hierarchy ({}) for birth {} ({} levels)\n",
-                    dasha_system.name(),
-                    args.birth_date,
-                    hierarchy.levels.len()
-                );
-                for (lvl_idx, level) in hierarchy.levels.iter().enumerate() {
-                    let level_name = dhruv_vedic_base::dasha::DashaLevel::from_u8(lvl_idx as u8)
-                        .map(|l| l.name())
-                        .unwrap_or("Unknown");
+                "hierarchy"
+            });
+
+            match mode {
+                "snapshot" => {
+                    let q_date = args.query_date.as_ref().unwrap_or_else(|| {
+                        eprintln!("--query-date is required for --mode snapshot");
+                        std::process::exit(1);
+                    });
+                    let query_utc = parse_utc(q_date).unwrap_or_else(|e| {
+                        eprintln!("{e}");
+                        std::process::exit(1);
+                    });
+                    let snapshot = dhruv_search::dasha_snapshot_at(
+                        &engine,
+                        &eop_kernel,
+                        &birth_utc,
+                        &query_utc,
+                        &location,
+                        dasha_system,
+                        clamped_level,
+                        &bhava_config,
+                        &rs_config,
+                        &aya_config,
+                        &variation,
+                    )
+                    .unwrap_or_else(|e| {
+                        eprintln!("Error: {e}");
+                        std::process::exit(1);
+                    });
                     println!(
-                        "Level {} ({}) — {} periods:",
-                        lvl_idx,
-                        level_name,
-                        level.len()
+                        "Dasha Snapshot ({}) at {} for birth {}\n",
+                        dasha_system.name(),
+                        q_date,
+                        args.birth_date
                     );
-                    let display_count = level.len().min(50);
-                    for period in &level[..display_count] {
-                        let indent = "  ".repeat(lvl_idx + 1);
+                    print_dasha_periods(&snapshot.periods, 0, 50);
+                }
+                "hierarchy" => {
+                    let hierarchy = dhruv_search::dasha_hierarchy_for_birth(
+                        &engine,
+                        &eop_kernel,
+                        &birth_utc,
+                        &location,
+                        dasha_system,
+                        clamped_level,
+                        &bhava_config,
+                        &rs_config,
+                        &aya_config,
+                        &variation,
+                    )
+                    .unwrap_or_else(|e| {
+                        eprintln!("Error: {e}");
+                        std::process::exit(1);
+                    });
+                    println!(
+                        "Dasha Hierarchy ({}) for birth {} ({} levels)\n",
+                        dasha_system.name(),
+                        args.birth_date,
+                        hierarchy.levels.len()
+                    );
+                    print_dasha_hierarchy(&hierarchy);
+                }
+                "level0" => {
+                    let periods = dhruv_search::dasha_level0_for_birth(
+                        &engine,
+                        &eop_kernel,
+                        &birth_utc,
+                        &location,
+                        dasha_system,
+                        &bhava_config,
+                        &rs_config,
+                        &aya_config,
+                    )
+                    .unwrap_or_else(|e| {
+                        eprintln!("Error: {e}");
+                        std::process::exit(1);
+                    });
+                    println!("Dasha Level0 ({}) for birth {}\n", dasha_system.name(), args.birth_date);
+                    print_dasha_periods(&periods, 1, 100);
+                }
+                "level0-entity" => {
+                    let entity = parse_dasha_entity_spec(args.entity.as_deref().unwrap_or_else(|| {
+                        eprintln!("--entity is required for --mode level0-entity");
+                        std::process::exit(1);
+                    }));
+                    let period = dhruv_search::dasha_level0_entity_for_birth(
+                        &engine,
+                        &eop_kernel,
+                        &birth_utc,
+                        &location,
+                        dasha_system,
+                        entity,
+                        &bhava_config,
+                        &rs_config,
+                        &aya_config,
+                    )
+                    .unwrap_or_else(|e| {
+                        eprintln!("Error: {e}");
+                        std::process::exit(1);
+                    });
+                    match period {
+                        Some(period) => {
+                            println!("Dasha Level0 Entity ({}) for birth {}\n", dasha_system.name(), args.birth_date);
+                            print_dasha_periods(&[period], 1, 1);
+                        }
+                        None => println!("No matching level0 period found."),
+                    }
+                }
+                "children" | "child-period" | "complete-level" => {
+                    let parent_level = args.parent_level.unwrap_or_else(|| {
+                        eprintln!("--parent-level is required for --mode {mode}");
+                        std::process::exit(1);
+                    });
+                    let hierarchy = dhruv_search::dasha_hierarchy_for_birth(
+                        &engine,
+                        &eop_kernel,
+                        &birth_utc,
+                        &location,
+                        dasha_system,
+                        parent_level.min(dhruv_vedic_base::dasha::MAX_DASHA_LEVEL),
+                        &bhava_config,
+                        &rs_config,
+                        &aya_config,
+                        &variation,
+                    )
+                    .unwrap_or_else(|e| {
+                        eprintln!("Error: {e}");
+                        std::process::exit(1);
+                    });
+                    let parent_level_idx = parent_level as usize;
+                    if parent_level_idx >= hierarchy.levels.len() {
+                        eprintln!("Parent level {parent_level} is not available.");
+                        std::process::exit(1);
+                    }
+                    let parent_periods = &hierarchy.levels[parent_level_idx];
+
+                    if mode == "complete-level" {
+                        let child_level = dhruv_vedic_base::dasha::DashaLevel::from_u8(
+                            parent_level.saturating_add(1),
+                        )
+                        .unwrap_or_else(|| {
+                            eprintln!("No deeper child level exists for parent level {parent_level}");
+                            std::process::exit(1);
+                        });
+                        let periods = dhruv_search::dasha_complete_level_for_birth(
+                            &engine,
+                            &eop_kernel,
+                            &birth_utc,
+                            &location,
+                            dasha_system,
+                            parent_periods,
+                            child_level,
+                            &bhava_config,
+                            &rs_config,
+                            &aya_config,
+                            &variation,
+                        )
+                        .unwrap_or_else(|e| {
+                            eprintln!("Error: {e}");
+                            std::process::exit(1);
+                        });
                         println!(
-                            "{}[{}] {} (JD {:.4} - {:.4}, {:.1} days)",
-                            indent,
-                            period.order,
-                            format_dasha_entity(&period.entity),
-                            period.start_jd,
-                            period.end_jd,
-                            period.duration_days(),
+                            "Dasha Complete Level ({}) child level {}\n",
+                            dasha_system.name(),
+                            child_level.name()
                         );
+                        print_dasha_periods(&periods, 1, 100);
+                    } else {
+                        let parent_index = args.parent_index.unwrap_or_else(|| {
+                            eprintln!("--parent-index is required for --mode {mode}");
+                            std::process::exit(1);
+                        }) as usize;
+                        let parent = parent_periods.get(parent_index).unwrap_or_else(|| {
+                            eprintln!("Parent index {parent_index} is out of range.");
+                            std::process::exit(1);
+                        });
+
+                        if mode == "children" {
+                            let children = dhruv_search::dasha_children_for_birth(
+                                &engine,
+                                &eop_kernel,
+                                &birth_utc,
+                                &location,
+                                dasha_system,
+                                parent,
+                                &bhava_config,
+                                &rs_config,
+                                &aya_config,
+                                &variation,
+                            )
+                            .unwrap_or_else(|e| {
+                                eprintln!("Error: {e}");
+                                std::process::exit(1);
+                            });
+                            println!(
+                                "Dasha Children ({}) parent level {} index {}\n",
+                                dasha_system.name(),
+                                parent_level,
+                                parent_index
+                            );
+                            print_dasha_periods(&children, 1, 100);
+                        } else {
+                            let entity = parse_dasha_entity_spec(args.entity.as_deref().unwrap_or_else(|| {
+                                eprintln!("--entity is required for --mode child-period");
+                                std::process::exit(1);
+                            }));
+                            let child = dhruv_search::dasha_child_period_for_birth(
+                                &engine,
+                                &eop_kernel,
+                                &birth_utc,
+                                &location,
+                                dasha_system,
+                                parent,
+                                entity,
+                                &bhava_config,
+                                &rs_config,
+                                &aya_config,
+                                &variation,
+                            )
+                            .unwrap_or_else(|e| {
+                                eprintln!("Error: {e}");
+                                std::process::exit(1);
+                            });
+                            match child {
+                                Some(period) => {
+                                    println!(
+                                        "Dasha Child Period ({}) parent level {} index {}\n",
+                                        dasha_system.name(),
+                                        parent_level,
+                                        parent_index
+                                    );
+                                    print_dasha_periods(&[period], 1, 1);
+                                }
+                                None => println!("No matching child period found."),
+                            }
+                        }
                     }
-                    if level.len() > display_count {
-                        println!("  ... and {} more periods", level.len() - display_count);
-                    }
-                    println!();
+                }
+                other => {
+                    eprintln!("Unknown dasha mode: {other}");
+                    eprintln!("Valid: hierarchy, snapshot, level0, level0-entity, children, child-period, complete-level");
+                    std::process::exit(1);
                 }
             }
         }
@@ -7012,6 +7179,54 @@ fn parse_dasha_system(s: &str) -> dhruv_vedic_base::dasha::DashaSystem {
     }
 }
 
+fn parse_dasha_entity_spec(spec: &str) -> dhruv_vedic_base::dasha::DashaEntity {
+    let (kind, value) = spec.split_once(':').unwrap_or_else(|| {
+        eprintln!("Invalid dasha entity: {spec}");
+        eprintln!("Expected: graha:0..8, rashi:0..11, yogini:0..7");
+        std::process::exit(1);
+    });
+    let idx: u8 = value.parse().unwrap_or_else(|_| {
+        eprintln!("Invalid dasha entity index: {value}");
+        std::process::exit(1);
+    });
+    match kind.to_ascii_lowercase().as_str() {
+        "graha" => match idx {
+            0 => dhruv_vedic_base::dasha::DashaEntity::Graha(dhruv_vedic_base::Graha::Surya),
+            1 => dhruv_vedic_base::dasha::DashaEntity::Graha(dhruv_vedic_base::Graha::Chandra),
+            2 => dhruv_vedic_base::dasha::DashaEntity::Graha(dhruv_vedic_base::Graha::Mangal),
+            3 => dhruv_vedic_base::dasha::DashaEntity::Graha(dhruv_vedic_base::Graha::Buddh),
+            4 => dhruv_vedic_base::dasha::DashaEntity::Graha(dhruv_vedic_base::Graha::Guru),
+            5 => dhruv_vedic_base::dasha::DashaEntity::Graha(dhruv_vedic_base::Graha::Shukra),
+            6 => dhruv_vedic_base::dasha::DashaEntity::Graha(dhruv_vedic_base::Graha::Shani),
+            7 => dhruv_vedic_base::dasha::DashaEntity::Graha(dhruv_vedic_base::Graha::Rahu),
+            8 => dhruv_vedic_base::dasha::DashaEntity::Graha(dhruv_vedic_base::Graha::Ketu),
+            _ => {
+                eprintln!("Graha index must be 0..8");
+                std::process::exit(1);
+            }
+        },
+        "rashi" => {
+            if idx >= 12 {
+                eprintln!("Rashi index must be 0..11");
+                std::process::exit(1);
+            }
+            dhruv_vedic_base::dasha::DashaEntity::Rashi(idx)
+        }
+        "yogini" => {
+            if idx >= 8 {
+                eprintln!("Yogini index must be 0..7");
+                std::process::exit(1);
+            }
+            dhruv_vedic_base::dasha::DashaEntity::Yogini(idx)
+        }
+        other => {
+            eprintln!("Unknown dasha entity type: {other}");
+            eprintln!("Valid: graha, rashi, yogini");
+            std::process::exit(1);
+        }
+    }
+}
+
 fn parse_charakaraka_scheme(s: &str) -> dhruv_vedic_base::CharakarakaScheme {
     match s.to_ascii_lowercase().replace('_', "-").as_str() {
         "eight" | "8" | "8-chara" | "8-charakaraka" | "jaimini-8" => {
@@ -7056,6 +7271,46 @@ fn format_dasha_entity(entity: &dhruv_vedic_base::dasha::DashaEntity) -> String 
         dhruv_vedic_base::dasha::DashaEntity::Graha(g) => g.english_name().to_string(),
         dhruv_vedic_base::dasha::DashaEntity::Rashi(r) => format!("Rashi {r}"),
         dhruv_vedic_base::dasha::DashaEntity::Yogini(y) => format!("Yogini {y}"),
+    }
+}
+
+fn print_dasha_periods(
+    periods: &[dhruv_vedic_base::dasha::DashaPeriod],
+    base_indent: usize,
+    max_display: usize,
+) {
+    let display_count = periods.len().min(max_display);
+    for period in &periods[..display_count] {
+        let indent = "  ".repeat(base_indent + period.level as usize);
+        println!(
+            "{}[{}] {} {} (JD {:.4} - {:.4}, {:.1} days)",
+            indent,
+            period.order,
+            period.level.name(),
+            format_dasha_entity(&period.entity),
+            period.start_jd,
+            period.end_jd,
+            period.duration_days(),
+        );
+    }
+    if periods.len() > display_count {
+        println!("  ... and {} more periods", periods.len() - display_count);
+    }
+}
+
+fn print_dasha_hierarchy(hierarchy: &dhruv_vedic_base::dasha::DashaHierarchy) {
+    for (lvl_idx, level) in hierarchy.levels.iter().enumerate() {
+        let level_name = dhruv_vedic_base::dasha::DashaLevel::from_u8(lvl_idx as u8)
+            .map(|l| l.name())
+            .unwrap_or("Unknown");
+        println!(
+            "Level {} ({}) — {} periods:",
+            lvl_idx,
+            level_name,
+            level.len()
+        );
+        print_dasha_periods(level, 1, 50);
+        println!();
     }
 }
 

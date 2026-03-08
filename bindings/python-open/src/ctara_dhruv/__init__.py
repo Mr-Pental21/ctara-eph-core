@@ -87,6 +87,21 @@ from ctara_dhruv.ayanamsha import ayanamsha, system_count, reference_plane_defau
 # Tara
 from ctara_dhruv.tara import TaraCatalog
 
+# Dasha
+from ctara_dhruv.dasha import (
+    DashaLevel,
+    DashaHierarchy,
+    dasha_selection_config_default,
+    dasha_variation_config_default,
+    dasha_hierarchy,
+    dasha_snapshot,
+    dasha_level0,
+    dasha_level0_entity,
+    dasha_children,
+    dasha_child_period,
+    dasha_complete_level,
+)
+
 __all__ = [
     # Engine
     "Engine", "init", "engine", "lsk", "eop",
@@ -115,4 +130,9 @@ __all__ = [
     "utc_to_jd_tdb", "jd_tdb_to_utc", "nutation",
     "ayanamsha", "system_count", "reference_plane_default",
     "TaraCatalog",
+    "DashaLevel", "DashaHierarchy",
+    "dasha_selection_config_default", "dasha_variation_config_default",
+    "dasha_hierarchy", "dasha_snapshot",
+    "dasha_level0", "dasha_level0_entity",
+    "dasha_children", "dasha_child_period", "dasha_complete_level",
 ]

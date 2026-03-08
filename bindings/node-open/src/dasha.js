@@ -39,6 +39,10 @@ function dashaSelectionConfigDefault() {
   return addon.dashaSelectionConfigDefault();
 }
 
+function dashaVariationConfigDefault() {
+  return addon.dashaVariationConfigDefault();
+}
+
 function dashaHierarchyUtc(
   engine,
   eop,
@@ -93,9 +97,155 @@ function dashaSnapshotUtc(
   return r.snapshot;
 }
 
+function dashaLevel0Utc(
+  engine,
+  eop,
+  birthUtc,
+  location,
+  {
+    ayanamshaSystem = 0,
+    useNutation = true,
+    system = 0,
+  } = {},
+) {
+  const r = addon.dashaLevel0Utc(
+    engine._handle,
+    eop._handle,
+    birthUtc,
+    location,
+    ayanamshaSystem,
+    !!useNutation,
+    system,
+  );
+  checkStatus('dasha_level0_utc', r.status);
+  return r.periods;
+}
+
+function dashaLevel0EntityUtc(
+  engine,
+  eop,
+  birthUtc,
+  location,
+  entity,
+  {
+    ayanamshaSystem = 0,
+    useNutation = true,
+    system = 0,
+  } = {},
+) {
+  const r = addon.dashaLevel0EntityUtc(
+    engine._handle,
+    eop._handle,
+    birthUtc,
+    location,
+    ayanamshaSystem,
+    !!useNutation,
+    system,
+    entity.entityType,
+    entity.entityIndex,
+  );
+  checkStatus('dasha_level0_entity_utc', r.status);
+  return r.found ? r.period : null;
+}
+
+function dashaChildrenUtc(
+  engine,
+  eop,
+  birthUtc,
+  location,
+  parent,
+  {
+    ayanamshaSystem = 0,
+    useNutation = true,
+    system = 0,
+    variationConfig = null,
+  } = {},
+) {
+  const r = addon.dashaChildrenUtc(
+    engine._handle,
+    eop._handle,
+    birthUtc,
+    location,
+    ayanamshaSystem,
+    !!useNutation,
+    system,
+    variationConfig,
+    parent,
+  );
+  checkStatus('dasha_children_utc', r.status);
+  return r.periods;
+}
+
+function dashaChildPeriodUtc(
+  engine,
+  eop,
+  birthUtc,
+  location,
+  parent,
+  childEntity,
+  {
+    ayanamshaSystem = 0,
+    useNutation = true,
+    system = 0,
+    variationConfig = null,
+  } = {},
+) {
+  const r = addon.dashaChildPeriodUtc(
+    engine._handle,
+    eop._handle,
+    birthUtc,
+    location,
+    ayanamshaSystem,
+    !!useNutation,
+    system,
+    variationConfig,
+    parent,
+    childEntity.entityType,
+    childEntity.entityIndex,
+  );
+  checkStatus('dasha_child_period_utc', r.status);
+  return r.found ? r.period : null;
+}
+
+function dashaCompleteLevelUtc(
+  engine,
+  eop,
+  birthUtc,
+  location,
+  parentPeriods,
+  childLevel,
+  {
+    ayanamshaSystem = 0,
+    useNutation = true,
+    system = 0,
+    variationConfig = null,
+  } = {},
+) {
+  const r = addon.dashaCompleteLevelUtc(
+    engine._handle,
+    eop._handle,
+    birthUtc,
+    location,
+    ayanamshaSystem,
+    !!useNutation,
+    system,
+    variationConfig,
+    parentPeriods,
+    childLevel,
+  );
+  checkStatus('dasha_complete_level_utc', r.status);
+  return r.periods;
+}
+
 module.exports = {
   DashaHierarchy,
   dashaSelectionConfigDefault,
+  dashaVariationConfigDefault,
   dashaHierarchyUtc,
   dashaSnapshotUtc,
+  dashaLevel0Utc,
+  dashaLevel0EntityUtc,
+  dashaChildrenUtc,
+  dashaChildPeriodUtc,
+  dashaCompleteLevelUtc,
 };

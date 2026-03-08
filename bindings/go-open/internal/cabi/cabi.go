@@ -21,6 +21,7 @@ type EopHandle struct{ ptr *C.DhruvEopHandle }
 type ConfigHandle struct{ ptr *C.DhruvConfigHandle }
 type TaraCatalogHandle struct{ ptr *C.DhruvTaraCatalogHandle }
 type DashaHierarchyHandle struct{ ptr C.DhruvDashaHierarchyHandle }
+type DashaPeriodListHandle struct{ ptr C.DhruvDashaPeriodListHandle }
 
 func (h EngineHandle) Valid() bool      { return h.ptr != nil }
 func (h LskHandle) Valid() bool         { return h.ptr != nil }
@@ -30,6 +31,7 @@ func (h TaraCatalogHandle) Valid() bool { return h.ptr != nil }
 func (h DashaHierarchyHandle) Valid() bool {
 	return h.ptr != nil
 }
+func (h DashaPeriodListHandle) Valid() bool { return h.ptr != nil }
 
 func APIVersion() uint32 { return uint32(C.dhruv_api_version()) }
 
@@ -1026,6 +1028,30 @@ func AllUpagrahasForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc Ge
 	}, st
 }
 
+func goDashaPeriod(out C.DhruvDashaPeriod) DashaPeriod {
+	return DashaPeriod{
+		EntityType:  uint8(out.entity_type),
+		EntityIndex: uint8(out.entity_index),
+		StartJD:     float64(out.start_jd),
+		EndJD:       float64(out.end_jd),
+		Level:       uint8(out.level),
+		Order:       uint16(out.order),
+		ParentIdx:   uint32(out.parent_idx),
+	}
+}
+
+func cDashaPeriod(period DashaPeriod) C.DhruvDashaPeriod {
+	return C.DhruvDashaPeriod{
+		entity_type:  C.uint8_t(period.EntityType),
+		entity_index: C.uint8_t(period.EntityIndex),
+		start_jd:     C.double(period.StartJD),
+		end_jd:       C.double(period.EndJD),
+		level:        C.uint8_t(period.Level),
+		order:        C.uint16_t(period.Order),
+		parent_idx:   C.uint32_t(period.ParentIdx),
+	}
+}
+
 func goDashaSelectionConfig(v C.DhruvDashaSelectionConfig) DashaSelectionConfig {
 	var out DashaSelectionConfig
 	out.Count = uint8(v.count)
@@ -1064,6 +1090,30 @@ func cDashaSelectionConfig(cfg DashaSelectionConfig) C.DhruvDashaSelectionConfig
 
 func DashaSelectionConfigDefault() DashaSelectionConfig {
 	return goDashaSelectionConfig(C.dhruv_dasha_selection_config_default())
+}
+
+func goDashaVariationConfig(v C.DhruvDashaVariationConfig) DashaVariationConfig {
+	var out DashaVariationConfig
+	out.YoginiScheme = uint8(v.yogini_scheme)
+	out.UseAbhijit = v.use_abhijit != 0
+	for i := 0; i < len(out.LevelMethods); i++ {
+		out.LevelMethods[i] = uint8(v.level_methods[i])
+	}
+	return out
+}
+
+func cDashaVariationConfig(cfg DashaVariationConfig) C.DhruvDashaVariationConfig {
+	var out C.DhruvDashaVariationConfig
+	out.yogini_scheme = C.uint8_t(cfg.YoginiScheme)
+	out.use_abhijit = boolU8(cfg.UseAbhijit)
+	for i := 0; i < len(cfg.LevelMethods); i++ {
+		out.level_methods[i] = C.uint8_t(cfg.LevelMethods[i])
+	}
+	return out
+}
+
+func DashaVariationConfigDefault() DashaVariationConfig {
+	return goDashaVariationConfig(C.dhruv_dasha_variation_config_default())
 }
 
 func cAmshaSelectionConfig(cfg AmshaSelectionConfig) C.DhruvAmshaSelectionConfig {
@@ -1195,7 +1245,7 @@ func (h DashaHierarchyHandle) PeriodCount(level uint8) (uint32, Status) {
 func (h DashaHierarchyHandle) PeriodAt(level uint8, idx uint32) (DashaPeriod, Status) {
 	var out C.DhruvDashaPeriod
 	st := Status(C.dhruv_dasha_hierarchy_period_at(h.ptr, C.uint8_t(level), C.uint32_t(idx), &out))
-	return DashaPeriod{EntityType: uint8(out.entity_type), EntityIndex: uint8(out.entity_index), StartJD: float64(out.start_jd), EndJD: float64(out.end_jd), Level: uint8(out.level), Order: uint16(out.order), ParentIdx: uint32(out.parent_idx)}, st
+	return goDashaPeriod(out), st
 }
 
 func DashaSnapshotUTC(engine EngineHandle, eop EopHandle, birthUTC, queryUTC UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, system uint8, maxLevel uint8) (DashaSnapshot, Status) {
@@ -1205,10 +1255,103 @@ func DashaSnapshotUTC(engine EngineHandle, eop EopHandle, birthUTC, queryUTC Utc
 	st := Status(C.dhruv_dasha_snapshot_utc(engine.ptr, eop.ptr, &cbirth, &cquery, &cloc, &cbhava, &crise, C.uint32_t(ayanamshaSystem), boolU8(useNutation), C.uint8_t(system), C.uint8_t(maxLevel), &out))
 	res := DashaSnapshot{System: uint8(out.system), QueryJD: float64(out.query_jd), Count: uint8(out.count)}
 	for i := 0; i < len(res.Periods); i++ {
-		p := out.periods[i]
-		res.Periods[i] = DashaPeriod{EntityType: uint8(p.entity_type), EntityIndex: uint8(p.entity_index), StartJD: float64(p.start_jd), EndJD: float64(p.end_jd), Level: uint8(p.level), Order: uint16(p.order), ParentIdx: uint32(p.parent_idx)}
+		res.Periods[i] = goDashaPeriod(out.periods[i])
 	}
 	return res, st
+}
+
+func (h *DashaPeriodListHandle) Free() {
+	if h == nil || h.ptr == nil {
+		return
+	}
+	C.dhruv_dasha_period_list_free(h.ptr)
+	h.ptr = nil
+}
+
+func (h DashaPeriodListHandle) Count() (uint32, Status) {
+	var out C.uint32_t
+	st := Status(C.dhruv_dasha_period_list_count(h.ptr, &out))
+	return uint32(out), st
+}
+
+func (h DashaPeriodListHandle) At(idx uint32) (DashaPeriod, Status) {
+	var out C.DhruvDashaPeriod
+	st := Status(C.dhruv_dasha_period_list_at(h.ptr, C.uint32_t(idx), &out))
+	return goDashaPeriod(out), st
+}
+
+func goDashaPeriodList(handle DashaPeriodListHandle) ([]DashaPeriod, Status) {
+	defer handle.Free()
+	count, st := handle.Count()
+	if st != StatusOK {
+		return nil, st
+	}
+	periods := make([]DashaPeriod, int(count))
+	for idx := uint32(0); idx < count; idx++ {
+		period, st := handle.At(idx)
+		if st != StatusOK {
+			return nil, st
+		}
+		periods[idx] = period
+	}
+	return periods, StatusOK
+}
+
+func DashaLevel0UTC(engine EngineHandle, eop EopHandle, birthUTC UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, system uint8) ([]DashaPeriod, Status) {
+	cbirth, cloc, cbhava, crise := cUTC(birthUTC), cGeo(loc), cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
+	var handle C.DhruvDashaPeriodListHandle
+	st := Status(C.dhruv_dasha_level0_utc(engine.ptr, eop.ptr, &cbirth, &cloc, &cbhava, &crise, C.uint32_t(ayanamshaSystem), boolU8(useNutation), C.uint8_t(system), &handle))
+	if st != StatusOK {
+		return nil, st
+	}
+	return goDashaPeriodList(DashaPeriodListHandle{ptr: handle})
+}
+
+func DashaLevel0EntityUTC(engine EngineHandle, eop EopHandle, birthUTC UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, system, entityType, entityIndex uint8) (DashaPeriod, bool, Status) {
+	cbirth, cloc, cbhava, crise := cUTC(birthUTC), cGeo(loc), cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
+	var found C.uint8_t
+	var out C.DhruvDashaPeriod
+	st := Status(C.dhruv_dasha_level0_entity_utc(engine.ptr, eop.ptr, &cbirth, &cloc, &cbhava, &crise, C.uint32_t(ayanamshaSystem), boolU8(useNutation), C.uint8_t(system), C.uint8_t(entityType), C.uint8_t(entityIndex), &found, &out))
+	return goDashaPeriod(out), found != 0, st
+}
+
+func DashaChildrenUTC(engine EngineHandle, eop EopHandle, birthUTC UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, system uint8, variationCfg DashaVariationConfig, parent DashaPeriod) ([]DashaPeriod, Status) {
+	cbirth, cloc, cbhava, crise := cUTC(birthUTC), cGeo(loc), cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
+	cvariation, cparent := cDashaVariationConfig(variationCfg), cDashaPeriod(parent)
+	var handle C.DhruvDashaPeriodListHandle
+	st := Status(C.dhruv_dasha_children_utc(engine.ptr, eop.ptr, &cbirth, &cloc, &cbhava, &crise, C.uint32_t(ayanamshaSystem), boolU8(useNutation), C.uint8_t(system), &cvariation, &cparent, &handle))
+	if st != StatusOK {
+		return nil, st
+	}
+	return goDashaPeriodList(DashaPeriodListHandle{ptr: handle})
+}
+
+func DashaChildPeriodUTC(engine EngineHandle, eop EopHandle, birthUTC UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, system uint8, variationCfg DashaVariationConfig, parent DashaPeriod, childEntityType, childEntityIndex uint8) (DashaPeriod, bool, Status) {
+	cbirth, cloc, cbhava, crise := cUTC(birthUTC), cGeo(loc), cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
+	cvariation, cparent := cDashaVariationConfig(variationCfg), cDashaPeriod(parent)
+	var found C.uint8_t
+	var out C.DhruvDashaPeriod
+	st := Status(C.dhruv_dasha_child_period_utc(engine.ptr, eop.ptr, &cbirth, &cloc, &cbhava, &crise, C.uint32_t(ayanamshaSystem), boolU8(useNutation), C.uint8_t(system), &cvariation, &cparent, C.uint8_t(childEntityType), C.uint8_t(childEntityIndex), &found, &out))
+	return goDashaPeriod(out), found != 0, st
+}
+
+func DashaCompleteLevelUTC(engine EngineHandle, eop EopHandle, birthUTC UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, system uint8, variationCfg DashaVariationConfig, parentPeriods []DashaPeriod, childLevel uint8) ([]DashaPeriod, Status) {
+	cbirth, cloc, cbhava, crise := cUTC(birthUTC), cGeo(loc), cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
+	cvariation := cDashaVariationConfig(variationCfg)
+	cparents := make([]C.DhruvDashaPeriod, len(parentPeriods))
+	for i, period := range parentPeriods {
+		cparents[i] = cDashaPeriod(period)
+	}
+	var parentPtr *C.DhruvDashaPeriod
+	if len(cparents) > 0 {
+		parentPtr = &cparents[0]
+	}
+	var handle C.DhruvDashaPeriodListHandle
+	st := Status(C.dhruv_dasha_complete_level_utc(engine.ptr, eop.ptr, &cbirth, &cloc, &cbhava, &crise, C.uint32_t(ayanamshaSystem), boolU8(useNutation), C.uint8_t(system), &cvariation, parentPtr, C.uint32_t(len(cparents)), C.uint8_t(childLevel), &handle))
+	if st != StatusOK {
+		return nil, st
+	}
+	return goDashaPeriodList(DashaPeriodListHandle{ptr: handle})
 }
 
 func LoadTaraCatalog(path string) (TaraCatalogHandle, Status) {

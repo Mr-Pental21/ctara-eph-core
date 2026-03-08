@@ -89,6 +89,7 @@ type (
 	GrahaPositionsConfig = cabi.GrahaPositionsConfig
 	BindusConfig         = cabi.BindusConfig
 	DashaSelectionConfig = cabi.DashaSelectionConfig
+	DashaVariationConfig = cabi.DashaVariationConfig
 	AmshaSelectionConfig = cabi.AmshaSelectionConfig
 	FullKundaliConfig    = cabi.FullKundaliConfig
 

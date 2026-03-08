@@ -320,6 +320,48 @@ bool ReadDashaSelectionConfig(napi_env env, napi_value obj, DhruvDashaSelectionC
     return true;
 }
 
+bool ReadDashaVariationConfig(napi_env env, napi_value obj, DhruvDashaVariationConfig* out) {
+    *out = dhruv_dasha_variation_config_default();
+    napi_value v;
+    bool has = false;
+
+    if (!GetOptionalNamedProperty(env, obj, "levelMethods", &v, &has)) return false;
+    if (has) {
+        if (!ReadUint8ArrayFixed(env, v, out->level_methods, 5)) return false;
+    }
+    if (!GetOptionalNamedProperty(env, obj, "yoginiScheme", &v, &has)) return false;
+    if (has) {
+        uint32_t value = 0;
+        if (!GetUint32(env, v, &value)) return false;
+        out->yogini_scheme = static_cast<uint8_t>(value);
+    }
+    if (!GetOptionalNamedProperty(env, obj, "useAbhijit", &v, &has)) return false;
+    if (has) {
+        bool value = false;
+        if (!GetBool(env, v, &value)) return false;
+        out->use_abhijit = value ? 1 : 0;
+    }
+    return true;
+}
+
+bool ReadDashaPeriodValue(napi_env env, napi_value obj, DhruvDashaPeriod* out) {
+    napi_value v;
+    uint32_t u32 = 0;
+    if (!GetNamedProperty(env, obj, "entityType", &v) || !GetUint32(env, v, &u32)) return false;
+    out->entity_type = static_cast<uint8_t>(u32);
+    if (!GetNamedProperty(env, obj, "entityIndex", &v) || !GetUint32(env, v, &u32)) return false;
+    out->entity_index = static_cast<uint8_t>(u32);
+    if (!GetNamedProperty(env, obj, "startJd", &v) || !GetDouble(env, v, &out->start_jd)) return false;
+    if (!GetNamedProperty(env, obj, "endJd", &v) || !GetDouble(env, v, &out->end_jd)) return false;
+    if (!GetNamedProperty(env, obj, "level", &v) || !GetUint32(env, v, &u32)) return false;
+    out->level = static_cast<uint8_t>(u32);
+    if (!GetNamedProperty(env, obj, "order", &v) || !GetUint32(env, v, &u32)) return false;
+    out->order = static_cast<uint16_t>(u32);
+    if (!GetNamedProperty(env, obj, "parentIdx", &v) || !GetUint32(env, v, &u32)) return false;
+    out->parent_idx = u32;
+    return true;
+}
+
 bool ReadFullKundaliConfig(napi_env env, napi_value obj, DhruvFullKundaliConfig* out) {
     napi_value v;
     bool b = false;
@@ -613,6 +655,45 @@ napi_value WriteDashaPeriod(napi_env env, const DhruvDashaPeriod& p) {
     SetNamed(env, po, "order", MakeUint32(env, p.order));
     SetNamed(env, po, "parentIdx", MakeUint32(env, p.parent_idx));
     return po;
+}
+
+napi_value WriteDashaVariationConfig(napi_env env, const DhruvDashaVariationConfig& cfg) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    napi_value methods;
+    napi_create_array_with_length(env, 5, &methods);
+    for (uint32_t i = 0; i < 5; ++i) {
+        napi_set_element(env, methods, i, MakeUint32(env, cfg.level_methods[i]));
+    }
+    SetNamed(env, obj, "levelMethods", methods);
+    SetNamed(env, obj, "yoginiScheme", MakeUint32(env, cfg.yogini_scheme));
+    SetNamed(env, obj, "useAbhijit", MakeBool(env, cfg.use_abhijit != 0));
+    return obj;
+}
+
+int32_t WriteDashaPeriodList(napi_env env, DhruvDashaPeriodListHandle handle, napi_value* out) {
+    uint32_t count = 0;
+    int32_t status = dhruv_dasha_period_list_count(handle, &count);
+    if (status != STATUS_OK) {
+        dhruv_dasha_period_list_free(handle);
+        return status;
+    }
+
+    napi_value periods;
+    napi_create_array_with_length(env, count, &periods);
+    for (uint32_t idx = 0; idx < count; ++idx) {
+        DhruvDashaPeriod period{};
+        status = dhruv_dasha_period_list_at(handle, idx, &period);
+        if (status != STATUS_OK) {
+            dhruv_dasha_period_list_free(handle);
+            return status;
+        }
+        napi_set_element(env, periods, idx, WriteDashaPeriod(env, period));
+    }
+
+    dhruv_dasha_period_list_free(handle);
+    *out = periods;
+    return STATUS_OK;
 }
 
 napi_value WriteFullPanchangInfo(napi_env env, const DhruvPanchangInfo& p) {
@@ -4724,6 +4805,11 @@ napi_value DashaSelectionConfigDefault(napi_env env, napi_callback_info info) {
     return obj;
 }
 
+napi_value DashaVariationConfigDefault(napi_env env, napi_callback_info info) {
+    (void)info;
+    return WriteDashaVariationConfig(env, dhruv_dasha_variation_config_default());
+}
+
 napi_value FullKundaliForDate(napi_env env, napi_callback_info info) {
     size_t argc = 9;
     napi_value args[9];
@@ -5054,6 +5140,356 @@ napi_value DashaSnapshotUtc(napi_env env, napi_callback_info info) {
         SetNamed(env, out, "snapshot", snap);
     }
 
+    return out;
+}
+
+napi_value DashaLevel0Utc(napi_env env, napi_callback_info info) {
+    size_t argc = 7;
+    napi_value args[7];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 7) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    void* e_ptr = nullptr;
+    void* ep_ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &e_ptr) || !ReadExternalPtr(env, args[1], &ep_ptr)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvUtcTime birth{};
+    DhruvGeoLocation loc{};
+    if (!ReadUtcTime(env, args[2], &birth) || !ReadGeoLocation(env, args[3], &loc)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    uint32_t ayanamsha = 0;
+    bool use_nutation = false;
+    uint32_t system = 0;
+    if (!GetUint32(env, args[4], &ayanamsha) || !GetBool(env, args[5], &use_nutation) || !GetUint32(env, args[6], &system)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvBhavaConfig bhava_cfg = dhruv_bhava_config_default();
+    DhruvRiseSetConfig rise_cfg = dhruv_riseset_config_default();
+    DhruvDashaPeriodListHandle handle = nullptr;
+    int32_t status = dhruv_dasha_level0_utc(
+        static_cast<const DhruvEngineHandle*>(e_ptr),
+        static_cast<const DhruvEopHandle*>(ep_ptr),
+        &birth,
+        &loc,
+        &bhava_cfg,
+        &rise_cfg,
+        ayanamsha,
+        use_nutation ? 1 : 0,
+        static_cast<uint8_t>(system),
+        &handle);
+
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        napi_value periods;
+        status = WriteDashaPeriodList(env, handle, &periods);
+        SetNamed(env, out, "status", MakeInt32(env, status));
+        if (status == STATUS_OK) {
+            SetNamed(env, out, "periods", periods);
+        }
+    }
+    return out;
+}
+
+napi_value DashaLevel0EntityUtc(napi_env env, napi_callback_info info) {
+    size_t argc = 9;
+    napi_value args[9];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 9) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    void* e_ptr = nullptr;
+    void* ep_ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &e_ptr) || !ReadExternalPtr(env, args[1], &ep_ptr)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvUtcTime birth{};
+    DhruvGeoLocation loc{};
+    if (!ReadUtcTime(env, args[2], &birth) || !ReadGeoLocation(env, args[3], &loc)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    uint32_t ayanamsha = 0;
+    bool use_nutation = false;
+    uint32_t system = 0;
+    uint32_t entity_type = 0;
+    uint32_t entity_index = 0;
+    if (!GetUint32(env, args[4], &ayanamsha) || !GetBool(env, args[5], &use_nutation) ||
+        !GetUint32(env, args[6], &system) || !GetUint32(env, args[7], &entity_type) ||
+        !GetUint32(env, args[8], &entity_index)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvBhavaConfig bhava_cfg = dhruv_bhava_config_default();
+    DhruvRiseSetConfig rise_cfg = dhruv_riseset_config_default();
+    uint8_t found = 0;
+    DhruvDashaPeriod period{};
+    int32_t status = dhruv_dasha_level0_entity_utc(
+        static_cast<const DhruvEngineHandle*>(e_ptr),
+        static_cast<const DhruvEopHandle*>(ep_ptr),
+        &birth,
+        &loc,
+        &bhava_cfg,
+        &rise_cfg,
+        ayanamsha,
+        use_nutation ? 1 : 0,
+        static_cast<uint8_t>(system),
+        static_cast<uint8_t>(entity_type),
+        static_cast<uint8_t>(entity_index),
+        &found,
+        &period);
+
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        SetNamed(env, out, "found", MakeBool(env, found != 0));
+        if (found != 0) {
+            SetNamed(env, out, "period", WriteDashaPeriod(env, period));
+        }
+    }
+    return out;
+}
+
+napi_value DashaChildrenUtc(napi_env env, napi_callback_info info) {
+    size_t argc = 9;
+    napi_value args[9];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 9) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    void* e_ptr = nullptr;
+    void* ep_ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &e_ptr) || !ReadExternalPtr(env, args[1], &ep_ptr)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvUtcTime birth{};
+    DhruvGeoLocation loc{};
+    if (!ReadUtcTime(env, args[2], &birth) || !ReadGeoLocation(env, args[3], &loc)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    uint32_t ayanamsha = 0;
+    bool use_nutation = false;
+    uint32_t system = 0;
+    if (!GetUint32(env, args[4], &ayanamsha) || !GetBool(env, args[5], &use_nutation) || !GetUint32(env, args[6], &system)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvDashaVariationConfig variation_cfg = dhruv_dasha_variation_config_default();
+    napi_valuetype variation_type = napi_undefined;
+    if (napi_typeof(env, args[7], &variation_type) != napi_ok) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+    if (variation_type != napi_null && variation_type != napi_undefined &&
+        !ReadDashaVariationConfig(env, args[7], &variation_cfg)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvDashaPeriod parent{};
+    if (!ReadDashaPeriodValue(env, args[8], &parent)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvBhavaConfig bhava_cfg = dhruv_bhava_config_default();
+    DhruvRiseSetConfig rise_cfg = dhruv_riseset_config_default();
+    DhruvDashaPeriodListHandle handle = nullptr;
+    int32_t status = dhruv_dasha_children_utc(
+        static_cast<const DhruvEngineHandle*>(e_ptr),
+        static_cast<const DhruvEopHandle*>(ep_ptr),
+        &birth,
+        &loc,
+        &bhava_cfg,
+        &rise_cfg,
+        ayanamsha,
+        use_nutation ? 1 : 0,
+        static_cast<uint8_t>(system),
+        &variation_cfg,
+        &parent,
+        &handle);
+
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        napi_value periods;
+        status = WriteDashaPeriodList(env, handle, &periods);
+        SetNamed(env, out, "status", MakeInt32(env, status));
+        if (status == STATUS_OK) {
+            SetNamed(env, out, "periods", periods);
+        }
+    }
+    return out;
+}
+
+napi_value DashaChildPeriodUtc(napi_env env, napi_callback_info info) {
+    size_t argc = 11;
+    napi_value args[11];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 11) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    void* e_ptr = nullptr;
+    void* ep_ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &e_ptr) || !ReadExternalPtr(env, args[1], &ep_ptr)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvUtcTime birth{};
+    DhruvGeoLocation loc{};
+    if (!ReadUtcTime(env, args[2], &birth) || !ReadGeoLocation(env, args[3], &loc)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    uint32_t ayanamsha = 0;
+    bool use_nutation = false;
+    uint32_t system = 0;
+    if (!GetUint32(env, args[4], &ayanamsha) || !GetBool(env, args[5], &use_nutation) || !GetUint32(env, args[6], &system)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvDashaVariationConfig variation_cfg = dhruv_dasha_variation_config_default();
+    napi_valuetype variation_type = napi_undefined;
+    if (napi_typeof(env, args[7], &variation_type) != napi_ok) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+    if (variation_type != napi_null && variation_type != napi_undefined &&
+        !ReadDashaVariationConfig(env, args[7], &variation_cfg)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvDashaPeriod parent{};
+    uint32_t child_entity_type = 0;
+    uint32_t child_entity_index = 0;
+    if (!ReadDashaPeriodValue(env, args[8], &parent) || !GetUint32(env, args[9], &child_entity_type) ||
+        !GetUint32(env, args[10], &child_entity_index)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvBhavaConfig bhava_cfg = dhruv_bhava_config_default();
+    DhruvRiseSetConfig rise_cfg = dhruv_riseset_config_default();
+    uint8_t found = 0;
+    DhruvDashaPeriod period{};
+    int32_t status = dhruv_dasha_child_period_utc(
+        static_cast<const DhruvEngineHandle*>(e_ptr),
+        static_cast<const DhruvEopHandle*>(ep_ptr),
+        &birth,
+        &loc,
+        &bhava_cfg,
+        &rise_cfg,
+        ayanamsha,
+        use_nutation ? 1 : 0,
+        static_cast<uint8_t>(system),
+        &variation_cfg,
+        &parent,
+        static_cast<uint8_t>(child_entity_type),
+        static_cast<uint8_t>(child_entity_index),
+        &found,
+        &period);
+
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        SetNamed(env, out, "found", MakeBool(env, found != 0));
+        if (found != 0) {
+            SetNamed(env, out, "period", WriteDashaPeriod(env, period));
+        }
+    }
+    return out;
+}
+
+napi_value DashaCompleteLevelUtc(napi_env env, napi_callback_info info) {
+    size_t argc = 10;
+    napi_value args[10];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 10) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    void* e_ptr = nullptr;
+    void* ep_ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &e_ptr) || !ReadExternalPtr(env, args[1], &ep_ptr)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvUtcTime birth{};
+    DhruvGeoLocation loc{};
+    if (!ReadUtcTime(env, args[2], &birth) || !ReadGeoLocation(env, args[3], &loc)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    uint32_t ayanamsha = 0;
+    bool use_nutation = false;
+    uint32_t system = 0;
+    if (!GetUint32(env, args[4], &ayanamsha) || !GetBool(env, args[5], &use_nutation) || !GetUint32(env, args[6], &system)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvDashaVariationConfig variation_cfg = dhruv_dasha_variation_config_default();
+    napi_valuetype variation_type = napi_undefined;
+    if (napi_typeof(env, args[7], &variation_type) != napi_ok) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+    if (variation_type != napi_null && variation_type != napi_undefined &&
+        !ReadDashaVariationConfig(env, args[7], &variation_cfg)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    bool is_array = false;
+    if (napi_is_array(env, args[8], &is_array) != napi_ok || !is_array) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+    uint32_t parent_count = 0;
+    if (napi_get_array_length(env, args[8], &parent_count) != napi_ok) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+    std::vector<DhruvDashaPeriod> parent_periods(parent_count);
+    for (uint32_t i = 0; i < parent_count; ++i) {
+        napi_value item;
+        if (napi_get_element(env, args[8], i, &item) != napi_ok || !ReadDashaPeriodValue(env, item, &parent_periods[i])) {
+            return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        }
+    }
+
+    uint32_t child_level = 0;
+    if (!GetUint32(env, args[9], &child_level)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+
+    DhruvBhavaConfig bhava_cfg = dhruv_bhava_config_default();
+    DhruvRiseSetConfig rise_cfg = dhruv_riseset_config_default();
+    DhruvDashaPeriodListHandle handle = nullptr;
+    int32_t status = dhruv_dasha_complete_level_utc(
+        static_cast<const DhruvEngineHandle*>(e_ptr),
+        static_cast<const DhruvEopHandle*>(ep_ptr),
+        &birth,
+        &loc,
+        &bhava_cfg,
+        &rise_cfg,
+        ayanamsha,
+        use_nutation ? 1 : 0,
+        static_cast<uint8_t>(system),
+        &variation_cfg,
+        parent_periods.empty() ? nullptr : parent_periods.data(),
+        parent_count,
+        static_cast<uint8_t>(child_level),
+        &handle);
+
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        napi_value periods;
+        status = WriteDashaPeriodList(env, handle, &periods);
+        SetNamed(env, out, "status", MakeInt32(env, status));
+        if (status == STATUS_OK) {
+            SetNamed(env, out, "periods", periods);
+        }
+    }
     return out;
 }
 
@@ -5422,12 +5858,18 @@ napi_value Init(napi_env env, napi_value exports) {
         {"fullKundaliForDate", nullptr, FullKundaliForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
 
         {"dashaSelectionConfigDefault", nullptr, DashaSelectionConfigDefault, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"dashaVariationConfigDefault", nullptr, DashaVariationConfigDefault, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"dashaHierarchyUtc", nullptr, DashaHierarchyUtc, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"dashaHierarchyFree", nullptr, DashaHierarchyFree, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"dashaHierarchyLevelCount", nullptr, DashaHierarchyLevelCount, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"dashaHierarchyPeriodCount", nullptr, DashaHierarchyPeriodCount, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"dashaHierarchyPeriodAt", nullptr, DashaHierarchyPeriodAt, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"dashaSnapshotUtc", nullptr, DashaSnapshotUtc, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"dashaLevel0Utc", nullptr, DashaLevel0Utc, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"dashaLevel0EntityUtc", nullptr, DashaLevel0EntityUtc, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"dashaChildrenUtc", nullptr, DashaChildrenUtc, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"dashaChildPeriodUtc", nullptr, DashaChildPeriodUtc, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"dashaCompleteLevelUtc", nullptr, DashaCompleteLevelUtc, nullptr, nullptr, nullptr, napi_default, nullptr},
 
         {"taraCatalogLoad", nullptr, TaraCatalogLoad, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"taraCatalogFree", nullptr, TaraCatalogFree, nullptr, nullptr, nullptr, napi_default, nullptr},

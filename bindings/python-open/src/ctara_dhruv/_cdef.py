@@ -275,6 +275,8 @@ typedef struct DhruvTaraCatalogHandle DhruvTaraCatalogHandle;
 
 /* DhruvDashaHierarchyHandle is void* */
 typedef void *DhruvDashaHierarchyHandle;
+/* DhruvDashaPeriodListHandle is void* */
+typedef void *DhruvDashaPeriodListHandle;
 
 /* ===================================================================
  * Structs
@@ -1081,6 +1083,12 @@ typedef struct {
     uint8_t has_snapshot_jd;
     double  snapshot_jd;
 } DhruvDashaSelectionConfig;
+
+typedef struct {
+    uint8_t level_methods[5];
+    uint8_t yogini_scheme;
+    uint8_t use_abhijit;
+} DhruvDashaVariationConfig;
 
 /* --- Full Kundali --- */
 
@@ -1896,6 +1904,7 @@ DhruvStatus dhruv_avastha_for_date(
     DhruvAllGrahaAvasthas *out);
 
 /* --- Dasha --- */
+DhruvDashaVariationConfig dhruv_dasha_variation_config_default(void);
 DhruvDashaSelectionConfig dhruv_dasha_selection_config_default(void);
 DhruvStatus dhruv_dasha_hierarchy_level_count(
     DhruvDashaHierarchyHandle handle, uint8_t *out);
@@ -1907,6 +1916,13 @@ DhruvStatus dhruv_dasha_hierarchy_period_at(
     uint8_t level, uint32_t idx,
     DhruvDashaPeriod *out);
 void dhruv_dasha_hierarchy_free(DhruvDashaHierarchyHandle handle);
+DhruvStatus dhruv_dasha_period_list_count(
+    DhruvDashaPeriodListHandle handle, uint32_t *out);
+DhruvStatus dhruv_dasha_period_list_at(
+    DhruvDashaPeriodListHandle handle,
+    uint32_t idx,
+    DhruvDashaPeriod *out);
+void dhruv_dasha_period_list_free(DhruvDashaPeriodListHandle handle);
 DhruvStatus dhruv_dasha_hierarchy_utc(
     const DhruvEngineHandle *engine,
     const DhruvEopHandle *eop,
@@ -1932,6 +1948,75 @@ DhruvStatus dhruv_dasha_snapshot_utc(
     uint8_t system,
     uint8_t max_level,
     DhruvDashaSnapshot *out);
+DhruvStatus dhruv_dasha_level0_utc(
+    const DhruvEngineHandle *engine,
+    const DhruvEopHandle *eop,
+    const DhruvUtcTime *birth_utc,
+    const DhruvGeoLocation *location,
+    const DhruvBhavaConfig *bhava_config,
+    const DhruvRiseSetConfig *riseset_config,
+    uint32_t ayanamsha_system,
+    uint8_t use_nutation,
+    uint8_t system,
+    DhruvDashaPeriodListHandle *out);
+DhruvStatus dhruv_dasha_level0_entity_utc(
+    const DhruvEngineHandle *engine,
+    const DhruvEopHandle *eop,
+    const DhruvUtcTime *birth_utc,
+    const DhruvGeoLocation *location,
+    const DhruvBhavaConfig *bhava_config,
+    const DhruvRiseSetConfig *riseset_config,
+    uint32_t ayanamsha_system,
+    uint8_t use_nutation,
+    uint8_t system,
+    uint8_t entity_type,
+    uint8_t entity_index,
+    uint8_t *out_found,
+    DhruvDashaPeriod *out);
+DhruvStatus dhruv_dasha_children_utc(
+    const DhruvEngineHandle *engine,
+    const DhruvEopHandle *eop,
+    const DhruvUtcTime *birth_utc,
+    const DhruvGeoLocation *location,
+    const DhruvBhavaConfig *bhava_config,
+    const DhruvRiseSetConfig *riseset_config,
+    uint32_t ayanamsha_system,
+    uint8_t use_nutation,
+    uint8_t system,
+    const DhruvDashaVariationConfig *variation_config,
+    const DhruvDashaPeriod *parent,
+    DhruvDashaPeriodListHandle *out);
+DhruvStatus dhruv_dasha_child_period_utc(
+    const DhruvEngineHandle *engine,
+    const DhruvEopHandle *eop,
+    const DhruvUtcTime *birth_utc,
+    const DhruvGeoLocation *location,
+    const DhruvBhavaConfig *bhava_config,
+    const DhruvRiseSetConfig *riseset_config,
+    uint32_t ayanamsha_system,
+    uint8_t use_nutation,
+    uint8_t system,
+    const DhruvDashaVariationConfig *variation_config,
+    const DhruvDashaPeriod *parent,
+    uint8_t child_entity_type,
+    uint8_t child_entity_index,
+    uint8_t *out_found,
+    DhruvDashaPeriod *out);
+DhruvStatus dhruv_dasha_complete_level_utc(
+    const DhruvEngineHandle *engine,
+    const DhruvEopHandle *eop,
+    const DhruvUtcTime *birth_utc,
+    const DhruvGeoLocation *location,
+    const DhruvBhavaConfig *bhava_config,
+    const DhruvRiseSetConfig *riseset_config,
+    uint32_t ayanamsha_system,
+    uint8_t use_nutation,
+    uint8_t system,
+    const DhruvDashaVariationConfig *variation_config,
+    const DhruvDashaPeriod *parent_periods,
+    uint32_t parent_count,
+    uint8_t child_level,
+    DhruvDashaPeriodListHandle *out);
 
 /* --- Full Kundali --- */
 DhruvFullKundaliConfig dhruv_full_kundali_config_default(void);

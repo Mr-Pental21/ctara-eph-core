@@ -5,7 +5,7 @@ Wraps the dhruv_ffi_c dasha APIs for birth-chart period analysis.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 from ._ffi import ffi, lib
@@ -98,6 +98,59 @@ def _extract_period(p):
     )
 
 
+def _make_period(period):
+    out = ffi.new("DhruvDashaPeriod *")
+    out.entity_type = period.entity_type
+    out.entity_index = period.entity_index
+    out.start_jd = period.start_jd
+    out.end_jd = period.end_jd
+    out.level = period.level
+    out.order = period.order
+    out.parent_idx = period.parent_idx
+    return out
+
+
+def _make_variation_config(variation_config):
+    if variation_config is None:
+        return ffi.NULL
+    cfg = ffi.new("DhruvDashaVariationConfig *")
+    default = lib.dhruv_dasha_variation_config_default()
+    cfg.level_methods = default.level_methods
+    cfg.yogini_scheme = default.yogini_scheme
+    cfg.use_abhijit = default.use_abhijit
+    for idx, method in enumerate(variation_config.get("level_methods", [])):
+        if idx >= 5:
+            break
+        cfg.level_methods[idx] = method if method is not None else 0xFF
+    if "yogini_scheme" in variation_config:
+        cfg.yogini_scheme = variation_config["yogini_scheme"]
+    if "use_abhijit" in variation_config:
+        cfg.use_abhijit = 1 if variation_config["use_abhijit"] else 0
+    return cfg
+
+
+def _extract_period_list(handle):
+    try:
+        count_out = ffi.new("uint32_t *")
+        check(lib.dhruv_dasha_period_list_count(handle, count_out), "period_list_count")
+        period_out = ffi.new("DhruvDashaPeriod *")
+        periods = []
+        for idx in range(count_out[0]):
+            check(lib.dhruv_dasha_period_list_at(handle, idx, period_out), "period_list_at")
+            periods.append(_extract_period(period_out))
+        return periods
+    finally:
+        lib.dhruv_dasha_period_list_free(handle)
+
+
+def _parse_entity(entity):
+    if isinstance(entity, dict):
+        return entity["type"], entity["index"]
+    if isinstance(entity, tuple) and len(entity) == 2:
+        return entity[0], entity[1]
+    raise TypeError("entity must be {'type': ..., 'index': ...} or (type, index)")
+
+
 # ---------------------------------------------------------------------------
 # Dasha selection config
 # ---------------------------------------------------------------------------
@@ -109,6 +162,11 @@ def dasha_selection_config_default():
     count=0 (no systems selected), max_level=2, no snapshot.
     """
     return lib.dhruv_dasha_selection_config_default()
+
+
+def dasha_variation_config_default():
+    """Return a default DhruvDashaVariationConfig C struct."""
+    return lib.dhruv_dasha_variation_config_default()
 
 
 # ---------------------------------------------------------------------------
@@ -273,3 +331,213 @@ def dasha_snapshot(
         query_jd=out.query_jd,
         periods=periods,
     )
+
+
+def dasha_level0(
+    engine,
+    lsk,
+    eop,
+    jd_utc_birth,
+    location,
+    system=0,
+    ayanamsha_system=0,
+    use_nutation=1,
+    bhava_config=None,
+    riseset_config=None,
+):
+    birth_utc = _make_utc(jd_utc_birth)
+    loc = _make_location(location)
+    bhava_cfg = _make_bhava_config(bhava_config)
+    rs_cfg = _make_riseset_config(riseset_config)
+    handle = ffi.new("void **")
+    check(
+        lib.dhruv_dasha_level0_utc(
+            engine._ptr,
+            eop,
+            birth_utc,
+            loc,
+            bhava_cfg,
+            rs_cfg,
+            ayanamsha_system,
+            use_nutation,
+            system,
+            handle,
+        ),
+        "dasha_level0_utc",
+    )
+    return _extract_period_list(handle[0])
+
+
+def dasha_level0_entity(
+    engine,
+    lsk,
+    eop,
+    jd_utc_birth,
+    location,
+    entity,
+    system=0,
+    ayanamsha_system=0,
+    use_nutation=1,
+    bhava_config=None,
+    riseset_config=None,
+):
+    entity_type, entity_index = _parse_entity(entity)
+    birth_utc = _make_utc(jd_utc_birth)
+    loc = _make_location(location)
+    bhava_cfg = _make_bhava_config(bhava_config)
+    rs_cfg = _make_riseset_config(riseset_config)
+    found = ffi.new("uint8_t *")
+    out = ffi.new("DhruvDashaPeriod *")
+    check(
+        lib.dhruv_dasha_level0_entity_utc(
+            engine._ptr,
+            eop,
+            birth_utc,
+            loc,
+            bhava_cfg,
+            rs_cfg,
+            ayanamsha_system,
+            use_nutation,
+            system,
+            entity_type,
+            entity_index,
+            found,
+            out,
+        ),
+        "dasha_level0_entity_utc",
+    )
+    return _extract_period(out) if found[0] else None
+
+
+def dasha_children(
+    engine,
+    lsk,
+    eop,
+    jd_utc_birth,
+    location,
+    parent,
+    system=0,
+    ayanamsha_system=0,
+    use_nutation=1,
+    bhava_config=None,
+    riseset_config=None,
+    variation_config=None,
+):
+    birth_utc = _make_utc(jd_utc_birth)
+    loc = _make_location(location)
+    bhava_cfg = _make_bhava_config(bhava_config)
+    rs_cfg = _make_riseset_config(riseset_config)
+    variation_cfg = _make_variation_config(variation_config)
+    parent_ptr = _make_period(parent)
+    handle = ffi.new("void **")
+    check(
+        lib.dhruv_dasha_children_utc(
+            engine._ptr,
+            eop,
+            birth_utc,
+            loc,
+            bhava_cfg,
+            rs_cfg,
+            ayanamsha_system,
+            use_nutation,
+            system,
+            variation_cfg,
+            parent_ptr,
+            handle,
+        ),
+        "dasha_children_utc",
+    )
+    return _extract_period_list(handle[0])
+
+
+def dasha_child_period(
+    engine,
+    lsk,
+    eop,
+    jd_utc_birth,
+    location,
+    parent,
+    entity,
+    system=0,
+    ayanamsha_system=0,
+    use_nutation=1,
+    bhava_config=None,
+    riseset_config=None,
+    variation_config=None,
+):
+    entity_type, entity_index = _parse_entity(entity)
+    birth_utc = _make_utc(jd_utc_birth)
+    loc = _make_location(location)
+    bhava_cfg = _make_bhava_config(bhava_config)
+    rs_cfg = _make_riseset_config(riseset_config)
+    variation_cfg = _make_variation_config(variation_config)
+    parent_ptr = _make_period(parent)
+    found = ffi.new("uint8_t *")
+    out = ffi.new("DhruvDashaPeriod *")
+    check(
+        lib.dhruv_dasha_child_period_utc(
+            engine._ptr,
+            eop,
+            birth_utc,
+            loc,
+            bhava_cfg,
+            rs_cfg,
+            ayanamsha_system,
+            use_nutation,
+            system,
+            variation_cfg,
+            parent_ptr,
+            entity_type,
+            entity_index,
+            found,
+            out,
+        ),
+        "dasha_child_period_utc",
+    )
+    return _extract_period(out) if found[0] else None
+
+
+def dasha_complete_level(
+    engine,
+    lsk,
+    eop,
+    jd_utc_birth,
+    location,
+    parent_periods,
+    child_level,
+    system=0,
+    ayanamsha_system=0,
+    use_nutation=1,
+    bhava_config=None,
+    riseset_config=None,
+    variation_config=None,
+):
+    birth_utc = _make_utc(jd_utc_birth)
+    loc = _make_location(location)
+    bhava_cfg = _make_bhava_config(bhava_config)
+    rs_cfg = _make_riseset_config(riseset_config)
+    variation_cfg = _make_variation_config(variation_config)
+    parent_buf = ffi.new("DhruvDashaPeriod[]", len(parent_periods))
+    for idx, period in enumerate(parent_periods):
+        parent_buf[idx] = _make_period(period)[0]
+    handle = ffi.new("void **")
+    check(
+        lib.dhruv_dasha_complete_level_utc(
+            engine._ptr,
+            eop,
+            birth_utc,
+            loc,
+            bhava_cfg,
+            rs_cfg,
+            ayanamsha_system,
+            use_nutation,
+            system,
+            variation_cfg,
+            parent_buf,
+            len(parent_periods),
+            child_level,
+            handle,
+        ),
+        "dasha_complete_level_utc",
+    )
+    return _extract_period_list(handle[0])

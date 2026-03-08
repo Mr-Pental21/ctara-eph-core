@@ -772,6 +772,12 @@ type DashaSelectionConfig struct {
 	SnapshotJd    float64
 }
 
+type DashaVariationConfig struct {
+	LevelMethods [5]uint8
+	YoginiScheme uint8
+	UseAbhijit   bool
+}
+
 type AmshaSelectionConfig struct {
 	Count      uint8
 	Codes      [40]uint16

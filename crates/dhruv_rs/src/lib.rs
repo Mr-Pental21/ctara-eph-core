@@ -41,6 +41,9 @@ pub use dhruv_search::{
     PANCHANG_INCLUDE_MASA, PANCHANG_INCLUDE_NAKSHATRA, PANCHANG_INCLUDE_TITHI,
     PANCHANG_INCLUDE_VAAR, PANCHANG_INCLUDE_VARSHA, PANCHANG_INCLUDE_YOGA, PanchangResult,
     SankrantiResult, SankrantiTarget, SphutalResult, TaraOutputKind, TaraResult,
+    dasha_child_period_for_birth, dasha_children_for_birth, dasha_complete_level_for_birth,
+    dasha_hierarchy_for_birth, dasha_level0_entity_for_birth, dasha_level0_for_birth,
+    dasha_snapshot_at,
 };
 pub use dhruv_tara::{
     EarthState, EquatorialPosition, TaraAccuracy, TaraCatalog, TaraConfig, TaraError, TaraId,
@@ -53,6 +56,10 @@ pub use dhruv_vedic_base::{
     AshtakavargaResult, AyanamshaSystem, BhavaConfig, BhinnaAshtakavarga, LunarNode,
     NodeDignityPolicy, NodeMode, SarvaAshtakavarga, calculate_all_bav, calculate_ashtakavarga,
     calculate_bav, calculate_sav,
+};
+pub use dhruv_vedic_base::dasha::{
+    DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot, DashaSystem,
+    DashaVariationConfig, SubPeriodMethod, YoginiScheme,
 };
 
 #[cfg(test)]

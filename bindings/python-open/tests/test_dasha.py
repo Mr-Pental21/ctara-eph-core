@@ -88,6 +88,76 @@ class TestDashaSnapshot:
 
 @skip_no_kernels
 @skip_no_eop
+class TestLowTierDasha:
+    def test_low_tier_vimshottari_functions(self, engine_handles):
+        from ctara_dhruv.dasha import (
+            dasha_variation_config_default,
+            dasha_level0,
+            dasha_level0_entity,
+            dasha_children,
+            dasha_child_period,
+            dasha_complete_level,
+        )
+        from ctara_dhruv.engine import engine, lsk, eop
+
+        level0 = dasha_level0(
+            engine(), lsk(), eop(),
+            jd_utc_birth=BIRTH_UTC,
+            location=BIRTH_LOC,
+            system=0,
+        )
+        assert len(level0) == 9
+
+        first = level0[0]
+        same = dasha_level0_entity(
+            engine(), lsk(), eop(),
+            jd_utc_birth=BIRTH_UTC,
+            location=BIRTH_LOC,
+            entity={"type": first.entity_type, "index": first.entity_index},
+            system=0,
+        )
+        assert same is not None
+        assert same.entity_index == first.entity_index
+
+        variation = dasha_variation_config_default()
+        children = dasha_children(
+            engine(), lsk(), eop(),
+            jd_utc_birth=BIRTH_UTC,
+            location=BIRTH_LOC,
+            parent=first,
+            system=0,
+            variation_config={
+                "level_methods": list(variation.level_methods),
+                "yogini_scheme": variation.yogini_scheme,
+                "use_abhijit": bool(variation.use_abhijit),
+            },
+        )
+        assert len(children) == 9
+
+        child = dasha_child_period(
+            engine(), lsk(), eop(),
+            jd_utc_birth=BIRTH_UTC,
+            location=BIRTH_LOC,
+            parent=first,
+            entity={"type": children[0].entity_type, "index": children[0].entity_index},
+            system=0,
+        )
+        assert child is not None
+        assert child.entity_index == children[0].entity_index
+
+        complete = dasha_complete_level(
+            engine(), lsk(), eop(),
+            jd_utc_birth=BIRTH_UTC,
+            location=BIRTH_LOC,
+            parent_periods=level0,
+            child_level=1,
+            system=0,
+        )
+        assert len(complete) == len(level0) * len(children)
+
+
+@skip_no_kernels
+@skip_no_eop
 class TestRashiDasha:
     def test_chara_dasha(self, engine_handles):
         """Chara dasha (system 11) should have 12 Maha periods (rashi-based)."""

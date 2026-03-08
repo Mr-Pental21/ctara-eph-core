@@ -33,7 +33,9 @@ pub use conjunction::{
 };
 pub use conjunction_types::{ConjunctionConfig, ConjunctionEvent, SearchDirection};
 pub use dasha::{
-    DashaInputs, dasha_hierarchy_for_birth, dasha_hierarchy_with_inputs, dasha_snapshot_at,
+    DashaInputs, dasha_child_period_for_birth, dasha_children_for_birth,
+    dasha_complete_level_for_birth, dasha_hierarchy_for_birth, dasha_hierarchy_with_inputs,
+    dasha_level0_entity_for_birth, dasha_level0_for_birth, dasha_snapshot_at,
     dasha_snapshot_with_inputs,
 };
 #[allow(deprecated)]

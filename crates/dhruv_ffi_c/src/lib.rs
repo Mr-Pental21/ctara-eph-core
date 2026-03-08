@@ -12,9 +12,11 @@ use dhruv_search::{
     LunarPhase, MaxSpeedEvent, MaxSpeedType, SankrantiConfig, SearchError, StationType,
     StationaryConfig, StationaryEvent, SuryaGrahan, SuryaGrahanType, amsha_charts_for_date,
     avastha_for_date, ayana_for_date, body_ecliptic_lon_lat, charakaraka_for_date,
-    dasha_hierarchy_for_birth, dasha_snapshot_at, elongation_at, full_kundali_for_date,
-    ghatika_for_date, ghatika_from_sunrises, graha_sidereal_longitudes, graha_tropical_longitudes,
-    hora_for_date, hora_from_sunrises, karana_at, karana_for_date, masa_for_date, nakshatra_at,
+    dasha_child_period_for_birth, dasha_children_for_birth, dasha_complete_level_for_birth,
+    dasha_hierarchy_for_birth, dasha_level0_entity_for_birth, dasha_level0_for_birth,
+    dasha_snapshot_at, elongation_at, full_kundali_for_date, ghatika_for_date,
+    ghatika_from_sunrises, graha_sidereal_longitudes, graha_tropical_longitudes, hora_for_date,
+    hora_from_sunrises, karana_at, karana_for_date, masa_for_date, nakshatra_at,
     nakshatra_for_date, next_amavasya, next_chandra_grahan, next_conjunction, next_max_speed,
     next_purnima, next_sankranti, next_specific_sankranti, next_stationary, next_surya_grahan,
     prev_amavasya, prev_chandra_grahan, prev_conjunction, prev_max_speed, prev_purnima,
@@ -9601,6 +9603,8 @@ pub struct DhruvDashaSnapshot {
 
 /// Opaque handle for DashaHierarchy (heap-allocated, caller frees).
 pub type DhruvDashaHierarchyHandle = *mut std::ffi::c_void;
+/// Opaque handle for a heap-allocated period vector.
+pub type DhruvDashaPeriodListHandle = *mut std::ffi::c_void;
 
 fn dasha_period_to_ffi(p: &dhruv_vedic_base::dasha::DashaPeriod) -> DhruvDashaPeriod {
     DhruvDashaPeriod {
@@ -9612,6 +9616,53 @@ fn dasha_period_to_ffi(p: &dhruv_vedic_base::dasha::DashaPeriod) -> DhruvDashaPe
         order: p.order,
         parent_idx: p.parent_idx,
     }
+}
+
+fn dasha_entity_from_ffi(entity_type: u8, entity_index: u8) -> Result<dhruv_vedic_base::dasha::DashaEntity, DhruvStatus> {
+    match entity_type {
+        0 => {
+            let graha = match entity_index {
+                0 => dhruv_vedic_base::Graha::Surya,
+                1 => dhruv_vedic_base::Graha::Chandra,
+                2 => dhruv_vedic_base::Graha::Mangal,
+                3 => dhruv_vedic_base::Graha::Buddh,
+                4 => dhruv_vedic_base::Graha::Guru,
+                5 => dhruv_vedic_base::Graha::Shukra,
+                6 => dhruv_vedic_base::Graha::Shani,
+                7 => dhruv_vedic_base::Graha::Rahu,
+                8 => dhruv_vedic_base::Graha::Ketu,
+                _ => return Err(DhruvStatus::InvalidInput),
+            };
+            Ok(dhruv_vedic_base::dasha::DashaEntity::Graha(graha))
+        }
+        1 => {
+            if entity_index >= 12 {
+                return Err(DhruvStatus::InvalidInput);
+            }
+            Ok(dhruv_vedic_base::dasha::DashaEntity::Rashi(entity_index))
+        }
+        2 => {
+            if entity_index >= 8 {
+                return Err(DhruvStatus::InvalidInput);
+            }
+            Ok(dhruv_vedic_base::dasha::DashaEntity::Yogini(entity_index))
+        }
+        _ => Err(DhruvStatus::InvalidInput),
+    }
+}
+
+fn dasha_period_from_ffi(p: &DhruvDashaPeriod) -> Result<dhruv_vedic_base::dasha::DashaPeriod, DhruvStatus> {
+    let entity = dasha_entity_from_ffi(p.entity_type, p.entity_index)?;
+    let level =
+        dhruv_vedic_base::dasha::DashaLevel::from_u8(p.level).ok_or(DhruvStatus::InvalidInput)?;
+    Ok(dhruv_vedic_base::dasha::DashaPeriod {
+        entity,
+        start_jd: p.start_jd,
+        end_jd: p.end_jd,
+        level,
+        order: p.order,
+        parent_idx: p.parent_idx,
+    })
 }
 
 /// Get the number of levels in a dasha hierarchy.
@@ -9690,6 +9741,110 @@ pub unsafe extern "C" fn dhruv_dasha_hierarchy_period_at(
 pub unsafe extern "C" fn dhruv_dasha_hierarchy_free(handle: DhruvDashaHierarchyHandle) {
     if !handle.is_null() {
         let _ = unsafe { Box::from_raw(handle as *mut dhruv_vedic_base::dasha::DashaHierarchy) };
+    }
+}
+
+/// Get the number of periods in a period list handle.
+///
+/// # Safety
+/// `handle` must be a valid period list handle. `out` must be non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_dasha_period_list_count(
+    handle: DhruvDashaPeriodListHandle,
+    out: *mut u32,
+) -> DhruvStatus {
+    if handle.is_null() || out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let periods = unsafe { &*(handle as *const Vec<dhruv_vedic_base::dasha::DashaPeriod>) };
+    unsafe { *out = periods.len() as u32 };
+    DhruvStatus::Ok
+}
+
+/// Read one period from a period list handle by index.
+///
+/// # Safety
+/// `handle` must be a valid period list handle. `out` must be non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_dasha_period_list_at(
+    handle: DhruvDashaPeriodListHandle,
+    idx: u32,
+    out: *mut DhruvDashaPeriod,
+) -> DhruvStatus {
+    if handle.is_null() || out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let periods = unsafe { &*(handle as *const Vec<dhruv_vedic_base::dasha::DashaPeriod>) };
+    let i = idx as usize;
+    if i >= periods.len() {
+        return DhruvStatus::InvalidInput;
+    }
+    unsafe { *out = dasha_period_to_ffi(&periods[i]) };
+    DhruvStatus::Ok
+}
+
+/// Free a dasha period list handle. Passing NULL is a no-op.
+///
+/// # Safety
+/// `handle` must come from one of the dasha period list producers or be NULL.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_dasha_period_list_free(handle: DhruvDashaPeriodListHandle) {
+    if !handle.is_null() {
+        let _ =
+            unsafe { Box::from_raw(handle as *mut Vec<dhruv_vedic_base::dasha::DashaPeriod>) };
+    }
+}
+
+/// C-compatible dasha variation overrides.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvDashaVariationConfig {
+    /// Per-level sub-period method overrides (0xFF = system default).
+    pub level_methods: [u8; 5],
+    /// Yogini scheme code (0=default).
+    pub yogini_scheme: u8,
+    /// For Ashtottari: use Abhijit in birth-balance detection.
+    pub use_abhijit: u8,
+}
+
+fn dasha_variation_from_ffi(
+    cfg: &DhruvDashaVariationConfig,
+) -> Result<dhruv_vedic_base::dasha::DashaVariationConfig, DhruvStatus> {
+    let mut level_methods = [None; 5];
+    for (idx, slot) in level_methods.iter_mut().enumerate() {
+        *slot = match cfg.level_methods[idx] {
+            0xFF => None,
+            raw => Some(
+                dhruv_vedic_base::dasha::SubPeriodMethod::from_u8(raw)
+                    .ok_or(DhruvStatus::InvalidSearchConfig)?,
+            ),
+        };
+    }
+    let yogini_scheme = dhruv_vedic_base::dasha::YoginiScheme::from_u8(cfg.yogini_scheme)
+        .ok_or(DhruvStatus::InvalidSearchConfig)?;
+    Ok(dhruv_vedic_base::dasha::DashaVariationConfig {
+        level_methods,
+        yogini_scheme,
+        use_abhijit: cfg.use_abhijit != 0,
+    })
+}
+
+fn resolve_dasha_variation_config_ptr(
+    config: *const DhruvDashaVariationConfig,
+) -> Result<dhruv_vedic_base::dasha::DashaVariationConfig, DhruvStatus> {
+    if let Some(cfg) = unsafe { config.as_ref() } {
+        return dasha_variation_from_ffi(cfg);
+    }
+    Ok(dhruv_vedic_base::dasha::DashaVariationConfig::default())
+}
+
+/// Return default dasha variation settings.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_dasha_variation_config_default() -> DhruvDashaVariationConfig {
+    DhruvDashaVariationConfig {
+        level_methods: [0xFF; 5],
+        yogini_scheme: 0,
+        use_abhijit: 1,
     }
 }
 
@@ -9950,6 +10105,476 @@ pub unsafe extern "C" fn dhruv_dasha_snapshot_utc(
             for i in 0..count {
                 out.periods[i] = dasha_period_to_ffi(&snapshot.periods[i]);
             }
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
+/// Compute the level-0 dasha periods for a birth chart.
+///
+/// Returns a period-list handle that must be freed with
+/// `dhruv_dasha_period_list_free`.
+///
+/// # Safety
+/// All pointers must be valid and non-null except optional config pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_dasha_level0_utc(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    birth_utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    bhava_config: *const DhruvBhavaConfig,
+    riseset_config: *const DhruvRiseSetConfig,
+    ayanamsha_system: u32,
+    use_nutation: u8,
+    system: u8,
+    out: *mut DhruvDashaPeriodListHandle,
+) -> DhruvStatus {
+    if engine.is_null() || eop.is_null() || birth_utc.is_null() || location.is_null() || out.is_null()
+    {
+        return DhruvStatus::NullPointer;
+    }
+
+    let engine = unsafe { &*engine };
+    let eop = unsafe { &*eop };
+    let utc_c = unsafe { &*birth_utc };
+    let loc_c = unsafe { &*location };
+
+    let birth_time = UtcTime {
+        year: utc_c.year,
+        month: utc_c.month,
+        day: utc_c.day,
+        hour: utc_c.hour,
+        minute: utc_c.minute,
+        second: utc_c.second,
+    };
+    let location = GeoLocation::new(loc_c.latitude_deg, loc_c.longitude_deg, loc_c.altitude_m);
+
+    let aya_system = match ayanamsha_system_from_code(ayanamsha_system as i32) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidQuery,
+    };
+    let rust_bhava_config = match resolve_bhava_config_ptr(bhava_config) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+    let rs_config = match resolve_riseset_config_ptr(riseset_config) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+    let aya_config = SankrantiConfig::new(aya_system, use_nutation != 0);
+    let dasha_system = match dhruv_vedic_base::dasha::DashaSystem::from_u8(system) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidInput,
+    };
+
+    match dasha_level0_for_birth(
+        engine,
+        eop,
+        &birth_time,
+        &location,
+        dasha_system,
+        &rust_bhava_config,
+        &rs_config,
+        &aya_config,
+    ) {
+        Ok(periods) => {
+            let boxed = Box::new(periods);
+            unsafe { *out = Box::into_raw(boxed) as DhruvDashaPeriodListHandle };
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
+/// Compute one specific level-0 dasha period for a birth chart.
+///
+/// # Safety
+/// All pointers must be valid and non-null except optional config pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_dasha_level0_entity_utc(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    birth_utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    bhava_config: *const DhruvBhavaConfig,
+    riseset_config: *const DhruvRiseSetConfig,
+    ayanamsha_system: u32,
+    use_nutation: u8,
+    system: u8,
+    entity_type: u8,
+    entity_index: u8,
+    out_found: *mut u8,
+    out: *mut DhruvDashaPeriod,
+) -> DhruvStatus {
+    if engine.is_null()
+        || eop.is_null()
+        || birth_utc.is_null()
+        || location.is_null()
+        || out_found.is_null()
+        || out.is_null()
+    {
+        return DhruvStatus::NullPointer;
+    }
+
+    let entity = match dasha_entity_from_ffi(entity_type, entity_index) {
+        Ok(value) => value,
+        Err(status) => return status,
+    };
+    let engine = unsafe { &*engine };
+    let eop = unsafe { &*eop };
+    let utc_c = unsafe { &*birth_utc };
+    let loc_c = unsafe { &*location };
+
+    let birth_time = UtcTime {
+        year: utc_c.year,
+        month: utc_c.month,
+        day: utc_c.day,
+        hour: utc_c.hour,
+        minute: utc_c.minute,
+        second: utc_c.second,
+    };
+    let location = GeoLocation::new(loc_c.latitude_deg, loc_c.longitude_deg, loc_c.altitude_m);
+    let aya_system = match ayanamsha_system_from_code(ayanamsha_system as i32) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidQuery,
+    };
+    let rust_bhava_config = match resolve_bhava_config_ptr(bhava_config) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+    let rs_config = match resolve_riseset_config_ptr(riseset_config) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+    let aya_config = SankrantiConfig::new(aya_system, use_nutation != 0);
+    let dasha_system = match dhruv_vedic_base::dasha::DashaSystem::from_u8(system) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidInput,
+    };
+
+    match dasha_level0_entity_for_birth(
+        engine,
+        eop,
+        &birth_time,
+        &location,
+        dasha_system,
+        entity,
+        &rust_bhava_config,
+        &rs_config,
+        &aya_config,
+    ) {
+        Ok(Some(period)) => {
+            unsafe {
+                *out_found = 1;
+                *out = dasha_period_to_ffi(&period);
+            }
+            DhruvStatus::Ok
+        }
+        Ok(None) => {
+            unsafe { *out_found = 0 };
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
+/// Compute all child periods for one parent period.
+///
+/// Returns a period-list handle that must be freed with
+/// `dhruv_dasha_period_list_free`.
+///
+/// # Safety
+/// All pointers must be valid and non-null except optional config pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_dasha_children_utc(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    birth_utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    bhava_config: *const DhruvBhavaConfig,
+    riseset_config: *const DhruvRiseSetConfig,
+    ayanamsha_system: u32,
+    use_nutation: u8,
+    system: u8,
+    variation_config: *const DhruvDashaVariationConfig,
+    parent: *const DhruvDashaPeriod,
+    out: *mut DhruvDashaPeriodListHandle,
+) -> DhruvStatus {
+    if engine.is_null()
+        || eop.is_null()
+        || birth_utc.is_null()
+        || location.is_null()
+        || parent.is_null()
+        || out.is_null()
+    {
+        return DhruvStatus::NullPointer;
+    }
+
+    let parent = match dasha_period_from_ffi(unsafe { &*parent }) {
+        Ok(period) => period,
+        Err(status) => return status,
+    };
+    let variation = match resolve_dasha_variation_config_ptr(variation_config) {
+        Ok(cfg) => cfg,
+        Err(status) => return status,
+    };
+    let engine = unsafe { &*engine };
+    let eop = unsafe { &*eop };
+    let utc_c = unsafe { &*birth_utc };
+    let loc_c = unsafe { &*location };
+    let birth_time = UtcTime {
+        year: utc_c.year,
+        month: utc_c.month,
+        day: utc_c.day,
+        hour: utc_c.hour,
+        minute: utc_c.minute,
+        second: utc_c.second,
+    };
+    let location = GeoLocation::new(loc_c.latitude_deg, loc_c.longitude_deg, loc_c.altitude_m);
+    let aya_system = match ayanamsha_system_from_code(ayanamsha_system as i32) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidQuery,
+    };
+    let rust_bhava_config = match resolve_bhava_config_ptr(bhava_config) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+    let rs_config = match resolve_riseset_config_ptr(riseset_config) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+    let aya_config = SankrantiConfig::new(aya_system, use_nutation != 0);
+    let dasha_system = match dhruv_vedic_base::dasha::DashaSystem::from_u8(system) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidInput,
+    };
+
+    match dasha_children_for_birth(
+        engine,
+        eop,
+        &birth_time,
+        &location,
+        dasha_system,
+        &parent,
+        &rust_bhava_config,
+        &rs_config,
+        &aya_config,
+        &variation,
+    ) {
+        Ok(periods) => {
+            let boxed = Box::new(periods);
+            unsafe { *out = Box::into_raw(boxed) as DhruvDashaPeriodListHandle };
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
+/// Compute one specific child period for a parent period.
+///
+/// # Safety
+/// All pointers must be valid and non-null except optional config pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_dasha_child_period_utc(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    birth_utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    bhava_config: *const DhruvBhavaConfig,
+    riseset_config: *const DhruvRiseSetConfig,
+    ayanamsha_system: u32,
+    use_nutation: u8,
+    system: u8,
+    variation_config: *const DhruvDashaVariationConfig,
+    parent: *const DhruvDashaPeriod,
+    child_entity_type: u8,
+    child_entity_index: u8,
+    out_found: *mut u8,
+    out: *mut DhruvDashaPeriod,
+) -> DhruvStatus {
+    if engine.is_null()
+        || eop.is_null()
+        || birth_utc.is_null()
+        || location.is_null()
+        || parent.is_null()
+        || out_found.is_null()
+        || out.is_null()
+    {
+        return DhruvStatus::NullPointer;
+    }
+
+    let parent = match dasha_period_from_ffi(unsafe { &*parent }) {
+        Ok(period) => period,
+        Err(status) => return status,
+    };
+    let child_entity = match dasha_entity_from_ffi(child_entity_type, child_entity_index) {
+        Ok(value) => value,
+        Err(status) => return status,
+    };
+    let variation = match resolve_dasha_variation_config_ptr(variation_config) {
+        Ok(cfg) => cfg,
+        Err(status) => return status,
+    };
+    let engine = unsafe { &*engine };
+    let eop = unsafe { &*eop };
+    let utc_c = unsafe { &*birth_utc };
+    let loc_c = unsafe { &*location };
+    let birth_time = UtcTime {
+        year: utc_c.year,
+        month: utc_c.month,
+        day: utc_c.day,
+        hour: utc_c.hour,
+        minute: utc_c.minute,
+        second: utc_c.second,
+    };
+    let location = GeoLocation::new(loc_c.latitude_deg, loc_c.longitude_deg, loc_c.altitude_m);
+    let aya_system = match ayanamsha_system_from_code(ayanamsha_system as i32) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidQuery,
+    };
+    let rust_bhava_config = match resolve_bhava_config_ptr(bhava_config) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+    let rs_config = match resolve_riseset_config_ptr(riseset_config) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+    let aya_config = SankrantiConfig::new(aya_system, use_nutation != 0);
+    let dasha_system = match dhruv_vedic_base::dasha::DashaSystem::from_u8(system) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidInput,
+    };
+
+    match dasha_child_period_for_birth(
+        engine,
+        eop,
+        &birth_time,
+        &location,
+        dasha_system,
+        &parent,
+        child_entity,
+        &rust_bhava_config,
+        &rs_config,
+        &aya_config,
+        &variation,
+    ) {
+        Ok(Some(period)) => {
+            unsafe {
+                *out_found = 1;
+                *out = dasha_period_to_ffi(&period);
+            }
+            DhruvStatus::Ok
+        }
+        Ok(None) => {
+            unsafe { *out_found = 0 };
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
+/// Compute a complete child level from a supplied parent level.
+///
+/// Returns a period-list handle that must be freed with
+/// `dhruv_dasha_period_list_free`.
+///
+/// # Safety
+/// All pointers must be valid and non-null except optional config pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_dasha_complete_level_utc(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    birth_utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    bhava_config: *const DhruvBhavaConfig,
+    riseset_config: *const DhruvRiseSetConfig,
+    ayanamsha_system: u32,
+    use_nutation: u8,
+    system: u8,
+    variation_config: *const DhruvDashaVariationConfig,
+    parent_periods: *const DhruvDashaPeriod,
+    parent_count: u32,
+    child_level: u8,
+    out: *mut DhruvDashaPeriodListHandle,
+) -> DhruvStatus {
+    if engine.is_null()
+        || eop.is_null()
+        || birth_utc.is_null()
+        || location.is_null()
+        || out.is_null()
+        || (parent_count > 0 && parent_periods.is_null())
+    {
+        return DhruvStatus::NullPointer;
+    }
+
+    let rust_child_level = match dhruv_vedic_base::dasha::DashaLevel::from_u8(child_level) {
+        Some(level) => level,
+        None => return DhruvStatus::InvalidInput,
+    };
+    let mut rust_parent_periods = Vec::with_capacity(parent_count as usize);
+    if parent_count > 0 {
+        let parent_slice = unsafe { std::slice::from_raw_parts(parent_periods, parent_count as usize) };
+        for period in parent_slice {
+            match dasha_period_from_ffi(period) {
+                Ok(value) => rust_parent_periods.push(value),
+                Err(status) => return status,
+            }
+        }
+    }
+    let variation = match resolve_dasha_variation_config_ptr(variation_config) {
+        Ok(cfg) => cfg,
+        Err(status) => return status,
+    };
+    let engine = unsafe { &*engine };
+    let eop = unsafe { &*eop };
+    let utc_c = unsafe { &*birth_utc };
+    let loc_c = unsafe { &*location };
+    let birth_time = UtcTime {
+        year: utc_c.year,
+        month: utc_c.month,
+        day: utc_c.day,
+        hour: utc_c.hour,
+        minute: utc_c.minute,
+        second: utc_c.second,
+    };
+    let location = GeoLocation::new(loc_c.latitude_deg, loc_c.longitude_deg, loc_c.altitude_m);
+    let aya_system = match ayanamsha_system_from_code(ayanamsha_system as i32) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidQuery,
+    };
+    let rust_bhava_config = match resolve_bhava_config_ptr(bhava_config) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+    let rs_config = match resolve_riseset_config_ptr(riseset_config) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+    let aya_config = SankrantiConfig::new(aya_system, use_nutation != 0);
+    let dasha_system = match dhruv_vedic_base::dasha::DashaSystem::from_u8(system) {
+        Some(s) => s,
+        None => return DhruvStatus::InvalidInput,
+    };
+
+    match dasha_complete_level_for_birth(
+        engine,
+        eop,
+        &birth_time,
+        &location,
+        dasha_system,
+        &rust_parent_periods,
+        rust_child_level,
+        &rust_bhava_config,
+        &rs_config,
+        &aya_config,
+        &variation,
+    ) {
+        Ok(periods) => {
+            let boxed = Box::new(periods);
+            unsafe { *out = Box::into_raw(boxed) as DhruvDashaPeriodListHandle };
             DhruvStatus::Ok
         }
         Err(e) => DhruvStatus::from(&e),
