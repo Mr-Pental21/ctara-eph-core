@@ -9618,7 +9618,10 @@ fn dasha_period_to_ffi(p: &dhruv_vedic_base::dasha::DashaPeriod) -> DhruvDashaPe
     }
 }
 
-fn dasha_entity_from_ffi(entity_type: u8, entity_index: u8) -> Result<dhruv_vedic_base::dasha::DashaEntity, DhruvStatus> {
+fn dasha_entity_from_ffi(
+    entity_type: u8,
+    entity_index: u8,
+) -> Result<dhruv_vedic_base::dasha::DashaEntity, DhruvStatus> {
     match entity_type {
         0 => {
             let graha = match entity_index {
@@ -9651,7 +9654,9 @@ fn dasha_entity_from_ffi(entity_type: u8, entity_index: u8) -> Result<dhruv_vedi
     }
 }
 
-fn dasha_period_from_ffi(p: &DhruvDashaPeriod) -> Result<dhruv_vedic_base::dasha::DashaPeriod, DhruvStatus> {
+fn dasha_period_from_ffi(
+    p: &DhruvDashaPeriod,
+) -> Result<dhruv_vedic_base::dasha::DashaPeriod, DhruvStatus> {
     let entity = dasha_entity_from_ffi(p.entity_type, p.entity_index)?;
     let level =
         dhruv_vedic_base::dasha::DashaLevel::from_u8(p.level).ok_or(DhruvStatus::InvalidInput)?;
@@ -9790,8 +9795,7 @@ pub unsafe extern "C" fn dhruv_dasha_period_list_at(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_dasha_period_list_free(handle: DhruvDashaPeriodListHandle) {
     if !handle.is_null() {
-        let _ =
-            unsafe { Box::from_raw(handle as *mut Vec<dhruv_vedic_base::dasha::DashaPeriod>) };
+        let _ = unsafe { Box::from_raw(handle as *mut Vec<dhruv_vedic_base::dasha::DashaPeriod>) };
     }
 }
 
@@ -10131,7 +10135,11 @@ pub unsafe extern "C" fn dhruv_dasha_level0_utc(
     system: u8,
     out: *mut DhruvDashaPeriodListHandle,
 ) -> DhruvStatus {
-    if engine.is_null() || eop.is_null() || birth_utc.is_null() || location.is_null() || out.is_null()
+    if engine.is_null()
+        || eop.is_null()
+        || birth_utc.is_null()
+        || location.is_null()
+        || out.is_null()
     {
         return DhruvStatus::NullPointer;
     }
@@ -10516,7 +10524,8 @@ pub unsafe extern "C" fn dhruv_dasha_complete_level_utc(
     };
     let mut rust_parent_periods = Vec::with_capacity(parent_count as usize);
     if parent_count > 0 {
-        let parent_slice = unsafe { std::slice::from_raw_parts(parent_periods, parent_count as usize) };
+        let parent_slice =
+            unsafe { std::slice::from_raw_parts(parent_periods, parent_count as usize) };
         for period in parent_slice {
             match dasha_period_from_ffi(period) {
                 Ok(value) => rust_parent_periods.push(value),

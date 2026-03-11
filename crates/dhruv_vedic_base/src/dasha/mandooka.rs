@@ -84,7 +84,7 @@ fn mandooka_period_sequence(parent_rashi: u8, method: SubPeriodMethod) -> Vec<(D
         .collect()
 }
 
-fn mandooka_children(parent: &DashaPeriod, method: SubPeriodMethod) -> Vec<DashaPeriod> {
+pub fn mandooka_children(parent: &DashaPeriod, method: SubPeriodMethod) -> Vec<DashaPeriod> {
     let child_level = match parent.level.child_level() {
         Some(level) => level,
         None => return Vec::new(),
@@ -112,7 +112,7 @@ fn mandooka_children(parent: &DashaPeriod, method: SubPeriodMethod) -> Vec<Dasha
     }
 }
 
-fn mandooka_complete_level(
+pub fn mandooka_complete_level(
     parent_level: &[DashaPeriod],
     child_level: DashaLevel,
     method: SubPeriodMethod,

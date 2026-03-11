@@ -7,9 +7,9 @@ use std::path::Path;
 use dhruv_core::{Engine, EngineConfig};
 use dhruv_search::sankranti_types::SankrantiConfig;
 use dhruv_search::{
-    DashaInputs, DashaSelectionConfig, FullKundaliConfig, dasha_hierarchy_for_birth,
-    dasha_hierarchy_with_inputs, dasha_snapshot_at, full_kundali_for_date,
-    graha_sidereal_longitudes,
+    DashaInputs, DashaSelectionConfig, FullKundaliConfig, dasha_children_for_birth,
+    dasha_complete_level_for_birth, dasha_hierarchy_for_birth, dasha_hierarchy_with_inputs,
+    dasha_snapshot_at, full_kundali_for_date, graha_sidereal_longitudes,
 };
 use dhruv_time::{EopKernel, UtcTime};
 use dhruv_vedic_base::BhavaConfig;
@@ -1214,4 +1214,87 @@ fn non_chakra_parity_golden_values() {
         "Chara end_jd: {:.10}",
         chara.levels[0][0].end_jd
     );
+}
+
+#[test]
+fn mandooka_children_and_complete_level_match_hierarchy() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let birth = birth_utc();
+    let location = new_delhi();
+    let bhava_config = BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+    let variation = DashaVariationConfig::default();
+
+    let hierarchy = dasha_hierarchy_for_birth(
+        &engine,
+        &eop,
+        &birth,
+        &location,
+        DashaSystem::Mandooka,
+        1,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &variation,
+    )
+    .expect("Mandooka hierarchy should succeed");
+
+    let parent = hierarchy.levels[0][0];
+    let children = dasha_children_for_birth(
+        &engine,
+        &eop,
+        &birth,
+        &location,
+        DashaSystem::Mandooka,
+        &parent,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &variation,
+    )
+    .expect("Mandooka children should succeed");
+
+    let expected_children: Vec<_> = hierarchy.levels[1]
+        .iter()
+        .filter(|period| period.parent_idx == 0)
+        .copied()
+        .collect();
+
+    assert_eq!(children.len(), expected_children.len());
+    for (actual, expected) in children.iter().zip(expected_children.iter()) {
+        assert_eq!(actual.entity, expected.entity);
+        assert_eq!(actual.level, expected.level);
+        assert_eq!(actual.parent_idx, expected.parent_idx);
+        assert_eq!(actual.order, expected.order);
+        assert!((actual.start_jd - expected.start_jd).abs() < 1e-10);
+        assert!((actual.end_jd - expected.end_jd).abs() < 1e-10);
+    }
+    assert_eq!(children.first().map(|p| p.entity), Some(parent.entity));
+
+    let complete_level = dasha_complete_level_for_birth(
+        &engine,
+        &eop,
+        &birth,
+        &location,
+        DashaSystem::Mandooka,
+        &hierarchy.levels[0],
+        DashaLevel::Antardasha,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &variation,
+    )
+    .expect("Mandooka complete level should succeed");
+
+    assert_eq!(complete_level.len(), hierarchy.levels[1].len());
+    for (actual, expected) in complete_level.iter().zip(hierarchy.levels[1].iter()) {
+        assert_eq!(actual.entity, expected.entity);
+        assert_eq!(actual.level, expected.level);
+        assert_eq!(actual.parent_idx, expected.parent_idx);
+        assert_eq!(actual.order, expected.order);
+        assert!((actual.start_jd - expected.start_jd).abs() < 1e-10);
+        assert!((actual.end_jd - expected.end_jd).abs() < 1e-10);
+    }
 }

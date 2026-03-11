@@ -9,15 +9,15 @@ use dhruv_core::Engine;
 use dhruv_time::{EopKernel, UtcTime};
 use dhruv_vedic_base::BhavaConfig;
 use dhruv_vedic_base::dasha::{
-    BirthPeriod, DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot,
-    DashaSystem, DashaVariationConfig, RashiDashaInputs, SubPeriodMethod, chakra_hierarchy,
-    chakra_level0, chakra_snapshot, chara_hierarchy, chara_level0, chara_period_years,
-    chara_snapshot, driga_hierarchy, driga_level0, driga_snapshot,
-    kaal_chakra_children, kaal_chakra_complete_level, kaal_chakra_hierarchy,
-    kaal_chakra_level0, kaal_chakra_snapshot, kala_children, kala_complete_level, kala_hierarchy,
-    kala_level0, kala_snapshot, karaka_kendradi_graha_hierarchy,
-    karaka_kendradi_graha_snapshot, karaka_kendradi_hierarchy, karaka_kendradi_snapshot,
-    kendradi_hierarchy, kendradi_level0, kendradi_snapshot, mandooka_hierarchy, mandooka_level0,
+    BirthPeriod, DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot, DashaSystem,
+    DashaVariationConfig, RashiDashaInputs, SubPeriodMethod, chakra_hierarchy, chakra_level0,
+    chakra_snapshot, chara_hierarchy, chara_level0, chara_period_years, chara_snapshot,
+    driga_hierarchy, driga_level0, driga_snapshot, kaal_chakra_children,
+    kaal_chakra_complete_level, kaal_chakra_hierarchy, kaal_chakra_level0, kaal_chakra_snapshot,
+    kala_children, kala_complete_level, kala_hierarchy, kala_level0, kala_snapshot,
+    karaka_kendradi_graha_hierarchy, karaka_kendradi_graha_snapshot, karaka_kendradi_hierarchy,
+    karaka_kendradi_snapshot, kendradi_hierarchy, kendradi_level0, kendradi_snapshot,
+    mandooka_children, mandooka_complete_level, mandooka_hierarchy, mandooka_level0,
     mandooka_snapshot, nakshatra_children, nakshatra_complete_level, nakshatra_config_for_system,
     nakshatra_hierarchy, nakshatra_level0, nakshatra_snapshot, shoola_hierarchy, shoola_level0,
     shoola_snapshot, sthira_hierarchy, sthira_level0, sthira_snapshot, yogardha_hierarchy,
@@ -287,13 +287,18 @@ fn complete_level_parent_method(
     let expected = parent_level[0]
         .level
         .child_level()
-        .ok_or(SearchError::InvalidConfig("parent level has no child level"))?;
+        .ok_or(SearchError::InvalidConfig(
+            "parent level has no child level",
+        ))?;
     if expected != child_level {
         return Err(SearchError::InvalidConfig(
             "child_level does not match the supplied parent periods",
         ));
     }
-    if parent_level.iter().any(|p| p.level != parent_level[0].level) {
+    if parent_level
+        .iter()
+        .any(|p| p.level != parent_level[0].level)
+    {
         return Err(SearchError::InvalidConfig(
             "parent periods must all be at the same level",
         ));
@@ -351,14 +356,18 @@ fn dispatch_level0(
             birth_jd,
             rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?,
         )),
-        DashaSystem::KarakaKendradi => Ok(dhruv_vedic_base::dasha::kendradi::karaka_kendradi_level0(
-            birth_jd,
-            rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?,
-        )),
-        DashaSystem::KarakaKendradiGraha => Ok(dhruv_vedic_base::dasha::kendradi::karaka_kendradi_graha_level0(
-            birth_jd,
-            rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?,
-        )),
+        DashaSystem::KarakaKendradi => {
+            Ok(dhruv_vedic_base::dasha::kendradi::karaka_kendradi_level0(
+                birth_jd,
+                rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?,
+            ))
+        }
+        DashaSystem::KarakaKendradiGraha => Ok(
+            dhruv_vedic_base::dasha::kendradi::karaka_kendradi_graha_level0(
+                birth_jd,
+                rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?,
+            ),
+        ),
         DashaSystem::Kala => {
             let (sunrise, sunset) = sunrise_sunset.ok_or(SearchError::InvalidConfig(
                 "sunrise/sunset required for Kala dasha",
@@ -389,7 +398,11 @@ fn dispatch_children(
         }
         DashaSystem::Chara => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            let method = method_for_parent_level(parent.level, dhruv_vedic_base::dasha::chara::CHARA_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent.level,
+                dhruv_vedic_base::dasha::chara::CHARA_DEFAULT_METHOD,
+                variation,
+            );
             Ok(dhruv_vedic_base::dasha::rashi_dasha::rashi_children(
                 parent,
                 &|r| chara_period_years(r, ri),
@@ -399,7 +412,11 @@ fn dispatch_children(
             ))
         }
         DashaSystem::Sthira => {
-            let method = method_for_parent_level(parent.level, dhruv_vedic_base::dasha::sthira::STHIRA_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent.level,
+                dhruv_vedic_base::dasha::sthira::STHIRA_DEFAULT_METHOD,
+                variation,
+            );
             Ok(dhruv_vedic_base::dasha::rashi_dasha::rashi_children(
                 parent,
                 &dhruv_vedic_base::dasha::sthira::sthira_period_years,
@@ -410,7 +427,11 @@ fn dispatch_children(
         }
         DashaSystem::Yogardha => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            let method = method_for_parent_level(parent.level, dhruv_vedic_base::dasha::yogardha::YOGARDHA_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent.level,
+                dhruv_vedic_base::dasha::yogardha::YOGARDHA_DEFAULT_METHOD,
+                variation,
+            );
             Ok(dhruv_vedic_base::dasha::rashi_dasha::rashi_children(
                 parent,
                 &|r| dhruv_vedic_base::dasha::yogardha::yogardha_period_years(r, ri),
@@ -422,7 +443,11 @@ fn dispatch_children(
             ))
         }
         DashaSystem::Driga => {
-            let method = method_for_parent_level(parent.level, dhruv_vedic_base::dasha::driga::DRIGA_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent.level,
+                dhruv_vedic_base::dasha::driga::DRIGA_DEFAULT_METHOD,
+                variation,
+            );
             Ok(dhruv_vedic_base::dasha::rashi_dasha::rashi_children(
                 parent,
                 &dhruv_vedic_base::dasha::driga::driga_period_years,
@@ -432,7 +457,11 @@ fn dispatch_children(
             ))
         }
         DashaSystem::Shoola => {
-            let method = method_for_parent_level(parent.level, dhruv_vedic_base::dasha::shoola::SHOOLA_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent.level,
+                dhruv_vedic_base::dasha::shoola::SHOOLA_DEFAULT_METHOD,
+                variation,
+            );
             Ok(dhruv_vedic_base::dasha::rashi_dasha::rashi_children(
                 parent,
                 &dhruv_vedic_base::dasha::shoola::shoola_period_years,
@@ -442,17 +471,19 @@ fn dispatch_children(
             ))
         }
         DashaSystem::Mandooka => {
-            let method = method_for_parent_level(parent.level, dhruv_vedic_base::dasha::mandooka::MANDOOKA_DEFAULT_METHOD, variation);
-            Ok(dhruv_vedic_base::dasha::rashi_dasha::rashi_children(
-                parent,
-                &dhruv_vedic_base::dasha::mandooka::mandooka_period_years,
-                dhruv_vedic_base::dasha::mandooka::MANDOOKA_TOTAL_YEARS,
+            let method = method_for_parent_level(
+                parent.level,
                 dhruv_vedic_base::dasha::mandooka::MANDOOKA_DEFAULT_METHOD,
-                method,
-            ))
+                variation,
+            );
+            Ok(mandooka_children(parent, method))
         }
         DashaSystem::Chakra => {
-            let method = method_for_parent_level(parent.level, dhruv_vedic_base::dasha::chakra::CHAKRA_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent.level,
+                dhruv_vedic_base::dasha::chakra::CHAKRA_DEFAULT_METHOD,
+                variation,
+            );
             Ok(dhruv_vedic_base::dasha::rashi_dasha::rashi_children(
                 parent,
                 &dhruv_vedic_base::dasha::chakra::chakra_period_years,
@@ -463,7 +494,11 @@ fn dispatch_children(
         }
         DashaSystem::Kendradi => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            let method = method_for_parent_level(parent.level, dhruv_vedic_base::dasha::kendradi::KENDRADI_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent.level,
+                dhruv_vedic_base::dasha::kendradi::KENDRADI_DEFAULT_METHOD,
+                variation,
+            );
             Ok(dhruv_vedic_base::dasha::rashi_dasha::rashi_children(
                 parent,
                 &|r| chara_period_years(r, ri),
@@ -474,7 +509,11 @@ fn dispatch_children(
         }
         DashaSystem::KarakaKendradi => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            let method = method_for_parent_level(parent.level, dhruv_vedic_base::dasha::kendradi::KENDRADI_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent.level,
+                dhruv_vedic_base::dasha::kendradi::KENDRADI_DEFAULT_METHOD,
+                variation,
+            );
             Ok(dhruv_vedic_base::dasha::rashi_dasha::rashi_children(
                 parent,
                 &|r| chara_period_years(r, ri),
@@ -485,7 +524,11 @@ fn dispatch_children(
         }
         DashaSystem::KarakaKendradiGraha => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            let method = method_for_parent_level(parent.level, dhruv_vedic_base::dasha::kendradi::KENDRADI_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent.level,
+                dhruv_vedic_base::dasha::kendradi::KENDRADI_DEFAULT_METHOD,
+                variation,
+            );
             Ok(dhruv_vedic_base::dasha::rashi_dasha::rashi_children(
                 parent,
                 &|r| chara_period_years(r, ri),
@@ -495,11 +538,19 @@ fn dispatch_children(
             ))
         }
         DashaSystem::Kala => {
-            let method = method_for_parent_level(parent.level, dhruv_vedic_base::dasha::kala_data::KALA_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent.level,
+                dhruv_vedic_base::dasha::kala_data::KALA_DEFAULT_METHOD,
+                variation,
+            );
             Ok(kala_children(parent, method))
         }
         DashaSystem::KaalChakra => {
-            let method = method_for_parent_level(parent.level, dhruv_vedic_base::dasha::kaal_chakra_data::KCD_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent.level,
+                dhruv_vedic_base::dasha::kaal_chakra_data::KCD_DEFAULT_METHOD,
+                variation,
+            );
             Ok(kaal_chakra_children(parent, method))
         }
         _ => unreachable!("nakshatra systems handled before match"),
@@ -525,11 +576,16 @@ fn dispatch_complete_level(
         DashaSystem::Yogini => {
             let cfg = yogini_config();
             let method = method_for_parent_level(parent_depth, cfg.default_method, variation);
-            yogini_complete_level(parent_level, &cfg, child_level, method).map_err(SearchError::from)
+            yogini_complete_level(parent_level, &cfg, child_level, method)
+                .map_err(SearchError::from)
         }
         DashaSystem::Chara => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            let method = method_for_parent_level(parent_depth, dhruv_vedic_base::dasha::chara::CHARA_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent_depth,
+                dhruv_vedic_base::dasha::chara::CHARA_DEFAULT_METHOD,
+                variation,
+            );
             dhruv_vedic_base::dasha::rashi_dasha::rashi_complete_level(
                 parent_level,
                 &|r| chara_period_years(r, ri),
@@ -541,7 +597,11 @@ fn dispatch_complete_level(
             .map_err(SearchError::from)
         }
         DashaSystem::Sthira => {
-            let method = method_for_parent_level(parent_depth, dhruv_vedic_base::dasha::sthira::STHIRA_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent_depth,
+                dhruv_vedic_base::dasha::sthira::STHIRA_DEFAULT_METHOD,
+                variation,
+            );
             dhruv_vedic_base::dasha::rashi_dasha::rashi_complete_level(
                 parent_level,
                 &dhruv_vedic_base::dasha::sthira::sthira_period_years,
@@ -554,7 +614,11 @@ fn dispatch_complete_level(
         }
         DashaSystem::Yogardha => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            let method = method_for_parent_level(parent_depth, dhruv_vedic_base::dasha::yogardha::YOGARDHA_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent_depth,
+                dhruv_vedic_base::dasha::yogardha::YOGARDHA_DEFAULT_METHOD,
+                variation,
+            );
             dhruv_vedic_base::dasha::rashi_dasha::rashi_complete_level(
                 parent_level,
                 &|r| dhruv_vedic_base::dasha::yogardha::yogardha_period_years(r, ri),
@@ -568,7 +632,11 @@ fn dispatch_complete_level(
             .map_err(SearchError::from)
         }
         DashaSystem::Driga => {
-            let method = method_for_parent_level(parent_depth, dhruv_vedic_base::dasha::driga::DRIGA_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent_depth,
+                dhruv_vedic_base::dasha::driga::DRIGA_DEFAULT_METHOD,
+                variation,
+            );
             dhruv_vedic_base::dasha::rashi_dasha::rashi_complete_level(
                 parent_level,
                 &dhruv_vedic_base::dasha::driga::driga_period_years,
@@ -580,7 +648,11 @@ fn dispatch_complete_level(
             .map_err(SearchError::from)
         }
         DashaSystem::Shoola => {
-            let method = method_for_parent_level(parent_depth, dhruv_vedic_base::dasha::shoola::SHOOLA_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent_depth,
+                dhruv_vedic_base::dasha::shoola::SHOOLA_DEFAULT_METHOD,
+                variation,
+            );
             dhruv_vedic_base::dasha::rashi_dasha::rashi_complete_level(
                 parent_level,
                 &dhruv_vedic_base::dasha::shoola::shoola_period_years,
@@ -592,19 +664,19 @@ fn dispatch_complete_level(
             .map_err(SearchError::from)
         }
         DashaSystem::Mandooka => {
-            let method = method_for_parent_level(parent_depth, dhruv_vedic_base::dasha::mandooka::MANDOOKA_DEFAULT_METHOD, variation);
-            dhruv_vedic_base::dasha::rashi_dasha::rashi_complete_level(
-                parent_level,
-                &dhruv_vedic_base::dasha::mandooka::mandooka_period_years,
-                dhruv_vedic_base::dasha::mandooka::MANDOOKA_TOTAL_YEARS,
-                child_level,
+            let method = method_for_parent_level(
+                parent_depth,
                 dhruv_vedic_base::dasha::mandooka::MANDOOKA_DEFAULT_METHOD,
-                method,
-            )
-            .map_err(SearchError::from)
+                variation,
+            );
+            mandooka_complete_level(parent_level, child_level, method).map_err(SearchError::from)
         }
         DashaSystem::Chakra => {
-            let method = method_for_parent_level(parent_depth, dhruv_vedic_base::dasha::chakra::CHAKRA_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent_depth,
+                dhruv_vedic_base::dasha::chakra::CHAKRA_DEFAULT_METHOD,
+                variation,
+            );
             dhruv_vedic_base::dasha::rashi_dasha::rashi_complete_level(
                 parent_level,
                 &dhruv_vedic_base::dasha::chakra::chakra_period_years,
@@ -617,7 +689,11 @@ fn dispatch_complete_level(
         }
         DashaSystem::Kendradi | DashaSystem::KarakaKendradi | DashaSystem::KarakaKendradiGraha => {
             let ri = rashi_inputs.ok_or(SearchError::InvalidConfig("rashi inputs required"))?;
-            let method = method_for_parent_level(parent_depth, dhruv_vedic_base::dasha::kendradi::KENDRADI_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent_depth,
+                dhruv_vedic_base::dasha::kendradi::KENDRADI_DEFAULT_METHOD,
+                variation,
+            );
             dhruv_vedic_base::dasha::rashi_dasha::rashi_complete_level(
                 parent_level,
                 &|r| chara_period_years(r, ri),
@@ -629,11 +705,19 @@ fn dispatch_complete_level(
             .map_err(SearchError::from)
         }
         DashaSystem::Kala => {
-            let method = method_for_parent_level(parent_depth, dhruv_vedic_base::dasha::kala_data::KALA_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent_depth,
+                dhruv_vedic_base::dasha::kala_data::KALA_DEFAULT_METHOD,
+                variation,
+            );
             kala_complete_level(parent_level, child_level, method).map_err(SearchError::from)
         }
         DashaSystem::KaalChakra => {
-            let method = method_for_parent_level(parent_depth, dhruv_vedic_base::dasha::kaal_chakra_data::KCD_DEFAULT_METHOD, variation);
+            let method = method_for_parent_level(
+                parent_depth,
+                dhruv_vedic_base::dasha::kaal_chakra_data::KCD_DEFAULT_METHOD,
+                variation,
+            );
             kaal_chakra_complete_level(parent_level, child_level, method).map_err(SearchError::from)
         }
         _ => unreachable!("nakshatra systems handled before match"),
