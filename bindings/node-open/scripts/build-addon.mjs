@@ -15,6 +15,7 @@ const outDir = path.join(pkgDir, 'build', 'Release');
 const outFile = path.join(outDir, 'dhruv_node.node');
 const headerDir = path.join(repoRoot, 'crates', 'dhruv_ffi_c', 'include');
 const targetRelease = path.join(repoRoot, 'target', 'release');
+const nodeArchDir = process.arch === 'x64' ? 'x64' : process.arch;
 
 function runOrThrow(cmd, args, opts = {}) {
   const res = spawnSync(cmd, args, { stdio: 'inherit', ...opts });
@@ -39,6 +40,8 @@ function findNodeIncludeDir() {
   const candidates = [
     process.env.NODE_INCLUDE_DIR,
     process.env.npm_config_nodedir && path.join(process.env.npm_config_nodedir, 'include', 'node'),
+    process.env.npm_config_devdir &&
+      path.join(process.env.npm_config_devdir, process.versions.node, 'include', 'node'),
     runnerToolCacheNode && path.join(runnerToolCacheNode, 'include', 'node'),
     process.env.LOCALAPPDATA &&
       path.join(process.env.LOCALAPPDATA, 'node-gyp', 'Cache', process.versions.node, 'include', 'node'),
@@ -67,7 +70,11 @@ function findNodeLibDir() {
     path.join(process.env.RUNNER_TOOL_CACHE, 'node', process.versions.node, 'x64');
   const candidates = [
     process.env.NODE_LIB_DIR,
+    process.env.npm_config_devdir &&
+      path.join(process.env.npm_config_devdir, process.versions.node, nodeArchDir),
     runnerToolCacheNode,
+    process.env.LOCALAPPDATA &&
+      path.join(process.env.LOCALAPPDATA, 'node-gyp', 'Cache', process.versions.node, nodeArchDir),
     process.config?.variables?.node_prefix,
     process.config?.variables?.nodedir,
     execDir,

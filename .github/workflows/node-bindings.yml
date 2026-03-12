@@ -46,5 +46,11 @@ jobs:
         shell: pwsh
         run: |
           cd bindings/node-open
+          $env:npm_config_devdir = "$env:LOCALAPPDATA\\node-gyp\\Cache"
+          $nodeVersion = node -p "process.versions.node"
+          $nodeArch = node -p "process.arch"
+          npx --yes node-gyp install --target $nodeVersion --devdir "$env:npm_config_devdir"
+          $env:NODE_INCLUDE_DIR = "$env:npm_config_devdir\\$nodeVersion\\include\\node"
+          $env:NODE_LIB_DIR = "$env:npm_config_devdir\\$nodeVersion\\$nodeArch"
           npm run build
           npm test
