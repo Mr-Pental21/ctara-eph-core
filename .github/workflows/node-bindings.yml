@@ -66,6 +66,5 @@ jobs:
           npx --yes node-gyp install --target $nodeVersion --devdir "$env:npm_config_devdir"
           $env:NODE_INCLUDE_DIR = "$env:npm_config_devdir\\$nodeVersion\\include\\node"
           $env:NODE_LIB_DIR = "$env:npm_config_devdir\\$nodeVersion\\$nodeArch"
-          cl /Bv
           npm run build
           npm test

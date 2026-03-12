@@ -137,6 +137,7 @@ function buildUnix() {
 function buildWindows() {
   const includeNode = findNodeIncludeDir();
   const nodeLibDir = findNodeLibDir();
+  const systemLibs = ['ws2_32.lib', 'userenv.lib', 'ntdll.lib'];
 
   const args = [
     '/nologo',
@@ -153,6 +154,7 @@ function buildWindows() {
     'dhruv_ffi_c.lib',
     `/LIBPATH:${nodeLibDir}`,
     'node.lib',
+    ...systemLibs,
   ];
 
   runOrThrow('cl', args, { cwd: pkgDir, shell: true });
