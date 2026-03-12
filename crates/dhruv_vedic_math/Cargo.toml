@@ -1,0 +1,10 @@
+[package]
+name = "dhruv_vedic_math"
+version = "0.1.0"
+license = "Apache-2.0"
+edition = "2024"
+
+[dependencies]
+
+[dev-dependencies]
+criterion = { workspace = true }

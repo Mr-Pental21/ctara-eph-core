@@ -17,13 +17,8 @@ use dhruv_search::stationary_types::StationaryConfig;
 use dhruv_search::{
     ConjunctionOperation, ConjunctionQuery, ConjunctionResult, GrahanKind, GrahanOperation,
     GrahanQuery, GrahanResult, LunarPhaseKind, LunarPhaseOperation, LunarPhaseQuery,
-    LunarPhaseResult, MotionKind, MotionOperation, MotionQuery, MotionResult, NodeBackend,
-    NodeOperation, PANCHANG_INCLUDE_ALL, PANCHANG_INCLUDE_ALL_CALENDAR, PANCHANG_INCLUDE_ALL_CORE,
-    PANCHANG_INCLUDE_AYANA, PANCHANG_INCLUDE_GHATIKA, PANCHANG_INCLUDE_HORA,
-    PANCHANG_INCLUDE_KARANA, PANCHANG_INCLUDE_MASA, PANCHANG_INCLUDE_NAKSHATRA,
-    PANCHANG_INCLUDE_TITHI, PANCHANG_INCLUDE_VAAR, PANCHANG_INCLUDE_VARSHA, PANCHANG_INCLUDE_YOGA,
-    PanchangOperation, SankrantiOperation, SankrantiQuery, SankrantiResult, SankrantiTarget,
-    TaraOperation, TaraOutputKind, TaraResult,
+    LunarPhaseResult, MotionKind, MotionOperation, MotionQuery, MotionResult, SankrantiOperation,
+    SankrantiQuery, SankrantiResult, SankrantiTarget,
 };
 use dhruv_tara::{EarthState, TaraAccuracy, TaraCatalog, TaraConfig, TaraId};
 use dhruv_time::{
@@ -40,6 +35,14 @@ use dhruv_vedic_base::{
     deg_to_dms, jd_tdb_to_centuries, nakshatra_from_longitude, nakshatra_from_tropical,
     nakshatra28_from_longitude, nakshatra28_from_tropical, rashi_from_longitude,
     rashi_from_tropical,
+};
+use dhruv_vedic_ops::{
+    NodeBackend, NodeOperation, PANCHANG_INCLUDE_ALL, PANCHANG_INCLUDE_ALL_CALENDAR,
+    PANCHANG_INCLUDE_ALL_CORE, PANCHANG_INCLUDE_AYANA, PANCHANG_INCLUDE_GHATIKA,
+    PANCHANG_INCLUDE_HORA, PANCHANG_INCLUDE_KARANA, PANCHANG_INCLUDE_MASA,
+    PANCHANG_INCLUDE_NAKSHATRA, PANCHANG_INCLUDE_TITHI, PANCHANG_INCLUDE_VAAR,
+    PANCHANG_INCLUDE_VARSHA, PANCHANG_INCLUDE_YOGA, PanchangOperation, TaraOperation,
+    TaraOutputKind, TaraResult,
 };
 
 #[derive(Parser)]
@@ -3450,7 +3453,7 @@ fn main() {
                 sankranti_config: config,
                 include_mask,
             };
-            match dhruv_search::panchang(&engine, &eop_kernel, &op) {
+            match dhruv_vedic_ops::panchang(&engine, &eop_kernel, &op) {
                 Ok(info) => {
                     println!(
                         "Panchang for {} at {:.6}°N, {:.6}°E (mask=0x{:x})\n",
@@ -4651,7 +4654,7 @@ fn main() {
                 backend,
                 at_jd_tdb: jd_tdb,
             };
-            let lon = dhruv_search::lunar_node(&engine, &op).unwrap_or_else(|e| {
+            let lon = dhruv_vedic_ops::lunar_node(&engine, &op).unwrap_or_else(|e| {
                 eprintln!("Error: {e}");
                 std::process::exit(1);
             });
@@ -7057,7 +7060,7 @@ fn main() {
                 config,
                 earth_state,
             };
-            match dhruv_search::tara(&cat, &op_equatorial) {
+            match dhruv_vedic_ops::tara(&cat, &op_equatorial) {
                 Ok(TaraResult::Equatorial(pos)) => {
                     println!("Equatorial (ICRS):");
                     println!("  RA:       {:.6}°", pos.ra_deg);
@@ -7076,7 +7079,7 @@ fn main() {
                 config,
                 earth_state,
             };
-            match dhruv_search::tara(&cat, &op_ecliptic) {
+            match dhruv_vedic_ops::tara(&cat, &op_ecliptic) {
                 Ok(TaraResult::Ecliptic(sc)) => {
                     println!("Ecliptic (of date):");
                     println!("  Longitude: {:.6}°", sc.lon_deg);
@@ -7098,7 +7101,7 @@ fn main() {
                 config,
                 earth_state,
             };
-            match dhruv_search::tara(&cat, &op_sidereal) {
+            match dhruv_vedic_ops::tara(&cat, &op_sidereal) {
                 Ok(TaraResult::Sidereal(lon)) => {
                     let rashi_info = rashi_from_longitude(lon);
                     let nak_info = nakshatra_from_longitude(lon);

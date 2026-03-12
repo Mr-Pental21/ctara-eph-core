@@ -1,22 +1,25 @@
 //! Canonical operation-style APIs for `dhruv_rs`.
 //!
-//! This layer provides unified request/response models and maps them to
-//! `dhruv_search::operations`.
+//! Search/event requests stay backed by `dhruv_search`, while assembled Vedic
+//! operations map to `dhruv_vedic_ops`.
 
 use dhruv_core::Body;
 use dhruv_search::{
-    AyanamshaMode, AyanamshaOperation, ConjunctionConfig, ConjunctionOperation, ConjunctionQuery,
-    ConjunctionResult, GrahanConfig, GrahanKind, GrahanOperation, GrahanQuery, GrahanResult,
-    LunarPhaseKind, LunarPhaseOperation, LunarPhaseQuery, LunarPhaseResult, MotionKind,
-    MotionOperation, MotionQuery, MotionResult, NodeBackend, NodeOperation, PanchangOperation,
-    PanchangResult, SankrantiConfig, SankrantiOperation, SankrantiQuery, SankrantiResult,
-    SankrantiTarget, StationaryConfig, TaraOperation, TaraOutputKind, TaraResult,
+    ConjunctionConfig, ConjunctionOperation, ConjunctionQuery, ConjunctionResult, GrahanConfig,
+    GrahanKind, GrahanOperation, GrahanQuery, GrahanResult, LunarPhaseKind, LunarPhaseOperation,
+    LunarPhaseQuery, LunarPhaseResult, MotionKind, MotionOperation, MotionQuery, MotionResult,
+    SankrantiConfig, SankrantiOperation, SankrantiQuery, SankrantiResult, SankrantiTarget,
+    StationaryConfig,
 };
 use dhruv_tara::{EarthState, TaraCatalog, TaraConfig, TaraId};
 use dhruv_time::{EopKernel, UtcTime, calendar_to_jd, jd_to_tdb_seconds, tdb_seconds_to_jd};
 use dhruv_vedic_base::{
     AyanamshaSystem, CharakarakaResult, CharakarakaScheme, GeoLocation, LunarNode, NodeMode,
     RiseSetConfig,
+};
+use dhruv_vedic_ops::{
+    AyanamshaMode, AyanamshaOperation, NodeBackend, NodeOperation, PanchangOperation,
+    PanchangResult, TaraOperation, TaraOutputKind, TaraResult,
 };
 
 use crate::context::DhruvContext;
@@ -380,7 +383,7 @@ pub fn ayanamsha_op(ctx: &DhruvContext, request: &AyanamshaRequest) -> Result<f6
         use_nutation,
         delta_psi_arcsec,
     };
-    Ok(dhruv_search::ayanamsha(&op)?)
+    Ok(dhruv_vedic_ops::ayanamsha(&op)?)
 }
 
 /// Unified lunar-node request.
@@ -401,7 +404,7 @@ pub fn lunar_node_op(ctx: &DhruvContext, request: &NodeRequest) -> Result<f64, D
         backend: request.backend,
         at_jd_tdb: time_input_to_jd_tdb(ctx, request.at),
     };
-    Ok(dhruv_search::lunar_node(eng, &op)?)
+    Ok(dhruv_vedic_ops::lunar_node(eng, &op)?)
 }
 
 /// Unified panchang request.
@@ -444,7 +447,7 @@ pub fn panchang_op(
         sankranti_config: resolve_sankranti_config(ctx, request.sankranti_config)?,
         include_mask: request.include_mask,
     };
-    Ok(dhruv_search::panchang(eng, eop, &op)?)
+    Ok(dhruv_vedic_ops::panchang(eng, eop, &op)?)
 }
 
 /// Unified tara request.
@@ -488,7 +491,7 @@ pub fn tara_op(
         config: resolve_tara_config(ctx, request.config)?,
         earth_state: request.earth_state,
     };
-    Ok(dhruv_search::tara(catalog, &op)?)
+    Ok(dhruv_vedic_ops::tara(catalog, &op)?)
 }
 
 /// Unified charakaraka request.
@@ -508,7 +511,7 @@ pub fn charakaraka(
 ) -> Result<CharakarakaResult, DhruvError> {
     let utc = time_input_to_utc_for_context(ctx, request.at);
     let aya_cfg = SankrantiConfig::new(request.system, request.use_nutation);
-    Ok(dhruv_search::charakaraka_for_date(
+    Ok(dhruv_vedic_ops::charakaraka_for_date(
         ctx.engine(),
         eop,
         &utc,

@@ -2,10 +2,10 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 
 use dhruv_core::EngineError;
-use dhruv_search::SearchError;
 use dhruv_tara::TaraError;
 use dhruv_time::TimeError;
 use dhruv_vedic_base::VedicError;
+use dhruv_vedic_ops::SearchError;
 
 /// Unified error type for the convenience wrapper.
 #[derive(Debug, Clone, PartialEq)]
@@ -77,6 +77,12 @@ impl From<TimeError> for DhruvError {
 impl From<SearchError> for DhruvError {
     fn from(e: SearchError) -> Self {
         Self::Search(e)
+    }
+}
+
+impl From<dhruv_search::SearchError> for DhruvError {
+    fn from(e: dhruv_search::SearchError) -> Self {
+        Self::Search(e.into())
     }
 }
 

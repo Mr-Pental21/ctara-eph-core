@@ -1,0 +1,560 @@
+//! Types for Vedic jyotish orchestration (graha longitudes, etc.).
+
+use crate::panchang_types::PanchangInfo;
+use dhruv_vedic_base::{
+    AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AmshaVariation, AshtakavargaResult,
+    BhavaResult, CharakarakaResult, CharakarakaScheme, Dms, DrishtiEntry, Graha,
+    GrahaDrishtiMatrix, KalaBalaBreakdown, Nakshatra, NodeDignityPolicy, Rashi, ShadbalaBreakdown,
+    SthanaBalaBreakdown,
+};
+
+/// Sidereal longitudes of all 9 grahas.
+#[derive(Debug, Clone, Copy)]
+pub struct GrahaLongitudes {
+    /// Sidereal longitudes indexed by `Graha::index()` (0-8).
+    pub longitudes: [f64; 9],
+}
+
+impl GrahaLongitudes {
+    /// Get the sidereal longitude for a specific graha.
+    pub fn longitude(&self, graha: Graha) -> f64 {
+        self.longitudes[graha.index() as usize]
+    }
+
+    /// Get the 0-based rashi index (0-11) for a specific graha.
+    pub fn rashi_index(&self, graha: Graha) -> u8 {
+        let lon = self.longitude(graha);
+        ((lon / 30.0).floor() as u8).min(11)
+    }
+
+    /// Get rashi indices for all 9 grahas.
+    pub fn all_rashi_indices(&self) -> [u8; 9] {
+        let mut indices = [0u8; 9];
+        for (i, &lon) in self.longitudes.iter().enumerate() {
+            indices[i] = ((lon / 30.0).floor() as u8).min(11);
+        }
+        indices
+    }
+}
+
+/// Tropical (ecliptic-of-date) longitudes of all 9 grahas.
+#[derive(Debug, Clone, Copy)]
+pub struct GrahaTropicalLongitudes {
+    /// Tropical longitudes indexed by `Graha::index()` (0-8).
+    pub longitudes: [f64; 9],
+}
+
+impl GrahaTropicalLongitudes {
+    /// Get the tropical longitude for a specific graha.
+    pub fn longitude(&self, graha: Graha) -> f64 {
+        self.longitudes[graha.index() as usize]
+    }
+}
+
+/// Configuration flags for graha_positions computation.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct GrahaPositionsConfig {
+    /// Compute nakshatra + pada for each graha.
+    pub include_nakshatra: bool,
+    /// Compute lagna (ascendant) longitude.
+    pub include_lagna: bool,
+    /// Include Uranus, Neptune, Pluto.
+    pub include_outer_planets: bool,
+    /// Compute bhava placement for each graha.
+    pub include_bhava: bool,
+}
+
+/// Position details for a single graha.
+#[derive(Debug, Clone, Copy)]
+pub struct GrahaEntry {
+    /// Sidereal longitude in degrees [0, 360).
+    pub sidereal_longitude: f64,
+    /// Rashi (0-based, 0-11).
+    pub rashi: Rashi,
+    /// Rashi index (0-based, 0-11).
+    pub rashi_index: u8,
+    /// Nakshatra (sentinel Ashwini if not computed).
+    pub nakshatra: Nakshatra,
+    /// Nakshatra index (0-26), 255 if not computed.
+    pub nakshatra_index: u8,
+    /// Pada (1-4), 0 if not computed.
+    pub pada: u8,
+    /// Bhava number (1-12), 0 if not computed.
+    pub bhava_number: u8,
+}
+
+impl GrahaEntry {
+    /// Create a sentinel (zeroed) entry.
+    pub fn sentinel() -> Self {
+        Self {
+            sidereal_longitude: 0.0,
+            rashi: Rashi::Mesha,
+            rashi_index: 0,
+            nakshatra: Nakshatra::Ashwini,
+            nakshatra_index: 255,
+            pada: 0,
+            bhava_number: 0,
+        }
+    }
+}
+
+/// Complete graha positions result.
+#[derive(Debug, Clone, Copy)]
+pub struct GrahaPositions {
+    /// 9 Vedic grahas (Sun through Ketu), indexed by Graha::index().
+    pub grahas: [GrahaEntry; 9],
+    /// Lagna entry (sentinel zeros if not computed).
+    pub lagna: GrahaEntry,
+    /// Outer planets: [Uranus, Neptune, Pluto] (sentinel zeros if not computed).
+    pub outer_planets: [GrahaEntry; 3],
+}
+
+/// Configuration flags for core_bindus computation.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct BindusConfig {
+    /// Compute nakshatra + pada for each bindu point.
+    pub include_nakshatra: bool,
+    /// Compute bhava placement for each bindu point.
+    pub include_bhava: bool,
+}
+
+/// Curated sensitive points (bindus) with optional nakshatra/bhava enrichment.
+#[derive(Debug, Clone, Copy)]
+pub struct BindusResult {
+    /// 12 arudha padas (A1 through A12).
+    pub arudha_padas: [GrahaEntry; 12],
+    /// Bhrigu Bindu (midpoint Rahu→Moon).
+    pub bhrigu_bindu: GrahaEntry,
+    /// Pranapada Lagna.
+    pub pranapada_lagna: GrahaEntry,
+    /// Gulika (lagna at Saturn's portion start).
+    pub gulika: GrahaEntry,
+    /// Maandi (lagna at Saturn's portion end).
+    pub maandi: GrahaEntry,
+    /// Hora Lagna.
+    pub hora_lagna: GrahaEntry,
+    /// Ghati Lagna.
+    pub ghati_lagna: GrahaEntry,
+    /// Sree Lagna.
+    pub sree_lagna: GrahaEntry,
+}
+
+/// Configuration flags for drishti computation.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct DrishtiConfig {
+    /// Compute 9×12 graha-to-bhava-cusp drishti.
+    pub include_bhava: bool,
+    /// Compute 9×1 graha-to-lagna drishti.
+    pub include_lagna: bool,
+    /// Compute 9×19 graha-to-core-bindus drishti.
+    pub include_bindus: bool,
+}
+
+/// Complete drishti result with graha matrix and optional extensions.
+#[derive(Debug, Clone, Copy)]
+pub struct DrishtiResult {
+    /// 9×9 graha-to-graha drishti (always computed).
+    pub graha_to_graha: GrahaDrishtiMatrix,
+    /// 9×12 graha-to-bhava-cusp drishti (zeroed if flag off).
+    pub graha_to_bhava: [[DrishtiEntry; 12]; 9],
+    /// 9×1 graha-to-lagna drishti (zeroed if flag off).
+    pub graha_to_lagna: [DrishtiEntry; 9],
+    /// 9×19 graha-to-core-bindus drishti (zeroed if flag off).
+    /// 19 bindus = 12 arudha padas + bhrigu_bindu + pranapada + gulika + maandi + hora_lagna + ghati_lagna + sree_lagna.
+    pub graha_to_bindus: [[DrishtiEntry; 19]; 9],
+}
+
+// ---------------------------------------------------------------------------
+// Amsha (divisional chart) types
+// ---------------------------------------------------------------------------
+
+/// Maximum number of amsha requests in a single batch.
+pub const MAX_AMSHA_REQUESTS: usize = 40;
+
+/// Single entity's position in an amsha chart.
+#[derive(Debug, Clone, Copy)]
+pub struct AmshaEntry {
+    /// Sidereal longitude in [0, 360).
+    pub sidereal_longitude: f64,
+    /// Rashi of the amsha position.
+    pub rashi: Rashi,
+    /// 0-based rashi index (0-11).
+    pub rashi_index: u8,
+    /// Degrees/minutes/seconds within rashi.
+    pub dms: Dms,
+    /// Decimal degrees within rashi [0, 30).
+    pub degrees_in_rashi: f64,
+}
+
+/// Scope flags: which entity groups to include in amsha charts.
+/// Grahas (9) + Lagna (1) always included.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct AmshaChartScope {
+    pub include_bhava_cusps: bool,
+    pub include_arudha_padas: bool,
+    pub include_upagrahas: bool,
+    pub include_sphutas: bool,
+    pub include_special_lagnas: bool,
+}
+
+/// All entity positions in one amsha chart.
+#[derive(Debug, Clone)]
+pub struct AmshaChart {
+    pub amsha: Amsha,
+    pub variation: AmshaVariation,
+    pub grahas: [AmshaEntry; 9],
+    pub lagna: AmshaEntry,
+    pub bhava_cusps: Option<[AmshaEntry; 12]>,
+    pub arudha_padas: Option<[AmshaEntry; 12]>,
+    pub upagrahas: Option<[AmshaEntry; 11]>,
+    pub sphutas: Option<[AmshaEntry; 16]>,
+    pub special_lagnas: Option<[AmshaEntry; 8]>,
+}
+
+/// Collection of amsha charts.
+#[derive(Debug, Clone)]
+pub struct AmshaResult {
+    pub charts: Vec<AmshaChart>,
+}
+
+/// Fixed-size amsha selection for FullKundaliConfig (Copy-compatible).
+#[derive(Debug, Clone, Copy)]
+pub struct AmshaSelectionConfig {
+    /// Number of valid entries (0..=MAX_AMSHA_REQUESTS).
+    pub count: u8,
+    /// D-numbers (1..144), 0=unused.
+    pub codes: [u16; MAX_AMSHA_REQUESTS],
+    /// Variation codes: 0=default, 1=HoraCancerLeoOnly.
+    pub variations: [u8; MAX_AMSHA_REQUESTS],
+}
+
+impl Default for AmshaSelectionConfig {
+    fn default() -> Self {
+        Self {
+            count: 0,
+            codes: [0; MAX_AMSHA_REQUESTS],
+            variations: [0; MAX_AMSHA_REQUESTS],
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Shadbala & Vimsopaka types
+// ---------------------------------------------------------------------------
+
+/// Shadbala entry for a single sapta graha.
+#[derive(Debug, Clone, Copy)]
+pub struct ShadbalaEntry {
+    pub graha: Graha,
+    pub sthana: SthanaBalaBreakdown,
+    pub dig: f64,
+    pub kala: KalaBalaBreakdown,
+    pub cheshta: f64,
+    pub naisargika: f64,
+    pub drik: f64,
+    pub total_shashtiamsas: f64,
+    pub total_rupas: f64,
+    pub required_strength: f64,
+    pub is_strong: bool,
+}
+
+impl ShadbalaEntry {
+    pub fn from_breakdown(graha: Graha, b: &ShadbalaBreakdown) -> Self {
+        Self {
+            graha,
+            sthana: b.sthana,
+            dig: b.dig,
+            kala: b.kala,
+            cheshta: b.cheshta,
+            naisargika: b.naisargika,
+            drik: b.drik,
+            total_shashtiamsas: b.total_shashtiamsas,
+            total_rupas: b.total_rupas,
+            required_strength: b.required_strength,
+            is_strong: b.is_strong,
+        }
+    }
+}
+
+/// Shadbala result for all 7 sapta grahas.
+#[derive(Debug, Clone, Copy)]
+pub struct ShadbalaResult {
+    pub entries: [ShadbalaEntry; 7],
+}
+
+/// Vimsopaka entry for a single graha.
+#[derive(Debug, Clone, Copy)]
+pub struct VimsopakaEntry {
+    pub graha: Graha,
+    pub shadvarga: f64,
+    pub saptavarga: f64,
+    pub dashavarga: f64,
+    pub shodasavarga: f64,
+}
+
+/// Vimsopaka result for all 9 navagrahas.
+#[derive(Debug, Clone, Copy)]
+pub struct VimsopakaResult {
+    pub entries: [VimsopakaEntry; 9],
+}
+
+// ---------------------------------------------------------------------------
+// Dasha selection config (for FullKundaliConfig)
+// ---------------------------------------------------------------------------
+
+/// Dasha selection for FullKundaliConfig. Copy-safe, fixed-size.
+#[derive(Debug, Clone, Copy)]
+pub struct DashaSelectionConfig {
+    /// Number of valid entries in `systems` (0..=MAX_DASHA_SYSTEMS).
+    pub count: u8,
+    /// Which dasha systems to compute (DashaSystem repr(u8), 0xFF=unused).
+    pub systems: [u8; dhruv_vedic_base::dasha::MAX_DASHA_SYSTEMS],
+    /// Per-system max level depth for hierarchy computation (0-4, 0xFF=use `max_level`).
+    pub max_levels: [u8; dhruv_vedic_base::dasha::MAX_DASHA_SYSTEMS],
+    /// Shared max level depth fallback for hierarchy computation (0-4, default 2).
+    pub max_level: u8,
+    /// Per-level sub-period method overrides (0xFF = use system default).
+    pub level_methods: [u8; 5],
+    /// Yogini scheme (0=default, 1=la-deepanshu-giri).
+    pub yogini_scheme: u8,
+    /// Whether to use Abhijit for Ashtottari (1=yes, 0=no).
+    pub use_abhijit: u8,
+    /// Optional query JD for snapshot computation.
+    /// None = skip snapshots, only compute hierarchy.
+    pub snapshot_jd: Option<f64>,
+}
+
+impl Default for DashaSelectionConfig {
+    fn default() -> Self {
+        Self {
+            count: 0,
+            systems: [0xFF; dhruv_vedic_base::dasha::MAX_DASHA_SYSTEMS],
+            max_levels: [0xFF; dhruv_vedic_base::dasha::MAX_DASHA_SYSTEMS],
+            max_level: dhruv_vedic_base::dasha::DEFAULT_DASHA_LEVEL,
+            level_methods: [0xFF; 5],
+            yogini_scheme: 0,
+            use_abhijit: 1,
+            snapshot_jd: None,
+        }
+    }
+}
+
+impl DashaSelectionConfig {
+    /// Fix recoverable issues (clamping).
+    pub fn sanitize(&mut self) {
+        if self.max_level > dhruv_vedic_base::dasha::MAX_DASHA_LEVEL {
+            self.max_level = dhruv_vedic_base::dasha::MAX_DASHA_LEVEL;
+        }
+        for max_level in &mut self.max_levels {
+            if *max_level != 0xFF && *max_level > dhruv_vedic_base::dasha::MAX_DASHA_LEVEL {
+                *max_level = dhruv_vedic_base::dasha::MAX_DASHA_LEVEL;
+            }
+        }
+    }
+
+    /// Validate configuration. Returns error for unrecoverable issues.
+    pub fn validate(&self) -> Result<(), dhruv_vedic_base::VedicError> {
+        use dhruv_vedic_base::VedicError;
+        let max_sys = dhruv_vedic_base::dasha::MAX_DASHA_SYSTEMS;
+        let num_systems = dhruv_vedic_base::dasha::ALL_DASHA_SYSTEMS.len();
+
+        if self.count as usize > max_sys {
+            return Err(VedicError::InvalidInput("count exceeds MAX_DASHA_SYSTEMS"));
+        }
+
+        for i in 0..self.count as usize {
+            let code = self.systems[i];
+            if code == 0xFF {
+                return Err(VedicError::InvalidInput(
+                    "invalid system code in active range",
+                ));
+            }
+            if code as usize >= num_systems {
+                return Err(VedicError::InvalidInput("unknown system code"));
+            }
+        }
+
+        // Check for duplicates
+        for i in 0..self.count as usize {
+            for j in (i + 1)..self.count as usize {
+                if self.systems[i] == self.systems[j] {
+                    return Err(VedicError::InvalidInput("duplicate system"));
+                }
+            }
+        }
+
+        // Validate level_methods
+        for &m in &self.level_methods {
+            if m != 0xFF && dhruv_vedic_base::dasha::SubPeriodMethod::from_u8(m).is_none() {
+                return Err(VedicError::InvalidInput("invalid sub-period method"));
+            }
+        }
+
+        // Validate yogini_scheme
+        if dhruv_vedic_base::dasha::YoginiScheme::from_u8(self.yogini_scheme).is_none() {
+            return Err(VedicError::InvalidInput("invalid yogini scheme"));
+        }
+
+        Ok(())
+    }
+
+    /// Effective max level for the active system at `index`.
+    pub fn effective_max_level(&self, index: usize) -> u8 {
+        let max_level = self.max_levels[index];
+        if max_level == 0xFF {
+            self.max_level
+        } else {
+            max_level
+        }
+    }
+
+    /// Convert to a DashaVariationConfig.
+    pub fn to_variation_config(&self) -> dhruv_vedic_base::dasha::DashaVariationConfig {
+        let mut level_methods = [None; 5];
+        for (i, &m) in self.level_methods.iter().enumerate() {
+            if m != 0xFF {
+                level_methods[i] = dhruv_vedic_base::dasha::SubPeriodMethod::from_u8(m);
+            }
+        }
+        dhruv_vedic_base::dasha::DashaVariationConfig {
+            level_methods,
+            yogini_scheme: dhruv_vedic_base::dasha::YoginiScheme::from_u8(self.yogini_scheme)
+                .unwrap_or_default(),
+            use_abhijit: self.use_abhijit != 0,
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Full kundali config/result
+// ---------------------------------------------------------------------------
+
+/// Configuration for one-shot full kundali computation.
+#[derive(Debug, Clone, Copy)]
+pub struct FullKundaliConfig {
+    /// Include bhava cusps section. Default: true.
+    pub include_bhava_cusps: bool,
+    /// Include comprehensive graha positions section.
+    pub include_graha_positions: bool,
+    /// Include core bindus section.
+    pub include_bindus: bool,
+    /// Include drishti section.
+    pub include_drishti: bool,
+    /// Include ashtakavarga section.
+    pub include_ashtakavarga: bool,
+    /// Include upagrahas section.
+    pub include_upagrahas: bool,
+    /// Include root sphutas section.
+    pub include_sphutas: bool,
+    /// Include special lagnas section.
+    pub include_special_lagnas: bool,
+    /// Include amsha (divisional chart) section.
+    pub include_amshas: bool,
+    /// Include shadbala section (sapta grahas only).
+    pub include_shadbala: bool,
+    /// Include vimsopaka bala section (navagraha).
+    pub include_vimsopaka: bool,
+    /// Include avastha (planetary state) section.
+    pub include_avastha: bool,
+    /// Include charakaraka (chara karaka) section.
+    pub include_charakaraka: bool,
+    /// Charakaraka scheme.
+    pub charakaraka_scheme: CharakarakaScheme,
+    /// Include panchang (tithi, karana, yoga, vaar, hora, ghatika, nakshatra).
+    pub include_panchang: bool,
+    /// Include calendar elements (masa, ayana, varsha). Implies include_panchang.
+    pub include_calendar: bool,
+    /// Include dasha (planetary period) section.
+    pub include_dasha: bool,
+    /// Node dignity policy for vimsopaka and avastha.
+    pub node_dignity_policy: NodeDignityPolicy,
+    /// Config passed to graha positions computation.
+    pub graha_positions_config: GrahaPositionsConfig,
+    /// Config passed to bindus computation.
+    pub bindus_config: BindusConfig,
+    /// Config passed to drishti computation.
+    pub drishti_config: DrishtiConfig,
+    /// Scope flags for amsha charts.
+    pub amsha_scope: AmshaChartScope,
+    /// Which amshas to compute.
+    pub amsha_selection: AmshaSelectionConfig,
+    /// Which dasha systems to compute.
+    pub dasha_config: DashaSelectionConfig,
+}
+
+impl Default for FullKundaliConfig {
+    fn default() -> Self {
+        Self {
+            include_bhava_cusps: true,
+            include_graha_positions: true,
+            include_bindus: true,
+            include_drishti: true,
+            include_ashtakavarga: true,
+            include_upagrahas: true,
+            include_sphutas: true,
+            include_special_lagnas: true,
+            include_amshas: false,
+            include_shadbala: false,
+            include_vimsopaka: false,
+            include_avastha: false,
+            include_charakaraka: false,
+            charakaraka_scheme: CharakarakaScheme::default(),
+            include_panchang: false,
+            include_calendar: false,
+            include_dasha: false,
+            node_dignity_policy: NodeDignityPolicy::default(),
+            graha_positions_config: GrahaPositionsConfig::default(),
+            bindus_config: BindusConfig::default(),
+            drishti_config: DrishtiConfig::default(),
+            amsha_scope: AmshaChartScope::default(),
+            amsha_selection: AmshaSelectionConfig::default(),
+            dasha_config: DashaSelectionConfig::default(),
+        }
+    }
+}
+
+/// One-shot full kundali result.
+#[derive(Debug, Clone)]
+pub struct SphutalResult {
+    /// Longitudes for each sphuta (indexed 0-15 matching `ALL_SPHUTAS` order).
+    pub longitudes: [f64; 16],
+}
+
+/// One-shot full kundali result.
+#[derive(Debug, Clone)]
+pub struct FullKundaliResult {
+    /// Ayanamsha in degrees used for this kundali.
+    pub ayanamsha_deg: f64,
+    /// Present when `FullKundaliConfig::include_bhava_cusps` is true.
+    pub bhava_cusps: Option<BhavaResult>,
+    /// Present when `FullKundaliConfig::include_graha_positions` is true.
+    pub graha_positions: Option<GrahaPositions>,
+    /// Present when `FullKundaliConfig::include_bindus` is true.
+    pub bindus: Option<BindusResult>,
+    /// Present when `FullKundaliConfig::include_drishti` is true.
+    pub drishti: Option<DrishtiResult>,
+    /// Present when `FullKundaliConfig::include_ashtakavarga` is true.
+    pub ashtakavarga: Option<AshtakavargaResult>,
+    /// Present when `FullKundaliConfig::include_upagrahas` is true.
+    pub upagrahas: Option<AllUpagrahas>,
+    /// Present when `FullKundaliConfig::include_sphutas` is true.
+    pub sphutas: Option<SphutalResult>,
+    /// Present when `FullKundaliConfig::include_special_lagnas` is true.
+    pub special_lagnas: Option<AllSpecialLagnas>,
+    /// Present when `FullKundaliConfig::include_amshas` is true.
+    pub amshas: Option<AmshaResult>,
+    /// Present when `FullKundaliConfig::include_shadbala` is true.
+    pub shadbala: Option<ShadbalaResult>,
+    /// Present when `FullKundaliConfig::include_vimsopaka` is true.
+    pub vimsopaka: Option<VimsopakaResult>,
+    /// Present when `FullKundaliConfig::include_avastha` is true.
+    pub avastha: Option<AllGrahaAvasthas>,
+    /// Present when `FullKundaliConfig::include_charakaraka` is true.
+    pub charakaraka: Option<CharakarakaResult>,
+    /// Present when `FullKundaliConfig::include_panchang` or `include_calendar` is true.
+    pub panchang: Option<PanchangInfo>,
+    /// Present when `FullKundaliConfig::include_dasha` is true.
+    pub dasha: Option<Vec<dhruv_vedic_base::DashaHierarchy>>,
+    /// Present when dasha is computed and snapshot_jd is set.
+    pub dasha_snapshots: Option<Vec<dhruv_vedic_base::DashaSnapshot>>,
+}

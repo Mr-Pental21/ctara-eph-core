@@ -35,12 +35,21 @@ impl From<EngineError> for SearchError {
     }
 }
 
-impl From<dhruv_vedic_base::VedicError> for SearchError {
-    fn from(e: dhruv_vedic_base::VedicError) -> Self {
+impl From<dhruv_vedic_engine::VedicError> for SearchError {
+    fn from(e: dhruv_vedic_engine::VedicError) -> Self {
         match e {
-            dhruv_vedic_base::VedicError::Engine(eng) => Self::Engine(eng),
-            dhruv_vedic_base::VedicError::InvalidInput(msg) => Self::InvalidConfig(msg),
+            dhruv_vedic_engine::VedicError::Engine(eng) => Self::Engine(eng),
+            dhruv_vedic_engine::VedicError::InvalidInput(msg) => Self::InvalidConfig(msg),
             _ => Self::NoConvergence("vedic calculation failed"),
+        }
+    }
+}
+
+impl From<dhruv_vedic_math::VedicError> for SearchError {
+    fn from(e: dhruv_vedic_math::VedicError) -> Self {
+        match e {
+            dhruv_vedic_math::VedicError::InvalidInput(msg) => Self::InvalidConfig(msg),
+            _ => Self::NoConvergence("vedic math calculation failed"),
         }
     }
 }

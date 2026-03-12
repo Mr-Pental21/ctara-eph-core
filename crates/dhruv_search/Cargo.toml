@@ -9,6 +9,8 @@ dhruv_core       = { path = "../dhruv_core" }
 dhruv_time       = { path = "../dhruv_time" }
 dhruv_frames     = { path = "../dhruv_frames" }
 dhruv_vedic_base = { path = "../dhruv_vedic_base" }
+dhruv_vedic_math = { path = "../dhruv_vedic_math" }
+dhruv_vedic_engine = { path = "../dhruv_vedic_engine" }
 dhruv_tara       = { path = "../dhruv_tara" }
 
 [dev-dependencies]

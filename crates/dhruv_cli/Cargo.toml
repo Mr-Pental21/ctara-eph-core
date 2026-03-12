@@ -10,6 +10,7 @@ dhruv_time   = { path = "../dhruv_time" }
 dhruv_frames = { path = "../dhruv_frames" }
 dhruv_config = { path = "../dhruv_config" }
 dhruv_search = { path = "../dhruv_search" }
+dhruv_vedic_ops = { path = "../dhruv_vedic_ops" }
 dhruv_vedic_base = { path = "../dhruv_vedic_base" }
 dhruv_tara       = { path = "../dhruv_tara" }
 clap = { version = "4", features = ["derive"] }

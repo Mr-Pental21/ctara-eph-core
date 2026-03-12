@@ -244,6 +244,7 @@ dependencies = [
  "dhruv_tara",
  "dhruv_time",
  "dhruv_vedic_base",
+ "dhruv_vedic_ops",
 ]
 
 [[package]]
@@ -282,6 +283,7 @@ dependencies = [
  "dhruv_tara",
  "dhruv_time",
  "dhruv_vedic_base",
+ "dhruv_vedic_ops",
 ]
 
 [[package]]
@@ -303,6 +305,7 @@ dependencies = [
  "dhruv_tara",
  "dhruv_time",
  "dhruv_vedic_base",
+ "dhruv_vedic_ops",
 ]
 
 [[package]]
@@ -315,6 +318,8 @@ dependencies = [
  "dhruv_tara",
  "dhruv_time",
  "dhruv_vedic_base",
+ "dhruv_vedic_engine",
+ "dhruv_vedic_math",
 ]
 
 [[package]]
@@ -343,6 +348,42 @@ dependencies = [
  "dhruv_frames",
  "dhruv_tara",
  "dhruv_time",
+ "dhruv_vedic_engine",
+ "dhruv_vedic_math",
+]
+
+[[package]]
+name = "dhruv_vedic_engine"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "dhruv_core",
+ "dhruv_frames",
+ "dhruv_tara",
+ "dhruv_time",
+ "dhruv_vedic_math",
+]
+
+[[package]]
+name = "dhruv_vedic_math"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+]
+
+[[package]]
+name = "dhruv_vedic_ops"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "dhruv_core",
+ "dhruv_frames",
+ "dhruv_search",
+ "dhruv_tara",
+ "dhruv_time",
+ "dhruv_vedic_base",
+ "dhruv_vedic_engine",
+ "dhruv_vedic_math",
 ]
 
 [[package]]

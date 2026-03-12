@@ -40,6 +40,12 @@ use dhruv_vedic_base::{
     nakshatra28_from_tropical, nth_rashi_from, rashi_from_longitude, rashi_from_tropical,
     samvatsara_from_year, time_upagraha_jd, tithi_from_elongation, vaar_from_jd, yoga_from_sum,
 };
+use dhruv_vedic_ops::{
+    PANCHANG_INCLUDE_AYANA, PANCHANG_INCLUDE_GHATIKA, PANCHANG_INCLUDE_HORA,
+    PANCHANG_INCLUDE_KARANA, PANCHANG_INCLUDE_MASA, PANCHANG_INCLUDE_NAKSHATRA,
+    PANCHANG_INCLUDE_TITHI, PANCHANG_INCLUDE_VAAR, PANCHANG_INCLUDE_VARSHA, PANCHANG_INCLUDE_YOGA,
+    PanchangOperation, PanchangResult, TaraOperation, TaraOutputKind, TaraResult,
+};
 
 /// ABI version for downstream bindings.
 pub const DHRUV_API_VERSION: u32 = 45;
@@ -122,6 +128,17 @@ impl From<&SearchError> for DhruvStatus {
             SearchError::Engine(e) => Self::from(e),
             SearchError::InvalidConfig(_) => Self::InvalidSearchConfig,
             SearchError::NoConvergence(_) => Self::NoConvergence,
+            _ => Self::Internal,
+        }
+    }
+}
+
+impl From<&dhruv_vedic_ops::SearchError> for DhruvStatus {
+    fn from(value: &dhruv_vedic_ops::SearchError) -> Self {
+        match value {
+            dhruv_vedic_ops::SearchError::Engine(e) => Self::from(e),
+            dhruv_vedic_ops::SearchError::InvalidConfig(_) => Self::InvalidSearchConfig,
+            dhruv_vedic_ops::SearchError::NoConvergence(_) => Self::NoConvergence,
             _ => Self::Internal,
         }
     }
@@ -3639,34 +3656,34 @@ fn panchang_include_mask_from_ffi(mask: u32) -> Option<u32> {
     }
     let mut out = 0_u32;
     if (mask & DHRUV_PANCHANG_INCLUDE_TITHI) != 0 {
-        out |= dhruv_search::PANCHANG_INCLUDE_TITHI;
+        out |= PANCHANG_INCLUDE_TITHI;
     }
     if (mask & DHRUV_PANCHANG_INCLUDE_KARANA) != 0 {
-        out |= dhruv_search::PANCHANG_INCLUDE_KARANA;
+        out |= PANCHANG_INCLUDE_KARANA;
     }
     if (mask & DHRUV_PANCHANG_INCLUDE_YOGA) != 0 {
-        out |= dhruv_search::PANCHANG_INCLUDE_YOGA;
+        out |= PANCHANG_INCLUDE_YOGA;
     }
     if (mask & DHRUV_PANCHANG_INCLUDE_VAAR) != 0 {
-        out |= dhruv_search::PANCHANG_INCLUDE_VAAR;
+        out |= PANCHANG_INCLUDE_VAAR;
     }
     if (mask & DHRUV_PANCHANG_INCLUDE_HORA) != 0 {
-        out |= dhruv_search::PANCHANG_INCLUDE_HORA;
+        out |= PANCHANG_INCLUDE_HORA;
     }
     if (mask & DHRUV_PANCHANG_INCLUDE_GHATIKA) != 0 {
-        out |= dhruv_search::PANCHANG_INCLUDE_GHATIKA;
+        out |= PANCHANG_INCLUDE_GHATIKA;
     }
     if (mask & DHRUV_PANCHANG_INCLUDE_NAKSHATRA) != 0 {
-        out |= dhruv_search::PANCHANG_INCLUDE_NAKSHATRA;
+        out |= PANCHANG_INCLUDE_NAKSHATRA;
     }
     if (mask & DHRUV_PANCHANG_INCLUDE_MASA) != 0 {
-        out |= dhruv_search::PANCHANG_INCLUDE_MASA;
+        out |= PANCHANG_INCLUDE_MASA;
     }
     if (mask & DHRUV_PANCHANG_INCLUDE_AYANA) != 0 {
-        out |= dhruv_search::PANCHANG_INCLUDE_AYANA;
+        out |= PANCHANG_INCLUDE_AYANA;
     }
     if (mask & DHRUV_PANCHANG_INCLUDE_VARSHA) != 0 {
-        out |= dhruv_search::PANCHANG_INCLUDE_VARSHA;
+        out |= PANCHANG_INCLUDE_VARSHA;
     }
     Some(out)
 }
@@ -5592,7 +5609,7 @@ pub unsafe extern "C" fn dhruv_panchang_compute_ex(
             req.location.altitude_m,
         );
 
-        let op = dhruv_search::PanchangOperation {
+        let op = PanchangOperation {
             at_utc,
             location,
             riseset_config,
@@ -5602,7 +5619,7 @@ pub unsafe extern "C" fn dhruv_panchang_compute_ex(
 
         let engine_ref = unsafe { &*engine };
         let eop_ref = unsafe { &*eop };
-        match dhruv_search::panchang(engine_ref, eop_ref, &op) {
+        match dhruv_vedic_ops::panchang(engine_ref, eop_ref, &op) {
             Ok(info) => {
                 unsafe { *out = panchang_result_to_ffi(&info) };
                 DhruvStatus::Ok
@@ -5834,45 +5851,134 @@ fn panchang_info_to_ffi(info: &dhruv_search::PanchangInfo) -> DhruvPanchangInfo 
     }
 }
 
-fn panchang_result_to_ffi(info: &dhruv_search::PanchangResult) -> DhruvPanchangOperationResult {
+fn tithi_info_to_ffi_ops(info: &dhruv_vedic_ops::TithiInfo) -> DhruvTithiInfo {
+    DhruvTithiInfo {
+        tithi_index: info.tithi_index as i32,
+        paksha: info.paksha as i32,
+        tithi_in_paksha: info.tithi_in_paksha as i32,
+        start: utc_time_to_ffi(&info.start),
+        end: utc_time_to_ffi(&info.end),
+    }
+}
+
+fn karana_info_to_ffi_ops(info: &dhruv_vedic_ops::KaranaInfo) -> DhruvKaranaInfo {
+    DhruvKaranaInfo {
+        karana_index: info.karana_index as i32,
+        karana_name_index: info.karana.index() as i32,
+        start: utc_time_to_ffi(&info.start),
+        end: utc_time_to_ffi(&info.end),
+    }
+}
+
+fn yoga_info_to_ffi_ops(info: &dhruv_vedic_ops::YogaInfo) -> DhruvYogaInfo {
+    DhruvYogaInfo {
+        yoga_index: info.yoga_index as i32,
+        start: utc_time_to_ffi(&info.start),
+        end: utc_time_to_ffi(&info.end),
+    }
+}
+
+fn vaar_info_to_ffi_ops(info: &dhruv_vedic_ops::VaarInfo) -> DhruvVaarInfo {
+    DhruvVaarInfo {
+        vaar_index: info.vaar.index() as i32,
+        start: utc_time_to_ffi(&info.start),
+        end: utc_time_to_ffi(&info.end),
+    }
+}
+
+fn hora_info_to_ffi_ops(info: &dhruv_vedic_ops::HoraInfo) -> DhruvHoraInfo {
+    DhruvHoraInfo {
+        hora_index: info.hora.index() as i32,
+        hora_position: info.hora_index as i32,
+        start: utc_time_to_ffi(&info.start),
+        end: utc_time_to_ffi(&info.end),
+    }
+}
+
+fn ghatika_info_to_ffi_ops(info: &dhruv_vedic_ops::GhatikaInfo) -> DhruvGhatikaInfo {
+    DhruvGhatikaInfo {
+        value: info.value as i32,
+        start: utc_time_to_ffi(&info.start),
+        end: utc_time_to_ffi(&info.end),
+    }
+}
+
+fn panchang_nakshatra_info_to_ffi_ops(
+    info: &dhruv_vedic_ops::PanchangNakshatraInfo,
+) -> DhruvPanchangNakshatraInfo {
+    DhruvPanchangNakshatraInfo {
+        nakshatra_index: info.nakshatra_index as i32,
+        pada: info.pada as i32,
+        start: utc_time_to_ffi(&info.start),
+        end: utc_time_to_ffi(&info.end),
+    }
+}
+
+fn masa_info_to_ffi_ops(info: &dhruv_vedic_ops::MasaInfo) -> DhruvMasaInfo {
+    DhruvMasaInfo {
+        masa_index: info.masa.index() as i32,
+        adhika: u8::from(info.adhika),
+        start: utc_time_to_ffi(&info.start),
+        end: utc_time_to_ffi(&info.end),
+    }
+}
+
+fn ayana_info_to_ffi_ops(info: &dhruv_vedic_ops::AyanaInfo) -> DhruvAyanaInfo {
+    DhruvAyanaInfo {
+        ayana: info.ayana.index() as i32,
+        start: utc_time_to_ffi(&info.start),
+        end: utc_time_to_ffi(&info.end),
+    }
+}
+
+fn varsha_info_to_ffi_ops(info: &dhruv_vedic_ops::VarshaInfo) -> DhruvVarshaInfo {
+    DhruvVarshaInfo {
+        samvatsara_index: info.samvatsara.index() as i32,
+        order: info.order as i32,
+        start: utc_time_to_ffi(&info.start),
+        end: utc_time_to_ffi(&info.end),
+    }
+}
+
+fn panchang_result_to_ffi(info: &PanchangResult) -> DhruvPanchangOperationResult {
     let (tithi_valid, tithi) = match info.tithi {
-        Some(v) => (1, tithi_info_to_ffi(&v)),
+        Some(v) => (1, tithi_info_to_ffi_ops(&v)),
         None => (0, zeroed_tithi_info()),
     };
     let (karana_valid, karana) = match info.karana {
-        Some(v) => (1, karana_info_to_ffi(&v)),
+        Some(v) => (1, karana_info_to_ffi_ops(&v)),
         None => (0, zeroed_karana_info()),
     };
     let (yoga_valid, yoga) = match info.yoga {
-        Some(v) => (1, yoga_info_to_ffi(&v)),
+        Some(v) => (1, yoga_info_to_ffi_ops(&v)),
         None => (0, zeroed_yoga_info()),
     };
     let (vaar_valid, vaar) = match info.vaar {
-        Some(v) => (1, vaar_info_to_ffi(&v)),
+        Some(v) => (1, vaar_info_to_ffi_ops(&v)),
         None => (0, zeroed_vaar_info()),
     };
     let (hora_valid, hora) = match info.hora {
-        Some(v) => (1, hora_info_to_ffi(&v)),
+        Some(v) => (1, hora_info_to_ffi_ops(&v)),
         None => (0, zeroed_hora_info()),
     };
     let (ghatika_valid, ghatika) = match info.ghatika {
-        Some(v) => (1, ghatika_info_to_ffi(&v)),
+        Some(v) => (1, ghatika_info_to_ffi_ops(&v)),
         None => (0, zeroed_ghatika_info()),
     };
     let (nakshatra_valid, nakshatra) = match info.nakshatra {
-        Some(v) => (1, panchang_nakshatra_info_to_ffi(&v)),
+        Some(v) => (1, panchang_nakshatra_info_to_ffi_ops(&v)),
         None => (0, zeroed_panchang_nakshatra_info()),
     };
     let (masa_valid, masa) = match info.masa {
-        Some(v) => (1, masa_info_to_ffi(&v)),
+        Some(v) => (1, masa_info_to_ffi_ops(&v)),
         None => (0, zeroed_masa_info()),
     };
     let (ayana_valid, ayana) = match info.ayana {
-        Some(v) => (1, ayana_info_to_ffi(&v)),
+        Some(v) => (1, ayana_info_to_ffi_ops(&v)),
         None => (0, zeroed_ayana_info()),
     };
     let (varsha_valid, varsha) = match info.varsha {
-        Some(v) => (1, varsha_info_to_ffi(&v)),
+        Some(v) => (1, varsha_info_to_ffi_ops(&v)),
         None => (0, zeroed_varsha_info()),
     };
 
@@ -10764,12 +10870,12 @@ pub unsafe extern "C" fn dhruv_tara_compute_ex(
             None => return DhruvStatus::InvalidQuery,
         };
         let output = match req.output_kind {
-            DHRUV_TARA_OUTPUT_EQUATORIAL => dhruv_search::TaraOutputKind::Equatorial,
-            DHRUV_TARA_OUTPUT_ECLIPTIC => dhruv_search::TaraOutputKind::Ecliptic,
-            DHRUV_TARA_OUTPUT_SIDEREAL => dhruv_search::TaraOutputKind::Sidereal,
+            DHRUV_TARA_OUTPUT_EQUATORIAL => TaraOutputKind::Equatorial,
+            DHRUV_TARA_OUTPUT_ECLIPTIC => TaraOutputKind::Ecliptic,
+            DHRUV_TARA_OUTPUT_SIDEREAL => TaraOutputKind::Sidereal,
             _ => return DhruvStatus::InvalidQuery,
         };
-        let op = dhruv_search::TaraOperation {
+        let op = TaraOperation {
             star,
             output,
             at_jd_tdb: req.jd_tdb,
@@ -10779,8 +10885,8 @@ pub unsafe extern "C" fn dhruv_tara_compute_ex(
         };
 
         let catalog = unsafe { &*handle };
-        match dhruv_search::tara(catalog, &op) {
-            Ok(dhruv_search::TaraResult::Equatorial(pos)) => {
+        match dhruv_vedic_ops::tara(catalog, &op) {
+            Ok(TaraResult::Equatorial(pos)) => {
                 unsafe {
                     *out = DhruvTaraComputeResult {
                         output_kind: DHRUV_TARA_OUTPUT_EQUATORIAL,
@@ -10799,7 +10905,7 @@ pub unsafe extern "C" fn dhruv_tara_compute_ex(
                 }
                 DhruvStatus::Ok
             }
-            Ok(dhruv_search::TaraResult::Ecliptic(sc)) => {
+            Ok(TaraResult::Ecliptic(sc)) => {
                 unsafe {
                     *out = DhruvTaraComputeResult {
                         output_kind: DHRUV_TARA_OUTPUT_ECLIPTIC,
@@ -10818,7 +10924,7 @@ pub unsafe extern "C" fn dhruv_tara_compute_ex(
                 }
                 DhruvStatus::Ok
             }
-            Ok(dhruv_search::TaraResult::Sidereal(lon)) => {
+            Ok(TaraResult::Sidereal(lon)) => {
                 unsafe {
                     *out = DhruvTaraComputeResult {
                         output_kind: DHRUV_TARA_OUTPUT_SIDEREAL,

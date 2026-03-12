@@ -5,13 +5,15 @@ license = "Apache-2.0"
 edition = "2024"
 
 [dependencies]
-dhruv_core   = { path = "../dhruv_core" }
-dhruv_time   = { path = "../dhruv_time" }
-dhruv_frames = { path = "../dhruv_frames" }
-dhruv_tara   = { path = "../dhruv_tara" }
+dhruv_vedic_math = { path = "../dhruv_vedic_math" }
+dhruv_vedic_engine = { path = "../dhruv_vedic_engine" }
 
 [dev-dependencies]
 criterion = { workspace = true }
+dhruv_core = { path = "../dhruv_core" }
+dhruv_time = { path = "../dhruv_time" }
+dhruv_frames = { path = "../dhruv_frames" }
+dhruv_tara = { path = "../dhruv_tara" }
 
 [[bench]]
 name = "vedic_bench"
