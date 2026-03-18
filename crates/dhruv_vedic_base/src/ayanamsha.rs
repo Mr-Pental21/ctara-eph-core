@@ -52,7 +52,7 @@ pub enum AyanamshaSystem {
     /// Pushya Paksha: delta Cancri (Pushya) at 16 deg Cancer (106 deg sidereal).
     PushyaPaksha,
 
-    /// Rohini Paksha: Aldebaran at 15 deg 47 min Taurus.
+    /// Rohini Paksha: Aldebaran at 16 deg 40 min Taurus.
     RohiniPaksha,
 
     /// Robert DeLuce ayanamsha (1930s).
@@ -143,8 +143,8 @@ impl AyanamshaSystem {
             // delta Cancri (Asellus Australis) at 106 deg sidereal
             // 128.722 (J2000 ecl lon) - 106.0 = 22.722
             Self::PushyaPaksha => 22.722,
-            // Aldebaran at 15 deg 47 min Taurus (69.789 - 45.783)
-            Self::RohiniPaksha => 24.006,
+            // Aldebaran at 16 deg 40 min Taurus (69.789 - 46.667)
+            Self::RohiniPaksha => 23.122_514,
             // Robert DeLuce
             Self::DeLuce => 21.619,
             // Esoteric/Bailey tradition

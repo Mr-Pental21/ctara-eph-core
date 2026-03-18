@@ -43,7 +43,7 @@ fn anchor_relative_systems_keep_anchor_sidereal_longitude_fixed() {
             system: AyanamshaSystem::RohiniPaksha,
             lon_j2000_deg: 69.789_181,
             lat_j2000_deg: -5.467_329,
-            target_sidereal_lon_deg: 45.783_333,
+            target_sidereal_lon_deg: 46.666_667,
         },
         AnchorCase {
             system: AyanamshaSystem::Aldebaran15Tau,

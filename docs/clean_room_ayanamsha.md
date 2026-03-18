@@ -88,13 +88,22 @@ The embedded HGCA catalog (`kernels/data/hgca_tara.json`) is compiled into
 the binary and used as the **default** computation path for all star-anchored
 systems. Static hardcoded coordinates serve as a fallback and validation path.
 
+For named star-anchor definitions, the target sidereal longitudes come from the
+published definition of each system. In particular:
+
+- RohiniPaksha uses Aldebaran fixed at the middle of Rohini nakshatra,
+  `16Ta40`, following P. V. R. Narasimha Rao's published Rohini-paksha
+  definition.
+- PushyaPaksha uses delta Cancri fixed at `16Cn00`, matching the corresponding
+  P. V. R. Narasimha Rao Pushya-paksha definition.
+
 | System | Anchor | Sidereal Position | J2000.0 Ecliptic Lon | Ayanamsha |
 |--------|--------|-------------------|---------------------|-----------|
 | Lahiri | Sidereal zero at 1956 anchor | 0 deg (sidereal zero) | 23.862 deg | 23°15'00.658" at 1956-03-21 (IAE gazette) |
 | TrueLahiri | Spica (alpha Vir) | 0 deg Libra (180 deg), star-locked | 203.841 deg | anchor-relative (star-locked) |
 | FaganBradley | SVP calibration | Empirical | Empirical | 24.736 deg (published SVP tables) |
 | PushyaPaksha | delta Cancri | 16 deg Cancer (106 deg) | 128.722 deg | 22.722 deg |
-| RohiniPaksha | Aldebaran (alpha Tau) | 15 deg 47 min Taurus (45.783 deg) | 69.789 deg | 24.006 deg |
+| RohiniPaksha | Aldebaran (alpha Tau) | 16 deg 40 min Taurus (46.667 deg) | 69.789 deg | 23.123 deg |
 | GalacticCenter0Sag | Galactic Center | 0 deg Sagittarius (240 deg) | 266.840 deg | 26.840 deg |
 | Aldebaran15Tau | Aldebaran | 15 deg Taurus (45 deg) | 69.789 deg | 24.789 deg |
 
@@ -107,6 +116,12 @@ Ecliptic conversion: IAU 2006 obliquity (ε = 23.439291°)
 
 Embedded catalog: `kernels/data/hgca_tara.json` (compiled into binary)
 Derivation test: `ayanamsha_anchor::tests::derive_anchor_coordinates_from_catalog()`
+
+Published definition references for target sidereal longitudes:
+- P. V. R. Narasimha Rao, "Correct Siddhamsa Chart of Parasara" (Rohini-paksha
+  anchor at Aldebaran = `16Ta40`)
+- P. V. R. Narasimha Rao, "Introducing Pushya-paksha Ayanamsa"
+  (Pushya-paksha anchor at delta Cancri = `16Cn00`)
 
 ### Epoch-Defined Systems
 
@@ -147,7 +162,7 @@ full consistency including the ecliptic tilt (π_A):
 - Lahiri (sidereal zero point at 0 deg, back-precessed from 1956 anchor)
 - TrueLahiri (Spica at 180 deg)
 - PushyaPaksha (Pushya anchor at 106 deg)
-- RohiniPaksha (Aldebaran at 15 deg 47 min Taurus)
+- RohiniPaksha (Aldebaran at 16 deg 40 min Taurus)
 - Aldebaran15Tau (Aldebaran at 15 deg Taurus)
 - GalacticCenter0Sag (Galactic center at 240 deg)
 - ChandraHari (λ Sco at 240 deg)

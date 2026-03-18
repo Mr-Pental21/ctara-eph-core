@@ -48,12 +48,13 @@ fn anchor_spec(system: AyanamshaSystem) -> Option<AnchorSpec> {
             lat_j2000_deg: 0.076,
             target_sidereal_lon_deg: 106.0,
         }),
-        // Aldebaran anchor at 15°47' Taurus.
+        // Aldebaran anchor at 16°40' Taurus, matching the published
+        // Rohini-paksha definition used by P. V. R. Narasimha Rao.
         // J2000 ecliptic from HGCA J2016.0 catalog, same derivation as TrueLahiri.
         AyanamshaSystem::RohiniPaksha => Some(AnchorSpec {
             lon_j2000_deg: 69.789_181,
             lat_j2000_deg: -5.467_329,
-            target_sidereal_lon_deg: 45.783_333,
+            target_sidereal_lon_deg: 46.666_667,
         }),
         // Aldebaran anchor at 15° Taurus.
         // Same Aldebaran J2000 ecliptic coordinates.

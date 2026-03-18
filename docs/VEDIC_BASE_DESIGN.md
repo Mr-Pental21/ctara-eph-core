@@ -290,7 +290,9 @@ pub enum AyanamshaSystem {
     /// Pushya Paksha: Pushya nakshatra (δ Cancri) at 16° Cancer = 106° sidereal.
     PushyaPaksha,
 
-    /// Rohini Paksha: Aldebaran (α Tau) at Rohini nakshatra ~15°47' Taurus.
+    /// Rohini Paksha: Aldebaran (α Tau) fixed at the middle of Rohini
+    /// nakshatra, 16°40' Taurus, following the published P. V. R.
+    /// Narasimha Rao definition.
     RohiniPaksha,
 
     /// Robert DeLuce ayanamsha (1930s).

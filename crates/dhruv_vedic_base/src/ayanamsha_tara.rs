@@ -33,7 +33,7 @@ pub(crate) fn anchor_tara_spec(system: AyanamshaSystem) -> Option<TaraAnchorSpec
         }),
         AyanamshaSystem::RohiniPaksha => Some(TaraAnchorSpec {
             tara_id: TaraId::Aldebaran,
-            target_sidereal_lon_deg: 45.783_333,
+            target_sidereal_lon_deg: 46.666_667,
         }),
         AyanamshaSystem::Aldebaran15Tau => Some(TaraAnchorSpec {
             tara_id: TaraId::Aldebaran,
