@@ -18,21 +18,21 @@ use dhruv_vedic_base::upagraha::TIME_BASED_UPAGRAHAS;
 use dhruv_vedic_base::vaar::vaar_from_jd;
 use dhruv_vedic_base::{
     ALL_GRAHAS, AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AmshaRequest,
-    AmshaVariation, ArudhaResult, AshtakavargaResult, AvasthaInputs, AyanamshaSystem, BhavaBalaBirthPeriod,
-    BhavaBalaInputs, BhavaBalaResult, BhavaConfig, BhavaResult, CharakarakaResult,
-    CharakarakaScheme, Dignity, DrishtiEntry, Graha, GrahaAvasthas, KalaBalaInputs,
-    LajjitadiInputs, LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS, SayanadiInputs,
-    ShadbalaInputs, Upagraha, all_avasthas, all_combustion_status, all_dashavarga_vimsopaka,
-    all_saptavarga_vimsopaka, all_shadbalas_from_inputs, all_shadvarga_vimsopaka,
-    all_shodasavarga_vimsopaka, all_sphutas, amsha_longitude, bhrigu_bindu,
-    calculate_ashtakavarga, calculate_bhava_bala, charakarakas_from_longitudes, compute_bhavas,
-    dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise, graha_drishti,
-    graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord, jd_tdb_to_centuries,
-    lagna_longitude_rad, lost_planetary_war, lunar_node_deg_for_epoch_on_plane,
-    masa_lord as graha_masa_lord, nakshatra_from_longitude, navamsa_number, node_dignity_in_rashi,
-    normalize_360, nth_rashi_from, pranapada_lagna, rashi_from_longitude, rashi_lord_by_index,
-    samvatsara_lord as graha_samvatsara_lord, sree_lagna, sun_based_upagrahas, time_upagraha_jd,
-    vaar_lord as graha_vaar_lord,
+    AmshaVariation, ArudhaResult, AshtakavargaResult, AvasthaInputs, AyanamshaSystem,
+    BhavaBalaBirthPeriod, BhavaBalaInputs, BhavaBalaResult, BhavaConfig, BhavaResult,
+    CharakarakaResult, CharakarakaScheme, Dignity, DrishtiEntry, Graha, GrahaAvasthas,
+    KalaBalaInputs, LajjitadiInputs, LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS,
+    SayanadiInputs, ShadbalaInputs, Upagraha, all_avasthas, all_combustion_status,
+    all_dashavarga_vimsopaka, all_saptavarga_vimsopaka, all_shadbalas_from_inputs,
+    all_shadvarga_vimsopaka, all_shodasavarga_vimsopaka, all_sphutas, amsha_longitude,
+    bhrigu_bindu, calculate_ashtakavarga, calculate_bhava_bala, charakarakas_from_longitudes,
+    compute_bhavas, dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise,
+    graha_drishti, graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord,
+    jd_tdb_to_centuries, lagna_longitude_rad, lost_planetary_war,
+    lunar_node_deg_for_epoch_on_plane, masa_lord as graha_masa_lord, nakshatra_from_longitude,
+    navamsa_number, node_dignity_in_rashi, normalize_360, nth_rashi_from, pranapada_lagna,
+    rashi_from_longitude, rashi_lord_by_index, samvatsara_lord as graha_samvatsara_lord,
+    sree_lagna, sun_based_upagrahas, time_upagraha_jd, vaar_lord as graha_vaar_lord,
 };
 
 use crate::conjunction::{body_ecliptic_lon_lat, body_ecliptic_state, body_lon_lat_on_plane};
@@ -77,6 +77,37 @@ fn ecliptic_to_sidereal(ecl_lon_deg: f64, aya: f64, plane: ReferencePlane) -> f6
         ReferencePlane::Invariable => ecliptic_lon_to_invariable_lon(ecl_lon_deg),
     };
     normalize(on_plane - aya)
+}
+
+/// Project a tropical ecliptic longitude onto the configured sidereal zodiac.
+pub fn tropical_to_sidereal_longitude(
+    tropical_lon_deg: f64,
+    ayanamsha_deg: f64,
+    reference_plane: ReferencePlane,
+) -> f64 {
+    ecliptic_to_sidereal(tropical_lon_deg, ayanamsha_deg, reference_plane)
+}
+
+/// Project tropical bhava cusp / lagna / MC output into the configured sidereal zodiac.
+pub fn siderealize_bhava_result(
+    result: &BhavaResult,
+    ayanamsha_deg: f64,
+    reference_plane: ReferencePlane,
+) -> BhavaResult {
+    let mut bhavas = result.bhavas;
+    for bhava in &mut bhavas {
+        bhava.cusp_deg =
+            tropical_to_sidereal_longitude(bhava.cusp_deg, ayanamsha_deg, reference_plane);
+        bhava.start_deg =
+            tropical_to_sidereal_longitude(bhava.start_deg, ayanamsha_deg, reference_plane);
+        bhava.end_deg =
+            tropical_to_sidereal_longitude(bhava.end_deg, ayanamsha_deg, reference_plane);
+    }
+    BhavaResult {
+        bhavas,
+        lagna_deg: tropical_to_sidereal_longitude(result.lagna_deg, ayanamsha_deg, reference_plane),
+        mc_deg: tropical_to_sidereal_longitude(result.mc_deg, ayanamsha_deg, reference_plane),
+    }
 }
 
 /// Recover ecliptic tropical longitude from a sidereal longitude on the given
@@ -462,6 +493,54 @@ pub fn special_lagnas_for_date(
         aya_config,
         &mut ctx,
     )
+}
+
+/// Compute bhava cusps and return them on the configured sidereal zodiac.
+pub fn sidereal_bhavas_for_date(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    bhava_config: &BhavaConfig,
+    aya_config: &SankrantiConfig,
+) -> Result<BhavaResult, SearchError> {
+    let mut ctx = JyotishContext::new(engine, Some(eop), utc, aya_config);
+    let tropical = *ctx.bhava_result(engine, eop, location, bhava_config)?;
+    Ok(siderealize_bhava_result(
+        &tropical,
+        ctx.ayanamsha,
+        ctx.reference_plane,
+    ))
+}
+
+/// Compute lagna (ascendant) on the configured sidereal zodiac.
+pub fn sidereal_lagna_for_date(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    aya_config: &SankrantiConfig,
+) -> Result<f64, SearchError> {
+    let mut ctx = JyotishContext::new(engine, Some(eop), utc, aya_config);
+    ctx.lagna_sid(engine, eop, location)
+}
+
+/// Compute MC (midheaven) on the configured sidereal zodiac.
+pub fn sidereal_mc_for_date(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    bhava_config: &BhavaConfig,
+    aya_config: &SankrantiConfig,
+) -> Result<f64, SearchError> {
+    let mut ctx = JyotishContext::new(engine, Some(eop), utc, aya_config);
+    let tropical = *ctx.bhava_result(engine, eop, location, bhava_config)?;
+    Ok(tropical_to_sidereal_longitude(
+        tropical.mc_deg,
+        ctx.ayanamsha,
+        ctx.reference_plane,
+    ))
 }
 
 fn special_lagnas_for_date_with_ctx(
@@ -1131,14 +1210,19 @@ pub fn full_kundali_for_date(
 
     // Bhava cusps — only computed when requested.
     let bhava_cusps = if config.include_bhava_cusps {
-        Some(compute_bhavas(
+        let tropical = compute_bhavas(
             engine,
             engine.lsk(),
             eop,
             location,
             ctx.jd_utc,
             bhava_config,
-        )?)
+        )?;
+        Some(siderealize_bhava_result(
+            &tropical,
+            ayanamsha,
+            ctx.reference_plane,
+        ))
     } else {
         None
     };
@@ -1259,6 +1343,7 @@ pub fn full_kundali_for_date(
             &graha_positions,
             &bindus,
             &upagrahas,
+            &sphutas,
             &special_lagnas,
             &mut ctx,
         )?)
@@ -1440,8 +1525,17 @@ fn bhavabala_for_date_with_ctx(
         &owned_shadbala
     };
 
-    let inputs =
-        assemble_bhavabala_inputs(engine, eop, utc, location, bhava_config, riseset_config, aya_config, shadbala, ctx)?;
+    let inputs = assemble_bhavabala_inputs(
+        engine,
+        eop,
+        utc,
+        location,
+        bhava_config,
+        riseset_config,
+        aya_config,
+        shadbala,
+        ctx,
+    )?;
     Ok(calculate_bhava_bala(&inputs))
 }
 
@@ -1497,14 +1591,8 @@ pub fn balas_for_date(
         aya_config,
         &mut ctx,
     )?;
-    let vimsopaka = vimsopaka_for_date_with_ctx(
-        engine,
-        eop,
-        location,
-        aya_config,
-        node_policy,
-        &mut ctx,
-    )?;
+    let vimsopaka =
+        vimsopaka_for_date_with_ctx(engine, eop, location, aya_config, node_policy, &mut ctx)?;
     let ashtakavarga = ashtakavarga_with_ctx(engine, eop, location, aya_config, &mut ctx)?;
     let bhavabala = bhavabala_for_date_with_ctx(
         engine,
@@ -2070,7 +2158,11 @@ fn assemble_bhavabala_inputs(
     .map_err(SearchError::from)?
     {
         RiseSetResult::Event { jd_tdb, .. } => jd_tdb,
-        _ => return Err(SearchError::NoConvergence("sun never sets for bhavabala birth period")),
+        _ => {
+            return Err(SearchError::NoConvergence(
+                "sun never sets for bhavabala birth period",
+            ));
+        }
     };
 
     let birth_period = classify_bhavabala_birth_period(ctx.jd_tdb, vedic_sunrise, vedic_sunset);
@@ -2711,8 +2803,11 @@ pub fn amsha_charts_from_kundali(
         None
     };
 
-    // Sphutas: not available from FullKundaliResult directly
-    let sphuta_lons: Option<[f64; 16]> = None;
+    let sphuta_lons = if scope.include_sphutas {
+        kundali.sphutas.as_ref().map(|s| s.longitudes)
+    } else {
+        None
+    };
 
     let charts = requests
         .iter()
@@ -2740,6 +2835,7 @@ fn amsha_charts_from_kundali_with_ctx(
     graha_positions: &Option<GrahaPositions>,
     bindus: &Option<BindusResult>,
     upagrahas: &Option<AllUpagrahas>,
+    sphutas: &Option<SphutalResult>,
     special_lagnas: &Option<AllSpecialLagnas>,
     ctx: &mut JyotishContext,
 ) -> Result<AmshaResult, SearchError> {
@@ -2794,7 +2890,11 @@ fn amsha_charts_from_kundali_with_ctx(
         None
     };
 
-    let sphuta_lons: Option<[f64; 16]> = None;
+    let sphuta_lons = if scope.include_sphutas {
+        sphutas.as_ref().map(|s| s.longitudes)
+    } else {
+        None
+    };
 
     let charts = requests
         .iter()

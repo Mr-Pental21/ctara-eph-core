@@ -1094,12 +1094,25 @@ impl ConfigResolver {
             defaults.charakaraka_scheme
         };
 
-        let graha_positions_cfg = self
+        let explicit_full_graha_positions = explicit.graha_positions.clone();
+        let op_full_graha_positions = op.graha_positions.clone();
+        let mut graha_positions_cfg = self
             .resolve_graha_positions(merge_patch(
-                explicit.graha_positions,
-                op.graha_positions.clone(),
+                explicit_full_graha_positions.clone(),
+                op_full_graha_positions.clone(),
             ))?
             .value;
+        if explicit_full_graha_positions
+            .as_ref()
+            .and_then(|patch| patch.include_lagna)
+            .is_none()
+            && op_full_graha_positions
+                .as_ref()
+                .and_then(|patch| patch.include_lagna)
+                .is_none()
+        {
+            graha_positions_cfg.include_lagna = defaults.graha_positions_config.include_lagna;
+        }
         let bindus_cfg = self
             .resolve_bindus(merge_patch(explicit.bindus, op.bindus.clone()))?
             .value;

@@ -736,6 +736,15 @@ fn full_kundali_has_bhava_cusps() {
         .bhava_cusps
         .as_ref()
         .expect("bhava_cusps should be Some");
+    let expected_bh = dhruv_search::sidereal_bhavas_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &aya_config,
+    )
+    .expect("sidereal_bhavas_for_date should succeed");
     assert_eq!(bh.bhavas.len(), 12);
     for (i, b) in bh.bhavas.iter().enumerate() {
         assert_eq!(b.number, (i + 1) as u8);
@@ -745,9 +754,24 @@ fn full_kundali_has_bhava_cusps() {
             i,
             b.cusp_deg
         );
+        assert!(
+            (b.cusp_deg - expected_bh.bhavas[i].cusp_deg).abs() < 1e-9,
+            "sidereal cusp mismatch for bhava {}",
+            i + 1
+        );
     }
     assert!(bh.lagna_deg >= 0.0 && bh.lagna_deg < 360.0);
     assert!(bh.mc_deg >= 0.0 && bh.mc_deg < 360.0);
+    assert!((bh.lagna_deg - expected_bh.lagna_deg).abs() < 1e-9);
+    assert!((bh.mc_deg - expected_bh.mc_deg).abs() < 1e-9);
+    let gp = result
+        .graha_positions
+        .as_ref()
+        .expect("graha_positions should be Some");
+    assert!(
+        gp.lagna.sidereal_longitude > 0.0 && gp.lagna.sidereal_longitude < 360.0,
+        "full_kundali default lagna should be populated"
+    );
     let sphutas = result.sphutas.as_ref().expect("sphutas should be Some");
     assert_eq!(sphutas.longitudes.len(), 16);
     for lon in sphutas.longitudes {

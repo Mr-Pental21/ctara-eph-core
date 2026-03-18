@@ -59,11 +59,13 @@ pub use jyotish::{
     drishti_for_date, full_kundali_for_date, graha_positions, graha_sidereal_longitudes,
     graha_sidereal_longitudes_with_model, graha_tropical_longitudes,
     graha_tropical_longitudes_with_model, shadbala_for_date, shadbala_for_graha,
-    special_lagnas_for_date, vimsopaka_for_date, vimsopaka_for_graha,
+    sidereal_bhavas_for_date, sidereal_lagna_for_date, sidereal_mc_for_date,
+    siderealize_bhava_result, special_lagnas_for_date, tropical_to_sidereal_longitude,
+    vimsopaka_for_date, vimsopaka_for_graha,
 };
 pub use jyotish_types::{
-    AmshaChart, AmshaChartScope, AmshaEntry, AmshaResult, AmshaSelectionConfig, BindusConfig,
-    BindusResult, BalaBundleResult, DashaSelectionConfig, DrishtiConfig, DrishtiResult,
+    AmshaChart, AmshaChartScope, AmshaEntry, AmshaResult, AmshaSelectionConfig, BalaBundleResult,
+    BindusConfig, BindusResult, DashaSelectionConfig, DrishtiConfig, DrishtiResult,
     FullKundaliConfig, FullKundaliResult, GrahaEntry, GrahaLongitudes, GrahaPositions,
     GrahaPositionsConfig, GrahaTropicalLongitudes, MAX_AMSHA_REQUESTS, ShadbalaEntry,
     ShadbalaResult, SphutalResult, VimsopakaEntry, VimsopakaResult,

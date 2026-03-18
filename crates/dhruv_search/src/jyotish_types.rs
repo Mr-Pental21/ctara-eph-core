@@ -515,7 +515,10 @@ impl Default for FullKundaliConfig {
             include_calendar: false,
             include_dasha: false,
             node_dignity_policy: NodeDignityPolicy::default(),
-            graha_positions_config: GrahaPositionsConfig::default(),
+            graha_positions_config: GrahaPositionsConfig {
+                include_lagna: true,
+                ..GrahaPositionsConfig::default()
+            },
             bindus_config: BindusConfig::default(),
             drishti_config: DrishtiConfig::default(),
             amsha_scope: AmshaChartScope::default(),

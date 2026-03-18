@@ -497,5 +497,12 @@ fn full_kundali_with_bhavabala() {
     )
     .expect("full_kundali_for_date should succeed");
 
-    assert_eq!(result.bhavabala.expect("bhavabala should be Some").entries.len(), 12);
+    assert_eq!(
+        result
+            .bhavabala
+            .expect("bhavabala should be Some")
+            .entries
+            .len(),
+        12
+    );
 }
