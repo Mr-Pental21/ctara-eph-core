@@ -706,6 +706,24 @@ struct KundaliArgs {
     /// Include amsha (divisional charts)
     #[arg(long)]
     include_amshas: bool,
+    /// Comma-separated amsha specs for kundali output, e.g. "D9,D10,D2:cancer-leo-only"
+    #[arg(long)]
+    amsha: Option<String>,
+    /// Include bhava cusps inside amsha charts
+    #[arg(long)]
+    amsha_include_bhava_cusps: bool,
+    /// Include arudha padas inside amsha charts
+    #[arg(long)]
+    amsha_include_arudha_padas: bool,
+    /// Include upagrahas inside amsha charts
+    #[arg(long)]
+    amsha_include_upagrahas: bool,
+    /// Include sphutas inside amsha charts
+    #[arg(long)]
+    amsha_include_sphutas: bool,
+    /// Include special lagnas inside amsha charts
+    #[arg(long)]
+    amsha_include_special_lagnas: bool,
     /// Include shadbala
     #[arg(long)]
     include_shadbala: bool,
@@ -736,6 +754,55 @@ struct KundaliArgs {
     /// Enable all sections (except dasha, which requires --dasha-systems)
     #[arg(long)]
     all: bool,
+}
+
+#[derive(clap::Args)]
+struct AmshaChartArgs {
+    /// UTC datetime (YYYY-MM-DDThh:mm:ssZ)
+    #[arg(long)]
+    date: String,
+    /// Latitude in degrees (north positive)
+    #[arg(long)]
+    lat: f64,
+    /// Longitude in degrees (east positive)
+    #[arg(long)]
+    lon: f64,
+    /// Altitude in meters (default 0)
+    #[arg(long, default_value = "0")]
+    alt: f64,
+    /// Ayanamsha system code (0-19, default 0=Lahiri)
+    #[arg(long, default_value = "0")]
+    ayanamsha: i32,
+    /// Apply nutation correction
+    #[arg(long)]
+    nutation: bool,
+    /// Path to SPK kernel
+    #[arg(long)]
+    bsp: Option<PathBuf>,
+    /// Path to leap second kernel
+    #[arg(long)]
+    lsk: Option<PathBuf>,
+    /// Path to IERS EOP file (finals2000A.all)
+    #[arg(long)]
+    eop: PathBuf,
+    /// Comma-separated amsha specs: D<n>[:variation], e.g. D9,D10,D2:cancer-leo-only
+    #[arg(long)]
+    amsha: String,
+    /// Include bhava cusps inside amsha charts
+    #[arg(long)]
+    include_bhava_cusps: bool,
+    /// Include arudha padas inside amsha charts
+    #[arg(long)]
+    include_arudha_padas: bool,
+    /// Include upagrahas inside amsha charts
+    #[arg(long)]
+    include_upagrahas: bool,
+    /// Include sphutas inside amsha charts
+    #[arg(long)]
+    include_sphutas: bool,
+    /// Include special lagnas inside amsha charts
+    #[arg(long)]
+    include_special_lagnas: bool,
 }
 
 #[derive(clap::Args)]
@@ -883,6 +950,15 @@ struct BhavasArgs {
     lsk: Option<PathBuf>,
     #[arg(long)]
     eop: PathBuf,
+    /// Return bhava cusps, lagna, and MC on the configured sidereal zodiac.
+    #[arg(long)]
+    sidereal: bool,
+    /// Ayanamsha system code used with `--sidereal` (0-19, default 0=Lahiri).
+    #[arg(long, default_value = "0")]
+    ayanamsha: i32,
+    /// Apply nutation when computing sidereal output.
+    #[arg(long)]
+    nutation: bool,
 }
 
 #[derive(clap::Args)]
@@ -901,6 +977,15 @@ struct LagnaComputeArgs {
     lsk: Option<PathBuf>,
     #[arg(long)]
     eop: PathBuf,
+    /// Return lagna and MC on the configured sidereal zodiac.
+    #[arg(long)]
+    sidereal: bool,
+    /// Ayanamsha system code used with `--sidereal` (0-19, default 0=Lahiri).
+    #[arg(long, default_value = "0")]
+    ayanamsha: i32,
+    /// Apply nutation when computing sidereal output.
+    #[arg(long)]
+    nutation: bool,
 }
 
 #[derive(clap::Args)]
@@ -2254,6 +2339,8 @@ enum Commands {
         #[arg(long)]
         amsha: String,
     },
+    /// Compute amsha charts for a date and location
+    AmshaChart(AmshaChartArgs),
     /// Compute Graha Avasthas (planetary states) for a date and location
     Avastha(AvasthaArgs),
     /// Compute Dasha (planetary period) hierarchy or snapshot
@@ -4156,7 +4243,20 @@ fn main() {
                 }
             };
 
-            let resolved = resolve_kundali_flags(
+            let requested_amsha_scope = amsha_scope(
+                args.amsha_include_bhava_cusps,
+                args.amsha_include_arudha_padas,
+                args.amsha_include_upagrahas,
+                args.amsha_include_sphutas,
+                args.amsha_include_special_lagnas,
+            );
+            let requested_amsha_selection = args
+                .amsha
+                .as_deref()
+                .map(parse_amsha_specs)
+                .map(|requests| amsha_selection_from_requests(&requests));
+
+            let mut resolved = resolve_kundali_flags(
                 args.all,
                 args.include_graha,
                 args.include_bindus,
@@ -4173,6 +4273,9 @@ fn main() {
                 args.include_panchang,
                 args.include_calendar,
             );
+            if requested_amsha_selection.is_some() || has_amsha_scope(&requested_amsha_scope) {
+                resolved.include_amshas = true;
+            }
 
             let snapshot_jd = args.dasha_snapshot_date.as_ref().map(|d| {
                 let snap_utc = parse_utc(d).unwrap_or_else(|e| {
@@ -4189,6 +4292,8 @@ fn main() {
                 snapshot_jd,
                 node_dignity_policy,
                 parse_charakaraka_scheme(&args.charakaraka_scheme),
+                requested_amsha_selection.as_ref(),
+                &requested_amsha_scope,
             );
 
             let result = dhruv_search::full_kundali_for_date(
@@ -4630,15 +4735,33 @@ fn main() {
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
             let bhava_config = BhavaConfig::default();
             let jd_utc = utc_to_jd_utc(&utc);
-
-            let result = dhruv_vedic_base::compute_bhavas(
-                &engine,
-                engine.lsk(),
-                &eop_kernel,
-                &location,
-                jd_utc,
-                &bhava_config,
-            )
+            let output_label = if args.sidereal {
+                "sidereal"
+            } else {
+                "tropical"
+            };
+            let result = if args.sidereal {
+                let system = require_aya_system(args.ayanamsha);
+                let aya_config = SankrantiConfig::new(system, args.nutation);
+                dhruv_search::sidereal_bhavas_for_date(
+                    &engine,
+                    &eop_kernel,
+                    &utc,
+                    &location,
+                    &bhava_config,
+                    &aya_config,
+                )
+            } else {
+                dhruv_vedic_base::compute_bhavas(
+                    &engine,
+                    engine.lsk(),
+                    &eop_kernel,
+                    &location,
+                    jd_utc,
+                    &bhava_config,
+                )
+                .map_err(dhruv_search::SearchError::from)
+            }
             .unwrap_or_else(|e| {
                 eprintln!("Error: {e}");
                 std::process::exit(1);
@@ -4649,7 +4772,7 @@ fn main() {
                 args.date, args.lat, args.lon
             );
             println!(
-                "  Lagna: {:.6}°  MC: {:.6}°\n",
+                "  Lagna ({output_label}): {:.6}°  MC ({output_label}): {:.6}°\n",
                 result.lagna_deg, result.mc_deg
             );
             println!(
@@ -4674,35 +4797,71 @@ fn main() {
             let eop_kernel = load_eop(&args.eop);
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
             let jd_utc = utc_to_jd_utc(&utc);
-
-            let lagna =
-                dhruv_vedic_base::lagna_longitude_rad(engine.lsk(), &eop_kernel, &location, jd_utc)
-                    .unwrap_or_else(|e| {
-                        eprintln!("Error: {e}");
-                        std::process::exit(1);
-                    });
-            let mc =
-                dhruv_vedic_base::mc_longitude_rad(engine.lsk(), &eop_kernel, &location, jd_utc)
-                    .unwrap_or_else(|e| {
-                        eprintln!("Error: {e}");
-                        std::process::exit(1);
-                    });
+            let bhava_config = BhavaConfig::default();
+            let (lagna_label, lagna_deg, mc_label, mc_deg) = if args.sidereal {
+                let system = require_aya_system(args.ayanamsha);
+                let aya_config = SankrantiConfig::new(system, args.nutation);
+                let lagna = dhruv_search::sidereal_lagna_for_date(
+                    &engine,
+                    &eop_kernel,
+                    &utc,
+                    &location,
+                    &aya_config,
+                )
+                .unwrap_or_else(|e| {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                });
+                let mc = dhruv_search::sidereal_mc_for_date(
+                    &engine,
+                    &eop_kernel,
+                    &utc,
+                    &location,
+                    &bhava_config,
+                    &aya_config,
+                )
+                .unwrap_or_else(|e| {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                });
+                ("sidereal", lagna, "sidereal", mc)
+            } else {
+                let lagna = dhruv_vedic_base::lagna_longitude_rad(
+                    engine.lsk(),
+                    &eop_kernel,
+                    &location,
+                    jd_utc,
+                )
+                .unwrap_or_else(|e| {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                })
+                .to_degrees()
+                .rem_euclid(360.0);
+                let mc = dhruv_vedic_base::mc_longitude_rad(
+                    engine.lsk(),
+                    &eop_kernel,
+                    &location,
+                    jd_utc,
+                )
+                .unwrap_or_else(|e| {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                })
+                .to_degrees()
+                .rem_euclid(360.0);
+                ("tropical", lagna, "tropical", mc)
+            };
             let ramc = dhruv_vedic_base::ramc_rad(engine.lsk(), &eop_kernel, &location, jd_utc)
                 .unwrap_or_else(|e| {
                     eprintln!("Error: {e}");
                     std::process::exit(1);
                 });
 
+            println!("Lagna ({lagna_label}): {:.6}°", lagna_deg);
+            println!("MC ({mc_label}):    {:.6}°", mc_deg);
             println!(
-                "Lagna (tropical): {:.6}°",
-                lagna.to_degrees().rem_euclid(360.0)
-            );
-            println!(
-                "MC (tropical):    {:.6}°",
-                mc.to_degrees().rem_euclid(360.0)
-            );
-            println!(
-                "RAMC:             {:.6}°",
+                "RAMC:               {:.6}°",
                 ramc.to_degrees().rem_euclid(360.0)
             );
         }
@@ -6576,7 +6735,15 @@ fn main() {
                 );
                 println!(
                     "{:<6} {:<10} {:<8} {:>11} {:>8} {:>8} {:>8} {:>8} {:>8}",
-                    "Bhava", "Rashi", "Lord", "Bhavadhip", "Dig", "Drishti", "Occup", "Rise", "Total"
+                    "Bhava",
+                    "Rashi",
+                    "Lord",
+                    "Bhavadhip",
+                    "Dig",
+                    "Drishti",
+                    "Occup",
+                    "Rise",
+                    "Total"
                 );
                 println!("{}", "-".repeat(86));
                 for entry in &result.entries {
@@ -6746,7 +6913,16 @@ fn main() {
             println!("Shadbala:");
             println!(
                 "{:<8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>6}",
-                "Graha", "Sthana", "Dig", "Kala", "Cheshta", "Nais", "Drik", "Total", "Reqd", "Strong"
+                "Graha",
+                "Sthana",
+                "Dig",
+                "Kala",
+                "Cheshta",
+                "Nais",
+                "Drik",
+                "Total",
+                "Reqd",
+                "Strong"
             );
             println!("{}", "-".repeat(88));
             for entry in &result.shadbala.entries {
@@ -6842,6 +7018,56 @@ fn main() {
                     info.dms.seconds,
                     info.rashi_index as f64 * 30.0 + info.degrees_in_rashi,
                 );
+            }
+        }
+        Commands::AmshaChart(args) => {
+            let utc = parse_utc(&args.date).unwrap_or_else(|e| {
+                eprintln!("{e}");
+                std::process::exit(1);
+            });
+            let system = require_aya_system(args.ayanamsha);
+            let engine = load_engine(&args.bsp, &args.lsk);
+            let eop_kernel = load_eop(&args.eop);
+            let location = GeoLocation::new(args.lat, args.lon, args.alt);
+            let bhava_config = BhavaConfig::default();
+            let rs_config = RiseSetConfig::default();
+            let aya_config = SankrantiConfig::new(system, args.nutation);
+            let requests = parse_amsha_specs(&args.amsha);
+            let scope = amsha_scope(
+                args.include_bhava_cusps,
+                args.include_arudha_padas,
+                args.include_upagrahas,
+                args.include_sphutas,
+                args.include_special_lagnas,
+            );
+            let result = dhruv_search::amsha_charts_for_date(
+                &engine,
+                &eop_kernel,
+                &utc,
+                &location,
+                &bhava_config,
+                &rs_config,
+                &aya_config,
+                &requests,
+                &scope,
+            )
+            .unwrap_or_else(|e| {
+                eprintln!("Error: {e}");
+                std::process::exit(1);
+            });
+            println!(
+                "Amsha charts for {} at {:.6}°N, {:.6}°E\n",
+                args.date, args.lat, args.lon
+            );
+            let mut stdout = std::io::stdout();
+            for (index, chart) in result.charts.iter().enumerate() {
+                if index > 0 {
+                    println!();
+                }
+                write_amsha_chart(&mut stdout, chart, "").unwrap_or_else(|e| {
+                    eprintln!("Error writing amsha chart output: {e}");
+                    std::process::exit(1);
+                });
             }
         }
         Commands::Avastha(args) => {
@@ -7645,6 +7871,55 @@ fn parse_amsha_specs(s: &str) -> Vec<dhruv_vedic_base::AmshaRequest> {
         .collect()
 }
 
+fn amsha_selection_from_requests(
+    requests: &[dhruv_vedic_base::AmshaRequest],
+) -> dhruv_search::AmshaSelectionConfig {
+    if requests.len() > dhruv_search::MAX_AMSHA_REQUESTS {
+        eprintln!(
+            "Too many amsha requests: {} (maximum {})",
+            requests.len(),
+            dhruv_search::MAX_AMSHA_REQUESTS
+        );
+        std::process::exit(1);
+    }
+    let mut selection = dhruv_search::AmshaSelectionConfig {
+        count: requests.len() as u8,
+        ..Default::default()
+    };
+    for (index, request) in requests.iter().enumerate() {
+        selection.codes[index] = request.amsha.code();
+        selection.variations[index] = match request.effective_variation() {
+            dhruv_vedic_base::AmshaVariation::TraditionalParashari => 0,
+            dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly => 1,
+        };
+    }
+    selection
+}
+
+fn amsha_scope(
+    include_bhava_cusps: bool,
+    include_arudha_padas: bool,
+    include_upagrahas: bool,
+    include_sphutas: bool,
+    include_special_lagnas: bool,
+) -> dhruv_search::AmshaChartScope {
+    dhruv_search::AmshaChartScope {
+        include_bhava_cusps,
+        include_arudha_padas,
+        include_upagrahas,
+        include_sphutas,
+        include_special_lagnas,
+    }
+}
+
+fn has_amsha_scope(scope: &dhruv_search::AmshaChartScope) -> bool {
+    scope.include_bhava_cusps
+        || scope.include_arudha_padas
+        || scope.include_upagrahas
+        || scope.include_sphutas
+        || scope.include_special_lagnas
+}
+
 fn print_conjunction_event(label: &str, ev: &ConjunctionEvent) {
     println!(
         "{}: JD TDB {:.6}  sep: {:.6}°",
@@ -7733,7 +8008,10 @@ fn print_shadbala_entry(entry: &dhruv_search::ShadbalaEntry) {
 }
 
 fn print_bhavabala_entry(entry: &dhruv_search::BhavaBalaEntry) {
-    println!("  Cusp:            {}", format_rashi_dms(entry.cusp_sidereal_lon));
+    println!(
+        "  Cusp:            {}",
+        format_rashi_dms(entry.cusp_sidereal_lon)
+    );
     println!("  House Lord:      {}", entry.lord.english_name());
     println!("  Bhavadhipati:    {:>8.2}", entry.bhavadhipati);
     println!("  Dig Bala:        {:>8.2}", entry.dig);
@@ -7923,6 +8201,8 @@ fn build_kundali_config(
     dasha_snapshot_jd: Option<f64>,
     node_policy: NodeDignityPolicy,
     charakaraka_scheme: dhruv_vedic_base::CharakarakaScheme,
+    requested_amsha_selection: Option<&dhruv_search::AmshaSelectionConfig>,
+    requested_amsha_scope: &dhruv_search::AmshaChartScope,
 ) -> dhruv_search::FullKundaliConfig {
     // Compute-vs-print: force graha_positions + lagna when amshas need it
     let compute_graha = resolved.include_graha || resolved.include_amshas;
@@ -7949,23 +8229,31 @@ fn build_kundali_config(
         (false, dhruv_search::DashaSelectionConfig::default())
     };
 
-    // Amsha: populate Shodasavarga default if enabled with count==0
+    let force_bhava_cusps = requested_amsha_scope.include_bhava_cusps;
+    let force_bindus = requested_amsha_scope.include_arudha_padas;
+    let force_upagrahas = requested_amsha_scope.include_upagrahas;
+    let force_sphutas = requested_amsha_scope.include_sphutas;
+    let force_special_lagnas = requested_amsha_scope.include_special_lagnas;
+
+    // Amsha: use explicit selection when present, otherwise populate Shodasavarga by default.
     let amsha_selection = if resolved.include_amshas {
-        shodasavarga_amsha_selection()
+        requested_amsha_selection
+            .copied()
+            .unwrap_or_else(shodasavarga_amsha_selection)
     } else {
         dhruv_search::AmshaSelectionConfig::default()
     };
 
     dhruv_search::FullKundaliConfig {
-        include_bhava_cusps: resolved.include_bhava_cusps,
+        include_bhava_cusps: resolved.include_bhava_cusps || force_bhava_cusps,
         include_graha_positions: compute_graha,
         graha_positions_config: gp_config,
-        include_bindus: resolved.include_bindus,
+        include_bindus: resolved.include_bindus || force_bindus,
         include_drishti: resolved.include_drishti,
         include_ashtakavarga: resolved.include_ashtakavarga,
-        include_upagrahas: resolved.include_upagrahas,
-        include_sphutas: resolved.include_bindus,
-        include_special_lagnas: resolved.include_special_lagnas,
+        include_upagrahas: resolved.include_upagrahas || force_upagrahas,
+        include_sphutas: resolved.include_bindus || force_sphutas,
+        include_special_lagnas: resolved.include_special_lagnas || force_special_lagnas,
         include_amshas: resolved.include_amshas,
         amsha_selection,
         include_shadbala: resolved.include_shadbala,
@@ -7988,7 +8276,7 @@ fn build_kundali_config(
             include_lagna: resolved.include_drishti,
             include_bindus: resolved.include_drishti,
         },
-        amsha_scope: dhruv_search::AmshaChartScope::default(),
+        amsha_scope: *requested_amsha_scope,
     }
 }
 
@@ -8016,6 +8304,126 @@ fn format_rashi_dms(sidereal_lon: f64) -> String {
     }
 
     format!("{:<10} {:02}°{:02}'{:02.0}\"", rashi_name, degs, mins, secs)
+}
+
+fn write_amsha_chart(
+    w: &mut impl std::io::Write,
+    chart: &dhruv_search::AmshaChart,
+    base_indent: &str,
+) -> std::io::Result<()> {
+    let graha_names = [
+        "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu",
+    ];
+    let variation_suffix = match chart.variation {
+        dhruv_vedic_base::AmshaVariation::TraditionalParashari => "",
+        dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly => " [cancer-leo-only]",
+    };
+
+    writeln!(
+        w,
+        "{base_indent}{} (D{}){variation_suffix}:",
+        chart.amsha.name(),
+        chart.amsha.code(),
+    )?;
+    for (index, entry) in chart.grahas.iter().enumerate() {
+        writeln!(
+            w,
+            "{base_indent}  {:<14} {}",
+            graha_names[index],
+            format_rashi_dms(entry.sidereal_longitude)
+        )?;
+    }
+    writeln!(
+        w,
+        "{base_indent}  {:<14} {}",
+        "Lagna",
+        format_rashi_dms(chart.lagna.sidereal_longitude)
+    )?;
+
+    if let Some(ref cusps) = chart.bhava_cusps {
+        writeln!(w, "{base_indent}  Bhava Cusps:")?;
+        for (index, entry) in cusps.iter().enumerate() {
+            writeln!(
+                w,
+                "{base_indent}    Bhava {:>2}      {}",
+                index + 1,
+                format_rashi_dms(entry.sidereal_longitude)
+            )?;
+        }
+    }
+
+    if let Some(ref arudha_padas) = chart.arudha_padas {
+        writeln!(w, "{base_indent}  Arudha Padas:")?;
+        for (index, entry) in arudha_padas.iter().enumerate() {
+            writeln!(
+                w,
+                "{base_indent}    A{:<2}          {}",
+                index + 1,
+                format_rashi_dms(entry.sidereal_longitude)
+            )?;
+        }
+    }
+
+    if let Some(ref upagrahas) = chart.upagrahas {
+        let names = [
+            "Gulika",
+            "Maandi",
+            "Kaala",
+            "Mrityu",
+            "Artha Prahara",
+            "Yama Ghantaka",
+            "Dhooma",
+            "Vyatipata",
+            "Parivesha",
+            "Indra Chapa",
+            "Upaketu",
+        ];
+        writeln!(w, "{base_indent}  Upagrahas:")?;
+        for (name, entry) in names.iter().zip(upagrahas.iter()) {
+            writeln!(
+                w,
+                "{base_indent}    {:<14} {}",
+                name,
+                format_rashi_dms(entry.sidereal_longitude)
+            )?;
+        }
+    }
+
+    if let Some(ref sphutas) = chart.sphutas {
+        writeln!(w, "{base_indent}  Sphutas:")?;
+        for (sphuta, entry) in dhruv_vedic_base::ALL_SPHUTAS.iter().zip(sphutas.iter()) {
+            writeln!(
+                w,
+                "{base_indent}    {:<22} {}",
+                sphuta.name(),
+                format_rashi_dms(entry.sidereal_longitude)
+            )?;
+        }
+    }
+
+    if let Some(ref special_lagnas) = chart.special_lagnas {
+        let names = [
+            "Bhava Lagna",
+            "Hora Lagna",
+            "Ghati Lagna",
+            "Vighati Lagna",
+            "Varnada Lagna",
+            "Sree Lagna",
+            "Pranapada Lagna",
+            "Indu Lagna",
+        ];
+        writeln!(w, "{base_indent}  Special Lagnas:")?;
+        for (name, entry) in names.iter().zip(special_lagnas.iter()) {
+            writeln!(
+                w,
+                "{base_indent}    {:<16} {}",
+                name,
+                format_rashi_dms(entry.sidereal_longitude)
+            )?;
+        }
+    }
+
+    Ok(())
 }
 
 fn print_kundali(
@@ -8226,21 +8634,8 @@ fn print_kundali(
     {
         writeln!(w, "Amsha Charts ({} chart(s)):", am.charts.len())?;
         for chart in &am.charts {
-            writeln!(w, "\n  {} (D{}):", chart.amsha.name(), chart.amsha.code())?;
-            for (i, entry) in chart.grahas.iter().enumerate() {
-                writeln!(
-                    w,
-                    "    {:<8} {}",
-                    graha_names[i],
-                    format_rashi_dms(entry.sidereal_longitude)
-                )?;
-            }
-            writeln!(
-                w,
-                "    {:<8} {}",
-                "Lagna",
-                format_rashi_dms(chart.lagna.sidereal_longitude)
-            )?;
+            writeln!(w)?;
+            write_amsha_chart(w, chart, "  ")?;
         }
         writeln!(w)?;
     }
