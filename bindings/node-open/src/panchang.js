@@ -43,14 +43,18 @@ function computeBhavasUtc(engine, eop, lsk, location, utc, config) {
   return r.bhava;
 }
 
-function lagnaDeg(lsk, eop, location, jdTdb) {
-  const r = addon.lagnaDeg(lsk._handle, eop._handle, location, jdTdb);
+function lagnaDeg(lsk, eop, location, jdTdb, config) {
+  const r = config == null
+    ? addon.lagnaDeg(lsk._handle, eop._handle, location, jdTdb)
+    : addon.lagnaDeg(lsk._handle, eop._handle, location, jdTdb, config);
   checkStatus('lagna_deg', r.status);
   return r.degrees;
 }
 
-function mcDeg(lsk, eop, location, jdTdb) {
-  const r = addon.mcDeg(lsk._handle, eop._handle, location, jdTdb);
+function mcDeg(lsk, eop, location, jdTdb, config) {
+  const r = config == null
+    ? addon.mcDeg(lsk._handle, eop._handle, location, jdTdb)
+    : addon.mcDeg(lsk._handle, eop._handle, location, jdTdb, config);
   checkStatus('mc_deg', r.status);
   return r.degrees;
 }
@@ -61,14 +65,18 @@ function ramcDeg(lsk, eop, location, jdTdb) {
   return r.degrees;
 }
 
-function lagnaDegUtc(lsk, eop, location, utc) {
-  const r = addon.lagnaDegUtc(lsk._handle, eop._handle, location, utc);
+function lagnaDegUtc(lsk, eop, location, utc, config) {
+  const r = config == null
+    ? addon.lagnaDegUtc(lsk._handle, eop._handle, location, utc)
+    : addon.lagnaDegUtc(lsk._handle, eop._handle, location, utc, config);
   checkStatus('lagna_deg_utc', r.status);
   return r.degrees;
 }
 
-function mcDegUtc(lsk, eop, location, utc) {
-  const r = addon.mcDegUtc(lsk._handle, eop._handle, location, utc);
+function mcDegUtc(lsk, eop, location, utc, config) {
+  const r = config == null
+    ? addon.mcDegUtc(lsk._handle, eop._handle, location, utc)
+    : addon.mcDegUtc(lsk._handle, eop._handle, location, utc, config);
   checkStatus('mc_deg_utc', r.status);
   return r.degrees;
 }

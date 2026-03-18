@@ -216,11 +216,29 @@ bool ReadRiseSetConfig(napi_env env, napi_value obj, DhruvRiseSetConfig* out) {
 }
 
 bool ReadBhavaConfig(napi_env env, napi_value obj, DhruvBhavaConfig* out) {
+    *out = dhruv_bhava_config_default();
     napi_value v;
-    if (!GetNamedProperty(env, obj, "system", &v) || !GetInt32(env, v, &out->system)) return false;
-    if (!GetNamedProperty(env, obj, "startingPoint", &v) || !GetInt32(env, v, &out->starting_point)) return false;
-    if (!GetNamedProperty(env, obj, "customStartDeg", &v) || !GetDouble(env, v, &out->custom_start_deg)) return false;
-    if (!GetNamedProperty(env, obj, "referenceMode", &v) || !GetInt32(env, v, &out->reference_mode)) return false;
+    bool has = false;
+    if (napi_has_named_property(env, obj, "system", &has) != napi_ok) return false;
+    if (has && (!GetNamedProperty(env, obj, "system", &v) || !GetInt32(env, v, &out->system))) return false;
+    if (napi_has_named_property(env, obj, "startingPoint", &has) != napi_ok) return false;
+    if (has && (!GetNamedProperty(env, obj, "startingPoint", &v) || !GetInt32(env, v, &out->starting_point))) return false;
+    if (napi_has_named_property(env, obj, "customStartDeg", &has) != napi_ok) return false;
+    if (has && (!GetNamedProperty(env, obj, "customStartDeg", &v) || !GetDouble(env, v, &out->custom_start_deg))) return false;
+    if (napi_has_named_property(env, obj, "referenceMode", &has) != napi_ok) return false;
+    if (has && (!GetNamedProperty(env, obj, "referenceMode", &v) || !GetInt32(env, v, &out->reference_mode))) return false;
+    if (napi_has_named_property(env, obj, "outputMode", &has) != napi_ok) return false;
+    if (has && (!GetNamedProperty(env, obj, "outputMode", &v) || !GetInt32(env, v, &out->output_mode))) return false;
+    if (napi_has_named_property(env, obj, "ayanamshaSystem", &has) != napi_ok) return false;
+    if (has && (!GetNamedProperty(env, obj, "ayanamshaSystem", &v) || !GetInt32(env, v, &out->ayanamsha_system))) return false;
+    if (napi_has_named_property(env, obj, "useNutation", &has) != napi_ok) return false;
+    if (has) {
+        bool b = false;
+        if (!GetNamedProperty(env, obj, "useNutation", &v) || !GetBool(env, v, &b)) return false;
+        out->use_nutation = b ? 1 : 0;
+    }
+    if (napi_has_named_property(env, obj, "referencePlane", &has) != napi_ok) return false;
+    if (has && (!GetNamedProperty(env, obj, "referencePlane", &v) || !GetInt32(env, v, &out->reference_plane))) return false;
     return true;
 }
 
@@ -2480,6 +2498,10 @@ napi_value BhavaConfigDefault(napi_env env, napi_callback_info info) {
     SetNamed(env, out, "startingPoint", MakeInt32(env, cfg.starting_point));
     SetNamed(env, out, "customStartDeg", MakeDouble(env, cfg.custom_start_deg));
     SetNamed(env, out, "referenceMode", MakeInt32(env, cfg.reference_mode));
+    SetNamed(env, out, "outputMode", MakeInt32(env, cfg.output_mode));
+    SetNamed(env, out, "ayanamshaSystem", MakeInt32(env, cfg.ayanamsha_system));
+    SetNamed(env, out, "useNutation", MakeBool(env, cfg.use_nutation != 0));
+    SetNamed(env, out, "referencePlane", MakeInt32(env, cfg.reference_plane));
     return out;
 }
 
@@ -2710,6 +2732,50 @@ napi_value ScalarDegWithLocJd(napi_env env, napi_callback_info info, int32_t (*f
     return out;
 }
 
+napi_value ScalarDegWithLocJdOptionalBhavaConfig(
+    napi_env env,
+    napi_callback_info info,
+    int32_t (*fn_plain)(const DhruvLskHandle*, const DhruvEopHandle*, const DhruvGeoLocation*, double, double*),
+    int32_t (*fn_cfg)(const DhruvLskHandle*, const DhruvEopHandle*, const DhruvGeoLocation*, double, const DhruvBhavaConfig*, double*)
+) {
+    size_t argc = 5;
+    napi_value args[5];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 4) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    void* lsk_ptr = nullptr;
+    void* ep_ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &lsk_ptr) || !ReadExternalPtr(env, args[1], &ep_ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvGeoLocation loc{};
+    if (!ReadGeoLocation(env, args[2], &loc)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    double jd = 0.0;
+    if (!GetDouble(env, args[3], &jd)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    double out_deg = 0.0;
+    int32_t status = STATUS_OK;
+    if (argc >= 5) {
+        DhruvBhavaConfig cfg{};
+        if (!ReadBhavaConfig(env, args[4], &cfg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        status = fn_cfg(
+            static_cast<const DhruvLskHandle*>(lsk_ptr),
+            static_cast<const DhruvEopHandle*>(ep_ptr),
+            &loc,
+            jd,
+            &cfg,
+            &out_deg
+        );
+    } else {
+        status = fn_plain(
+            static_cast<const DhruvLskHandle*>(lsk_ptr),
+            static_cast<const DhruvEopHandle*>(ep_ptr),
+            &loc,
+            jd,
+            &out_deg
+        );
+    }
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) SetNamed(env, out, "degrees", MakeDouble(env, out_deg));
+    return out;
+}
+
 napi_value ScalarDegWithLocUtc(napi_env env, napi_callback_info info, int32_t (*fn)(const DhruvLskHandle*, const DhruvEopHandle*, const DhruvGeoLocation*, const DhruvUtcTime*, double*)) {
     size_t argc = 4;
     napi_value args[4];
@@ -2729,11 +2795,63 @@ napi_value ScalarDegWithLocUtc(napi_env env, napi_callback_info info, int32_t (*
     return out;
 }
 
-napi_value LagnaDeg(napi_env env, napi_callback_info info) { return ScalarDegWithLocJd(env, info, dhruv_lagna_deg); }
-napi_value MCDeg(napi_env env, napi_callback_info info) { return ScalarDegWithLocJd(env, info, dhruv_mc_deg); }
+napi_value ScalarDegWithLocUtcOptionalBhavaConfig(
+    napi_env env,
+    napi_callback_info info,
+    int32_t (*fn_plain)(const DhruvLskHandle*, const DhruvEopHandle*, const DhruvGeoLocation*, const DhruvUtcTime*, double*),
+    int32_t (*fn_cfg)(const DhruvLskHandle*, const DhruvEopHandle*, const DhruvGeoLocation*, const DhruvUtcTime*, const DhruvBhavaConfig*, double*)
+) {
+    size_t argc = 5;
+    napi_value args[5];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 4) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    void* lsk_ptr = nullptr;
+    void* ep_ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &lsk_ptr) || !ReadExternalPtr(env, args[1], &ep_ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvGeoLocation loc{};
+    if (!ReadGeoLocation(env, args[2], &loc)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvUtcTime utc{};
+    if (!ReadUtcTime(env, args[3], &utc)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    double out_deg = 0.0;
+    int32_t status = STATUS_OK;
+    if (argc >= 5) {
+        DhruvBhavaConfig cfg{};
+        if (!ReadBhavaConfig(env, args[4], &cfg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        status = fn_cfg(
+            static_cast<const DhruvLskHandle*>(lsk_ptr),
+            static_cast<const DhruvEopHandle*>(ep_ptr),
+            &loc,
+            &utc,
+            &cfg,
+            &out_deg
+        );
+    } else {
+        status = fn_plain(
+            static_cast<const DhruvLskHandle*>(lsk_ptr),
+            static_cast<const DhruvEopHandle*>(ep_ptr),
+            &loc,
+            &utc,
+            &out_deg
+        );
+    }
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) SetNamed(env, out, "degrees", MakeDouble(env, out_deg));
+    return out;
+}
+
+napi_value LagnaDeg(napi_env env, napi_callback_info info) {
+    return ScalarDegWithLocJdOptionalBhavaConfig(env, info, dhruv_lagna_deg, dhruv_lagna_deg_with_config);
+}
+napi_value MCDeg(napi_env env, napi_callback_info info) {
+    return ScalarDegWithLocJdOptionalBhavaConfig(env, info, dhruv_mc_deg, dhruv_mc_deg_with_config);
+}
 napi_value RAMCDeg(napi_env env, napi_callback_info info) { return ScalarDegWithLocJd(env, info, dhruv_ramc_deg); }
-napi_value LagnaDegUtc(napi_env env, napi_callback_info info) { return ScalarDegWithLocUtc(env, info, dhruv_lagna_deg_utc); }
-napi_value MCDegUtc(napi_env env, napi_callback_info info) { return ScalarDegWithLocUtc(env, info, dhruv_mc_deg_utc); }
+napi_value LagnaDegUtc(napi_env env, napi_callback_info info) {
+    return ScalarDegWithLocUtcOptionalBhavaConfig(env, info, dhruv_lagna_deg_utc, dhruv_lagna_deg_utc_with_config);
+}
+napi_value MCDegUtc(napi_env env, napi_callback_info info) {
+    return ScalarDegWithLocUtcOptionalBhavaConfig(env, info, dhruv_mc_deg_utc, dhruv_mc_deg_utc_with_config);
+}
 napi_value RAMCDegUtc(napi_env env, napi_callback_info info) { return ScalarDegWithLocUtc(env, info, dhruv_ramc_deg_utc); }
 
 napi_value RiseSetResultToUtc(napi_env env, napi_callback_info info) {

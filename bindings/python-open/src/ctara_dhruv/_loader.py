@@ -57,8 +57,8 @@ def find_library() -> str:
 
     # Step 4: Dev build in repo target/release.
     # _loader.py is at bindings/python-open/src/ctara_dhruv/_loader.py
-    # repo root is 5 parents up.
-    repo_root = here.parent.parent.parent.parent.parent
+    # repo root is 4 parents up from the package directory.
+    repo_root = here.parent.parent.parent.parent
     dev_lib = repo_root / "target" / "release" / lib_name
     if dev_lib.is_file():
         return str(dev_lib)

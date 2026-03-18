@@ -42,9 +42,19 @@ func (e *Engine) LagnaDeg(lsk *LSK, ep *EOP, loc GeoLocation, jdTdb float64) (fl
 	return out, statusErr("lagna_deg", st)
 }
 
+func (e *Engine) LagnaDegWithConfig(lsk *LSK, ep *EOP, loc GeoLocation, jdTdb float64, cfg BhavaConfig) (float64, error) {
+	out, st := cabi.LagnaDegWithConfig(lsk.h, ep.h, loc, jdTdb, cfg)
+	return out, statusErr("lagna_deg_with_config", st)
+}
+
 func (e *Engine) MCDeg(lsk *LSK, ep *EOP, loc GeoLocation, jdTdb float64) (float64, error) {
 	out, st := cabi.MCDeg(lsk.h, ep.h, loc, jdTdb)
 	return out, statusErr("mc_deg", st)
+}
+
+func (e *Engine) MCDegWithConfig(lsk *LSK, ep *EOP, loc GeoLocation, jdTdb float64, cfg BhavaConfig) (float64, error) {
+	out, st := cabi.MCDegWithConfig(lsk.h, ep.h, loc, jdTdb, cfg)
+	return out, statusErr("mc_deg_with_config", st)
 }
 
 func (e *Engine) RAMCDeg(lsk *LSK, ep *EOP, loc GeoLocation, jdTdb float64) (float64, error) {
@@ -57,9 +67,19 @@ func (e *Engine) LagnaDegUTC(lsk *LSK, ep *EOP, loc GeoLocation, utc UtcTime) (f
 	return out, statusErr("lagna_deg_utc", st)
 }
 
+func (e *Engine) LagnaDegUTCWithConfig(lsk *LSK, ep *EOP, loc GeoLocation, utc UtcTime, cfg BhavaConfig) (float64, error) {
+	out, st := cabi.LagnaDegUTCWithConfig(lsk.h, ep.h, loc, utc, cfg)
+	return out, statusErr("lagna_deg_utc_with_config", st)
+}
+
 func (e *Engine) MCDegUTC(lsk *LSK, ep *EOP, loc GeoLocation, utc UtcTime) (float64, error) {
 	out, st := cabi.MCDegUTC(lsk.h, ep.h, loc, utc)
 	return out, statusErr("mc_deg_utc", st)
+}
+
+func (e *Engine) MCDegUTCWithConfig(lsk *LSK, ep *EOP, loc GeoLocation, utc UtcTime, cfg BhavaConfig) (float64, error) {
+	out, st := cabi.MCDegUTCWithConfig(lsk.h, ep.h, loc, utc, cfg)
+	return out, statusErr("mc_deg_utc_with_config", st)
 }
 
 func (e *Engine) RAMCDegUTC(lsk *LSK, ep *EOP, loc GeoLocation, utc UtcTime) (float64, error) {

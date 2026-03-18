@@ -92,6 +92,10 @@ def _make_bhava_config(bhava_config):
     cfg.starting_point = bhava_config.get("starting_point", -1)
     cfg.custom_start_deg = bhava_config.get("custom_start_deg", 0.0)
     cfg.reference_mode = bhava_config.get("reference_mode", 0)
+    cfg.output_mode = bhava_config.get("output_mode", 0)
+    cfg.ayanamsha_system = bhava_config.get("ayanamsha_system", 0)
+    cfg.use_nutation = bhava_config.get("use_nutation", 0)
+    cfg.reference_plane = bhava_config.get("reference_plane", -1)
     return cfg
 
 

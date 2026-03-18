@@ -296,7 +296,8 @@ def compute_bhavas(engine, lsk, eop, location: GeoLocation,
     """Compute 12 bhava cusps with lagna and MC.
 
     Args:
-        config: Optional DhruvBhavaConfig pointer.
+        config: Optional DhruvBhavaConfig pointer. Set output fields to request
+            sidereal longitude output.
     """
     geo = _make_geo(location)
     out = ffi.new("DhruvBhavaResult *")
@@ -315,21 +316,37 @@ def compute_bhavas(engine, lsk, eop, location: GeoLocation,
     return BhavaResult(bhavas=bhavas, lagna_deg=out.lagna_deg, mc_deg=out.mc_deg)
 
 
-def lagna_deg(lsk, eop, location: GeoLocation, jd_utc: float) -> float:
-    """Compute Ascendant ecliptic longitude in degrees. No engine needed."""
+def lagna_deg(lsk, eop, location: GeoLocation, jd_utc: float, config=None) -> float:
+    """Compute Ascendant longitude in degrees.
+
+    Args:
+        config: Optional DhruvBhavaConfig pointer for sidereal output.
+    """
     geo = _make_geo(location)
     out = ffi.new("double *")
-    status = lib.dhruv_lagna_deg(lsk, eop, geo, jd_utc, out)
-    check(status, "dhruv_lagna_deg")
+    if config is None:
+        status = lib.dhruv_lagna_deg(lsk, eop, geo, jd_utc, out)
+        check(status, "dhruv_lagna_deg")
+    else:
+        status = lib.dhruv_lagna_deg_with_config(lsk, eop, geo, jd_utc, config, out)
+        check(status, "dhruv_lagna_deg_with_config")
     return out[0]
 
 
-def mc_deg(lsk, eop, location: GeoLocation, jd_utc: float) -> float:
-    """Compute MC (Midheaven) ecliptic longitude in degrees. No engine needed."""
+def mc_deg(lsk, eop, location: GeoLocation, jd_utc: float, config=None) -> float:
+    """Compute MC (Midheaven) longitude in degrees.
+
+    Args:
+        config: Optional DhruvBhavaConfig pointer for sidereal output.
+    """
     geo = _make_geo(location)
     out = ffi.new("double *")
-    status = lib.dhruv_mc_deg(lsk, eop, geo, jd_utc, out)
-    check(status, "dhruv_mc_deg")
+    if config is None:
+        status = lib.dhruv_mc_deg(lsk, eop, geo, jd_utc, out)
+        check(status, "dhruv_mc_deg")
+    else:
+        status = lib.dhruv_mc_deg_with_config(lsk, eop, geo, jd_utc, config, out)
+        check(status, "dhruv_mc_deg_with_config")
     return out[0]
 
 
@@ -354,7 +371,12 @@ def ramc_deg_utc(lsk, eop, location: GeoLocation, utc: UtcTime) -> float:
 
 def compute_bhavas_utc(engine, lsk, eop, location: GeoLocation,
                        utc: UtcTime, config=None) -> BhavaResult:
-    """Compute 12 bhava cusps with lagna and MC from UTC input."""
+    """Compute 12 bhava cusps with lagna and MC from UTC input.
+
+    Args:
+        config: Optional DhruvBhavaConfig pointer. Set output fields to request
+            sidereal longitude output.
+    """
     geo = _make_geo(location)
     t = _make_utc(utc)
     out = ffi.new("DhruvBhavaResult *")
@@ -373,23 +395,39 @@ def compute_bhavas_utc(engine, lsk, eop, location: GeoLocation,
     return BhavaResult(bhavas=bhavas, lagna_deg=out.lagna_deg, mc_deg=out.mc_deg)
 
 
-def lagna_deg_utc(lsk, eop, location: GeoLocation, utc: UtcTime) -> float:
-    """Compute Ascendant ecliptic longitude in degrees from UTC."""
+def lagna_deg_utc(lsk, eop, location: GeoLocation, utc: UtcTime, config=None) -> float:
+    """Compute Ascendant longitude in degrees from UTC.
+
+    Args:
+        config: Optional DhruvBhavaConfig pointer for sidereal output.
+    """
     geo = _make_geo(location)
     t = _make_utc(utc)
     out = ffi.new("double *")
-    status = lib.dhruv_lagna_deg_utc(lsk, eop, geo, t, out)
-    check(status, "dhruv_lagna_deg_utc")
+    if config is None:
+        status = lib.dhruv_lagna_deg_utc(lsk, eop, geo, t, out)
+        check(status, "dhruv_lagna_deg_utc")
+    else:
+        status = lib.dhruv_lagna_deg_utc_with_config(lsk, eop, geo, t, config, out)
+        check(status, "dhruv_lagna_deg_utc_with_config")
     return out[0]
 
 
-def mc_deg_utc(lsk, eop, location: GeoLocation, utc: UtcTime) -> float:
-    """Compute MC (Midheaven) ecliptic longitude in degrees from UTC."""
+def mc_deg_utc(lsk, eop, location: GeoLocation, utc: UtcTime, config=None) -> float:
+    """Compute MC (Midheaven) longitude in degrees from UTC.
+
+    Args:
+        config: Optional DhruvBhavaConfig pointer for sidereal output.
+    """
     geo = _make_geo(location)
     t = _make_utc(utc)
     out = ffi.new("double *")
-    status = lib.dhruv_mc_deg_utc(lsk, eop, geo, t, out)
-    check(status, "dhruv_mc_deg_utc")
+    if config is None:
+        status = lib.dhruv_mc_deg_utc(lsk, eop, geo, t, out)
+        check(status, "dhruv_mc_deg_utc")
+    else:
+        status = lib.dhruv_mc_deg_utc_with_config(lsk, eop, geo, t, config, out)
+        check(status, "dhruv_mc_deg_utc_with_config")
     return out[0]
 
 

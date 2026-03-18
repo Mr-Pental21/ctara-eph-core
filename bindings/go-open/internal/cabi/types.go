@@ -132,6 +132,10 @@ type BhavaConfig struct {
 	StartingPoint  int32
 	CustomStartDeg float64
 	ReferenceMode  int32
+	OutputMode     int32
+	AyanamshaSystem int32
+	UseNutation    bool
+	ReferencePlane int32
 }
 
 type Bhava struct {

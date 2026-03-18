@@ -103,15 +103,23 @@ func cBhavaConfig(cfg BhavaConfig) C.DhruvBhavaConfig {
 		starting_point:   C.int32_t(cfg.StartingPoint),
 		custom_start_deg: C.double(cfg.CustomStartDeg),
 		reference_mode:   C.int32_t(cfg.ReferenceMode),
+		output_mode:      C.int32_t(cfg.OutputMode),
+		ayanamsha_system: C.int32_t(cfg.AyanamshaSystem),
+		use_nutation:     boolU8(cfg.UseNutation),
+		reference_plane:  C.int32_t(cfg.ReferencePlane),
 	}
 }
 
 func goBhavaConfig(cfg C.DhruvBhavaConfig) BhavaConfig {
 	return BhavaConfig{
-		System:         int32(cfg.system),
-		StartingPoint:  int32(cfg.starting_point),
-		CustomStartDeg: float64(cfg.custom_start_deg),
-		ReferenceMode:  int32(cfg.reference_mode),
+		System:          int32(cfg.system),
+		StartingPoint:   int32(cfg.starting_point),
+		CustomStartDeg:  float64(cfg.custom_start_deg),
+		ReferenceMode:   int32(cfg.reference_mode),
+		OutputMode:      int32(cfg.output_mode),
+		AyanamshaSystem: int32(cfg.ayanamsha_system),
+		UseNutation:     cfg.use_nutation != 0,
+		ReferencePlane:  int32(cfg.reference_plane),
 	}
 }
 
@@ -473,10 +481,26 @@ func LagnaDeg(lsk LskHandle, eop EopHandle, loc GeoLocation, jdTdb float64) (flo
 	return float64(out), st
 }
 
+func LagnaDegWithConfig(lsk LskHandle, eop EopHandle, loc GeoLocation, jdTdb float64, cfg BhavaConfig) (float64, Status) {
+	cloc := cGeo(loc)
+	ccfg := cBhavaConfig(cfg)
+	var out C.double
+	st := Status(C.dhruv_lagna_deg_with_config(lsk.ptr, eop.ptr, &cloc, C.double(jdTdb), &ccfg, &out))
+	return float64(out), st
+}
+
 func MCDeg(lsk LskHandle, eop EopHandle, loc GeoLocation, jdTdb float64) (float64, Status) {
 	cloc := cGeo(loc)
 	var out C.double
 	st := Status(C.dhruv_mc_deg(lsk.ptr, eop.ptr, &cloc, C.double(jdTdb), &out))
+	return float64(out), st
+}
+
+func MCDegWithConfig(lsk LskHandle, eop EopHandle, loc GeoLocation, jdTdb float64, cfg BhavaConfig) (float64, Status) {
+	cloc := cGeo(loc)
+	ccfg := cBhavaConfig(cfg)
+	var out C.double
+	st := Status(C.dhruv_mc_deg_with_config(lsk.ptr, eop.ptr, &cloc, C.double(jdTdb), &ccfg, &out))
 	return float64(out), st
 }
 
@@ -495,11 +519,29 @@ func LagnaDegUTC(lsk LskHandle, eop EopHandle, loc GeoLocation, utc UtcTime) (fl
 	return float64(out), st
 }
 
+func LagnaDegUTCWithConfig(lsk LskHandle, eop EopHandle, loc GeoLocation, utc UtcTime, cfg BhavaConfig) (float64, Status) {
+	cloc := cGeo(loc)
+	cutc := cUTC(utc)
+	ccfg := cBhavaConfig(cfg)
+	var out C.double
+	st := Status(C.dhruv_lagna_deg_utc_with_config(lsk.ptr, eop.ptr, &cloc, &cutc, &ccfg, &out))
+	return float64(out), st
+}
+
 func MCDegUTC(lsk LskHandle, eop EopHandle, loc GeoLocation, utc UtcTime) (float64, Status) {
 	cloc := cGeo(loc)
 	cutc := cUTC(utc)
 	var out C.double
 	st := Status(C.dhruv_mc_deg_utc(lsk.ptr, eop.ptr, &cloc, &cutc, &out))
+	return float64(out), st
+}
+
+func MCDegUTCWithConfig(lsk LskHandle, eop EopHandle, loc GeoLocation, utc UtcTime, cfg BhavaConfig) (float64, Status) {
+	cloc := cGeo(loc)
+	cutc := cUTC(utc)
+	ccfg := cBhavaConfig(cfg)
+	var out C.double
+	st := Status(C.dhruv_mc_deg_utc_with_config(lsk.ptr, eop.ptr, &cloc, &cutc, &ccfg, &out))
 	return float64(out), st
 }
 
