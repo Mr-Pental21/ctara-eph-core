@@ -1272,6 +1272,7 @@ pub fn full_kundali_for_date(
             &graha_positions,
             &bindus,
             &upagrahas,
+            &sphutas,
             &special_lagnas,
             &mut ctx,
         )?)
@@ -2466,8 +2467,11 @@ pub fn amsha_charts_from_kundali(
         None
     };
 
-    // Sphutas: not available from FullKundaliResult directly
-    let sphuta_lons: Option<[f64; 16]> = None;
+    let sphuta_lons = if scope.include_sphutas {
+        kundali.sphutas.as_ref().map(|s| s.longitudes)
+    } else {
+        None
+    };
 
     let charts = requests
         .iter()
@@ -2495,6 +2499,7 @@ fn amsha_charts_from_kundali_with_ctx(
     graha_positions: &Option<GrahaPositions>,
     bindus: &Option<BindusResult>,
     upagrahas: &Option<AllUpagrahas>,
+    sphutas: &Option<SphutalResult>,
     special_lagnas: &Option<AllSpecialLagnas>,
     ctx: &mut JyotishContext,
 ) -> Result<AmshaResult, SearchError> {
@@ -2549,7 +2554,11 @@ fn amsha_charts_from_kundali_with_ctx(
         None
     };
 
-    let sphuta_lons: Option<[f64; 16]> = None;
+    let sphuta_lons = if scope.include_sphutas {
+        sphutas.as_ref().map(|s| s.longitudes)
+    } else {
+        None
+    };
 
     let charts = requests
         .iter()
