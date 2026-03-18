@@ -57,6 +57,10 @@ defmodule CtaraDhruv.Native do
   def dasha_run(_resource, _request), do: :erlang.nif_error(:nif_not_loaded)
   def tara_run(_resource, _request), do: :erlang.nif_error(:nif_not_loaded)
 
+  def create_engine(config), do: handle(engine_new(normalize_term(config)))
+
+  def call_engine_noarg(fun, %Engine{} = engine), do: handle(fun.(engine.resource))
+
   def call_engine(fun, %Engine{} = engine, request),
     do: handle(fun.(engine.resource, normalize_term(request)))
 

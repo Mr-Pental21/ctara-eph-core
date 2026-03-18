@@ -1,5 +1,12 @@
 defmodule CtaraDhruv.Jyotish do
-  @moduledoc false
+  @moduledoc """
+  Jyotish chart computations.
+
+  `full_kundali/2` uses the request's `:sankranti_config` when provided and the
+  wrapper's resolved ayanamsha defaults otherwise. `full_kundali/3` is a
+  convenience arity for explicitly supplying the chart ayanamsha config from
+  Elixir.
+  """
 
   alias CtaraDhruv.Native
 
@@ -49,6 +56,12 @@ defmodule CtaraDhruv.Jyotish do
   def full_kundali(engine, request),
     do: Native.call_engine(&Native.jyotish_run/2, engine, Map.put(request, :op, :full_kundali))
 
+  def full_kundali(engine, request, sankranti_config),
+    do: full_kundali(engine, put_sankranti_config(request, sankranti_config))
+
   def amsha(engine, request),
     do: Native.call_engine(&Native.jyotish_run/2, engine, Map.put(request, :op, :amsha))
+
+  defp put_sankranti_config(request, sankranti_config),
+    do: Map.put(request, :sankranti_config, sankranti_config)
 end

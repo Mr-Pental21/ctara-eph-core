@@ -3,7 +3,7 @@ defmodule CtaraDhruvTest do
 
   alias CtaraDhruv.{Dasha, Engine, Ephemeris, Jyotish, Panchang, Search, Tara, Time, Vedic}
 
-  @repo_root Path.expand("../..", __DIR__)
+  @repo_root Path.expand("../../..", __DIR__)
   @kernel_dir Path.join(@repo_root, "kernels/data")
   @spk Path.join(@kernel_dir, "de442s.bsp")
   @lsk Path.join(@kernel_dir, "naif0012.tls")
@@ -47,13 +47,13 @@ defmodule CtaraDhruvTest do
 
         assert {:ok, _} =
                  Time.utc_to_jd_tdb(engine, %{
-                   utc: %{year: 2024, month: 1, day: 1, hour: 12, minute: 0, second: 0.0}
+                   utc: %{year: 2015, month: 1, day: 1, hour: 12, minute: 0, second: 0.0}
                  })
 
         if File.exists?(@eop) do
           assert {:ok, _} = Engine.load_eop(engine, @eop)
           location = %{latitude_deg: 28.6139, longitude_deg: 77.2090, altitude_m: 0.0}
-          utc = %{year: 2024, month: 1, day: 15, hour: 6, minute: 0, second: 0.0}
+          utc = %{year: 2015, month: 1, day: 15, hour: 6, minute: 0, second: 0.0}
 
           assert {:ok, _} =
                    Vedic.ayanamsha(engine, %{
@@ -84,6 +84,44 @@ defmodule CtaraDhruvTest do
           assert {:ok, _} = Tara.catalog_info(engine)
         else
           assert {:ok, _} = Tara.catalog_info(engine)
+        end
+    end
+  end
+
+  test "elixir wrapper exposes sidereal bhavas and full_kundali defaults" do
+    case with_engine() do
+      :skip ->
+        assert true
+
+      {:ok, engine} ->
+        if File.exists?(@eop) do
+          assert {:ok, _} = Engine.load_eop(engine, @eop)
+
+          location = %{latitude_deg: 28.6139, longitude_deg: 77.2090, altitude_m: 0.0}
+          utc = %{year: 2015, month: 1, day: 15, hour: 6, minute: 0, second: 0.0}
+          request = %{utc: utc, location: location}
+          sidereal = %{ayanamsha_system: :lahiri, use_nutation: false}
+
+          assert {:ok, %{longitude_deg: tropical_lagna}} = Vedic.lagna(engine, request)
+          assert {:ok, %{longitude_deg: sidereal_lagna}} = Vedic.lagna(engine, request, sidereal)
+          assert abs(tropical_lagna - sidereal_lagna) > 0.1
+
+          assert {:ok, %{longitude_deg: sidereal_mc}} = Vedic.mc(engine, request, sidereal)
+
+          assert {:ok, bhavas} = Vedic.bhavas(engine, request, sidereal)
+          assert length(bhavas.bhavas) == 12
+          assert_in_delta bhavas.lagna_deg, sidereal_lagna, 1.0e-6
+          assert_in_delta bhavas.mc_deg, sidereal_mc, 1.0e-6
+
+          assert {:ok, chart} = Jyotish.full_kundali(engine, request, sidereal)
+          assert is_map(chart.graha_positions)
+          assert is_map(chart.graha_positions.lagna)
+          assert is_float(chart.graha_positions.lagna.sidereal_longitude)
+          assert is_map(chart.bhava_cusps)
+          assert_in_delta chart.bhava_cusps.lagna_deg, sidereal_lagna, 1.0e-6
+          assert_in_delta chart.bhava_cusps.mc_deg, sidereal_mc, 1.0e-6
+        else
+          assert true
         end
     end
   end

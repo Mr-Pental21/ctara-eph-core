@@ -23,6 +23,7 @@ use dhruv_search::{
     all_upagrahas_for_date, amsha_charts_for_date, arudha_padas_for_date, ashtakavarga_for_date,
     avastha_for_date, balas_for_date, bhavabala_for_date, charakaraka_for_date, core_bindus,
     drishti_for_date, graha_positions as graha_positions_fn, shadbala_for_date,
+    sidereal_bhavas_for_date, sidereal_lagna_for_date, sidereal_mc_for_date,
     special_lagnas_for_date, vimsopaka_for_date,
 };
 use dhruv_tara::{TaraAccuracy, TaraCatalog, TaraConfig, TaraId};
@@ -230,6 +231,7 @@ struct JyotishRequest {
     sankranti_config: Option<SankrantiConfigInput>,
     full_kundali_config: Option<FullKundaliConfigInput>,
     amsha_requests: Option<Vec<AmshaRequestInput>>,
+    amsha_scope: Option<AmshaChartScopeInput>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -335,7 +337,18 @@ struct FullKundaliConfigInput {
     graha_positions_config: Option<GrahaPositionsConfigInput>,
     bindus_config: Option<BindusConfigInput>,
     drishti_config: Option<DrishtiConfigInput>,
+    amsha_scope: Option<AmshaChartScopeInput>,
+    amsha_selection: Option<Vec<AmshaRequestInput>>,
     dasha_config: Option<DashaSelectionConfigInput>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct AmshaChartScopeInput {
+    include_bhava_cusps: Option<bool>,
+    include_arudha_padas: Option<bool>,
+    include_upagrahas: Option<bool>,
+    include_sphutas: Option<bool>,
+    include_special_lagnas: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -2106,6 +2119,15 @@ fn handle_vedic(resource: &ResourceArc<EngineResource>, request: VedicRequest) -
                         .ok_or_else(|| error_payload("invalid_request", "location is required"))?,
                 );
                 let bhava_config = to_bhava_config(state, request.bhava_config.as_ref())?;
+                let sidereal_output = request.sankranti_config.is_some();
+                let sankranti_config = if sidereal_output {
+                    Some(to_sankranti_config(
+                        state,
+                        request.sankranti_config.as_ref(),
+                    )?)
+                } else {
+                    None
+                };
                 let jd_utc = dhruv_time::calendar_to_jd(
                     utc.year,
                     utc.month,
@@ -2115,15 +2137,44 @@ fn handle_vedic(resource: &ResourceArc<EngineResource>, request: VedicRequest) -
                         + utc.second / 86_400.0,
                 );
                 match request.op.as_str() {
+                    "lagna" if sidereal_output => sidereal_lagna_for_date(
+                        engine,
+                        eop,
+                        &utc,
+                        &location,
+                        sankranti_config.as_ref().expect("sidereal config set"),
+                    )
+                    .map(|value| json!({ "longitude_deg": value }))
+                    .map_err(|err| map_error("vedic_error", err)),
                     "lagna" => lagna_longitude_rad(engine.lsk(), eop, &location, jd_utc)
                         .map(|value| json!({ "longitude_deg": value.to_degrees() }))
                         .map_err(|err| map_error("vedic_error", err)),
+                    "mc" if sidereal_output => sidereal_mc_for_date(
+                        engine,
+                        eop,
+                        &utc,
+                        &location,
+                        &bhava_config,
+                        sankranti_config.as_ref().expect("sidereal config set"),
+                    )
+                    .map(|value| json!({ "longitude_deg": value }))
+                    .map_err(|err| map_error("vedic_error", err)),
                     "mc" => mc_longitude_rad(engine.lsk(), eop, &location, jd_utc)
                         .map(|value| json!({ "longitude_deg": value.to_degrees() }))
                         .map_err(|err| map_error("vedic_error", err)),
                     "ramc" => ramc_rad(engine.lsk(), eop, &location, jd_utc)
                         .map(|value| json!({ "longitude_deg": value.to_degrees() }))
                         .map_err(|err| map_error("vedic_error", err)),
+                    _ if sidereal_output => sidereal_bhavas_for_date(
+                        engine,
+                        eop,
+                        &utc,
+                        &location,
+                        &bhava_config,
+                        sankranti_config.as_ref().expect("sidereal config set"),
+                    )
+                    .map(bhava_result_json)
+                    .map_err(|err| map_error("vedic_error", err)),
                     _ => {
                         compute_bhavas(engine, engine.lsk(), eop, &location, jd_utc, &bhava_config)
                             .map(bhava_result_json)
@@ -2583,12 +2634,14 @@ fn handle_jyotish(resource: &ResourceArc<EngineResource>, request: JyotishReques
                 &sankranti_config,
                 parse_node_dignity_policy(request.node_dignity_policy.as_ref())?,
             )
-            .map(|result| json!({
-                "shadbala": shadbala_json(result.shadbala),
-                "vimsopaka": vimsopaka_json(result.vimsopaka),
-                "ashtakavarga": ashtakavarga_json(result.ashtakavarga),
-                "bhavabala": bhavabala_json(result.bhavabala)
-            }))
+            .map(|result| {
+                json!({
+                    "shadbala": shadbala_json(result.shadbala),
+                    "vimsopaka": vimsopaka_json(result.vimsopaka),
+                    "ashtakavarga": ashtakavarga_json(result.ashtakavarga),
+                    "bhavabala": bhavabala_json(result.bhavabala)
+                })
+            })
             .map_err(|err| map_error("search_error", err)),
             "avastha" => avastha_for_date(
                 engine,

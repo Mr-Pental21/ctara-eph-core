@@ -36,6 +36,18 @@ mix test
 The ExUnit suite runs wrapper smoke coverage across the native families. Tests
 that require SPK/LSK/EOP/tara data skip gracefully when those files are absent.
 
+## Benchmark
+
+```bash
+mix run bench/all_functions.exs
+```
+
+Optional environment knobs:
+
+- `DHRUV_BENCH_ITERATIONS=3`
+- `DHRUV_BENCH_WARMUP=1`
+- `DHRUV_BENCH_FILTER='Jyotish|Dasha'`
+
 ## Quickstart
 
 ```elixir
@@ -67,6 +79,38 @@ IO.inspect(jd)
 
 :ok = Engine.close(engine)
 ```
+
+## Sidereal Chart Output
+
+The direct Vedic bhava surface is tropical unless you provide a
+`sankranti_config`. The Elixir wrapper now exposes convenience arities for that
+explicitly:
+
+```elixir
+alias CtaraDhruv.{Jyotish, Vedic}
+
+location = %{latitude_deg: 28.6139, longitude_deg: 77.2090, altitude_m: 0.0}
+utc = %{year: 2015, month: 1, day: 15, hour: 6, minute: 0, second: 0.0}
+sidereal = %{ayanamsha_system: :lahiri, use_nutation: false}
+
+{:ok, lagna} = Vedic.lagna(engine, %{utc: utc, location: location}, sidereal)
+{:ok, bhavas} = Vedic.bhavas(engine, %{utc: utc, location: location}, sidereal)
+
+{:ok, chart} =
+  Jyotish.full_kundali(
+    engine,
+    %{utc: utc, location: location},
+    sidereal
+  )
+```
+
+Notes:
+
+- `Vedic.lagna/2`, `Vedic.mc/2`, and `Vedic.bhavas/2` stay tropical when
+  `:sankranti_config` is omitted.
+- `Jyotish.full_kundali/3` applies the supplied ayanamsha to the full chart,
+  including returned `bhava_cusps`.
+- `full_kundali` now includes `graha_positions.lagna` by default.
 
 ## Coverage
 
