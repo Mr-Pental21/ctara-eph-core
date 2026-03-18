@@ -23,7 +23,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       46
+#define DHRUV_API_VERSION       47
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 
@@ -368,6 +368,10 @@ typedef struct {
     int32_t starting_point;
     double  custom_start_deg;
     int32_t reference_mode;
+    int32_t output_mode;
+    int32_t ayanamsha_system;
+    uint8_t use_nutation;
+    int32_t reference_plane;
 } DhruvBhavaConfig;
 
 typedef struct {
@@ -1327,11 +1331,25 @@ DhruvStatus dhruv_lagna_deg(
     const DhruvGeoLocation *location,
     double jd_tdb,
     double *out);
+DhruvStatus dhruv_lagna_deg_with_config(
+    const DhruvLskHandle *lsk,
+    const DhruvEopHandle *eop,
+    const DhruvGeoLocation *location,
+    double jd_tdb,
+    const DhruvBhavaConfig *config,
+    double *out);
 DhruvStatus dhruv_mc_deg(
     const DhruvLskHandle *lsk,
     const DhruvEopHandle *eop,
     const DhruvGeoLocation *location,
     double jd_tdb,
+    double *out);
+DhruvStatus dhruv_mc_deg_with_config(
+    const DhruvLskHandle *lsk,
+    const DhruvEopHandle *eop,
+    const DhruvGeoLocation *location,
+    double jd_tdb,
+    const DhruvBhavaConfig *config,
     double *out);
 DhruvStatus dhruv_ramc_deg(
     const DhruvLskHandle *lsk,
@@ -1496,11 +1514,25 @@ DhruvStatus dhruv_lagna_deg_utc(
     const DhruvGeoLocation *location,
     const DhruvUtcTime *utc,
     double *out);
+DhruvStatus dhruv_lagna_deg_utc_with_config(
+    const DhruvLskHandle *lsk,
+    const DhruvEopHandle *eop,
+    const DhruvGeoLocation *location,
+    const DhruvUtcTime *utc,
+    const DhruvBhavaConfig *config,
+    double *out);
 DhruvStatus dhruv_mc_deg_utc(
     const DhruvLskHandle *lsk,
     const DhruvEopHandle *eop,
     const DhruvGeoLocation *location,
     const DhruvUtcTime *utc,
+    double *out);
+DhruvStatus dhruv_mc_deg_utc_with_config(
+    const DhruvLskHandle *lsk,
+    const DhruvEopHandle *eop,
+    const DhruvGeoLocation *location,
+    const DhruvUtcTime *utc,
+    const DhruvBhavaConfig *config,
     double *out);
 DhruvStatus dhruv_ramc_deg_utc(
     const DhruvLskHandle *lsk,

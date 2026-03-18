@@ -15,17 +15,17 @@ use dhruv_search::{
     charakaraka_for_date, dasha_child_period_for_birth, dasha_children_for_birth,
     dasha_complete_level_for_birth, dasha_hierarchy_for_birth, dasha_level0_entity_for_birth,
     dasha_level0_for_birth, dasha_snapshot_at, elongation_at, full_kundali_for_date,
-    ghatika_for_date, ghatika_from_sunrises, graha_sidereal_longitudes,
-    graha_tropical_longitudes, hora_for_date, hora_from_sunrises, karana_at, karana_for_date,
-    masa_for_date, nakshatra_at, nakshatra_for_date, next_amavasya, next_chandra_grahan,
-    next_conjunction, next_max_speed, next_purnima, next_sankranti, next_specific_sankranti,
-    next_stationary, next_surya_grahan, prev_amavasya, prev_chandra_grahan, prev_conjunction,
-    prev_max_speed, prev_purnima, prev_sankranti, prev_specific_sankranti, prev_stationary,
-    prev_surya_grahan, search_amavasyas, search_chandra_grahan, search_conjunctions,
-    search_max_speed, search_purnimas, search_sankrantis, search_stationary,
-    search_surya_grahan, shadbala_for_date, sidereal_sum_at, special_lagnas_for_date, tithi_at,
-    tithi_for_date, vaar_for_date, vaar_from_sunrises, varsha_for_date, vedic_day_sunrises,
-    vimsopaka_for_date, yoga_at, yoga_for_date,
+    ghatika_for_date, ghatika_from_sunrises, graha_sidereal_longitudes, graha_tropical_longitudes,
+    hora_for_date, hora_from_sunrises, karana_at, karana_for_date, masa_for_date, nakshatra_at,
+    nakshatra_for_date, next_amavasya, next_chandra_grahan, next_conjunction, next_max_speed,
+    next_purnima, next_sankranti, next_specific_sankranti, next_stationary, next_surya_grahan,
+    prev_amavasya, prev_chandra_grahan, prev_conjunction, prev_max_speed, prev_purnima,
+    prev_sankranti, prev_specific_sankranti, prev_stationary, prev_surya_grahan, search_amavasyas,
+    search_chandra_grahan, search_conjunctions, search_max_speed, search_purnimas,
+    search_sankrantis, search_stationary, search_surya_grahan, shadbala_for_date, sidereal_sum_at,
+    siderealize_bhava_result, special_lagnas_for_date, tithi_at, tithi_for_date,
+    tropical_to_sidereal_longitude, vaar_for_date, vaar_from_sunrises, varsha_for_date,
+    vedic_day_sunrises, vimsopaka_for_date, yoga_at, yoga_for_date,
 };
 use dhruv_tara::{TaraAccuracy, TaraCatalog, TaraConfig, TaraError, TaraId};
 use dhruv_time::UtcTime;
@@ -49,7 +49,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 46;
+pub const DHRUV_API_VERSION: u32 = 47;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -1580,6 +1580,8 @@ pub const DHRUV_BHAVA_ALCABITUS: i32 = 9;
 
 pub const DHRUV_BHAVA_REF_START: i32 = 0;
 pub const DHRUV_BHAVA_REF_MIDDLE: i32 = 1;
+pub const DHRUV_BHAVA_OUTPUT_TROPICAL: i32 = 0;
+pub const DHRUV_BHAVA_OUTPUT_SIDEREAL: i32 = 1;
 
 /// Starting point: use the Lagna (Ascendant).
 pub const DHRUV_BHAVA_START_LAGNA: i32 = -1;
@@ -1603,6 +1605,14 @@ pub struct DhruvBhavaConfig {
     pub custom_start_deg: f64,
     /// Reference mode: 0=start of first, 1=middle of first.
     pub reference_mode: i32,
+    /// Output longitude mode: 0=tropical ecliptic, 1=sidereal on configured reference plane.
+    pub output_mode: i32,
+    /// Ayanamsha system code used when `output_mode == 1`.
+    pub ayanamsha_system: i32,
+    /// Apply nutation when computing ayanamsha for sidereal output.
+    pub use_nutation: u8,
+    /// Reference plane for sidereal output: 0=ecliptic, 1=invariable, -1=system default.
+    pub reference_plane: i32,
 }
 
 /// C-compatible single bhava result.
@@ -1658,6 +1668,87 @@ fn bhava_config_from_ffi(cfg: &DhruvBhavaConfig) -> Result<BhavaConfig, DhruvSta
     })
 }
 
+#[derive(Debug, Clone, Copy)]
+struct BhavaOutputProjection {
+    ayanamsha_deg: f64,
+    reference_plane: dhruv_frames::ReferencePlane,
+}
+
+fn bhava_output_projection_from_ffi(
+    cfg: &DhruvBhavaConfig,
+    jd_tdb: f64,
+) -> Result<Option<BhavaOutputProjection>, DhruvStatus> {
+    match cfg.output_mode {
+        DHRUV_BHAVA_OUTPUT_TROPICAL => Ok(None),
+        DHRUV_BHAVA_OUTPUT_SIDEREAL => {
+            let system = ayanamsha_system_from_code(cfg.ayanamsha_system)
+                .ok_or(DhruvStatus::InvalidQuery)?;
+            let reference_plane = reference_plane_from_code(cfg.reference_plane, system);
+            let t = jd_tdb_to_centuries(jd_tdb);
+            let mut aya_config = SankrantiConfig::new(system, cfg.use_nutation != 0);
+            aya_config.reference_plane = reference_plane;
+            Ok(Some(BhavaOutputProjection {
+                ayanamsha_deg: aya_config.ayanamsha_deg_at_centuries(t),
+                reference_plane,
+            }))
+        }
+        _ => Err(DhruvStatus::InvalidQuery),
+    }
+}
+
+fn bhava_result_to_ffi_with_projection(
+    result: &dhruv_vedic_base::BhavaResult,
+    projection: Option<BhavaOutputProjection>,
+) -> DhruvBhavaResult {
+    let projected = projection.map(|projection| {
+        siderealize_bhava_result(result, projection.ayanamsha_deg, projection.reference_plane)
+    });
+    let view = projected.as_ref().unwrap_or(result);
+    let mut ffi_bhavas = [DhruvBhava {
+        number: 0,
+        cusp_deg: 0.0,
+        start_deg: 0.0,
+        end_deg: 0.0,
+    }; 12];
+    for (i, b) in view.bhavas.iter().enumerate() {
+        ffi_bhavas[i] = DhruvBhava {
+            number: b.number,
+            cusp_deg: b.cusp_deg,
+            start_deg: b.start_deg,
+            end_deg: b.end_deg,
+        };
+    }
+    DhruvBhavaResult {
+        bhavas: ffi_bhavas,
+        lagna_deg: view.lagna_deg,
+        mc_deg: view.mc_deg,
+    }
+}
+
+fn jd_utc_to_jd_tdb_with_eop(
+    lsk: &dhruv_time::LeapSecondKernel,
+    eop: &dhruv_time::EopKernel,
+    jd_utc: f64,
+) -> f64 {
+    let utc_s = dhruv_time::jd_to_tdb_seconds(jd_utc);
+    let out = lsk.utc_to_tdb_with_policy_and_eop(
+        utc_s,
+        Some(eop),
+        dhruv_vedic_base::time_conversion_policy(),
+    );
+    dhruv_time::tdb_seconds_to_jd(out.tdb_seconds)
+}
+
+fn projected_tropical_deg(tropical_deg: f64, projection: Option<BhavaOutputProjection>) -> f64 {
+    projection.map_or(tropical_deg, |projection| {
+        tropical_to_sidereal_longitude(
+            tropical_deg,
+            projection.ayanamsha_deg,
+            projection.reference_plane,
+        )
+    })
+}
+
 /// Returns default bhava configuration (Equal, Lagna, StartOfFirst).
 #[unsafe(no_mangle)]
 pub extern "C" fn dhruv_bhava_config_default() -> DhruvBhavaConfig {
@@ -1666,6 +1757,10 @@ pub extern "C" fn dhruv_bhava_config_default() -> DhruvBhavaConfig {
         starting_point: DHRUV_BHAVA_START_LAGNA,
         custom_start_deg: 0.0,
         reference_mode: DHRUV_BHAVA_REF_START,
+        output_mode: DHRUV_BHAVA_OUTPUT_TROPICAL,
+        ayanamsha_system: 0,
+        use_nutation: 0,
+        reference_plane: -1,
     }
 }
 
@@ -1715,30 +1810,26 @@ pub unsafe extern "C" fn dhruv_compute_bhavas(
             Ok(c) => c,
             Err(status) => return status,
         };
+        let output_cfg_storage;
+        let output_cfg = if config.is_null() {
+            output_cfg_storage = dhruv_bhava_config_default();
+            &output_cfg_storage
+        } else {
+            unsafe { &*config }
+        };
+        let projection = match bhava_output_projection_from_ffi(
+            output_cfg,
+            jd_utc_to_jd_tdb_with_eop(lsk_ref, eop_ref, jd_utc),
+        ) {
+            Ok(p) => p,
+            Err(status) => return status,
+        };
 
         match compute_bhavas(engine_ref, lsk_ref, eop_ref, &geo, jd_utc, &rust_config) {
             Ok(result) => {
-                let mut ffi_bhavas = [DhruvBhava {
-                    number: 0,
-                    cusp_deg: 0.0,
-                    start_deg: 0.0,
-                    end_deg: 0.0,
-                }; 12];
-                for (i, b) in result.bhavas.iter().enumerate() {
-                    ffi_bhavas[i] = DhruvBhava {
-                        number: b.number,
-                        cusp_deg: b.cusp_deg,
-                        start_deg: b.start_deg,
-                        end_deg: b.end_deg,
-                    };
-                }
                 // SAFETY: Pointer checked for null.
                 unsafe {
-                    *out_result = DhruvBhavaResult {
-                        bhavas: ffi_bhavas,
-                        lagna_deg: result.lagna_deg,
-                        mc_deg: result.mc_deg,
-                    };
+                    *out_result = bhava_result_to_ffi_with_projection(&result, projection);
                 }
                 DhruvStatus::Ok
             }
@@ -1788,6 +1879,59 @@ pub unsafe extern "C" fn dhruv_lagna_deg(
     })
 }
 
+/// Compute the Lagna (Ascendant) longitude with optional sidereal output config.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null except `config`, which may be NULL.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_lagna_deg_with_config(
+    lsk: *const DhruvLskHandle,
+    eop: *const DhruvEopHandle,
+    location: *const DhruvGeoLocation,
+    jd_utc: f64,
+    config: *const DhruvBhavaConfig,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || eop.is_null() || location.is_null() || out_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        let lsk_ref = unsafe { &*lsk };
+        let eop_ref = unsafe { &*eop };
+        let loc_ref = unsafe { &*location };
+        let geo = GeoLocation::new(
+            loc_ref.latitude_deg,
+            loc_ref.longitude_deg,
+            loc_ref.altitude_m,
+        );
+        let cfg_storage;
+        let cfg_ref = if config.is_null() {
+            cfg_storage = dhruv_bhava_config_default();
+            &cfg_storage
+        } else {
+            unsafe { &*config }
+        };
+        let projection = match bhava_output_projection_from_ffi(
+            cfg_ref,
+            jd_utc_to_jd_tdb_with_eop(lsk_ref, eop_ref, jd_utc),
+        ) {
+            Ok(p) => p,
+            Err(status) => return status,
+        };
+
+        match dhruv_vedic_base::lagna_longitude_rad(lsk_ref, eop_ref, &geo, jd_utc) {
+            Ok(rad) => {
+                unsafe {
+                    *out_deg = projected_tropical_deg(rad.to_degrees(), projection);
+                }
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
 /// Compute the MC (Midheaven) ecliptic longitude in degrees.
 ///
 /// # Safety
@@ -1820,6 +1964,59 @@ pub unsafe extern "C" fn dhruv_mc_deg(
             Ok(rad) => {
                 // SAFETY: Pointer checked for null.
                 unsafe { *out_deg = rad.to_degrees() };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Compute the MC (Midheaven) longitude with optional sidereal output config.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null except `config`, which may be NULL.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_mc_deg_with_config(
+    lsk: *const DhruvLskHandle,
+    eop: *const DhruvEopHandle,
+    location: *const DhruvGeoLocation,
+    jd_utc: f64,
+    config: *const DhruvBhavaConfig,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null() || eop.is_null() || location.is_null() || out_deg.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        let lsk_ref = unsafe { &*lsk };
+        let eop_ref = unsafe { &*eop };
+        let loc_ref = unsafe { &*location };
+        let geo = GeoLocation::new(
+            loc_ref.latitude_deg,
+            loc_ref.longitude_deg,
+            loc_ref.altitude_m,
+        );
+        let cfg_storage;
+        let cfg_ref = if config.is_null() {
+            cfg_storage = dhruv_bhava_config_default();
+            &cfg_storage
+        } else {
+            unsafe { &*config }
+        };
+        let projection = match bhava_output_projection_from_ffi(
+            cfg_ref,
+            jd_utc_to_jd_tdb_with_eop(lsk_ref, eop_ref, jd_utc),
+        ) {
+            Ok(p) => p,
+            Err(status) => return status,
+        };
+
+        match dhruv_vedic_base::mc_longitude_rad(lsk_ref, eop_ref, &geo, jd_utc) {
+            Ok(rad) => {
+                unsafe {
+                    *out_deg = projected_tropical_deg(rad.to_degrees(), projection);
+                }
                 DhruvStatus::Ok
             }
             Err(e) => DhruvStatus::from(&e),
@@ -4715,28 +4912,24 @@ pub unsafe extern "C" fn dhruv_compute_bhavas_utc(
             Err(s) => return s,
         };
         let jd_utc = ffi_utc_to_jd_utc(unsafe { &*utc });
+        let output_cfg_storage;
+        let output_cfg = if config.is_null() {
+            output_cfg_storage = dhruv_bhava_config_default();
+            &output_cfg_storage
+        } else {
+            unsafe { &*config }
+        };
+        let projection = match bhava_output_projection_from_ffi(
+            output_cfg,
+            jd_utc_to_jd_tdb_with_eop(lsk_ref, eop_ref, jd_utc),
+        ) {
+            Ok(p) => p,
+            Err(status) => return status,
+        };
         match compute_bhavas(engine_ref, lsk_ref, eop_ref, &geo, jd_utc, &rust_config) {
             Ok(result) => {
-                let mut ffi_bhavas = [DhruvBhava {
-                    number: 0,
-                    cusp_deg: 0.0,
-                    start_deg: 0.0,
-                    end_deg: 0.0,
-                }; 12];
-                for (i, b) in result.bhavas.iter().enumerate() {
-                    ffi_bhavas[i] = DhruvBhava {
-                        number: b.number,
-                        cusp_deg: b.cusp_deg,
-                        start_deg: b.start_deg,
-                        end_deg: b.end_deg,
-                    };
-                }
                 unsafe {
-                    *out_result = DhruvBhavaResult {
-                        bhavas: ffi_bhavas,
-                        lagna_deg: result.lagna_deg,
-                        mc_deg: result.mc_deg,
-                    };
+                    *out_result = bhava_result_to_ffi_with_projection(&result, projection);
                 }
                 DhruvStatus::Ok
             }
@@ -4785,6 +4978,61 @@ pub unsafe extern "C" fn dhruv_lagna_deg_utc(
     })
 }
 
+/// Compute the Lagna (Ascendant) with UTC input and optional sidereal output config.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null except `config`, which may be NULL.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_lagna_deg_utc_with_config(
+    lsk: *const DhruvLskHandle,
+    eop: *const DhruvEopHandle,
+    location: *const DhruvGeoLocation,
+    utc: *const DhruvUtcTime,
+    config: *const DhruvBhavaConfig,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null()
+            || eop.is_null()
+            || location.is_null()
+            || utc.is_null()
+            || out_deg.is_null()
+        {
+            return DhruvStatus::NullPointer;
+        }
+        let lsk_ref = unsafe { &*lsk };
+        let eop_ref = unsafe { &*eop };
+        let loc_ref = unsafe { &*location };
+        let geo = GeoLocation::new(
+            loc_ref.latitude_deg,
+            loc_ref.longitude_deg,
+            loc_ref.altitude_m,
+        );
+        let jd_utc = ffi_utc_to_jd_utc(unsafe { &*utc });
+        let cfg_storage;
+        let cfg_ref = if config.is_null() {
+            cfg_storage = dhruv_bhava_config_default();
+            &cfg_storage
+        } else {
+            unsafe { &*config }
+        };
+        let projection = match bhava_output_projection_from_ffi(
+            cfg_ref,
+            jd_utc_to_jd_tdb_with_eop(lsk_ref, eop_ref, jd_utc),
+        ) {
+            Ok(p) => p,
+            Err(status) => return status,
+        };
+        match dhruv_vedic_base::lagna_longitude_rad(lsk_ref, eop_ref, &geo, jd_utc) {
+            Ok(rad) => {
+                unsafe { *out_deg = projected_tropical_deg(rad.to_degrees(), projection) };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
 /// Compute the MC (Midheaven) with UTC input.
 ///
 /// # Safety
@@ -4818,6 +5066,61 @@ pub unsafe extern "C" fn dhruv_mc_deg_utc(
         match dhruv_vedic_base::mc_longitude_rad(lsk_ref, eop_ref, &geo, jd_utc) {
             Ok(rad) => {
                 unsafe { *out_deg = rad.to_degrees() };
+                DhruvStatus::Ok
+            }
+            Err(e) => DhruvStatus::from(&e),
+        }
+    })
+}
+
+/// Compute the MC (Midheaven) with UTC input and optional sidereal output config.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null except `config`, which may be NULL.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_mc_deg_utc_with_config(
+    lsk: *const DhruvLskHandle,
+    eop: *const DhruvEopHandle,
+    location: *const DhruvGeoLocation,
+    utc: *const DhruvUtcTime,
+    config: *const DhruvBhavaConfig,
+    out_deg: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if lsk.is_null()
+            || eop.is_null()
+            || location.is_null()
+            || utc.is_null()
+            || out_deg.is_null()
+        {
+            return DhruvStatus::NullPointer;
+        }
+        let lsk_ref = unsafe { &*lsk };
+        let eop_ref = unsafe { &*eop };
+        let loc_ref = unsafe { &*location };
+        let geo = GeoLocation::new(
+            loc_ref.latitude_deg,
+            loc_ref.longitude_deg,
+            loc_ref.altitude_m,
+        );
+        let jd_utc = ffi_utc_to_jd_utc(unsafe { &*utc });
+        let cfg_storage;
+        let cfg_ref = if config.is_null() {
+            cfg_storage = dhruv_bhava_config_default();
+            &cfg_storage
+        } else {
+            unsafe { &*config }
+        };
+        let projection = match bhava_output_projection_from_ffi(
+            cfg_ref,
+            jd_utc_to_jd_tdb_with_eop(lsk_ref, eop_ref, jd_utc),
+        ) {
+            Ok(p) => p,
+            Err(status) => return status,
+        };
+        match dhruv_vedic_base::mc_longitude_rad(lsk_ref, eop_ref, &geo, jd_utc) {
+            Ok(rad) => {
+                unsafe { *out_deg = projected_tropical_deg(rad.to_degrees(), projection) };
                 DhruvStatus::Ok
             }
             Err(e) => DhruvStatus::from(&e),
@@ -8872,7 +9175,7 @@ pub extern "C" fn dhruv_full_kundali_config_default() -> DhruvFullKundaliConfig 
         node_dignity_policy: 0, // SignLordBased
         graha_positions_config: DhruvGrahaPositionsConfig {
             include_nakshatra: 0,
-            include_lagna: 0,
+            include_lagna: 1,
             include_outer_planets: 0,
             include_bhava: 0,
         },
@@ -8948,7 +9251,7 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
         None => return DhruvStatus::InvalidQuery,
     };
 
-        let rust_bhava_config = match resolve_bhava_config_ptr(bhava_config) {
+    let rust_bhava_config = match resolve_bhava_config_ptr(bhava_config) {
         Ok(c) => c,
         Err(status) => return status,
     };
@@ -11762,6 +12065,7 @@ mod tests {
             starting_point: DHRUV_BHAVA_START_LAGNA,
             custom_start_deg: 0.0,
             reference_mode: DHRUV_BHAVA_REF_START,
+            ..dhruv_bhava_config_default()
         };
         let result = bhava_config_from_ffi(&cfg);
         assert_eq!(result, Err(DhruvStatus::InvalidQuery));
@@ -11774,6 +12078,7 @@ mod tests {
             starting_point: -99,
             custom_start_deg: 0.0,
             reference_mode: DHRUV_BHAVA_REF_START,
+            ..dhruv_bhava_config_default()
         };
         let result = bhava_config_from_ffi(&cfg);
         assert_eq!(result, Err(DhruvStatus::InvalidQuery));
@@ -12157,8 +12462,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_46() {
-        assert_eq!(dhruv_api_version(), 46);
+    fn ffi_api_version_is_47() {
+        assert_eq!(dhruv_api_version(), 47);
     }
 
     #[test]
@@ -12182,6 +12487,7 @@ mod tests {
         assert_eq!(cfg.include_calendar, 0);
         assert_eq!(cfg.include_dasha, 0);
         assert_eq!(cfg.node_dignity_policy, 0);
+        assert_eq!(cfg.graha_positions_config.include_lagna, 1);
     }
 
     // --- Search error mapping ---
@@ -14515,6 +14821,7 @@ mod tests {
             starting_point: 0,
             custom_start_deg: 0.0,
             reference_mode: 0,
+            ..dhruv_bhava_config_default()
         };
         let rs = DhruvRiseSetConfig {
             use_refraction: 1,

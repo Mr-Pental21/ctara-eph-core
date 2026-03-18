@@ -1291,6 +1291,7 @@ fn ffi_bhava_body_starting_point() {
         starting_point: 10, // Sun's NAIF code
         custom_start_deg: 0.0,
         reference_mode: DHRUV_BHAVA_REF_START,
+        ..dhruv_bhava_config_default()
     };
 
     let mut result = DhruvBhavaResult {
