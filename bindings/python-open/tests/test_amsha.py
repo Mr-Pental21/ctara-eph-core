@@ -74,3 +74,33 @@ class TestAmshaChartForDate:
             assert 0 <= g.sidereal_longitude < 360
             assert 0 <= g.rashi_index <= 11
         assert 0 <= chart.lagna.sidereal_longitude < 360
+
+    def test_chart_for_date_with_optional_scope_sections(self, engine_handles):
+        """Amsha chart should expose optional scoped sections when requested."""
+        from ctara_dhruv.amsha import amsha_chart_for_date
+        from ctara_dhruv.engine import engine, lsk, eop
+
+        chart = amsha_chart_for_date(
+            engine(), lsk(), eop(),
+            jd_utc=(2024, 1, 15, 6, 0, 0.0),
+            location=(28.6139, 77.2090),
+            amsha_code=9,
+            scope={
+                "include_bhava_cusps": 1,
+                "include_arudha_padas": 1,
+                "include_upagrahas": 1,
+                "include_sphutas": 1,
+                "include_special_lagnas": 1,
+            },
+        )
+
+        assert chart.bhava_cusps is not None
+        assert len(chart.bhava_cusps) == 12
+        assert chart.arudha_padas is not None
+        assert len(chart.arudha_padas) == 12
+        assert chart.upagrahas is not None
+        assert len(chart.upagrahas) == 11
+        assert chart.sphutas is not None
+        assert len(chart.sphutas) == 16
+        assert chart.special_lagnas is not None
+        assert len(chart.special_lagnas) == 8

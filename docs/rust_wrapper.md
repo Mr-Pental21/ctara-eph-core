@@ -147,6 +147,20 @@ let d: UtcDate = "2024-03-20T12:30:45.5Z".parse().unwrap();
 | `core_bindus(date, eop, location, system, nutation, nak, bhava)` | `Vec<CoreBindu>` | 19 curated sensitive points |
 | `drishti(date, eop, location, system, nutation, config)` | `DrishtiResult` | Graha drishti with optional bhava/lagna/bindus |
 
+#### Amsha (Divisional Charts)
+
+| Function | Returns | Description |
+|---|---|---|
+| `amsha_longitude(sidereal_lon, amsha, variation)` | `f64` | Pure single-point amsha transform |
+| `amsha_rashi_info(sidereal_lon, amsha, variation)` | `RashiInfo` | Pure amsha transform with rashi breakdown |
+| `amsha_longitudes(sidereal_lon, requests)` | `Vec<f64>` | Batch pure amsha transform |
+| `amsha_chart_for_date(ctx, eop, date, location, bhava, riseset, system, nutation, amsha, variation, scope)` | `AmshaChart` | One date-backed amsha chart |
+| `amsha_charts_for_date(ctx, eop, date, location, bhava, riseset, system, nutation, requests, scope)` | `AmshaResult` | Multiple date-backed amsha charts |
+
+`full_kundali_for_date(...)` remains the bulk path for embedded amsha output.
+Use `FullKundaliConfig.include_amshas`, `FullKundaliConfig.amsha_selection`,
+and `FullKundaliConfig.amsha_scope` to control that section.
+
 #### Search Functions
 
 | Function | Returns | Description |
@@ -510,9 +524,9 @@ These are re-exported from internal crates so callers only need `use dhruv_rs::*
 
 **From `dhruv_time`:** `EopKernel`
 
-**From `dhruv_vedic_base`:** `AyanamshaSystem`, `BhavaConfig`, `BhavaResult`, `BhavaSystem`, `Bhava`, `LunarNode`, `NodeMode`, `GeoLocation`, `RiseSetConfig`, `RiseSetEvent`, `RiseSetResult`, `SunLimb`, `Graha`, `Sphuta`, `SphutalInputs`, `SpecialLagna`, `AllSpecialLagnas`, `ArudhaPada`, `ArudhaResult`, `Upagraha`, `AllUpagrahas`, `AshtakavargaResult`, `BhinnaAshtakavarga`, `SarvaAshtakavarga`, `DrishtiEntry`, `GrahaDrishtiMatrix`, `SunBasedUpagrahas`, `TithiPosition`, `KaranaPosition`, `YogaPosition`, `GhatikaPosition`, `NakshatraInfo`, `Nakshatra28Info`, `RashiInfo`, `Dms`
+**From `dhruv_vedic_base`:** `AyanamshaSystem`, `BhavaConfig`, `BhavaResult`, `BhavaSystem`, `Bhava`, `LunarNode`, `NodeMode`, `GeoLocation`, `RiseSetConfig`, `RiseSetEvent`, `RiseSetResult`, `SunLimb`, `Graha`, `Sphuta`, `SphutalInputs`, `SpecialLagna`, `AllSpecialLagnas`, `ArudhaPada`, `ArudhaResult`, `Upagraha`, `AllUpagrahas`, `AshtakavargaResult`, `BhinnaAshtakavarga`, `SarvaAshtakavarga`, `DrishtiEntry`, `GrahaDrishtiMatrix`, `SunBasedUpagrahas`, `TithiPosition`, `KaranaPosition`, `YogaPosition`, `GhatikaPosition`, `NakshatraInfo`, `Nakshatra28Info`, `RashiInfo`, `Dms`, `Amsha`, `AmshaVariation`, `AmshaRequest`, `ALL_AMSHAS`, `SHODASHAVARGA`
 
-**From `dhruv_search`:** `DrishtiConfig`, `DrishtiResult`, `GrahaLongitudes`, `LunarPhaseEvent`, `ConjunctionConfig`, `ConjunctionEvent`, `GrahanConfig`, `ChandraGrahan`, `SuryaGrahan`, `SankrantiConfig`, `SankrantiEvent`, `StationaryConfig`, `StationaryEvent`, `MaxSpeedEvent`
+**From `dhruv_search`:** `DrishtiConfig`, `DrishtiResult`, `GrahaLongitudes`, `LunarPhaseEvent`, `ConjunctionConfig`, `ConjunctionEvent`, `GrahanConfig`, `ChandraGrahan`, `SuryaGrahan`, `SankrantiConfig`, `SankrantiEvent`, `StationaryConfig`, `StationaryEvent`, `MaxSpeedEvent`, `AmshaChart`, `AmshaChartScope`, `AmshaResult`, `AmshaSelectionConfig`, `FullKundaliConfig`, `FullKundaliResult`
 
 **Vedic name enums (re-exported with aliases):** `AyanaKind`, `HoraLord`, `KaranaName`, `MasaName`, `NakshatraName`, `Nakshatra28Name`, `Paksha`, `RashiName`, `SamvatsaraName`, `TithiName`, `VaarName`, `YogaName`
 

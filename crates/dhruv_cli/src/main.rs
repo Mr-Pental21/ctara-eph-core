@@ -3,7 +3,7 @@ use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use dhruv_config::{ConfigResolver, DefaultsMode, EngineConfigPatch, load_with_discovery};
 use dhruv_core::{Body, Engine, EngineConfig, Frame, Observer, Query};
 use dhruv_frames::{
@@ -803,6 +803,34 @@ struct AmshaChartArgs {
     /// Include special lagnas inside amsha charts
     #[arg(long)]
     include_special_lagnas: bool,
+}
+
+#[derive(clap::Args)]
+struct AmshaArgs {
+    /// Sidereal longitude in degrees
+    #[arg(long)]
+    lon: f64,
+    /// Comma-separated amsha specs: D<n>[:variation], e.g. D9,D10,D2:cancer-leo-only
+    #[arg(long)]
+    amsha: String,
+    /// Which amsha transform shape to print
+    #[arg(long, value_enum, default_value_t = AmshaOutputMode::Rashi)]
+    output: AmshaOutputMode,
+    /// Output format for batch or scripting use
+    #[arg(long, value_enum, default_value_t = AmshaOutputFormat::Text)]
+    format: AmshaOutputFormat,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum AmshaOutputMode {
+    Longitude,
+    Rashi,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum AmshaOutputFormat {
+    Text,
+    Tsv,
 }
 
 #[derive(clap::Args)]
@@ -2331,14 +2359,7 @@ enum Commands {
     /// Compute Chara Karaka assignments for a date
     Charakaraka(CharakarakaArgs),
     /// Transform a sidereal longitude through amsha (divisional chart) mappings
-    Amsha {
-        /// Sidereal longitude in degrees
-        #[arg(long)]
-        lon: f64,
-        /// Comma-separated amsha specs: D<n>[:variation], e.g. D9,D10,D2:cancer-leo-only
-        #[arg(long)]
-        amsha: String,
-    },
+    Amsha(AmshaArgs),
     /// Compute amsha charts for a date and location
     AmshaChart(AmshaChartArgs),
     /// Compute Graha Avasthas (planetary states) for a date and location
@@ -6998,27 +7019,15 @@ fn main() {
                 );
             }
         }
-        Commands::Amsha { lon, amsha } => {
-            let requests = parse_amsha_specs(&amsha);
-            for req in &requests {
-                let variation = req.effective_variation();
-                let info = dhruv_vedic_base::amsha_rashi_info(lon, req.amsha, Some(variation));
-                let rashi = dhruv_vedic_base::ALL_RASHIS[info.rashi_index as usize];
-                let var_label = match variation {
-                    dhruv_vedic_base::AmshaVariation::TraditionalParashari => "",
-                    dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly => " (cancer-leo-only)",
-                };
-                println!(
-                    "{}{}: {:?} {:02}°{:02}'{:05.2}\"  ({:.6}°)",
-                    req.amsha.name(),
-                    var_label,
-                    rashi,
-                    info.dms.degrees,
-                    info.dms.minutes,
-                    info.dms.seconds,
-                    info.rashi_index as f64 * 30.0 + info.degrees_in_rashi,
-                );
-            }
+        Commands::Amsha(args) => {
+            let requests = parse_amsha_specs(&args.amsha);
+            let rows = compute_amsha_transform_rows(args.lon, &requests);
+            let mut stdout = std::io::stdout();
+            write_amsha_transform_rows(&mut stdout, &rows, args.output, args.format)
+                .unwrap_or_else(|e| {
+                    eprintln!("Failed to write amsha output: {e}");
+                    std::process::exit(1);
+                });
         }
         Commands::AmshaChart(args) => {
             let utc = parse_utc(&args.date).unwrap_or_else(|e| {
@@ -7817,6 +7826,122 @@ fn print_dasha_hierarchy(hierarchy: &dhruv_vedic_base::dasha::DashaHierarchy) {
         print_dasha_periods(level, 1, 50);
         println!();
     }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct AmshaTransformRow {
+    amsha: dhruv_vedic_base::Amsha,
+    variation: dhruv_vedic_base::AmshaVariation,
+    longitude: f64,
+    info: dhruv_vedic_base::RashiInfo,
+}
+
+fn compute_amsha_transform_rows(
+    lon: f64,
+    requests: &[dhruv_vedic_base::AmshaRequest],
+) -> Vec<AmshaTransformRow> {
+    requests
+        .iter()
+        .map(|req| {
+            let variation = req.effective_variation();
+            let info = dhruv_vedic_base::amsha_rashi_info(lon, req.amsha, Some(variation));
+            let longitude = info.rashi_index as f64 * 30.0 + info.degrees_in_rashi;
+            AmshaTransformRow {
+                amsha: req.amsha,
+                variation,
+                longitude,
+                info,
+            }
+        })
+        .collect()
+}
+
+fn format_amsha_variation_label(variation: dhruv_vedic_base::AmshaVariation) -> &'static str {
+    match variation {
+        dhruv_vedic_base::AmshaVariation::TraditionalParashari => "",
+        dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly => " (cancer-leo-only)",
+    }
+}
+
+fn amsha_variation_code(variation: dhruv_vedic_base::AmshaVariation) -> u8 {
+    match variation {
+        dhruv_vedic_base::AmshaVariation::TraditionalParashari => 0,
+        dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly => 1,
+    }
+}
+
+fn write_amsha_transform_rows(
+    w: &mut impl std::io::Write,
+    rows: &[AmshaTransformRow],
+    output: AmshaOutputMode,
+    format: AmshaOutputFormat,
+) -> std::io::Result<()> {
+    match format {
+        AmshaOutputFormat::Text => match output {
+            AmshaOutputMode::Longitude => {
+                for row in rows {
+                    writeln!(
+                        w,
+                        "{}{}: {:.6}°",
+                        row.amsha.name(),
+                        format_amsha_variation_label(row.variation),
+                        row.longitude
+                    )?;
+                }
+            }
+            AmshaOutputMode::Rashi => {
+                for row in rows {
+                    writeln!(
+                        w,
+                        "{}{}: {:?} {:02}°{:02}'{:05.2}\"  ({:.6}°)",
+                        row.amsha.name(),
+                        format_amsha_variation_label(row.variation),
+                        row.info.rashi,
+                        row.info.dms.degrees,
+                        row.info.dms.minutes,
+                        row.info.dms.seconds,
+                        row.longitude,
+                    )?;
+                }
+            }
+        },
+        AmshaOutputFormat::Tsv => match output {
+            AmshaOutputMode::Longitude => {
+                writeln!(w, "amsha\tvariation\tlongitude_deg")?;
+                for row in rows {
+                    writeln!(
+                        w,
+                        "D{}\t{}\t{:.6}",
+                        row.amsha.code(),
+                        amsha_variation_code(row.variation),
+                        row.longitude
+                    )?;
+                }
+            }
+            AmshaOutputMode::Rashi => {
+                writeln!(
+                    w,
+                    "amsha\tvariation\tlongitude_deg\trashi_index\trashi\tdegrees_in_rashi\tdms_degrees\tdms_minutes\tdms_seconds"
+                )?;
+                for row in rows {
+                    writeln!(
+                        w,
+                        "D{}\t{}\t{:.6}\t{}\t{}\t{:.6}\t{}\t{}\t{:.2}",
+                        row.amsha.code(),
+                        amsha_variation_code(row.variation),
+                        row.longitude,
+                        row.info.rashi_index,
+                        row.info.rashi.name(),
+                        row.info.degrees_in_rashi,
+                        row.info.dms.degrees,
+                        row.info.dms.minutes,
+                        row.info.dms.seconds,
+                    )?;
+                }
+            }
+        },
+    }
+    Ok(())
 }
 
 fn parse_amsha_specs(s: &str) -> Vec<dhruv_vedic_base::AmshaRequest> {
@@ -9027,6 +9152,8 @@ mod tests {
             None,
             NodeDignityPolicy::default(),
             default_charakaraka_scheme(),
+            None,
+            &dhruv_search::AmshaChartScope::default(),
         );
         assert!(cfg.include_bhava_cusps);
         assert!(cfg.include_graha_positions);
@@ -9056,6 +9183,8 @@ mod tests {
             None,
             NodeDignityPolicy::default(),
             default_charakaraka_scheme(),
+            None,
+            &dhruv_search::AmshaChartScope::default(),
         );
         assert!(!cfg.include_bhava_cusps);
         assert!(cfg.include_panchang);
@@ -9075,6 +9204,8 @@ mod tests {
             None,
             NodeDignityPolicy::default(),
             default_charakaraka_scheme(),
+            None,
+            &dhruv_search::AmshaChartScope::default(),
         );
         assert!(cfg.include_graha_positions);
         assert!(!cfg.include_bindus);
@@ -9094,6 +9225,8 @@ mod tests {
             None,
             NodeDignityPolicy::default(),
             default_charakaraka_scheme(),
+            None,
+            &dhruv_search::AmshaChartScope::default(),
         );
         assert!(cfg.include_graha_positions);
         assert!(cfg.include_panchang);
@@ -9116,6 +9249,8 @@ mod tests {
             None,
             NodeDignityPolicy::default(),
             default_charakaraka_scheme(),
+            None,
+            &dhruv_search::AmshaChartScope::default(),
         );
         assert!(!cfg.include_dasha);
         assert_eq!(cfg.dasha_config.count, 0);
@@ -9137,6 +9272,8 @@ mod tests {
             None,
             NodeDignityPolicy::default(),
             default_charakaraka_scheme(),
+            None,
+            &dhruv_search::AmshaChartScope::default(),
         );
         // Graha must be force-computed for amshas
         assert!(cfg.include_graha_positions);
@@ -9158,8 +9295,113 @@ mod tests {
             None,
             NodeDignityPolicy::AlwaysSama,
             default_charakaraka_scheme(),
+            None,
+            &dhruv_search::AmshaChartScope::default(),
         );
         assert_eq!(cfg.node_dignity_policy, NodeDignityPolicy::AlwaysSama);
+    }
+
+    #[test]
+    fn test_amsha_selection_from_requests_preserves_codes_and_variations() {
+        let requests = vec![
+            dhruv_vedic_base::AmshaRequest::new(dhruv_vedic_base::Amsha::D9),
+            dhruv_vedic_base::AmshaRequest::with_variation(
+                dhruv_vedic_base::Amsha::D2,
+                dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly,
+            ),
+        ];
+        let selection = amsha_selection_from_requests(&requests);
+        assert_eq!(selection.count, 2);
+        assert_eq!(selection.codes[0], 9);
+        assert_eq!(selection.variations[0], 0);
+        assert_eq!(selection.codes[1], 2);
+        assert_eq!(selection.variations[1], 1);
+    }
+
+    #[test]
+    fn test_build_kundali_config_uses_explicit_amsha_selection_and_scope_dependencies() {
+        let resolved = resolve_kundali_flags(
+            false, false, false, false, false, false, false, true, false, false, false, false,
+            false, false, false,
+        );
+        let requests = vec![
+            dhruv_vedic_base::AmshaRequest::new(dhruv_vedic_base::Amsha::D9),
+            dhruv_vedic_base::AmshaRequest::new(dhruv_vedic_base::Amsha::D10),
+        ];
+        let selection = amsha_selection_from_requests(&requests);
+        let scope = amsha_scope(true, true, true, true, true);
+        let cfg = build_kundali_config(
+            &resolved,
+            None,
+            2,
+            None,
+            NodeDignityPolicy::default(),
+            default_charakaraka_scheme(),
+            Some(&selection),
+            &scope,
+        );
+        assert_eq!(cfg.amsha_selection.count, 2);
+        assert_eq!(cfg.amsha_selection.codes[0], 9);
+        assert_eq!(cfg.amsha_selection.codes[1], 10);
+        assert!(cfg.amsha_scope.include_bhava_cusps);
+        assert!(cfg.amsha_scope.include_arudha_padas);
+        assert!(cfg.amsha_scope.include_upagrahas);
+        assert!(cfg.amsha_scope.include_sphutas);
+        assert!(cfg.amsha_scope.include_special_lagnas);
+        assert!(cfg.include_bhava_cusps);
+        assert!(cfg.include_bindus);
+        assert!(cfg.include_upagrahas);
+        assert!(cfg.include_sphutas);
+        assert!(cfg.include_special_lagnas);
+    }
+
+    #[test]
+    fn test_write_amsha_transform_rows_text_longitude() {
+        let requests = vec![
+            dhruv_vedic_base::AmshaRequest::new(dhruv_vedic_base::Amsha::D9),
+            dhruv_vedic_base::AmshaRequest::with_variation(
+                dhruv_vedic_base::Amsha::D2,
+                dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly,
+            ),
+        ];
+        let rows = compute_amsha_transform_rows(45.0, &requests);
+        let mut out = Vec::new();
+        write_amsha_transform_rows(
+            &mut out,
+            &rows,
+            AmshaOutputMode::Longitude,
+            AmshaOutputFormat::Text,
+        )
+        .expect("write should succeed");
+        let rendered = String::from_utf8(out).expect("utf8");
+        assert!(rendered.contains("Navamsha:"));
+        assert!(rendered.contains("(cancer-leo-only):"));
+        assert_eq!(rendered.lines().count(), 2);
+        assert!(!rendered.contains("Mesha"));
+    }
+
+    #[test]
+    fn test_write_amsha_transform_rows_tsv_rashi() {
+        let requests = vec![dhruv_vedic_base::AmshaRequest::new(
+            dhruv_vedic_base::Amsha::D9,
+        )];
+        let rows = compute_amsha_transform_rows(45.0, &requests);
+        let mut out = Vec::new();
+        write_amsha_transform_rows(
+            &mut out,
+            &rows,
+            AmshaOutputMode::Rashi,
+            AmshaOutputFormat::Tsv,
+        )
+        .expect("write should succeed");
+        let rendered = String::from_utf8(out).expect("utf8");
+        assert!(
+            rendered.starts_with(
+                "amsha\tvariation\tlongitude_deg\trashi_index\trashi\tdegrees_in_rashi"
+            )
+        );
+        assert!(rendered.contains("\nD9\t0\t"));
+        assert_eq!(rendered.lines().count(), 2);
     }
 
     #[test]

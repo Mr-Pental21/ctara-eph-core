@@ -131,6 +131,49 @@ class TestFullKundali:
             assert len(sav.total_points) == 12
             assert sum(sav.total_points) == 337  # SAV constant
 
+    def test_full_kundali_amsha_scope_and_selection(self, engine_handles):
+        """Full kundali should expose scoped amsha chart sections when selected."""
+        from ctara_dhruv.kundali import full_kundali, full_kundali_config_default
+        from ctara_dhruv.engine import engine, lsk, eop
+
+        cfg = full_kundali_config_default()
+        cfg.include_bhava_cusps = 1
+        cfg.include_bindus = 1
+        cfg.include_upagrahas = 1
+        cfg.include_sphutas = 1
+        cfg.include_special_lagnas = 1
+        cfg.include_amshas = 1
+        cfg.amsha_selection.count = 1
+        cfg.amsha_selection.codes[0] = 9
+        cfg.amsha_selection.variations[0] = 0
+        cfg.amsha_scope.include_bhava_cusps = 1
+        cfg.amsha_scope.include_arudha_padas = 1
+        cfg.amsha_scope.include_upagrahas = 1
+        cfg.amsha_scope.include_sphutas = 1
+        cfg.amsha_scope.include_special_lagnas = 1
+
+        result = full_kundali(
+            engine(), lsk(), eop(),
+            jd_utc=(2024, 1, 15, 6, 0, 0.0),
+            location=(28.6139, 77.2090),
+            config=cfg,
+        )
+
+        assert result.amshas is not None
+        assert len(result.amshas) == 1
+        chart = result.amshas[0]
+        assert chart.amsha_code == 9
+        assert chart.bhava_cusps is not None
+        assert len(chart.bhava_cusps) == 12
+        assert chart.arudha_padas is not None
+        assert len(chart.arudha_padas) == 12
+        assert chart.upagrahas is not None
+        assert len(chart.upagrahas) == 11
+        assert chart.sphutas is not None
+        assert len(chart.sphutas) == 16
+        assert chart.special_lagnas is not None
+        assert len(chart.special_lagnas) == 8
+
     def test_charakaraka_for_date(self, engine_handles):
         """Direct charakaraka call should return non-empty assignments."""
         from ctara_dhruv.kundali import charakaraka_for_date

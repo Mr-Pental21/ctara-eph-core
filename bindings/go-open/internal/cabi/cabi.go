@@ -1939,6 +1939,21 @@ func FullKundaliForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc Geo
 			for j := 0; j < GrahaCount; j++ {
 				chart.Grahas[j] = goAmshaEntry(out.amshas[i].grahas[j])
 			}
+			if chart.BhavaCuspsValid {
+				chart.BhavaCusps = goAmshaEntries(out.amshas[i].bhava_cusps[:])
+			}
+			if chart.ArudhaPadasValid {
+				chart.ArudhaPadas = goAmshaEntries(out.amshas[i].arudha_padas[:])
+			}
+			if chart.UpagrahasValid {
+				chart.Upagrahas = goAmshaEntries(out.amshas[i].upagrahas[:])
+			}
+			if chart.SphutasValid {
+				chart.Sphutas = goAmshaEntries(out.amshas[i].sphutas[:])
+			}
+			if chart.SpecialLagnasValid {
+				chart.SpecialLagnas = goAmshaEntries(out.amshas[i].special_lagnas[:])
+			}
 			res.Amshas[i] = chart
 		}
 	}

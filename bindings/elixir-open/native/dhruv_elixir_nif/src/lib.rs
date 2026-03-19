@@ -1046,6 +1046,65 @@ fn to_drishti_config(
     config
 }
 
+fn to_amsha_scope(input: Option<&AmshaChartScopeInput>) -> dhruv_search::AmshaChartScope {
+    let mut scope = dhruv_search::AmshaChartScope::default();
+    if let Some(input) = input {
+        if let Some(value) = input.include_bhava_cusps {
+            scope.include_bhava_cusps = value;
+        }
+        if let Some(value) = input.include_arudha_padas {
+            scope.include_arudha_padas = value;
+        }
+        if let Some(value) = input.include_upagrahas {
+            scope.include_upagrahas = value;
+        }
+        if let Some(value) = input.include_sphutas {
+            scope.include_sphutas = value;
+        }
+        if let Some(value) = input.include_special_lagnas {
+            scope.include_special_lagnas = value;
+        }
+    }
+    scope
+}
+
+fn to_amsha_selection(
+    input: Option<&[AmshaRequestInput]>,
+) -> Result<dhruv_search::AmshaSelectionConfig, Value> {
+    let mut selection = dhruv_search::AmshaSelectionConfig::default();
+    let Some(input) = input else {
+        return Ok(selection);
+    };
+    if input.len() > dhruv_search::MAX_AMSHA_REQUESTS {
+        return Err(error_payload("invalid_request", "too many amsha requests"));
+    }
+    selection.count = input.len() as u8;
+    for (index, request) in input.iter().enumerate() {
+        let amsha = dhruv_vedic_base::Amsha::from_code(request.code)
+            .ok_or_else(|| error_payload("invalid_request", "unknown amsha code"))?;
+        let variation = match request.variation {
+            Some(code) => {
+                let variation = dhruv_vedic_base::AmshaVariation::from_code(code)
+                    .ok_or_else(|| error_payload("invalid_request", "unknown amsha variation"))?;
+                if !variation.is_applicable_to(amsha) {
+                    return Err(error_payload(
+                        "invalid_request",
+                        "amsha variation not applicable to amsha code",
+                    ));
+                }
+                variation
+            }
+            None => dhruv_vedic_base::AmshaVariation::TraditionalParashari,
+        };
+        selection.codes[index] = amsha.code();
+        selection.variations[index] = match variation {
+            dhruv_vedic_base::AmshaVariation::TraditionalParashari => 0,
+            dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly => 1,
+        };
+    }
+    Ok(selection)
+}
+
 fn to_full_kundali_config(
     state: &EngineState,
     input: Option<&FullKundaliConfigInput>,
@@ -1129,6 +1188,33 @@ fn to_full_kundali_config(
         }
         if let Some(drishti_config) = input.drishti_config.as_ref() {
             config.drishti_config = to_drishti_config(state, Some(drishti_config));
+        }
+        let amsha_scope = to_amsha_scope(input.amsha_scope.as_ref());
+        let amsha_selection = to_amsha_selection(input.amsha_selection.as_deref())?;
+        if input.amsha_scope.is_some() {
+            config.amsha_scope = amsha_scope;
+        }
+        if input.amsha_selection.is_some() {
+            config.amsha_selection = amsha_selection;
+            config.include_amshas = true;
+        }
+        if config.include_amshas {
+            config.graha_positions_config.include_lagna = true;
+            if config.amsha_scope.include_bhava_cusps {
+                config.include_bhava_cusps = true;
+            }
+            if config.amsha_scope.include_arudha_padas {
+                config.include_bindus = true;
+            }
+            if config.amsha_scope.include_upagrahas {
+                config.include_upagrahas = true;
+            }
+            if config.amsha_scope.include_sphutas {
+                config.include_sphutas = true;
+            }
+            if config.amsha_scope.include_special_lagnas {
+                config.include_special_lagnas = true;
+            }
         }
         if let Some(dasha_config) = input.dasha_config.as_ref() {
             if let Some(snapshot_jd) = dasha_config.snapshot_jd {
@@ -1735,7 +1821,22 @@ fn amsha_result_json(result: dhruv_search::AmshaResult) -> Value {
             "amsha": debug_name(chart.amsha),
             "variation": debug_name(chart.variation),
             "grahas": chart.grahas.into_iter().map(amsha_entry_json).collect::<Vec<_>>(),
-            "lagna": amsha_entry_json(chart.lagna)
+            "lagna": amsha_entry_json(chart.lagna),
+            "bhava_cusps": chart
+                .bhava_cusps
+                .map(|entries| entries.into_iter().map(amsha_entry_json).collect::<Vec<_>>()),
+            "arudha_padas": chart
+                .arudha_padas
+                .map(|entries| entries.into_iter().map(amsha_entry_json).collect::<Vec<_>>()),
+            "upagrahas": chart
+                .upagrahas
+                .map(|entries| entries.into_iter().map(amsha_entry_json).collect::<Vec<_>>()),
+            "sphutas": chart
+                .sphutas
+                .map(|entries| entries.into_iter().map(amsha_entry_json).collect::<Vec<_>>()),
+            "special_lagnas": chart
+                .special_lagnas
+                .map(|entries| entries.into_iter().map(amsha_entry_json).collect::<Vec<_>>())
         })).collect::<Vec<_>>()
     })
 }
@@ -2670,6 +2771,7 @@ fn handle_jyotish(resource: &ResourceArc<EngineResource>, request: JyotishReques
             .map(full_kundali_json)
             .map_err(|err| map_error("search_error", err)),
             "amsha" => {
+                let scope = to_amsha_scope(request.amsha_scope.as_ref());
                 let requests = request
                     .amsha_requests
                     .unwrap_or_default()
@@ -2700,7 +2802,7 @@ fn handle_jyotish(resource: &ResourceArc<EngineResource>, request: JyotishReques
                     &to_riseset_config(state, request.riseset_config.as_ref())?,
                     &sankranti_config,
                     &requests,
-                    &dhruv_search::AmshaChartScope::default(),
+                    &scope,
                 )
                 .map(amsha_result_json)
                 .map_err(|err| map_error("search_error", err))
@@ -3091,6 +3193,16 @@ rustler::init!("Elixir.CtaraDhruv.Native", load = load);
 mod tests {
     use super::*;
 
+    fn dummy_state() -> EngineState {
+        EngineState {
+            engine: None,
+            resolver: None,
+            eop: None,
+            time_policy: TimeConversionPolicy::StrictLsk,
+            tara_catalog: Arc::new(TaraCatalog::embedded().clone()),
+        }
+    }
+
     #[test]
     fn camel_to_snake_handles_mixed_case() {
         assert_eq!(camel_to_snake("MixedParashara"), "mixed_parashara");
@@ -3111,13 +3223,7 @@ mod tests {
 
     #[test]
     fn resource_mutation_updates_state() {
-        let dummy = EngineState {
-            engine: None,
-            resolver: None,
-            eop: None,
-            time_policy: TimeConversionPolicy::StrictLsk,
-            tara_catalog: Arc::new(TaraCatalog::embedded().clone()),
-        };
+        let dummy = dummy_state();
         assert!(matches!(dummy.time_policy, TimeConversionPolicy::StrictLsk));
         assert!(dummy.tara_catalog.len() > 0);
     }
@@ -3127,5 +3233,84 @@ mod tests {
         let payload = error_payload("search_error", "boom");
         assert_eq!(payload["kind"], "search_error");
         assert_eq!(payload["message"], "boom");
+    }
+
+    #[test]
+    fn amsha_selection_conversion_preserves_codes_and_variations() {
+        let selection = to_amsha_selection(Some(&[
+            AmshaRequestInput {
+                code: 9,
+                variation: None,
+            },
+            AmshaRequestInput {
+                code: 2,
+                variation: Some(1),
+            },
+        ]))
+        .expect("amsha selection should parse");
+        assert_eq!(selection.count, 2);
+        assert_eq!(selection.codes[0], 9);
+        assert_eq!(selection.variations[0], 0);
+        assert_eq!(selection.codes[1], 2);
+        assert_eq!(selection.variations[1], 1);
+    }
+
+    #[test]
+    fn full_kundali_config_promotes_amsha_scope_dependencies() {
+        let state = dummy_state();
+        let config = to_full_kundali_config(
+            &state,
+            Some(&FullKundaliConfigInput {
+                include_bhava_cusps: None,
+                include_graha_positions: None,
+                include_bindus: None,
+                include_drishti: None,
+                include_ashtakavarga: None,
+                include_upagrahas: None,
+                include_sphutas: None,
+                include_special_lagnas: None,
+                include_amshas: Some(true),
+                include_shadbala: None,
+                include_bhavabala: None,
+                include_vimsopaka: None,
+                include_avastha: None,
+                include_charakaraka: None,
+                include_panchang: None,
+                include_calendar: None,
+                include_dasha: None,
+                charakaraka_scheme: None,
+                node_dignity_policy: None,
+                graha_positions_config: None,
+                bindus_config: None,
+                drishti_config: None,
+                amsha_scope: Some(AmshaChartScopeInput {
+                    include_bhava_cusps: Some(true),
+                    include_arudha_padas: Some(true),
+                    include_upagrahas: Some(true),
+                    include_sphutas: Some(true),
+                    include_special_lagnas: Some(true),
+                }),
+                amsha_selection: Some(vec![AmshaRequestInput {
+                    code: 9,
+                    variation: None,
+                }]),
+                dasha_config: None,
+            }),
+        )
+        .expect("full kundali config should parse");
+        assert!(config.include_amshas);
+        assert!(config.graha_positions_config.include_lagna);
+        assert!(config.include_bhava_cusps);
+        assert!(config.include_bindus);
+        assert!(config.include_upagrahas);
+        assert!(config.include_sphutas);
+        assert!(config.include_special_lagnas);
+        assert_eq!(config.amsha_selection.count, 1);
+        assert_eq!(config.amsha_selection.codes[0], 9);
+        assert!(config.amsha_scope.include_bhava_cusps);
+        assert!(config.amsha_scope.include_arudha_padas);
+        assert!(config.amsha_scope.include_upagrahas);
+        assert!(config.amsha_scope.include_sphutas);
+        assert!(config.amsha_scope.include_special_lagnas);
     }
 }

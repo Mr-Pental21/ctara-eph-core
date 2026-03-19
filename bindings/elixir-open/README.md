@@ -112,6 +112,53 @@ Notes:
   including returned `bhava_cusps`.
 - `full_kundali` now includes `graha_positions.lagna` by default.
 
+## Amsha Notes
+
+The Elixir wrapper exposes amsha-related behavior through
+`CtaraDhruv.Jyotish`.
+
+Dedicated amsha requests:
+
+```elixir
+{:ok, result} =
+  Jyotish.amsha(engine, %{
+    utc: utc,
+    location: location,
+    amsha_requests: [%{code: 9}, %{code: 2, variation: 1}],
+    amsha_scope: %{
+      include_bhava_cusps: true,
+      include_arudha_padas: true,
+      include_upagrahas: true,
+      include_sphutas: true,
+      include_special_lagnas: true
+    }
+  })
+```
+
+Embedded amsha configuration in `full_kundali`:
+
+```elixir
+{:ok, chart} =
+  Jyotish.full_kundali(engine, %{
+    utc: utc,
+    location: location,
+    full_kundali_config: %{
+      include_amshas: true,
+      amsha_selection: [%{code: 9}],
+      amsha_scope: %{include_sphutas: true, include_special_lagnas: true}
+    }
+  })
+```
+
+Result maps may now include these optional amsha chart keys when requested and
+available:
+
+- `:bhava_cusps`
+- `:arudha_padas`
+- `:upagrahas`
+- `:sphutas`
+- `:special_lagnas`
+
 ## Coverage
 
 Public modules included in this wrapper:

@@ -1119,6 +1119,46 @@ napi_value WriteAmshaChart(napi_env env, const DhruvAmshaChart& a) {
     SetNamed(env, obj, "upagrahasValid", MakeBool(env, a.upagrahas_valid != 0));
     SetNamed(env, obj, "sphutasValid", MakeBool(env, a.sphutas_valid != 0));
     SetNamed(env, obj, "specialLagnasValid", MakeBool(env, a.special_lagnas_valid != 0));
+    if (a.bhava_cusps_valid != 0) {
+        napi_value bhava_cusps;
+        napi_create_array_with_length(env, 12, &bhava_cusps);
+        for (uint32_t i = 0; i < 12; ++i) {
+            napi_set_element(env, bhava_cusps, i, WriteAmshaEntry(env, a.bhava_cusps[i]));
+        }
+        SetNamed(env, obj, "bhavaCusps", bhava_cusps);
+    }
+    if (a.arudha_padas_valid != 0) {
+        napi_value arudha_padas;
+        napi_create_array_with_length(env, 12, &arudha_padas);
+        for (uint32_t i = 0; i < 12; ++i) {
+            napi_set_element(env, arudha_padas, i, WriteAmshaEntry(env, a.arudha_padas[i]));
+        }
+        SetNamed(env, obj, "arudhaPadas", arudha_padas);
+    }
+    if (a.upagrahas_valid != 0) {
+        napi_value upagrahas;
+        napi_create_array_with_length(env, 11, &upagrahas);
+        for (uint32_t i = 0; i < 11; ++i) {
+            napi_set_element(env, upagrahas, i, WriteAmshaEntry(env, a.upagrahas[i]));
+        }
+        SetNamed(env, obj, "upagrahas", upagrahas);
+    }
+    if (a.sphutas_valid != 0) {
+        napi_value sphutas;
+        napi_create_array_with_length(env, 16, &sphutas);
+        for (uint32_t i = 0; i < 16; ++i) {
+            napi_set_element(env, sphutas, i, WriteAmshaEntry(env, a.sphutas[i]));
+        }
+        SetNamed(env, obj, "sphutas", sphutas);
+    }
+    if (a.special_lagnas_valid != 0) {
+        napi_value special_lagnas;
+        napi_create_array_with_length(env, 8, &special_lagnas);
+        for (uint32_t i = 0; i < 8; ++i) {
+            napi_set_element(env, special_lagnas, i, WriteAmshaEntry(env, a.special_lagnas[i]));
+        }
+        SetNamed(env, obj, "specialLagnas", special_lagnas);
+    }
     return obj;
 }
 

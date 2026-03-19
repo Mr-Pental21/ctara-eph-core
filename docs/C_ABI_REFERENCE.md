@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 45`
+**ABI version:** `DHRUV_API_VERSION = 47`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -48,6 +48,7 @@ Complete reference for the `dhruv_ffi_c` C-compatible API surface.
    - [Pure-Math Ashtakavarga](#pure-math-ashtakavarga)
    - [Pure-Math Drishti](#pure-math-drishti)
    - [Pure-Math Ghatika / Hora](#pure-math-ghatika--hora)
+   - [Amsha (Divisional Charts)](#amsha-divisional-charts)
    - [Fixed Stars (Tara)](#fixed-stars-tara)
 
 ---
@@ -1582,7 +1583,120 @@ Determine the hora lord for a given weekday and hora position. Returns the lord'
 
 ---
 
+### Amsha (Divisional Charts)
+
+Canonical amsha types and validation rules are described in
+`docs/AMSHA_PARITY_CONTRACT.md`.
+
+Direct amsha entry points:
+
+```c
+DhruvStatus dhruv_amsha_longitude(
+    double    sidereal_lon,     // sidereal longitude in degrees
+    uint16_t  amsha_code,       // D-number (1, 2, 3, ... 144)
+    uint8_t   variation_code,   // 0=TraditionalParashari, 1=HoraCancerLeoOnly
+    double*   out
+);
+```
+
+Transform a single sidereal longitude through one amsha division.
+
+```c
+DhruvStatus dhruv_amsha_rashi_info(
+    double           sidereal_lon,
+    uint16_t         amsha_code,
+    uint8_t          variation_code,
+    DhruvRashiInfo*  out
+);
+```
+
+Transform a single sidereal longitude through one amsha division and return
+full rashi information for the transformed longitude.
+
+```c
+DhruvStatus dhruv_amsha_longitudes(
+    double           sidereal_lon,
+    const uint16_t*  amsha_codes,       // count items
+    const uint8_t*   variation_codes,   // count items or NULL for all default
+    uint32_t         count,
+    double*          out                // count items
+);
+```
+
+Transform one sidereal longitude through multiple amshas in one call.
+
+```c
+DhruvStatus dhruv_amsha_chart_for_date(
+    const DhruvEngineHandle*      engine,
+    const DhruvEopHandle*         eop,
+    const DhruvUtcTime*           utc,
+    const DhruvGeoLocation*       location,
+    const DhruvBhavaConfig*       bhava_config,     // nullable: defaults resolved
+    const DhruvRiseSetConfig*     riseset_config,   // nullable: defaults resolved
+    uint32_t                      ayanamsha_system,
+    uint8_t                       use_nutation,
+    uint16_t                      amsha_code,
+    uint8_t                       variation_code,
+    const DhruvAmshaChartScope*   scope,
+    DhruvAmshaChart*              out
+);
+```
+
+Compute one amsha chart for a date and location. `scope` controls optional
+sections inside the returned `DhruvAmshaChart`.
+
+Relevant config/result shapes:
+
+```c
+struct DhruvAmshaChartScope {
+    uint8_t include_bhava_cusps;
+    uint8_t include_arudha_padas;
+    uint8_t include_upagrahas;
+    uint8_t include_sphutas;
+    uint8_t include_special_lagnas;
+};
+
+struct DhruvAmshaSelectionConfig {
+    uint8_t  count;                          // 0..=40
+    uint16_t codes[DHRUV_MAX_AMSHA_REQUESTS];
+    uint8_t  variations[DHRUV_MAX_AMSHA_REQUESTS];
+};
+```
+
+Full-kundali embeds amsha configuration here:
+
+- `DhruvFullKundaliConfig.include_amshas`
+- `DhruvFullKundaliConfig.amsha_scope`
+- `DhruvFullKundaliConfig.amsha_selection`
+
+and returns amsha charts here:
+
+- `DhruvFullKundaliResult.amshas_valid`
+- `DhruvFullKundaliResult.amshas_count`
+- `DhruvFullKundaliResult.amshas`
+
+Validation notes:
+
+- unknown `amsha_code` returns `DHRUV_STATUS_INVALID_SEARCH_CONFIG`
+- unknown `variation_code` returns `DHRUV_STATUS_INVALID_SEARCH_CONFIG`
+- `HoraCancerLeoOnly` is valid only for `D2`
+- `variation_codes == NULL` in `dhruv_amsha_longitudes` means all requests use
+  `TraditionalParashari`
+
+Dependency notes for full-kundali amsha scope:
+
+- `include_bhava_cusps` amsha output depends on root `include_bhava_cusps`
+- `include_arudha_padas` amsha output depends on root `include_bindus`
+- `include_upagrahas` amsha output depends on root `include_upagrahas`
+- `include_sphutas` amsha output depends on root `include_sphutas`
+- `include_special_lagnas` amsha output depends on root `include_special_lagnas`
+
+---
+
 ## Function Summary
+
+The summary table below predates some newer amsha helper exports. For current
+amsha entry points, use the dedicated section above.
 
 Note: as of ABI v42, legacy split `dhruv_next_*` / `dhruv_prev_*` /
 `dhruv_search_*` wrappers are no longer exported C ABI symbols.
@@ -1662,7 +1776,8 @@ Use the unified `*_search_ex` / `*_compute_ex` entries documented above.
 | 86 | `dhruv_tara_galactic_center_ecliptic` | | | | yes |
 | 87 | `dhruv_panchang_compute_ex` | yes | conditional | yes | |
 
-**Total exported symbols: 82 functions**
+This summary table is not an authoritative symbol count. For current amsha
+exports and config/result shapes, use the dedicated sections above.
 
 ---
 
@@ -1879,6 +1994,14 @@ no proper motion). Equivalent to requesting ecliptic output for
 ---
 
 ## Changelog
+
+**v47**: Added dedicated amsha C ABI entry points
+`dhruv_amsha_longitude`, `dhruv_amsha_rashi_info`,
+`dhruv_amsha_longitudes`, and `dhruv_amsha_chart_for_date`. Added
+`DHRUV_MAX_AMSHA_REQUESTS`, `DhruvAmshaChartScope`,
+`DhruvAmshaSelectionConfig`, and `DhruvAmshaChart`. Extended
+`DhruvFullKundaliConfig` with `amsha_scope` and `amsha_selection`, and
+extended `DhruvFullKundaliResult` with embedded amsha charts.
 
 **v45**: Extended `DhruvBhinnaAshtakavarga` with contributor attribution matrix
 `contributors[12][8]` (0/1 flags per rashi and contributor). Affects all APIs

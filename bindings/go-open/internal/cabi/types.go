@@ -128,14 +128,14 @@ type AyanamshaComputeRequest struct {
 }
 
 type BhavaConfig struct {
-	System         int32
-	StartingPoint  int32
-	CustomStartDeg float64
-	ReferenceMode  int32
-	OutputMode     int32
+	System          int32
+	StartingPoint   int32
+	CustomStartDeg  float64
+	ReferenceMode   int32
+	OutputMode      int32
 	AyanamshaSystem int32
-	UseNutation    bool
-	ReferencePlane int32
+	UseNutation     bool
+	ReferencePlane  int32
 }
 
 type Bhava struct {
@@ -652,6 +652,11 @@ type AmshaChart struct {
 	VariationCode      uint8
 	Grahas             [GrahaCount]AmshaEntry
 	Lagna              AmshaEntry
+	BhavaCusps         []AmshaEntry
+	ArudhaPadas        []AmshaEntry
+	Upagrahas          []AmshaEntry
+	Sphutas            []AmshaEntry
+	SpecialLagnas      []AmshaEntry
 	BhavaCuspsValid    bool
 	ArudhaPadasValid   bool
 	UpagrahasValid     bool

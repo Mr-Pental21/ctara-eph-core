@@ -44,3 +44,30 @@ Functional coverage note:
   `dhruv_graha_positions`, `dhruv_ashtakavarga_for_date`, `dhruv_core_bindus`,
   `dhruv_drishti`, `dhruv_graha_sidereal_longitudes`,
   `dhruv_graha_tropical_longitudes`, `dhruv_nakshatra_at`
+
+## Amsha Parity Status
+
+Amsha parity is tracked separately from the broad runtime-coverage count above.
+
+Canonical C ABI amsha surface:
+
+- `dhruv_amsha_longitude`
+- `dhruv_amsha_rashi_info`
+- `dhruv_amsha_longitudes`
+- `dhruv_amsha_chart_for_date`
+- full-kundali amsha config/result fields
+
+Current wrapper status:
+
+| Surface | Status | Notes |
+|---|---|---|
+| `dhruv_rs` | complete | direct pure helpers, date-backed chart helpers, and full-kundali amsha config exposed |
+| CLI | complete | `amsha`, `amsha-chart`, and `kundali` amsha selection/scope flags documented and implemented |
+| Python | complete | direct amsha helpers plus full-kundali amsha selection/scope and optional section extraction |
+| Go | complete | direct amsha helpers plus full-kundali amsha selection/scope and optional section extraction |
+| Node | complete | direct amsha helpers plus full-kundali amsha selection/scope and optional section extraction |
+| Elixir | complete | dedicated amsha scope plus full-kundali amsha selection/scope and richer result maps |
+
+Reference:
+
+- `docs/AMSHA_PARITY_CONTRACT.md`

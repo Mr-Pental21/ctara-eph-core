@@ -4,7 +4,7 @@ Open-source Go bindings for `ctara-dhruv-core`, implemented against the canonica
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=45`
+- ABI target: `DHRUV_API_VERSION=47`
 - Binding strategy: `cgo` over `crates/dhruv_ffi_c/include/dhruv.h`
 - Package: `ctara-dhruv-core/bindings/go-open/dhruv`
 
@@ -61,7 +61,7 @@ If runtime loading fails:
 ## Coverage
 
 Low-level coverage in `internal/cabi` maps all currently exported `dhruv_ffi_c`
-symbols from `dhruv.h` (ABI v45).
+symbols from `dhruv.h` (ABI v47).
 
 The public `dhruv` package includes wrappers for:
 
@@ -79,3 +79,26 @@ The public `dhruv` package includes wrappers for:
 - dasha hierarchy/snapshot APIs
 - full-kundali summary and full-result APIs, including root sphutas and dasha hierarchies
 - tara catalog and compute APIs
+
+## Amsha Notes
+
+The Go wrapper exposes the amsha surface through:
+
+- `AmshaLongitude`
+- `AmshaRashiInfo`
+- `AmshaLongitudes`
+- `(*Engine).AmshaChartForDate`
+- `FullKundaliConfig.AmshaSelection`
+- `FullKundaliConfig.AmshaScope`
+
+`AmshaChart` now carries optional scoped sections directly:
+
+- `BhavaCusps`
+- `ArudhaPadas`
+- `Upagrahas`
+- `Sphutas`
+- `SpecialLagnas`
+
+For embedded amsha charts in `FullKundaliForDate`, the relevant root sections
+must also be enabled in the full-kundali config, or the wrapper caller must use
+a higher-level helper that promotes those dependencies.

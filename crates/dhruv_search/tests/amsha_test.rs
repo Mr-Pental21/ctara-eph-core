@@ -352,6 +352,141 @@ fn full_kundali_with_amshas() {
 }
 
 #[test]
+fn full_kundali_amsha_scope_includes_optional_sections() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = utc_2024_jan_15();
+    let location = new_delhi();
+    let bhava_config = BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+
+    let mut sel = AmshaSelectionConfig::default();
+    sel.count = 1;
+    sel.codes[0] = 9; // D9
+
+    let scope = AmshaChartScope {
+        include_bhava_cusps: true,
+        include_arudha_padas: true,
+        include_upagrahas: true,
+        include_sphutas: true,
+        include_special_lagnas: true,
+    };
+
+    let config = FullKundaliConfig {
+        include_bhava_cusps: true,
+        include_graha_positions: true,
+        include_bindus: true,
+        include_upagrahas: true,
+        include_sphutas: true,
+        include_special_lagnas: true,
+        include_amshas: true,
+        graha_positions_config: GrahaPositionsConfig {
+            include_lagna: true,
+            ..Default::default()
+        },
+        amsha_scope: scope,
+        amsha_selection: sel,
+        ..Default::default()
+    };
+
+    let result = full_kundali_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
+    )
+    .expect("full_kundali should succeed");
+
+    let amshas = result.amshas.expect("amshas should be present");
+    assert_eq!(amshas.charts.len(), 1);
+
+    let chart = &amshas.charts[0];
+    assert!(chart.bhava_cusps.is_some());
+    assert!(chart.arudha_padas.is_some());
+    assert!(chart.upagrahas.is_some());
+    assert!(chart.sphutas.is_some());
+    assert!(chart.special_lagnas.is_some());
+}
+
+#[test]
+fn amsha_from_kundali_preserves_sphutas_when_present() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = utc_2024_jan_15();
+    let location = new_delhi();
+    let bhava_config = BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+
+    let requests = [AmshaRequest::new(Amsha::D9)];
+    let scope = AmshaChartScope {
+        include_sphutas: true,
+        ..Default::default()
+    };
+
+    let direct = amsha_charts_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &requests,
+        &scope,
+    )
+    .expect("direct amsha_charts should succeed");
+
+    let kundali_config = FullKundaliConfig {
+        include_graha_positions: true,
+        include_sphutas: true,
+        graha_positions_config: GrahaPositionsConfig {
+            include_lagna: true,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let kundali = full_kundali_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &kundali_config,
+    )
+    .expect("kundali should succeed");
+
+    assert!(kundali.sphutas.is_some(), "root sphutas should be present");
+
+    let from_kundali =
+        amsha_charts_from_kundali(&kundali, None, &requests, &scope).expect("from_kundali");
+
+    let direct_sphutas = direct.charts[0].sphutas.as_ref().expect("direct sphutas");
+    let from_sphutas = from_kundali.charts[0]
+        .sphutas
+        .as_ref()
+        .expect("kundali-derived sphutas");
+
+    for i in 0..direct_sphutas.len() {
+        assert!(
+            (direct_sphutas[i].sidereal_longitude - from_sphutas[i].sidereal_longitude).abs()
+                < 0.001,
+            "sphuta {} mismatch: {} vs {}",
+            i,
+            direct_sphutas[i].sidereal_longitude,
+            from_sphutas[i].sidereal_longitude
+        );
+    }
+}
+
+#[test]
 fn validation_inapplicable_variation() {
     let Some(engine) = load_engine() else { return };
     let Some(eop) = load_eop() else { return };

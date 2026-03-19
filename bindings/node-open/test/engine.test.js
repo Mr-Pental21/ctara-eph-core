@@ -296,14 +296,36 @@ test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
   assert.equal(typeof kundali.charakarakaValid, 'boolean');
 
   const fullCfg = dhruv.fullKundaliConfigDefault();
+  fullCfg.includeBhavaCusps = true;
+  fullCfg.includeBindus = true;
+  fullCfg.includeUpagrahas = true;
+  fullCfg.includeSphutas = true;
+  fullCfg.includeSpecialLagnas = true;
   fullCfg.includeDasha = true;
+  fullCfg.includeAmshas = true;
   fullCfg.dashaConfig.count = 2;
   fullCfg.dashaConfig.systems[0] = 0;
   fullCfg.dashaConfig.systems[1] = 1;
   fullCfg.dashaConfig.maxLevels[0] = 0;
   fullCfg.dashaConfig.maxLevels[1] = 1;
+  fullCfg.amshaScope = {
+    includeBhavaCusps: true,
+    includeArudhaPadas: true,
+    includeUpagrahas: true,
+    includeSphutas: true,
+    includeSpecialLagnas: true,
+  };
+  fullCfg.amshaSelection.count = 1;
+  fullCfg.amshaSelection.codes[0] = 9;
+  fullCfg.amshaSelection.variations[0] = 0;
   const kundaliFull = dhruv.fullKundaliForDate(engine, eop, utc, loc, bhavaCfg, riseCfg, 0, true, fullCfg);
   assert.equal(kundaliFull.sphutas.longitudes.length, 16);
+  assert.equal(kundaliFull.amshas.length, 1);
+  assert.equal(kundaliFull.amshas[0].bhavaCusps.length, 12);
+  assert.equal(kundaliFull.amshas[0].arudhaPadas.length, 12);
+  assert.equal(kundaliFull.amshas[0].upagrahas.length, 11);
+  assert.equal(kundaliFull.amshas[0].sphutas.length, 16);
+  assert.equal(kundaliFull.amshas[0].specialLagnas.length, 8);
   assert.equal(kundaliFull.dasha.length, 2);
   assert.equal(kundaliFull.dasha[0].system, 0);
   assert.equal(kundaliFull.dasha[1].system, 1);
@@ -439,14 +461,19 @@ test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
   const amshaLons = dhruv.amshaLongitudes(100, [9, 10], [0, 0]);
   assert.equal(amshaLons.length, 2);
   const amshaScope = {
-    includeBhavaCusps: false,
-    includeArudhaPadas: false,
-    includeUpagrahas: false,
-    includeSphutas: false,
-    includeSpecialLagnas: false,
+    includeBhavaCusps: true,
+    includeArudhaPadas: true,
+    includeUpagrahas: true,
+    includeSphutas: true,
+    includeSpecialLagnas: true,
   };
   const amshaChart = dhruv.amshaChartForDate(engine, eop, utc, loc, bhavaCfg, riseCfg, 0, true, 9, 0, amshaScope);
   assert.equal(amshaChart.grahas.length, 9);
+  assert.equal(amshaChart.bhavaCusps.length, 12);
+  assert.equal(amshaChart.arudhaPadas.length, 12);
+  assert.equal(amshaChart.upagrahas.length, 11);
+  assert.equal(amshaChart.sphutas.length, 16);
+  assert.equal(amshaChart.specialLagnas.length, 8);
 
   const dashaCfg = dhruv.dashaSelectionConfigDefault();
   assert.equal(typeof dashaCfg.count, 'number');

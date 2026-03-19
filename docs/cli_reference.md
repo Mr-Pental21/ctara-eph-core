@@ -351,6 +351,67 @@ dhruv drishti --date 2024-03-20T12:00:00Z --lat 28.6 --lon 77.2 \
   --bsp de442s.bsp --lsk naif0012.tls --eop finals2000A.all --bhava --lagna --bindus
 ```
 
+### `amsha` — Pure amsha transforms from one sidereal longitude
+
+```
+dhruv amsha --lon 45 --amsha D9,D10
+dhruv amsha --lon 45 --amsha D9,D2:cancer-leo-only --output longitude
+dhruv amsha --lon 45 --amsha D9,D10 --output rashi --format tsv
+```
+
+| Flag | Description |
+|---|---|
+| `--lon` | Input sidereal longitude in degrees |
+| `--amsha` | Comma-separated amsha specs: `D<n>[:variation]` |
+| `--output` | `rashi` (default) or `longitude` |
+| `--format` | `text` (default) or `tsv` |
+
+Variation names:
+
+- `default`
+- `cancer-leo-only` (`D2` only)
+
+### `amsha-chart` — Date-backed amsha charts
+
+```
+dhruv amsha-chart --date 2024-03-20T12:00:00Z --lat 28.6 --lon 77.2 \
+  --bsp de442s.bsp --lsk naif0012.tls --eop finals2000A.all \
+  --amsha D9,D10 --include-sphutas --include-special-lagnas
+```
+
+| Flag | Description |
+|---|---|
+| `--amsha` | One or more amsha specs: `D<n>[:variation]` |
+| `--include-bhava-cusps` | Include bhava cusps inside each amsha chart |
+| `--include-arudha-padas` | Include arudha padas inside each amsha chart |
+| `--include-upagrahas` | Include upagrahas inside each amsha chart |
+| `--include-sphutas` | Include sphutas inside each amsha chart |
+| `--include-special-lagnas` | Include special lagnas inside each amsha chart |
+
+### `kundali` — Full-kundali orchestration with amsha selection/scope
+
+```
+dhruv kundali --date 2024-03-20T12:00:00Z --lat 28.6 --lon 77.2 \
+  --bsp de442s.bsp --lsk naif0012.tls --eop finals2000A.all \
+  --include-amshas --amsha D9,D10 \
+  --amsha-include-sphutas --amsha-include-special-lagnas
+```
+
+Amsha-related kundali flags:
+
+| Flag | Description |
+|---|---|
+| `--include-amshas` | Enable the amsha section in full kundali output |
+| `--amsha` | Explicit amsha selection, replacing default shodashavarga |
+| `--amsha-include-bhava-cusps` | Include bhava cusps inside returned amsha charts |
+| `--amsha-include-arudha-padas` | Include arudha padas inside returned amsha charts |
+| `--amsha-include-upagrahas` | Include upagrahas inside returned amsha charts |
+| `--amsha-include-sphutas` | Include sphutas inside returned amsha charts |
+| `--amsha-include-special-lagnas` | Include special lagnas inside returned amsha charts |
+
+When explicit amsha scope is requested, the CLI promotes the dependent root
+sections needed to populate those amsha sub-sections.
+
 ---
 
 ## Search: Lunar Phases

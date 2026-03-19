@@ -687,6 +687,14 @@ func goAmshaEntry(v C.DhruvAmshaEntry) AmshaEntry {
 	}
 }
 
+func goAmshaEntries(src []C.DhruvAmshaEntry) []AmshaEntry {
+	out := make([]AmshaEntry, len(src))
+	for i := range src {
+		out[i] = goAmshaEntry(src[i])
+	}
+	return out
+}
+
 func AmshaChartForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, amshaCode uint16, variationCode uint8, scope AmshaChartScope) (AmshaChart, Status) {
 	cutc, cloc := cUTC(utc), cGeo(loc)
 	cbhava, crise, cscope := cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg), cAmshaScope(scope)
@@ -704,6 +712,21 @@ func AmshaChartForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoL
 	}
 	for i := 0; i < GrahaCount; i++ {
 		res.Grahas[i] = goAmshaEntry(out.grahas[i])
+	}
+	if res.BhavaCuspsValid {
+		res.BhavaCusps = goAmshaEntries(out.bhava_cusps[:])
+	}
+	if res.ArudhaPadasValid {
+		res.ArudhaPadas = goAmshaEntries(out.arudha_padas[:])
+	}
+	if res.UpagrahasValid {
+		res.Upagrahas = goAmshaEntries(out.upagrahas[:])
+	}
+	if res.SphutasValid {
+		res.Sphutas = goAmshaEntries(out.sphutas[:])
+	}
+	if res.SpecialLagnasValid {
+		res.SpecialLagnas = goAmshaEntries(out.special_lagnas[:])
 	}
 	return res, st
 }

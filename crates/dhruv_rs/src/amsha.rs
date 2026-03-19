@@ -6,8 +6,8 @@ pub use dhruv_vedic_base::{
     amsha_rashi_infos, rashi_element, rashi_position_to_longitude,
 };
 
-use crate::{AyanamshaSystem, BhavaConfig, DhruvContext, DhruvError, GeoLocation, RiseSetConfig};
 use crate::date::UtcDate;
+use crate::{AyanamshaSystem, BhavaConfig, DhruvContext, DhruvError, GeoLocation, RiseSetConfig};
 
 pub use dhruv_search::{AmshaChart, AmshaChartScope, AmshaResult, AmshaSelectionConfig};
 
@@ -91,10 +91,9 @@ pub fn chart_for_date(
         &requests,
         scope,
     )?;
-    result
-        .charts
-        .pop()
-        .ok_or(DhruvError::Config("amsha chart result unexpectedly empty".to_string()))
+    result.charts.pop().ok_or(DhruvError::Config(
+        "amsha chart result unexpectedly empty".to_string(),
+    ))
 }
 
 /// Compute a single amsha chart using default bhava and rise/set configs.

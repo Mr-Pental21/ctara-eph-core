@@ -183,6 +183,49 @@ func TestSearchAndPanchangSmoke(t *testing.T) {
 	if len(kundali.Dasha[0].Levels) != 1 || len(kundali.Dasha[1].Levels) != 2 {
 		t.Fatalf("unexpected per-system dasha depths: %d %d", len(kundali.Dasha[0].Levels), len(kundali.Dasha[1].Levels))
 	}
+
+	amshaScope := AmshaChartScope{
+		IncludeBhavaCusps:    true,
+		IncludeArudhaPadas:   true,
+		IncludeUpagrahas:     true,
+		IncludeSphutas:       true,
+		IncludeSpecialLagnas: true,
+	}
+	amshaChart, err := eng.AmshaChartForDate(eop, utc, loc, bhava, riseset, 0, true, 9, 0, amshaScope)
+	if err != nil {
+		t.Fatalf("AmshaChartForDate: %v", err)
+	}
+	if len(amshaChart.BhavaCusps) != 12 || len(amshaChart.ArudhaPadas) != 12 {
+		t.Fatalf("expected bhava/arudha amsha sections, got %d/%d", len(amshaChart.BhavaCusps), len(amshaChart.ArudhaPadas))
+	}
+	if len(amshaChart.Upagrahas) != 11 || len(amshaChart.Sphutas) != SphutaCount || len(amshaChart.SpecialLagnas) != 8 {
+		t.Fatalf(
+			"expected upagraha/sphuta/special-lagna amsha sections, got %d/%d/%d",
+			len(amshaChart.Upagrahas), len(amshaChart.Sphutas), len(amshaChart.SpecialLagnas),
+		)
+	}
+
+	amshaCfg := FullKundaliConfigDefault()
+	amshaCfg.IncludeBhavaCusps = true
+	amshaCfg.IncludeBindus = true
+	amshaCfg.IncludeUpagrahas = true
+	amshaCfg.IncludeSphutas = true
+	amshaCfg.IncludeSpecialLagnas = true
+	amshaCfg.IncludeAmshas = true
+	amshaCfg.AmshaScope = amshaScope
+	amshaCfg.AmshaSelection.Count = 1
+	amshaCfg.AmshaSelection.Codes[0] = 9
+	amshaCfg.AmshaSelection.Variations[0] = 0
+	kundaliWithAmshas, err := eng.FullKundaliForDate(eop, utc, loc, bhava, riseset, 0, true, amshaCfg)
+	if err != nil {
+		t.Fatalf("FullKundaliForDate (amshas): %v", err)
+	}
+	if len(kundaliWithAmshas.Amshas) != 1 {
+		t.Fatalf("expected 1 amsha chart, got %d", len(kundaliWithAmshas.Amshas))
+	}
+	if len(kundaliWithAmshas.Amshas[0].Sphutas) != SphutaCount {
+		t.Fatalf("expected scoped amsha sphutas in full kundali, got %d", len(kundaliWithAmshas.Amshas[0].Sphutas))
+	}
 }
 
 func TestAshtakavargaContributors(t *testing.T) {
