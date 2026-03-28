@@ -9,6 +9,10 @@ dhruv <COMMAND> [OPTIONS]
 Engine kernels can be provided by explicit flags (`--bsp`, `--lsk`) or layered config.
 Location-dependent commands additionally require `--lat`, `--lon`, and `--eop`.
 
+For end-user guides and examples, start with [`docs/end_user/cli/README.md`](end_user/cli/README.md).
+This page stays reference-oriented and should match the current CLI code in
+`crates/dhruv_cli/src/main.rs`.
+
 ---
 
 ## Table of Contents
@@ -324,6 +328,16 @@ dhruv upagrahas --date 2024-03-20T12:00:00Z --lat 28.6 --lon 77.2 \
   --bsp de442s.bsp --lsk naif0012.tls --eop finals2000A.all
 ```
 
+Time-based upagraha flags shared by `upagrahas`, `core-bindus`, and `kundali`:
+
+| Flag | Values | Description |
+|---|---|---|
+| `--gulika-point` | `start`, `middle`, `end` | Point used within Gulika's selected period. Default `start`. |
+| `--maandi-point` | `start`, `middle`, `end` | Point used within Maandi's selected period. Default `end`. |
+| `--other-upagraha-point` | `start`, `middle`, `end` | Shared point for Kaala, Mrityu, Artha Prahara, and Yama Ghantaka. Default `start`. |
+| `--gulika-planet` | `rahu`, `saturn` | Planet period used to derive Gulika. Default `rahu`. |
+| `--maandi-planet` | `rahu`, `saturn` | Planet period used to derive Maandi. Default `rahu`. |
+
 ### `charakaraka` — Chara karaka assignments (7/8 schemes)
 
 ```
@@ -343,6 +357,10 @@ dhruv charakaraka --date 2024-03-20T12:00:00Z \
 dhruv core-bindus --date 2024-03-20T12:00:00Z --lat 28.6 --lon 77.2 \
   --bsp de442s.bsp --lsk naif0012.tls --eop finals2000A.all --nakshatra --bhava
 ```
+
+`core-bindus` reuses the same time-based upagraha flags as `upagrahas`. Those
+values feed `BindusConfig.upagraha_config`, which affects the returned Gulika
+and Maandi bindus.
 
 ### `drishti` — Graha drishti with virupa strength
 
@@ -411,6 +429,11 @@ Amsha-related kundali flags:
 
 When explicit amsha scope is requested, the CLI promotes the dependent root
 sections needed to populate those amsha sub-sections.
+
+`kundali` also accepts the same time-based upagraha flags as `upagrahas`.
+Those values populate `FullKundaliConfig.upagraha_config` and
+`FullKundaliConfig.bindus_config.upagraha_config`, so the setting applies both
+to the top-level upagraha section and to Gulika/Maandi inside bindus.
 
 ---
 
@@ -644,7 +667,7 @@ There is nothing to expose.
 `dhruv_rashi_name`, `dhruv_rashi_count`, `dhruv_nakshatra_name`, `dhruv_nakshatra28_name`,
 `dhruv_nakshatra_count`, `dhruv_tithi_name`, `dhruv_karana_name`, `dhruv_yoga_name`,
 `dhruv_vaar_name`, `dhruv_hora_name`, `dhruv_masa_name`, `dhruv_ayana_name`,
-`dhruv_samvatsara_name`, `dhruv_graha_name`, `dhruv_graha_english_name`,
+`dhruv_samvatsara_name`, `dhruv_graha_name`, `dhruv_yogini_name`,
 `dhruv_sphuta_name`, `dhruv_special_lagna_name`, `dhruv_arudha_pada_name`,
 `dhruv_upagraha_name`, `dhruv_ayanamsha_system_count`, `dhruv_bhava_system_count`,
 `dhruv_lunar_node_count`.

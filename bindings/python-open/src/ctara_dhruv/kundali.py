@@ -9,6 +9,7 @@ from __future__ import annotations
 from ._ffi import ffi, lib
 from ._check import check
 from .dasha import DashaHierarchy, DashaLevel
+from .vedic import _make_time_upagraha_config
 from .types import (
     AmshaChart,
     AmshaEntry,
@@ -287,7 +288,8 @@ def core_bindus(
         use_nutation: 1=yes, 0=no.
         bhava_config: Optional bhava config dict.
         riseset_config: Optional riseset config dict.
-        bindus_config: Optional dict with include_nakshatra, include_bhava (u8).
+        bindus_config: Optional dict with include_nakshatra, include_bhava (u8),
+            and optional nested upagraha_config.
 
     Returns:
         BindusResult dataclass.
@@ -301,6 +303,9 @@ def core_bindus(
         bcfg = ffi.new("DhruvBindusConfig *")
         bcfg.include_nakshatra = bindus_config.get("include_nakshatra", 0)
         bcfg.include_bhava = bindus_config.get("include_bhava", 0)
+        upa_cfg = _make_time_upagraha_config(bindus_config.get("upagraha_config"))
+        if upa_cfg != ffi.NULL:
+            bcfg.upagraha_config = upa_cfg[0]
     else:
         bcfg = ffi.NULL
 
@@ -478,6 +483,7 @@ def _extract_dasha_period(p):
         level=p.level,
         order=p.order,
         parent_idx=p.parent_idx,
+        entity_name=ffi.string(p.entity_name).decode("utf-8") if p.entity_name != ffi.NULL else None,
     )
 
 

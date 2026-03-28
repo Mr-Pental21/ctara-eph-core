@@ -66,21 +66,6 @@ impl Graha {
         }
     }
 
-    /// English name of the graha.
-    pub const fn english_name(self) -> &'static str {
-        match self {
-            Self::Surya => "Sun",
-            Self::Chandra => "Moon",
-            Self::Mangal => "Mars",
-            Self::Buddh => "Mercury",
-            Self::Guru => "Jupiter",
-            Self::Shukra => "Venus",
-            Self::Shani => "Saturn",
-            Self::Rahu => "Rahu",
-            Self::Ketu => "Ketu",
-        }
-    }
-
     /// 0-based index into ALL_GRAHAS.
     pub const fn index(self) -> u8 {
         match self {
@@ -197,7 +182,6 @@ mod tests {
     fn graha_names_nonempty() {
         for g in ALL_GRAHAS {
             assert!(!g.name().is_empty());
-            assert!(!g.english_name().is_empty());
         }
     }
 

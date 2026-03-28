@@ -165,8 +165,8 @@ func HoraName(index uint32) string {
 func GrahaName(index uint32) string {
 	return cString((*C.char)(unsafe.Pointer(C.dhruv_graha_name(C.uint32_t(index)))))
 }
-func GrahaEnglishName(index uint32) string {
-	return cString((*C.char)(unsafe.Pointer(C.dhruv_graha_english_name(C.uint32_t(index)))))
+func YoginiName(index uint32) string {
+	return cString((*C.char)(unsafe.Pointer(C.dhruv_yogini_name(C.uint32_t(index)))))
 }
 func SphutaName(index uint32) string {
 	return cString((*C.char)(unsafe.Pointer(C.dhruv_sphuta_name(C.uint32_t(index)))))
@@ -434,10 +434,42 @@ func TimeUpagrahaJD(upagrahaIndex uint32, weekday uint32, isDay bool, sunriseJd,
 	return float64(outJd), st
 }
 
+func TimeUpagrahaJDWithConfig(upagrahaIndex uint32, weekday uint32, isDay bool, sunriseJd, sunsetJd, nextSunriseJd float64, cfg TimeUpagrahaConfig) (float64, Status) {
+	var outJd C.double
+	ccfg := cTimeUpagrahaConfig(cfg)
+	st := Status(C.dhruv_time_upagraha_jd_with_config(
+		C.uint32_t(upagrahaIndex),
+		C.uint32_t(weekday),
+		boolU8(isDay),
+		C.double(sunriseJd),
+		C.double(sunsetJd),
+		C.double(nextSunriseJd),
+		&ccfg,
+		&outJd,
+	))
+	return float64(outJd), st
+}
+
 func TimeUpagrahaJDUTC(engine EngineHandle, eop EopHandle, loc GeoLocation, risesetConfig RiseSetConfig, utc UtcTime, upagrahaIndex uint32) (float64, Status) {
 	cloc, ccfg, cutc := cGeo(loc), cRiseSetConfig(risesetConfig), cUTC(utc)
 	var outJD C.double
 	st := Status(C.dhruv_time_upagraha_jd_utc(engine.ptr, eop.ptr, &cutc, &cloc, &ccfg, C.uint32_t(upagrahaIndex), &outJD))
+	return float64(outJD), st
+}
+
+func TimeUpagrahaJDUTCWithConfig(engine EngineHandle, eop EopHandle, loc GeoLocation, risesetConfig RiseSetConfig, utc UtcTime, upagrahaIndex uint32, upagrahaConfig TimeUpagrahaConfig) (float64, Status) {
+	cloc, ccfg, cutc, cupa := cGeo(loc), cRiseSetConfig(risesetConfig), cUTC(utc), cTimeUpagrahaConfig(upagrahaConfig)
+	var outJD C.double
+	st := Status(C.dhruv_time_upagraha_jd_utc_with_config(
+		engine.ptr,
+		eop.ptr,
+		&cutc,
+		&cloc,
+		&ccfg,
+		&cupa,
+		C.uint32_t(upagrahaIndex),
+		&outJD,
+	))
 	return float64(outJD), st
 }
 
@@ -609,7 +641,11 @@ func GrahaPositionsForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc 
 }
 
 func cBindusConfig(cfg BindusConfig) C.DhruvBindusConfig {
-	return C.DhruvBindusConfig{include_nakshatra: boolU8(cfg.IncludeNakshatra), include_bhava: boolU8(cfg.IncludeBhava)}
+	return C.DhruvBindusConfig{
+		include_nakshatra: boolU8(cfg.IncludeNakshatra),
+		include_bhava:     boolU8(cfg.IncludeBhava),
+		upagraha_config:   cTimeUpagrahaConfig(cfg.UpagrahaConfig),
+	}
 }
 
 func CoreBindusForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, cfg BindusConfig) (BindusResult, Status) {

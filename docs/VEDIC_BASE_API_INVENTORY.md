@@ -62,10 +62,10 @@ It also exports constants used by algorithms:
 Many enum/value types expose `name()`, `index()`, and related helper methods,
 for example:
 
-- `Rashi::name`, `Rashi::western_name`, `Rashi::index`, `Rashi::all`
+- `Rashi::name`, `Rashi::index`, `Rashi::all`
 - `Nakshatra::name`, `Nakshatra::index`, `Nakshatra::all`
 - `Tithi::name`, `Tithi::paksha`, `Tithi::tithi_in_paksha`, `Tithi::index`
-- `Graha::name`, `Graha::english_name`, `Graha::index`, `Graha::naif_code`
+- `Graha::name`, `Graha::index`, `Graha::naif_code`
 - `Upagraha::name`, `Upagraha::index`, `Upagraha::is_time_based`
 
 These helpers are part of the public API contract and are intentionally

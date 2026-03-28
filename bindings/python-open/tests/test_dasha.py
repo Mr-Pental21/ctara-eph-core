@@ -60,6 +60,8 @@ class TestDashaHierarchy:
             for p in level.periods:
                 assert p.entity_type == 0  # Graha for Vimshottari
                 assert 0 <= p.entity_index <= 8
+                assert p.entity_name is not None
+                assert len(p.entity_name) > 0
                 assert p.start_jd < p.end_jd
                 assert p.level == level.level
 
@@ -175,3 +177,20 @@ class TestRashiDasha:
         for p in level0.periods:
             assert p.entity_type == 1  # Rashi
             assert 0 <= p.entity_index <= 11
+            assert p.entity_name is not None
+            assert len(p.entity_name) > 0
+
+    def test_yogini_dasha_names(self, engine_handles):
+        """Yogini dasha should surface exact canonical Yogini names."""
+        from ctara_dhruv.dasha import dasha_hierarchy
+        from ctara_dhruv.engine import engine, lsk, eop
+        result = dasha_hierarchy(
+            engine(), lsk(), eop(),
+            jd_utc_birth=BIRTH_UTC,
+            location=BIRTH_LOC,
+            system=10,  # Yogini
+            max_level=0,
+        )
+        names = [period.entity_name for period in result.levels[0].periods]
+        assert all(name for name in names)
+        assert any(name == "Mangala" for name in names)

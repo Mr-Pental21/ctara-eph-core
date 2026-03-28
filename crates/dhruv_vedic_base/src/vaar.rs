@@ -42,19 +42,6 @@ impl Vaar {
         }
     }
 
-    /// English weekday name.
-    pub const fn english_name(self) -> &'static str {
-        match self {
-            Self::Ravivaar => "Sunday",
-            Self::Somvaar => "Monday",
-            Self::Mangalvaar => "Tuesday",
-            Self::Budhvaar => "Wednesday",
-            Self::Guruvaar => "Thursday",
-            Self::Shukravaar => "Friday",
-            Self::Shanivaar => "Saturday",
-        }
-    }
-
     /// 0-based index (Ravivaar=0, Shanivaar=6).
     pub const fn index(self) -> u8 {
         match self {
@@ -102,7 +89,6 @@ mod tests {
     fn vaar_names_nonempty() {
         for v in ALL_VAARS {
             assert!(!v.name().is_empty());
-            assert!(!v.english_name().is_empty());
         }
     }
 

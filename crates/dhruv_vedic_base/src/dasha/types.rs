@@ -4,7 +4,7 @@
 //! This module defines the fundamental data structures shared across all
 //! 23 dasha systems.
 
-use crate::graha::Graha;
+use crate::{graha::Graha, rashi::Rashi};
 
 /// Year length constant for dasha period calculations.
 pub const DAYS_PER_YEAR: f64 = 365.25;
@@ -97,6 +97,35 @@ impl DashaEntity {
             Self::Yogini(y) => *y,
         }
     }
+
+    /// Exact project-native name for this dasha entity.
+    pub const fn name(&self) -> &'static str {
+        match self {
+            Self::Graha(graha) => graha.name(),
+            Self::Rashi(0) => Rashi::Mesha.name(),
+            Self::Rashi(1) => Rashi::Vrishabha.name(),
+            Self::Rashi(2) => Rashi::Mithuna.name(),
+            Self::Rashi(3) => Rashi::Karka.name(),
+            Self::Rashi(4) => Rashi::Simha.name(),
+            Self::Rashi(5) => Rashi::Kanya.name(),
+            Self::Rashi(6) => Rashi::Tula.name(),
+            Self::Rashi(7) => Rashi::Vrischika.name(),
+            Self::Rashi(8) => Rashi::Dhanu.name(),
+            Self::Rashi(9) => Rashi::Makara.name(),
+            Self::Rashi(10) => Rashi::Kumbha.name(),
+            Self::Rashi(11) => Rashi::Meena.name(),
+            Self::Rashi(_) => "Unknown",
+            Self::Yogini(0) => "Mangala",
+            Self::Yogini(1) => "Pingala",
+            Self::Yogini(2) => "Dhanya",
+            Self::Yogini(3) => "Bhramari",
+            Self::Yogini(4) => "Bhadrika",
+            Self::Yogini(5) => "Ulka",
+            Self::Yogini(6) => "Siddha",
+            Self::Yogini(7) => "Sankata",
+            Self::Yogini(_) => "Unknown",
+        }
+    }
 }
 
 /// A single dasha period.
@@ -120,6 +149,11 @@ impl DashaPeriod {
     /// Duration of the period in days.
     pub fn duration_days(&self) -> f64 {
         self.end_jd - self.start_jd
+    }
+
+    /// Exact project-native name for the ruling entity of this period.
+    pub const fn entity_name(&self) -> &'static str {
+        self.entity.name()
     }
 }
 
@@ -287,6 +321,27 @@ mod tests {
         assert_eq!(DashaEntity::Graha(Graha::Surya).type_code(), 0);
         assert_eq!(DashaEntity::Rashi(0).type_code(), 1);
         assert_eq!(DashaEntity::Yogini(0).type_code(), 2);
+    }
+
+    #[test]
+    fn entity_names_are_exact() {
+        assert_eq!(DashaEntity::Graha(Graha::Surya).name(), "Surya");
+        assert_eq!(DashaEntity::Rashi(0).name(), "Mesha");
+        assert_eq!(DashaEntity::Yogini(0).name(), "Mangala");
+        assert_eq!(DashaEntity::Yogini(7).name(), "Sankata");
+    }
+
+    #[test]
+    fn period_entity_name_uses_entity_name() {
+        let period = DashaPeriod {
+            entity: DashaEntity::Yogini(3),
+            start_jd: 0.0,
+            end_jd: 1.0,
+            level: DashaLevel::Mahadasha,
+            order: 1,
+            parent_idx: 0,
+        };
+        assert_eq!(period.entity_name(), "Bhramari");
     }
 
     #[test]

@@ -62,24 +62,6 @@ impl Rashi {
         }
     }
 
-    /// Western (English) name of the rashi.
-    pub const fn western_name(self) -> &'static str {
-        match self {
-            Self::Mesha => "Aries",
-            Self::Vrishabha => "Taurus",
-            Self::Mithuna => "Gemini",
-            Self::Karka => "Cancer",
-            Self::Simha => "Leo",
-            Self::Kanya => "Virgo",
-            Self::Tula => "Libra",
-            Self::Vrischika => "Scorpio",
-            Self::Dhanu => "Sagittarius",
-            Self::Makara => "Capricorn",
-            Self::Kumbha => "Aquarius",
-            Self::Meena => "Pisces",
-        }
-    }
-
     /// 0-based index (Mesha=0 .. Meena=11).
     pub const fn index(self) -> u8 {
         match self {
@@ -211,7 +193,6 @@ mod tests {
     fn rashi_names_nonempty() {
         for r in ALL_RASHIS {
             assert!(!r.name().is_empty());
-            assert!(!r.western_name().is_empty());
         }
     }
 

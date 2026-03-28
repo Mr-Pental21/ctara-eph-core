@@ -5,9 +5,14 @@ canonical C ABI (`dhruv_ffi_c`) via `cffi`.
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=47`
+- ABI target: `DHRUV_API_VERSION=48`
 - Package root: `bindings/python-open`
 - Runtime dependency: `cffi`
+
+## End-User Docs
+
+Usage-first documentation for this wrapper lives in
+[`../../docs/end_user/python/README.md`](../../docs/end_user/python/README.md).
 
 ## Install For Local Development
 
@@ -22,6 +27,23 @@ The shared `dhruv_ffi_c` library must be built from the repository root:
 ```bash
 cargo build -p dhruv_ffi_c --release
 ```
+
+## Time-Based Upagraha Config
+
+Dasha periods exposed by the Python wrapper now include `entity_name`, the
+exact canonical Sanskrit entity name alongside the numeric entity fields.
+
+The Python wrapper exposes configurable time-based upagrahas through:
+
+- `ctara_dhruv.vedic.time_upagraha_config_default()`
+- `ctara_dhruv.vedic.all_upagrahas_for_date(..., upagraha_config=...)`
+- `ctara_dhruv.kundali.core_bindus(..., bindus_config={"upagraha_config": ...})`
+- `ctara_dhruv.kundali.full_kundali(..., config=...)`
+
+Accepted dict values are:
+
+- points: `"start"`, `"middle"`, `"end"`
+- planets: `"rahu"`, `"saturn"`
 
 ## Amsha Surface
 

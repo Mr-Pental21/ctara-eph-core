@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 47`
+**ABI version:** `DHRUV_API_VERSION = 48`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -1804,6 +1804,7 @@ struct DhruvDashaSelectionConfig {
 struct DhruvDashaPeriod {
     uint8_t  entity_type;  // 0=Graha, 1=Rashi, 2=Yogini
     uint8_t  entity_index; // Graha (0-8), Rashi (0-11), Yogini (0-7)
+    const char *entity_name; // canonical static UTF-8 name
     double   start_jd;     // JD UTC, inclusive
     double   end_jd;       // JD UTC, exclusive
     uint8_t  level;        // 0-4
@@ -1827,6 +1828,7 @@ struct DhruvDashaSnapshot {
 
 All JD values in dasha APIs use **JD UTC** (not TDB):
 - `DhruvDashaSelectionConfig.snapshot_jd` — query time (only when `has_snapshot_jd == 1`)
+- `DhruvDashaPeriod.entity_name` — canonical static entity name
 - `DhruvDashaPeriod.start_jd`, `.end_jd` — period boundaries
 - `DhruvDashaSnapshot.query_jd` — echoed query time
 
@@ -2008,6 +2010,8 @@ extended `DhruvFullKundaliResult` with embedded amsha charts.
 that produce/consume BAV values: `dhruv_calculate_bav`,
 `dhruv_calculate_all_bav`, `dhruv_calculate_ashtakavarga`,
 `dhruv_ashtakavarga_for_date`, and full-kundali ashtakavarga fields.
+
+**v48**: Removed `dhruv_graha_english_name` from the exported C ABI. Added `dhruv_yogini_name`. Extended `DhruvDashaPeriod` with `entity_name`, a canonical static UTF-8 pointer so dasha outputs carry exact entity names directly.
 
 **v43**: Added charakaraka API surface. New constants: `DHRUV_MAX_CHARAKARAKA_ENTRIES`, `DHRUV_CHARAKARAKA_SCHEME_*`, `DHRUV_CHARAKARAKA_ROLE_*`. New types: `DhruvCharakarakaEntry`, `DhruvCharakarakaResult`. New function: `dhruv_charakaraka_for_date`. Extended `DhruvFullKundaliConfig` with `include_charakaraka` and `charakaraka_scheme`; extended `DhruvFullKundaliResult` with `charakaraka_valid` and `charakaraka`.
 

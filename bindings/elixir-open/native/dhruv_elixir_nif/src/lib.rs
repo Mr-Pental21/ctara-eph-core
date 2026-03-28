@@ -2012,10 +2012,19 @@ fn dasha_period_json(period: DashaPeriod) -> Value {
 fn dasha_entity_json(entity: DashaEntity) -> Value {
     match entity {
         DashaEntity::Graha(graha) => {
-            json!({ "kind": "graha", "index": graha.index(), "name": debug_name(graha) })
+            json!({ "kind": "graha", "index": graha.index(), "name": graha.name() })
         }
-        DashaEntity::Rashi(index) => json!({ "kind": "rashi", "index": index }),
-        DashaEntity::Yogini(index) => json!({ "kind": "yogini", "index": index }),
+        DashaEntity::Rashi(index) => {
+            let name = dhruv_vedic_base::ALL_RASHIS
+                .get(index as usize)
+                .map(|rashi| rashi.name())
+                .unwrap_or("Unknown");
+            json!({ "kind": "rashi", "index": index, "name": name })
+        }
+        DashaEntity::Yogini(index) => {
+            let name = DashaEntity::Yogini(index).name();
+            json!({ "kind": "yogini", "index": index, "name": name })
+        }
     }
 }
 

@@ -4,9 +4,14 @@ Open-source Go bindings for `ctara-dhruv-core`, implemented against the canonica
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=47`
+- ABI target: `DHRUV_API_VERSION=48`
 - Binding strategy: `cgo` over `crates/dhruv_ffi_c/include/dhruv.h`
 - Package: `ctara-dhruv-core/bindings/go-open/dhruv`
+
+## End-User Docs
+
+Usage-first documentation for this wrapper lives in
+[`../../docs/end_user/go/README.md`](../../docs/end_user/go/README.md).
 
 ## Prerequisites
 
@@ -61,7 +66,10 @@ If runtime loading fails:
 ## Coverage
 
 Low-level coverage in `internal/cabi` maps all currently exported `dhruv_ffi_c`
-symbols from `dhruv.h` (ABI v47).
+symbols from `dhruv.h` (ABI v48).
+
+Dasha periods returned through the Go wrapper now carry `EntityName`, the exact
+canonical Sanskrit entity name alongside the numeric kind/index fields.
 
 The public `dhruv` package includes wrappers for:
 
@@ -79,6 +87,20 @@ The public `dhruv` package includes wrappers for:
 - dasha hierarchy/snapshot APIs
 - full-kundali summary and full-result APIs, including root sphutas and dasha hierarchies
 - tara catalog and compute APIs
+
+## Time-Based Upagraha Config
+
+The Go wrapper exposes configurable time-based upagrahas through:
+
+- `TimeUpagrahaConfigDefault()`
+- `(*Engine).AllUpagrahasForDateWithConfig(...)`
+- `BindusConfig.UpagrahaConfig`
+- `FullKundaliConfig.UpagrahaConfig`
+
+Public value constants are:
+
+- `UpagrahaPointStart`, `UpagrahaPointMiddle`, `UpagrahaPointEnd`
+- `GulikaMaandiPlanetRahu`, `GulikaMaandiPlanetSaturn`
 
 ## Amsha Notes
 

@@ -30,11 +30,11 @@ use dhruv_time::{
 use dhruv_vedic_base::BhavaConfig;
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig, RiseSetResult};
 use dhruv_vedic_base::{
-    ALL_GRAHAS, AyanamshaSystem, Graha, LunarNode, NodeDignityPolicy, NodeMode, Rashi,
-    ayanamsha_deg, ayanamsha_deg_with_catalog, ayanamsha_mean_deg_with_catalog, ayanamsha_true_deg,
-    deg_to_dms, jd_tdb_to_centuries, nakshatra_from_longitude, nakshatra_from_tropical,
-    nakshatra28_from_longitude, nakshatra28_from_tropical, rashi_from_longitude,
-    rashi_from_tropical,
+    ALL_GRAHAS, AyanamshaSystem, Graha, GulikaMaandiPlanet, LunarNode, NodeDignityPolicy, NodeMode,
+    Rashi, TimeUpagrahaConfig, TimeUpagrahaPoint, ayanamsha_deg, ayanamsha_deg_with_catalog,
+    ayanamsha_mean_deg_with_catalog, ayanamsha_true_deg, deg_to_dms, jd_tdb_to_centuries,
+    nakshatra_from_longitude, nakshatra_from_tropical, nakshatra28_from_longitude,
+    nakshatra28_from_tropical, rashi_from_longitude, rashi_from_tropical,
 };
 use dhruv_vedic_ops::{
     NodeBackend, NodeOperation, PANCHANG_INCLUDE_ALL, PANCHANG_INCLUDE_ALL_CALENDAR,
@@ -460,6 +460,57 @@ struct PanchangArgs {
 }
 
 #[derive(clap::Args)]
+struct TimeUpagrahaArgs {
+    /// Gulika point within its selected period: start, middle, or end
+    #[arg(long, value_enum)]
+    gulika_point: Option<TimeUpagrahaPointArg>,
+    /// Maandi point within its selected period: start, middle, or end
+    #[arg(long, value_enum)]
+    maandi_point: Option<TimeUpagrahaPointArg>,
+    /// Point for Kaala/Mrityu/Artha Prahara/Yama Ghantaka: start, middle, or end
+    #[arg(long, value_enum)]
+    other_upagraha_point: Option<TimeUpagrahaPointArg>,
+    /// Planet period used for Gulika: rahu or saturn
+    #[arg(long, value_enum)]
+    gulika_planet: Option<GulikaMaandiPlanetArg>,
+    /// Planet period used for Maandi: rahu or saturn
+    #[arg(long, value_enum)]
+    maandi_planet: Option<GulikaMaandiPlanetArg>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum TimeUpagrahaPointArg {
+    Start,
+    Middle,
+    End,
+}
+
+impl From<TimeUpagrahaPointArg> for TimeUpagrahaPoint {
+    fn from(value: TimeUpagrahaPointArg) -> Self {
+        match value {
+            TimeUpagrahaPointArg::Start => Self::Start,
+            TimeUpagrahaPointArg::Middle => Self::Middle,
+            TimeUpagrahaPointArg::End => Self::End,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum GulikaMaandiPlanetArg {
+    Rahu,
+    Saturn,
+}
+
+impl From<GulikaMaandiPlanetArg> for GulikaMaandiPlanet {
+    fn from(value: GulikaMaandiPlanetArg) -> Self {
+        match value {
+            GulikaMaandiPlanetArg::Rahu => Self::Rahu,
+            GulikaMaandiPlanetArg::Saturn => Self::Saturn,
+        }
+    }
+}
+
+#[derive(clap::Args)]
 struct AshtakavargaArgs {
     /// UTC datetime (YYYY-MM-DDThh:mm:ssZ)
     #[arg(long)]
@@ -519,6 +570,8 @@ struct UpagrahasArgs {
     /// Path to IERS EOP file (finals2000A.all)
     #[arg(long)]
     eop: PathBuf,
+    #[command(flatten)]
+    upagraha: TimeUpagrahaArgs,
 }
 
 #[derive(clap::Args)]
@@ -605,6 +658,8 @@ struct CoreBindusArgs {
     /// Path to IERS EOP file (finals2000A.all)
     #[arg(long)]
     eop: PathBuf,
+    #[command(flatten)]
+    upagraha: TimeUpagrahaArgs,
 }
 
 #[derive(clap::Args)]
@@ -754,6 +809,8 @@ struct KundaliArgs {
     /// Enable all sections (except dasha, which requires --dasha-systems)
     #[arg(long)]
     all: bool,
+    #[command(flatten)]
+    upagraha: TimeUpagrahaArgs,
 }
 
 #[derive(clap::Args)]
@@ -3006,9 +3063,8 @@ fn main() {
             let info = rashi_from_longitude(lon);
             let dms = info.dms;
             println!(
-                "{} ({}) - {} deg {} min {:.1} sec ({:.6} deg in rashi)",
+                "{} - {} deg {} min {:.1} sec ({:.6} deg in rashi)",
                 info.rashi.name(),
-                info.rashi.western_name(),
                 dms.degrees,
                 dms.minutes,
                 dms.seconds,
@@ -3053,9 +3109,8 @@ fn main() {
             println!("Ayanamsha: {:.6} deg", aya);
             println!("Sidereal: {:.6} deg", args.lon - aya);
             println!(
-                "{} ({}) - {} deg {} min {:.1} sec ({:.6} deg in rashi)",
+                "{} - {} deg {} min {:.1} sec ({:.6} deg in rashi)",
                 info.rashi.name(),
-                info.rashi.western_name(),
                 dms.degrees,
                 dms.minutes,
                 dms.seconds,
@@ -3181,11 +3236,7 @@ fn main() {
             };
             match dhruv_search::sankranti(&engine, &op) {
                 Ok(SankrantiResult::Single(Some(ev))) => {
-                    println!(
-                        "Next Sankranti: {} ({})",
-                        ev.rashi.name(),
-                        ev.rashi.western_name()
-                    );
+                    println!("Next Sankranti: {}", ev.rashi.name());
                     println!("  Time: {}", ev.utc);
                     println!(
                         "  Sidereal lon: {:.6} deg  Tropical lon: {:.6} deg",
@@ -3822,14 +3873,16 @@ fn main() {
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
             let rs_config = RiseSetConfig::default();
             let config = dhruv_search::sankranti_types::SankrantiConfig::new(system, args.nutation);
+            let upagraha_config = build_time_upagraha_config(&args.upagraha);
 
-            let result = dhruv_search::all_upagrahas_for_date(
+            let result = dhruv_search::all_upagrahas_for_date_with_config(
                 &engine,
                 &eop_kernel,
                 &utc,
                 &location,
                 &rs_config,
                 &config,
+                &upagraha_config,
             )
             .unwrap_or_else(|e| {
                 eprintln!("Error: {e}");
@@ -4025,9 +4078,11 @@ fn main() {
             let bhava_config = BhavaConfig::default();
             let rs_config = RiseSetConfig::default();
             let aya_config = SankrantiConfig::new(system, args.nutation);
+            let upagraha_config = build_time_upagraha_config(&args.upagraha);
             let bindus_config = dhruv_search::BindusConfig {
                 include_nakshatra: args.nakshatra,
                 include_bhava: args.bhava,
+                upagraha_config,
             };
 
             let result = dhruv_search::core_bindus(
@@ -4315,6 +4370,7 @@ fn main() {
                 parse_charakaraka_scheme(&args.charakaraka_scheme),
                 requested_amsha_selection.as_ref(),
                 &requested_amsha_scope,
+                build_time_upagraha_config(&args.upagraha),
             );
 
             let result = dhruv_search::full_kundali_for_date(
@@ -4420,11 +4476,7 @@ fn main() {
             };
             match dhruv_search::sankranti(&engine, &op) {
                 Ok(SankrantiResult::Single(Some(ev))) => {
-                    println!(
-                        "Previous Sankranti: {} ({})",
-                        ev.rashi.name(),
-                        ev.rashi.western_name()
-                    );
+                    println!("Previous Sankranti: {}", ev.rashi.name());
                     println!("  Time: {}", ev.utc);
                     println!(
                         "  Sidereal lon: {:.6} deg  Tropical lon: {:.6} deg",
@@ -4550,9 +4602,8 @@ fn main() {
                     println!("Found {} Sankrantis:", events.len());
                     for ev in &events {
                         println!(
-                            "  {} ({}) at {}  sid: {:.6}°  trop: {:.6}°",
+                            "  {} at {}  sid: {:.6}°  trop: {:.6}°",
                             ev.rashi.name(),
-                            ev.rashi.western_name(),
                             ev.utc,
                             ev.sun_sidereal_longitude_deg,
                             ev.sun_tropical_longitude_deg
@@ -4715,8 +4766,10 @@ fn main() {
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
             let rs_config = RiseSetConfig::default();
             let jd_utc = utc_to_jd_utc(&utc);
-            let jd_noon =
-                dhruv_vedic_base::approximate_local_noon_jd(jd_utc.floor(), location.longitude_deg);
+            let jd_noon = dhruv_vedic_base::approximate_local_noon_jd(
+                dhruv_vedic_base::utc_day_start_jd(jd_utc),
+                location.longitude_deg,
+            );
 
             let events = dhruv_vedic_base::compute_all_events(
                 &engine,
@@ -5428,7 +5481,7 @@ fn main() {
                         (_, SankrantiTarget::SpecificRashi(r)) => format!("{} Sankranti", r.name()),
                         _ => "Sankranti".to_string(),
                     };
-                    println!("{label}: {} ({})", ev.rashi.name(), ev.rashi.western_name());
+                    println!("{label}: {}", ev.rashi.name());
                     println!("  Time: {}", ev.utc);
                     println!(
                         "  Sidereal lon: {:.6} deg  Tropical lon: {:.6} deg",
@@ -5450,9 +5503,8 @@ fn main() {
                     }
                     for ev in &events {
                         println!(
-                            "  {} ({}) at {}  sid: {:.6}°  trop: {:.6}°",
+                            "  {} at {}  sid: {:.6}°  trop: {:.6}°",
                             ev.rashi.name(),
-                            ev.rashi.western_name(),
                             ev.utc,
                             ev.sun_sidereal_longitude_deg,
                             ev.sun_tropical_longitude_deg
@@ -6306,7 +6358,7 @@ fn main() {
 
         Commands::VaarFromJd { jd } => {
             let vaar = dhruv_vedic_base::vaar_from_jd(jd);
-            println!("{} ({})", vaar.name(), vaar.english_name());
+            println!("{}", vaar.name());
         }
 
         Commands::MasaFromRashi { rashi } => {
@@ -6653,7 +6705,7 @@ fn main() {
                     eprintln!("Error: {e}");
                     std::process::exit(1);
                 });
-                println!("Shadbala for {} on {}\n", g.english_name(), args.date);
+                println!("Shadbala for {} on {}\n", g.name(), args.date);
                 print_shadbala_entry(&entry);
             } else {
                 let result = dhruv_search::shadbala_for_date(
@@ -6772,7 +6824,7 @@ fn main() {
                         "{:<6} {:<10} {:<8} {:>11.2} {:>8.2} {:>8.2} {:>8.2} {:>8.2} {:>8.2}",
                         entry.bhava_number,
                         dhruv_vedic_base::ALL_RASHIS[entry.rashi_index as usize].name(),
-                        entry.lord.english_name(),
+                        entry.lord.name(),
                         entry.bhavadhipati,
                         entry.dig,
                         entry.drishti,
@@ -6815,7 +6867,7 @@ fn main() {
                     "{:<4} {:<14} {:<8} {:<26} {:>8.3}",
                     e.rank,
                     charakaraka_role_name(e.role),
-                    e.graha.english_name(),
+                    e.graha.name(),
                     format_rashi_dms(e.longitude_deg),
                     e.effective_degrees_in_rashi
                 );
@@ -6858,7 +6910,7 @@ fn main() {
                     eprintln!("Error: {e}");
                     std::process::exit(1);
                 });
-                println!("Vimsopaka for {} on {}\n", g.english_name(), args.date);
+                println!("Vimsopaka for {} on {}\n", g.name(), args.date);
                 println!("  Shadvarga:     {:>6.2}/20", entry.shadvarga);
                 println!("  Saptavarga:    {:>6.2}/20", entry.saptavarga);
                 println!("  Dashavarga:    {:>6.2}/20", entry.dashavarga);
@@ -6949,7 +7001,7 @@ fn main() {
             for entry in &result.shadbala.entries {
                 println!(
                     "{:<8} {:>8.2} {:>8.2} {:>8.2} {:>8.2} {:>8.2} {:>8.2} {:>8.2} {:>8.2} {:>6}",
-                    entry.graha.english_name(),
+                    entry.graha.name(),
                     entry.sthana.total,
                     entry.dig,
                     entry.kala.total,
@@ -6972,7 +7024,7 @@ fn main() {
             for entry in &result.vimsopaka.entries {
                 println!(
                     "{:<8} {:>10.2} {:>10.2} {:>10.2} {:>12.2}",
-                    entry.graha.english_name(),
+                    entry.graha.name(),
                     entry.shadvarga,
                     entry.saptavarga,
                     entry.dashavarga,
@@ -7009,7 +7061,7 @@ fn main() {
                     "{:<6} {:<10} {:<8} {:>11.2} {:>8.2} {:>8.2} {:>8.2} {:>8.2} {:>8.2}",
                     entry.bhava_number,
                     dhruv_vedic_base::ALL_RASHIS[entry.rashi_index as usize].name(),
-                    entry.lord.english_name(),
+                    entry.lord.name(),
                     entry.bhavadhipati,
                     entry.dig,
                     entry.drishti,
@@ -7114,7 +7166,7 @@ fn main() {
                     eprintln!("Error: {e}");
                     std::process::exit(1);
                 });
-                println!("Avasthas for {} on {}\n", g.english_name(), args.date);
+                println!("Avasthas for {} on {}\n", g.name(), args.date);
                 print_graha_avastha(&entry);
             } else {
                 let result = dhruv_search::avastha_for_date(
@@ -7600,11 +7652,7 @@ fn main() {
                     let nak_info = nakshatra_from_longitude(lon);
                     println!("Sidereal ({:?}, nutation={}):", system, args.nutation);
                     println!("  Longitude: {:.6}°", lon);
-                    println!(
-                        "  Rashi:     {} ({})",
-                        rashi_info.rashi.name(),
-                        rashi_info.rashi.western_name()
-                    );
+                    println!("  Rashi:     {}", rashi_info.rashi.name());
                     println!(
                         "  Nakshatra: {} (pada {})",
                         nak_info.nakshatra.name(),
@@ -7781,11 +7829,7 @@ fn charakaraka_role_name(role: dhruv_vedic_base::CharakarakaRole) -> &'static st
 }
 
 fn format_dasha_entity(entity: &dhruv_vedic_base::dasha::DashaEntity) -> String {
-    match entity {
-        dhruv_vedic_base::dasha::DashaEntity::Graha(g) => g.english_name().to_string(),
-        dhruv_vedic_base::dasha::DashaEntity::Rashi(r) => format!("Rashi {r}"),
-        dhruv_vedic_base::dasha::DashaEntity::Yogini(y) => format!("Yogini {y}"),
-    }
+    entity.name().to_string()
 }
 
 fn print_dasha_periods(
@@ -8137,7 +8181,7 @@ fn print_bhavabala_entry(entry: &dhruv_search::BhavaBalaEntry) {
         "  Cusp:            {}",
         format_rashi_dms(entry.cusp_sidereal_lon)
     );
-    println!("  House Lord:      {}", entry.lord.english_name());
+    println!("  House Lord:      {}", entry.lord.name());
     println!("  Bhavadhipati:    {:>8.2}", entry.bhavadhipati);
     println!("  Dig Bala:        {:>8.2}", entry.dig);
     println!("  Drishti Bala:    {:>8.2}", entry.drishti);
@@ -8328,6 +8372,7 @@ fn build_kundali_config(
     charakaraka_scheme: dhruv_vedic_base::CharakarakaScheme,
     requested_amsha_selection: Option<&dhruv_search::AmshaSelectionConfig>,
     requested_amsha_scope: &dhruv_search::AmshaChartScope,
+    upagraha_config: TimeUpagrahaConfig,
 ) -> dhruv_search::FullKundaliConfig {
     // Compute-vs-print: force graha_positions + lagna when amshas need it
     let compute_graha = resolved.include_graha || resolved.include_amshas;
@@ -8392,9 +8437,11 @@ fn build_kundali_config(
         include_dasha,
         dasha_config,
         node_dignity_policy: node_policy,
+        upagraha_config,
         bindus_config: dhruv_search::BindusConfig {
             include_nakshatra: resolved.include_bindus,
             include_bhava: resolved.include_bindus,
+            upagraha_config,
         },
         drishti_config: dhruv_search::DrishtiConfig {
             include_bhava: resolved.include_drishti,
@@ -8403,6 +8450,26 @@ fn build_kundali_config(
         },
         amsha_scope: *requested_amsha_scope,
     }
+}
+
+fn build_time_upagraha_config(args: &TimeUpagrahaArgs) -> TimeUpagrahaConfig {
+    let mut config = TimeUpagrahaConfig::default();
+    if let Some(point) = args.gulika_point {
+        config.gulika_point = point.into();
+    }
+    if let Some(point) = args.maandi_point {
+        config.maandi_point = point.into();
+    }
+    if let Some(point) = args.other_upagraha_point {
+        config.other_point = point.into();
+    }
+    if let Some(planet) = args.gulika_planet {
+        config.gulika_planet = planet.into();
+    }
+    if let Some(planet) = args.maandi_planet {
+        config.maandi_planet = planet.into();
+    }
+    config
 }
 
 fn format_rashi_dms(sidereal_lon: f64) -> String {
@@ -8779,7 +8846,7 @@ fn print_kundali(
             writeln!(
                 w,
                 "  {:<8} {:>8.2} {:>6.2} {:>8.2} {:>8.2} {:>6.2} {:>6.2} {:>8.2} {:>6.2} {:>6}",
-                e.graha.english_name(),
+                e.graha.name(),
                 e.sthana.total,
                 e.dig,
                 e.kala.total,
@@ -8810,7 +8877,7 @@ fn print_kundali(
                 "  {:<6} {:<10} {:<8} {:>11.2} {:>8.2} {:>8.2} {:>8.2} {:>8.2} {:>8.2}",
                 e.bhava_number,
                 dhruv_vedic_base::ALL_RASHIS[e.rashi_index as usize].name(),
-                e.lord.english_name(),
+                e.lord.name(),
                 e.bhavadhipati,
                 e.dig,
                 e.drishti,
@@ -8836,7 +8903,7 @@ fn print_kundali(
             writeln!(
                 w,
                 "  {:<8} {:>10.2} {:>11.2} {:>10.2} {:>13.2}",
-                e.graha.english_name(),
+                e.graha.name(),
                 e.shadvarga,
                 e.saptavarga,
                 e.dashavarga,
@@ -8887,7 +8954,7 @@ fn print_kundali(
                 "  {:<4} {:<14} {:<8} {:<26} {:>8.3}",
                 e.rank,
                 charakaraka_role_name(e.role),
-                e.graha.english_name(),
+                e.graha.name(),
                 format_rashi_dms(e.longitude_deg),
                 e.effective_degrees_in_rashi
             )?;
@@ -9154,6 +9221,7 @@ mod tests {
             default_charakaraka_scheme(),
             None,
             &dhruv_search::AmshaChartScope::default(),
+            TimeUpagrahaConfig::default(),
         );
         assert!(cfg.include_bhava_cusps);
         assert!(cfg.include_graha_positions);
@@ -9185,6 +9253,7 @@ mod tests {
             default_charakaraka_scheme(),
             None,
             &dhruv_search::AmshaChartScope::default(),
+            TimeUpagrahaConfig::default(),
         );
         assert!(!cfg.include_bhava_cusps);
         assert!(cfg.include_panchang);
@@ -9206,6 +9275,7 @@ mod tests {
             default_charakaraka_scheme(),
             None,
             &dhruv_search::AmshaChartScope::default(),
+            TimeUpagrahaConfig::default(),
         );
         assert!(cfg.include_graha_positions);
         assert!(!cfg.include_bindus);
@@ -9227,6 +9297,7 @@ mod tests {
             default_charakaraka_scheme(),
             None,
             &dhruv_search::AmshaChartScope::default(),
+            TimeUpagrahaConfig::default(),
         );
         assert!(cfg.include_graha_positions);
         assert!(cfg.include_panchang);
@@ -9251,6 +9322,7 @@ mod tests {
             default_charakaraka_scheme(),
             None,
             &dhruv_search::AmshaChartScope::default(),
+            TimeUpagrahaConfig::default(),
         );
         assert!(!cfg.include_dasha);
         assert_eq!(cfg.dasha_config.count, 0);
@@ -9274,6 +9346,7 @@ mod tests {
             default_charakaraka_scheme(),
             None,
             &dhruv_search::AmshaChartScope::default(),
+            TimeUpagrahaConfig::default(),
         );
         // Graha must be force-computed for amshas
         assert!(cfg.include_graha_positions);
@@ -9297,6 +9370,7 @@ mod tests {
             default_charakaraka_scheme(),
             None,
             &dhruv_search::AmshaChartScope::default(),
+            TimeUpagrahaConfig::default(),
         );
         assert_eq!(cfg.node_dignity_policy, NodeDignityPolicy::AlwaysSama);
     }
@@ -9339,6 +9413,7 @@ mod tests {
             default_charakaraka_scheme(),
             Some(&selection),
             &scope,
+            TimeUpagrahaConfig::default(),
         );
         assert_eq!(cfg.amsha_selection.count, 2);
         assert_eq!(cfg.amsha_selection.codes[0], 9);

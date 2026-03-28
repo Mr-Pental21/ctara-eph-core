@@ -4,9 +4,14 @@ Open-source Node.js bindings for `ctara-dhruv-core`, implemented against the can
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=47`
+- ABI target: `DHRUV_API_VERSION=48`
 - Binding strategy: Native Node-API addon (`native/dhruv_node.cc`) over `crates/dhruv_ffi_c/include/dhruv.h`
 - Package: `bindings/node-open`
+
+## End-User Docs
+
+Usage-first documentation for this wrapper lives in
+[`../../docs/end_user/node/README.md`](../../docs/end_user/node/README.md).
 
 ## Prerequisites
 
@@ -69,8 +74,28 @@ Public modules included in this wrapper:
 - charakaraka date API (`charakarakaForDate`) with selectable schemes (`8`, `7-no-pitri`, `7-pk-merged-mk`, `mixed-parashara`)
 - extras/composable APIs (panchang intermediates, sphuta/special-lagna scalar helpers, ashtakavarga, drishti, graha positions, bindus, amsha)
 - shadbala/vimsopaka/avastha and full-kundali summary
-- dasha hierarchy and snapshot
+- dasha hierarchy and snapshot, with `entityName` on returned period objects for the exact canonical Sanskrit entity name
 - tara catalog load/compute helpers
+
+## Time-Based Upagraha Config
+
+The Node wrapper accepts an optional `upagrahaConfig` object in:
+
+- `jyotish.allUpagrahasForDate(...)`
+- `extras.timeUpagrahaJd(...)`
+- `extras.timeUpagrahaJdUtc(...)`
+- `extras.coreBindusForDate(...)`
+- `shadbala.fullKundaliForDate(...)`
+
+Object fields are:
+
+- `gulikaPoint`, `maandiPoint`, `otherPoint`
+- `gulikaPlanet`, `maandiPlanet`
+
+Value mappings are numeric:
+
+- points: `0=start`, `1=middle`, `2=end`
+- planets: `0=rahu`, `1=saturn`
 
 ## Amsha Notes
 

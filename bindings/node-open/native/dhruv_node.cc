@@ -281,13 +281,51 @@ bool ReadGrahaPositionsConfig(napi_env env, napi_value obj, DhruvGrahaPositionsC
     return true;
 }
 
+bool ReadTimeUpagrahaConfig(napi_env env, napi_value obj, DhruvTimeUpagrahaConfig* out) {
+    *out = dhruv_time_upagraha_config_default();
+    napi_value v;
+    bool has = false;
+    uint32_t u32 = 0;
+    if (!GetOptionalNamedProperty(env, obj, "gulikaPoint", &v, &has)) return false;
+    if (has) {
+        if (!GetUint32(env, v, &u32)) return false;
+        out->gulika_point = static_cast<uint8_t>(u32);
+    }
+    if (!GetOptionalNamedProperty(env, obj, "maandiPoint", &v, &has)) return false;
+    if (has) {
+        if (!GetUint32(env, v, &u32)) return false;
+        out->maandi_point = static_cast<uint8_t>(u32);
+    }
+    if (!GetOptionalNamedProperty(env, obj, "otherPoint", &v, &has)) return false;
+    if (has) {
+        if (!GetUint32(env, v, &u32)) return false;
+        out->other_point = static_cast<uint8_t>(u32);
+    }
+    if (!GetOptionalNamedProperty(env, obj, "gulikaPlanet", &v, &has)) return false;
+    if (has) {
+        if (!GetUint32(env, v, &u32)) return false;
+        out->gulika_planet = static_cast<uint8_t>(u32);
+    }
+    if (!GetOptionalNamedProperty(env, obj, "maandiPlanet", &v, &has)) return false;
+    if (has) {
+        if (!GetUint32(env, v, &u32)) return false;
+        out->maandi_planet = static_cast<uint8_t>(u32);
+    }
+    return true;
+}
+
 bool ReadBindusConfig(napi_env env, napi_value obj, DhruvBindusConfig* out) {
     napi_value v;
     bool b = false;
+    *out = DhruvBindusConfig{};
+    out->upagraha_config = dhruv_time_upagraha_config_default();
     if (!GetNamedProperty(env, obj, "includeNakshatra", &v) || !GetBool(env, v, &b)) return false;
     out->include_nakshatra = b ? 1 : 0;
     if (!GetNamedProperty(env, obj, "includeBhava", &v) || !GetBool(env, v, &b)) return false;
     out->include_bhava = b ? 1 : 0;
+    bool has = false;
+    if (!GetOptionalNamedProperty(env, obj, "upagrahaConfig", &v, &has)) return false;
+    if (has && !ReadTimeUpagrahaConfig(env, v, &out->upagraha_config)) return false;
     return true;
 }
 
@@ -381,6 +419,7 @@ bool ReadDashaPeriodValue(napi_env env, napi_value obj, DhruvDashaPeriod* out) {
 }
 
 bool ReadFullKundaliConfig(napi_env env, napi_value obj, DhruvFullKundaliConfig* out) {
+    *out = dhruv_full_kundali_config_default();
     napi_value v;
     bool b = false;
     uint32_t u32 = 0;
@@ -415,6 +454,9 @@ bool ReadFullKundaliConfig(napi_env env, napi_value obj, DhruvFullKundaliConfig*
     if (!GetNamedProperty(env, obj, "charakarakaScheme", &v) || !GetUint32(env, v, &u32)) return false;
     out->charakaraka_scheme = static_cast<uint8_t>(u32);
     if (!GetNamedProperty(env, obj, "nodeDignityPolicy", &v) || !GetUint32(env, v, &out->node_dignity_policy)) return false;
+    bool has = false;
+    if (!GetOptionalNamedProperty(env, obj, "upagrahaConfig", &v, &has)) return false;
+    if (has && !ReadTimeUpagrahaConfig(env, v, &out->upagraha_config)) return false;
     if (!GetNamedProperty(env, obj, "grahaPositionsConfig", &v) || !ReadGrahaPositionsConfig(env, v, &out->graha_positions_config)) return false;
     if (!GetNamedProperty(env, obj, "bindusConfig", &v) || !ReadBindusConfig(env, v, &out->bindus_config)) return false;
     if (!GetNamedProperty(env, obj, "drishtiConfig", &v) || !ReadDrishtiConfig(env, v, &out->drishti_config)) return false;
@@ -688,6 +730,7 @@ napi_value WriteDashaPeriod(napi_env env, const DhruvDashaPeriod& p) {
     napi_create_object(env, &po);
     SetNamed(env, po, "entityType", MakeUint32(env, p.entity_type));
     SetNamed(env, po, "entityIndex", MakeUint32(env, p.entity_index));
+    SetNamed(env, po, "entityName", MakeString(env, p.entity_name ? p.entity_name : ""));
     SetNamed(env, po, "startJd", MakeDouble(env, p.start_jd));
     SetNamed(env, po, "endJd", MakeDouble(env, p.end_jd));
     SetNamed(env, po, "level", MakeUint32(env, p.level));
@@ -841,6 +884,17 @@ napi_value WriteAllUpagrahas(napi_env env, const DhruvAllUpagrahas& u) {
     SetNamed(env, obj, "parivesha", MakeDouble(env, u.parivesha));
     SetNamed(env, obj, "indraChapa", MakeDouble(env, u.indra_chapa));
     SetNamed(env, obj, "upaketu", MakeDouble(env, u.upaketu));
+    return obj;
+}
+
+napi_value WriteTimeUpagrahaConfig(napi_env env, const DhruvTimeUpagrahaConfig& cfg) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "gulikaPoint", MakeUint32(env, cfg.gulika_point));
+    SetNamed(env, obj, "maandiPoint", MakeUint32(env, cfg.maandi_point));
+    SetNamed(env, obj, "otherPoint", MakeUint32(env, cfg.other_point));
+    SetNamed(env, obj, "gulikaPlanet", MakeUint32(env, cfg.gulika_planet));
+    SetNamed(env, obj, "maandiPlanet", MakeUint32(env, cfg.maandi_planet));
     return obj;
 }
 
@@ -2347,7 +2401,7 @@ napi_value YogaName(napi_env env, napi_callback_info info) { return NameLookup(e
 napi_value VaarName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_vaar_name); }
 napi_value HoraName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_hora_name); }
 napi_value GrahaName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_graha_name); }
-napi_value GrahaEnglishName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_graha_english_name); }
+napi_value YoginiName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_yogini_name); }
 napi_value SphutaName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_sphuta_name); }
 napi_value SpecialLagnaName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_special_lagna_name); }
 napi_value ArudhaPadaName(napi_env env, napi_callback_info info) { return NameLookup(env, info, dhruv_arudha_pada_name); }
@@ -3726,8 +3780,8 @@ napi_value ArudhaPadasForDate(napi_env env, napi_callback_info info) {
 }
 
 napi_value AllUpagrahasForDate(napi_env env, napi_callback_info info) {
-    size_t argc = 6;
-    napi_value args[6];
+    size_t argc = 7;
+    napi_value args[7];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     if (argc < 6) return MakeStatusResult(env, STATUS_INVALID_INPUT);
 
@@ -3746,14 +3800,29 @@ napi_value AllUpagrahasForDate(napi_env env, napi_callback_info info) {
     if (!GetUint32(env, args[4], &ayanamsha) || !GetBool(env, args[5], &use_nutation)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
 
     DhruvAllUpagrahas upagrahas{};
-    int32_t status = dhruv_all_upagrahas_for_date(
-        static_cast<const DhruvEngineHandle*>(e_ptr),
-        static_cast<const DhruvEopHandle*>(ep_ptr),
-        &utc,
-        &loc,
-        ayanamsha,
-        use_nutation ? 1 : 0,
-        &upagrahas);
+    int32_t status = STATUS_OK;
+    if (argc >= 7 && args[6] != nullptr) {
+        DhruvTimeUpagrahaConfig upagraha_cfg{};
+        if (!ReadTimeUpagrahaConfig(env, args[6], &upagraha_cfg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        status = dhruv_all_upagrahas_for_date_with_config(
+            static_cast<const DhruvEngineHandle*>(e_ptr),
+            static_cast<const DhruvEopHandle*>(ep_ptr),
+            &utc,
+            &loc,
+            ayanamsha,
+            use_nutation ? 1 : 0,
+            &upagraha_cfg,
+            &upagrahas);
+    } else {
+        status = dhruv_all_upagrahas_for_date(
+            static_cast<const DhruvEngineHandle*>(e_ptr),
+            static_cast<const DhruvEopHandle*>(ep_ptr),
+            &utc,
+            &loc,
+            ayanamsha,
+            use_nutation ? 1 : 0,
+            &upagrahas);
+    }
 
     napi_value out = MakeStatusResult(env, status);
     if (status == STATUS_OK) {
@@ -4065,8 +4134,8 @@ napi_value SunBasedUpagrahas(napi_env env, napi_callback_info info) {
 }
 
 napi_value TimeUpagrahaJd(napi_env env, napi_callback_info info) {
-    size_t argc = 6;
-    napi_value args[6];
+    size_t argc = 7;
+    napi_value args[7];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     if (argc < 6) return MakeStatusResult(env, STATUS_INVALID_INPUT);
     uint32_t weekday = 0;
@@ -4080,14 +4149,29 @@ napi_value TimeUpagrahaJd(napi_env env, napi_callback_info info) {
         return MakeStatusResult(env, STATUS_INVALID_INPUT);
     }
     double out_jd = 0.0;
-    int32_t status = dhruv_time_upagraha_jd(
-        upagraha,
-        weekday,
-        is_day ? 1 : 0,
-        sunrise,
-        sunset,
-        next_sunrise,
-        &out_jd);
+    int32_t status = STATUS_OK;
+    if (argc >= 7 && args[6] != nullptr) {
+        DhruvTimeUpagrahaConfig upagraha_cfg{};
+        if (!ReadTimeUpagrahaConfig(env, args[6], &upagraha_cfg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        status = dhruv_time_upagraha_jd_with_config(
+            upagraha,
+            weekday,
+            is_day ? 1 : 0,
+            sunrise,
+            sunset,
+            next_sunrise,
+            &upagraha_cfg,
+            &out_jd);
+    } else {
+        status = dhruv_time_upagraha_jd(
+            upagraha,
+            weekday,
+            is_day ? 1 : 0,
+            sunrise,
+            sunset,
+            next_sunrise,
+            &out_jd);
+    }
     napi_value out = MakeStatusResult(env, status);
     if (status == STATUS_OK) {
         SetNamed(env, out, "jdTdb", MakeDouble(env, out_jd));
@@ -4096,8 +4180,8 @@ napi_value TimeUpagrahaJd(napi_env env, napi_callback_info info) {
 }
 
 napi_value TimeUpagrahaJdUtc(napi_env env, napi_callback_info info) {
-    size_t argc = 6;
-    napi_value args[6];
+    size_t argc = 7;
+    napi_value args[7];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     if (argc < 6) return MakeStatusResult(env, STATUS_INVALID_INPUT);
     void* e_ptr = nullptr;
@@ -4111,14 +4195,29 @@ napi_value TimeUpagrahaJdUtc(napi_env env, napi_callback_info info) {
         return MakeStatusResult(env, STATUS_INVALID_INPUT);
     }
     double out_jd = 0.0;
-    int32_t status = dhruv_time_upagraha_jd_utc(
-        static_cast<const DhruvEngineHandle*>(e_ptr),
-        static_cast<const DhruvEopHandle*>(ep_ptr),
-        &utc,
-        &loc,
-        &cfg,
-        upagraha,
-        &out_jd);
+    int32_t status = STATUS_OK;
+    if (argc >= 7 && args[6] != nullptr) {
+        DhruvTimeUpagrahaConfig upagraha_cfg{};
+        if (!ReadTimeUpagrahaConfig(env, args[6], &upagraha_cfg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        status = dhruv_time_upagraha_jd_utc_with_config(
+            static_cast<const DhruvEngineHandle*>(e_ptr),
+            static_cast<const DhruvEopHandle*>(ep_ptr),
+            &utc,
+            &loc,
+            &cfg,
+            &upagraha_cfg,
+            upagraha,
+            &out_jd);
+    } else {
+        status = dhruv_time_upagraha_jd_utc(
+            static_cast<const DhruvEngineHandle*>(e_ptr),
+            static_cast<const DhruvEopHandle*>(ep_ptr),
+            &utc,
+            &loc,
+            &cfg,
+            upagraha,
+            &out_jd);
+    }
     napi_value out = MakeStatusResult(env, status);
     if (status == STATUS_OK) {
         SetNamed(env, out, "jdTdb", MakeDouble(env, out_jd));
@@ -5011,6 +5110,7 @@ napi_value FullKundaliConfigDefault(napi_env env, napi_callback_info info) {
     SetNamed(env, obj, "includeCharakaraka", MakeBool(env, cfg.include_charakaraka != 0));
     SetNamed(env, obj, "charakarakaScheme", MakeUint32(env, cfg.charakaraka_scheme));
     SetNamed(env, obj, "nodeDignityPolicy", MakeUint32(env, cfg.node_dignity_policy));
+    SetNamed(env, obj, "upagrahaConfig", WriteTimeUpagrahaConfig(env, cfg.upagraha_config));
 
     napi_value graha_cfg;
     napi_create_object(env, &graha_cfg);
@@ -5024,6 +5124,7 @@ napi_value FullKundaliConfigDefault(napi_env env, napi_callback_info info) {
     napi_create_object(env, &bindus_cfg);
     SetNamed(env, bindus_cfg, "includeNakshatra", MakeBool(env, cfg.bindus_config.include_nakshatra != 0));
     SetNamed(env, bindus_cfg, "includeBhava", MakeBool(env, cfg.bindus_config.include_bhava != 0));
+    SetNamed(env, bindus_cfg, "upagrahaConfig", WriteTimeUpagrahaConfig(env, cfg.bindus_config.upagraha_config));
     SetNamed(env, obj, "bindusConfig", bindus_cfg);
 
     napi_value drishti_cfg;
@@ -6052,7 +6153,7 @@ napi_value Init(napi_env env, napi_value exports) {
         {"vaarName", nullptr, VaarName, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"horaName", nullptr, HoraName, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"grahaName", nullptr, GrahaName, nullptr, nullptr, nullptr, napi_default, nullptr},
-        {"grahaEnglishName", nullptr, GrahaEnglishName, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"yoginiName", nullptr, YoginiName, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"sphutaName", nullptr, SphutaName, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"specialLagnaName", nullptr, SpecialLagnaName, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"arudhaPadaName", nullptr, ArudhaPadaName, nullptr, nullptr, nullptr, napi_default, nullptr},

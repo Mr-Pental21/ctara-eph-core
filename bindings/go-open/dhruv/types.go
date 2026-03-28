@@ -2,7 +2,7 @@ package dhruv
 
 import "ctara-dhruv-core/bindings/go-open/internal/cabi"
 
-const ExpectedAPIVersion = 47
+const ExpectedAPIVersion = 48
 
 const (
 	PathCapacity          = cabi.PathCapacity
@@ -30,6 +30,17 @@ const (
 	CharakarakaRoleGnati      = cabi.CharakarakaRoleGnati
 	CharakarakaRoleDara       = cabi.CharakarakaRoleDara
 	CharakarakaRoleMatriPutra = cabi.CharakarakaRoleMatriPutra
+)
+
+const (
+	UpagrahaPointStart  = cabi.UpagrahaPointStart
+	UpagrahaPointMiddle = cabi.UpagrahaPointMiddle
+	UpagrahaPointEnd    = cabi.UpagrahaPointEnd
+)
+
+const (
+	GulikaMaandiPlanetRahu   = cabi.GulikaMaandiPlanetRahu
+	GulikaMaandiPlanetSaturn = cabi.GulikaMaandiPlanetSaturn
 )
 
 type (
@@ -85,6 +96,7 @@ type (
 	SpecialLagnas        = cabi.SpecialLagnas
 	ArudhaResult         = cabi.ArudhaResult
 	AllUpagrahas         = cabi.AllUpagrahas
+	TimeUpagrahaConfig   = cabi.TimeUpagrahaConfig
 	DrishtiConfig        = cabi.DrishtiConfig
 	GrahaPositionsConfig = cabi.GrahaPositionsConfig
 	BindusConfig         = cabi.BindusConfig

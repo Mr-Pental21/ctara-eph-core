@@ -95,6 +95,7 @@ def _extract_period(p):
         level=p.level,
         order=p.order,
         parent_idx=p.parent_idx,
+        entity_name=ffi.string(p.entity_name).decode("utf-8") if p.entity_name != ffi.NULL else None,
     )
 
 
@@ -102,6 +103,7 @@ def _make_period(period):
     out = ffi.new("DhruvDashaPeriod *")
     out.entity_type = period.entity_type
     out.entity_index = period.entity_index
+    out.entity_name = ffi.NULL
     out.start_jd = period.start_jd
     out.end_jd = period.end_jd
     out.level = period.level

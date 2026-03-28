@@ -978,6 +978,7 @@ class DashaPeriod:
 
     ``entity_type``: 0=Graha, 1=Rashi, 2=Yogini.
     ``entity_index``: Graha (0-8), rashi (0-11), or yogini (0-7).
+    ``entity_name``: exact canonical entity name when available.
     ``level``: hierarchical level (0-4).
     ``start_jd`` / ``end_jd``: JD UTC, [start, end) interval.
     ``order``: 1-indexed position among siblings.
@@ -991,6 +992,7 @@ class DashaPeriod:
     level: int
     order: int
     parent_idx: int
+    entity_name: Optional[str] = None
 
 
 @dataclass(frozen=True)

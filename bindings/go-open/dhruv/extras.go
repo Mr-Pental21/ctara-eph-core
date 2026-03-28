@@ -66,7 +66,7 @@ func YogaName(index uint32) string            { return cabi.YogaName(index) }
 func VaarName(index uint32) string            { return cabi.VaarName(index) }
 func HoraName(index uint32) string            { return cabi.HoraName(index) }
 func GrahaName(index uint32) string           { return cabi.GrahaName(index) }
-func GrahaEnglishName(index uint32) string    { return cabi.GrahaEnglishName(index) }
+func YoginiName(index uint32) string          { return cabi.YoginiName(index) }
 func SphutaName(index uint32) string          { return cabi.SphutaName(index) }
 func SpecialLagnaName(index uint32) string    { return cabi.SpecialLagnaName(index) }
 func ArudhaPadaName(index uint32) string      { return cabi.ArudhaPadaName(index) }
@@ -225,14 +225,28 @@ func (e *Engine) SunBasedUpagrahas(jdTdb float64, ayanamshaSystem uint32, useNut
 	return out, statusErr("sun_based_upagrahas", st)
 }
 
+func TimeUpagrahaConfigDefault() TimeUpagrahaConfig {
+	return cabi.TimeUpagrahaConfigDefault()
+}
+
 func TimeUpagrahaJD(upagrahaIndex uint32, weekday uint32, isDay bool, sunriseJd, sunsetJd, nextSunriseJd float64) (float64, error) {
 	jd, st := cabi.TimeUpagrahaJD(upagrahaIndex, weekday, isDay, sunriseJd, sunsetJd, nextSunriseJd)
 	return jd, statusErr("time_upagraha_jd", st)
 }
 
+func TimeUpagrahaJDWithConfig(upagrahaIndex uint32, weekday uint32, isDay bool, sunriseJd, sunsetJd, nextSunriseJd float64, cfg TimeUpagrahaConfig) (float64, error) {
+	jd, st := cabi.TimeUpagrahaJDWithConfig(upagrahaIndex, weekday, isDay, sunriseJd, sunsetJd, nextSunriseJd, cfg)
+	return jd, statusErr("time_upagraha_jd_with_config", st)
+}
+
 func (e *Engine) TimeUpagrahaJDUTC(ep *EOP, loc GeoLocation, riseCfg RiseSetConfig, utc UtcTime, upagrahaIndex uint32) (float64, error) {
 	jd, st := cabi.TimeUpagrahaJDUTC(e.h, ep.h, loc, riseCfg, utc, upagrahaIndex)
 	return jd, statusErr("time_upagraha_jd_utc", st)
+}
+
+func (e *Engine) TimeUpagrahaJDUTCWithConfig(ep *EOP, loc GeoLocation, riseCfg RiseSetConfig, utc UtcTime, upagrahaIndex uint32, cfg TimeUpagrahaConfig) (float64, error) {
+	jd, st := cabi.TimeUpagrahaJDUTCWithConfig(e.h, ep.h, loc, riseCfg, utc, upagrahaIndex, cfg)
+	return jd, statusErr("time_upagraha_jd_utc_with_config", st)
 }
 
 func CalculateAshtakavarga(grahaRashis [7]uint8, lagnaRashi uint8) (AshtakavargaResult, error) {

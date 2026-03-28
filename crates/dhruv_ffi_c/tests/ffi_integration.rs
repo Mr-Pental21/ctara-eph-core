@@ -2045,6 +2045,251 @@ fn ffi_utc_sunrise_roundtrip() {
 }
 
 #[test]
+fn ffi_time_upagraha_jd_utc_matches_manual_night_window_after_noon_utc() {
+    if !all_kernels_available() {
+        eprintln!("Skipping: not all kernel files available");
+        return;
+    }
+
+    let engine_ptr = make_engine().unwrap();
+    let lsk_path = lsk_path_cstr().unwrap();
+    let eop_path = eop_path_cstr().unwrap();
+
+    let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
+    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
+    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let loc = DhruvGeoLocation {
+        latitude_deg: 12.9716,
+        longitude_deg: 77.5946,
+        altitude_m: 0.0,
+    };
+    let utc = DhruvUtcTime {
+        year: 2026,
+        month: 3,
+        day: 17,
+        hour: 15,
+        minute: 6,
+        second: 19.0,
+    };
+    let cfg = dhruv_riseset_config_default();
+
+    let mut sunrise_jd = 0.0;
+    let mut next_sunrise_jd = 0.0;
+    let status = unsafe {
+        dhruv_vedic_day_sunrises(
+            engine_ptr,
+            eop_ptr,
+            &utc,
+            &loc,
+            &cfg,
+            &mut sunrise_jd,
+            &mut next_sunrise_jd,
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let jd_0h = calendar_to_jd(utc.year, utc.month, utc.day as f64);
+    let noon_jd = dhruv_approximate_local_noon_jd(jd_0h, loc.longitude_deg);
+    let mut sunset = DhruvRiseSetResult {
+        result_type: -1,
+        event_code: -1,
+        jd_tdb: 0.0,
+    };
+    let status = unsafe {
+        dhruv_compute_rise_set(
+            engine_ptr,
+            lsk_ptr,
+            eop_ptr,
+            &loc,
+            DHRUV_EVENT_SUNSET,
+            noon_jd,
+            &cfg,
+            &mut sunset,
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(sunset.result_type, DHRUV_RISESET_EVENT);
+
+    let mut query_jd_tdb = 0.0;
+    let status = unsafe {
+        dhruv_utc_to_tdb_jd(
+            lsk_ptr,
+            utc.year,
+            utc.month,
+            utc.day,
+            utc.hour,
+            utc.minute,
+            utc.second,
+            &mut query_jd_tdb,
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert!(
+        query_jd_tdb >= sunset.jd_tdb,
+        "query should be in the night interval for this regression case"
+    );
+
+    for index in 0..6u32 {
+        let mut manual_jd = 0.0;
+        let status = unsafe {
+            dhruv_time_upagraha_jd(
+                index,
+                2,
+                0,
+                sunrise_jd,
+                sunset.jd_tdb,
+                next_sunrise_jd,
+                &mut manual_jd,
+            )
+        };
+        assert_eq!(status, DhruvStatus::Ok);
+        assert!(
+            manual_jd >= sunset.jd_tdb && manual_jd <= next_sunrise_jd,
+            "manual JD should lie in the night interval"
+        );
+
+        let mut utc_jd = 0.0;
+        let status = unsafe {
+            dhruv_time_upagraha_jd_utc(engine_ptr, eop_ptr, &utc, &loc, &cfg, index, &mut utc_jd)
+        };
+        assert_eq!(status, DhruvStatus::Ok);
+        assert!(
+            (utc_jd - manual_jd).abs() < 1e-8,
+            "index {index}: utc_jd={utc_jd}, manual_jd={manual_jd}"
+        );
+    }
+
+    unsafe {
+        dhruv_eop_free(eop_ptr);
+        dhruv_lsk_free(lsk_ptr);
+        dhruv_engine_free(engine_ptr);
+    }
+}
+
+#[test]
+fn ffi_compute_rise_set_utc_matches_manual_same_day_sunset_after_noon_utc() {
+    if !all_kernels_available() {
+        eprintln!("Skipping: not all kernel files available");
+        return;
+    }
+
+    let engine_ptr = make_engine().unwrap();
+    let lsk_path = lsk_path_cstr().unwrap();
+    let eop_path = eop_path_cstr().unwrap();
+
+    let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
+    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
+    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let loc = DhruvGeoLocation {
+        latitude_deg: 12.9716,
+        longitude_deg: 77.5946,
+        altitude_m: 0.0,
+    };
+    let utc = DhruvUtcTime {
+        year: 2026,
+        month: 3,
+        day: 17,
+        hour: 15,
+        minute: 6,
+        second: 19.0,
+    };
+    let cfg = dhruv_riseset_config_default();
+
+    let jd_0h = calendar_to_jd(utc.year, utc.month, utc.day as f64);
+    let noon_jd = dhruv_approximate_local_noon_jd(jd_0h, loc.longitude_deg);
+    let mut manual = DhruvRiseSetResult {
+        result_type: -1,
+        event_code: -1,
+        jd_tdb: 0.0,
+    };
+    let status = unsafe {
+        dhruv_compute_rise_set(
+            engine_ptr,
+            lsk_ptr,
+            eop_ptr,
+            &loc,
+            DHRUV_EVENT_SUNSET,
+            noon_jd,
+            &cfg,
+            &mut manual,
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(manual.result_type, DHRUV_RISESET_EVENT);
+
+    let mut utc_result = DhruvRiseSetResultUtc {
+        result_type: -1,
+        event_code: -1,
+        utc: DhruvUtcTime {
+            year: 0,
+            month: 0,
+            day: 0,
+            hour: 0,
+            minute: 0,
+            second: 0.0,
+        },
+    };
+    let status = unsafe {
+        dhruv_compute_rise_set_utc(
+            engine_ptr,
+            lsk_ptr,
+            eop_ptr,
+            &loc,
+            DHRUV_EVENT_SUNSET,
+            &utc,
+            &cfg,
+            &mut utc_result,
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(utc_result.result_type, DHRUV_RISESET_EVENT);
+
+    let mut manual_utc = DhruvUtcTime {
+        year: 0,
+        month: 0,
+        day: 0,
+        hour: 0,
+        minute: 0,
+        second: 0.0,
+    };
+    let status = unsafe { dhruv_riseset_result_to_utc(lsk_ptr, &manual, &mut manual_utc) };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let actual_seconds = utc_result.utc.hour as i64 * 3600
+        + utc_result.utc.minute as i64 * 60
+        + utc_result.utc.second.round() as i64;
+    let expected_seconds = manual_utc.hour as i64 * 3600
+        + manual_utc.minute as i64 * 60
+        + manual_utc.second.round() as i64;
+
+    assert_eq!(utc_result.utc.year, manual_utc.year);
+    assert_eq!(utc_result.utc.month, manual_utc.month);
+    assert_eq!(utc_result.utc.day, manual_utc.day);
+    assert!(
+        (actual_seconds - expected_seconds).abs() <= 1,
+        "utc_result={:?}, manual_utc={:?}",
+        utc_result.utc,
+        manual_utc
+    );
+
+    unsafe {
+        dhruv_eop_free(eop_ptr);
+        dhruv_lsk_free(lsk_ptr);
+        dhruv_engine_free(engine_ptr);
+    }
+}
+
+#[test]
 fn ffi_utc_nutation_roundtrip() {
     let lsk_path = match lsk_path_cstr() {
         Some(p) => p,
@@ -2181,6 +2426,7 @@ fn ffi_full_kundali_result_free_double_free_same_pointer() {
         include_panchang: 0,
         include_calendar: 0,
         node_dignity_policy: 0,
+        upagraha_config: dhruv_time_upagraha_config_default(),
         graha_positions_config: DhruvGrahaPositionsConfig {
             include_nakshatra: 0,
             include_lagna: 0,
@@ -2190,6 +2436,7 @@ fn ffi_full_kundali_result_free_double_free_same_pointer() {
         bindus_config: DhruvBindusConfig {
             include_nakshatra: 0,
             include_bhava: 0,
+            upagraha_config: dhruv_time_upagraha_config_default(),
         },
         drishti_config: DhruvDrishtiConfig {
             include_bhava: 0,
@@ -2277,6 +2524,7 @@ fn ffi_full_kundali_error_path_free_safety() {
         include_panchang: 0,
         include_calendar: 0,
         node_dignity_policy: 0,
+        upagraha_config: dhruv_time_upagraha_config_default(),
         graha_positions_config: DhruvGrahaPositionsConfig {
             include_nakshatra: 0,
             include_lagna: 0,
@@ -2286,6 +2534,7 @@ fn ffi_full_kundali_error_path_free_safety() {
         bindus_config: DhruvBindusConfig {
             include_nakshatra: 0,
             include_bhava: 0,
+            upagraha_config: dhruv_time_upagraha_config_default(),
         },
         drishti_config: DhruvDrishtiConfig {
             include_bhava: 0,
@@ -2363,6 +2612,7 @@ fn ffi_full_kundali_dasha_overflow_rejection() {
         include_panchang: 0,
         include_calendar: 0,
         node_dignity_policy: 0,
+        upagraha_config: dhruv_time_upagraha_config_default(),
         graha_positions_config: DhruvGrahaPositionsConfig {
             include_nakshatra: 0,
             include_lagna: 0,
@@ -2372,6 +2622,7 @@ fn ffi_full_kundali_dasha_overflow_rejection() {
         bindus_config: DhruvBindusConfig {
             include_nakshatra: 0,
             include_bhava: 0,
+            upagraha_config: dhruv_time_upagraha_config_default(),
         },
         drishti_config: DhruvDrishtiConfig {
             include_bhava: 0,
@@ -2453,6 +2704,7 @@ fn ffi_full_kundali_dasha_partial_success_contract() {
         include_panchang: 0,
         include_calendar: 0,
         node_dignity_policy: 0,
+        upagraha_config: dhruv_time_upagraha_config_default(),
         graha_positions_config: DhruvGrahaPositionsConfig {
             include_nakshatra: 0,
             include_lagna: 0,
@@ -2462,6 +2714,7 @@ fn ffi_full_kundali_dasha_partial_success_contract() {
         bindus_config: DhruvBindusConfig {
             include_nakshatra: 0,
             include_bhava: 0,
+            upagraha_config: dhruv_time_upagraha_config_default(),
         },
         drishti_config: DhruvDrishtiConfig {
             include_bhava: 0,
@@ -2522,6 +2775,10 @@ fn ffi_full_kundali_dasha_partial_success_contract() {
             snap_sys,
             hier_systems
         );
+        let count = r.dasha_snapshots[i].count as usize;
+        for j in 0..count {
+            assert!(!r.dasha_snapshots[i].periods[j].entity_name.is_null());
+        }
     }
 
     unsafe { dhruv_full_kundali_result_free(result.as_mut_ptr()) };
@@ -2556,6 +2813,7 @@ fn ffi_full_kundali_panchang_only() {
         include_panchang: 1,
         include_calendar: 0,
         node_dignity_policy: 0,
+        upagraha_config: dhruv_time_upagraha_config_default(),
         graha_positions_config: DhruvGrahaPositionsConfig {
             include_nakshatra: 0,
             include_lagna: 0,
@@ -2565,6 +2823,7 @@ fn ffi_full_kundali_panchang_only() {
         bindus_config: DhruvBindusConfig {
             include_nakshatra: 0,
             include_bhava: 0,
+            upagraha_config: dhruv_time_upagraha_config_default(),
         },
         drishti_config: DhruvDrishtiConfig {
             include_bhava: 0,
@@ -2643,6 +2902,7 @@ fn ffi_full_kundali_panchang_disabled() {
         include_panchang: 0,
         include_calendar: 0,
         node_dignity_policy: 0,
+        upagraha_config: dhruv_time_upagraha_config_default(),
         graha_positions_config: DhruvGrahaPositionsConfig {
             include_nakshatra: 0,
             include_lagna: 0,
@@ -2652,6 +2912,7 @@ fn ffi_full_kundali_panchang_disabled() {
         bindus_config: DhruvBindusConfig {
             include_nakshatra: 0,
             include_bhava: 0,
+            upagraha_config: dhruv_time_upagraha_config_default(),
         },
         drishti_config: DhruvDrishtiConfig {
             include_bhava: 0,
@@ -2726,6 +2987,7 @@ fn ffi_full_kundali_calendar_implies_panchang() {
         include_panchang: 0,
         include_calendar: 1,
         node_dignity_policy: 0,
+        upagraha_config: dhruv_time_upagraha_config_default(),
         graha_positions_config: DhruvGrahaPositionsConfig {
             include_nakshatra: 0,
             include_lagna: 0,
@@ -2735,6 +2997,7 @@ fn ffi_full_kundali_calendar_implies_panchang() {
         bindus_config: DhruvBindusConfig {
             include_nakshatra: 0,
             include_bhava: 0,
+            upagraha_config: dhruv_time_upagraha_config_default(),
         },
         drishti_config: DhruvDrishtiConfig {
             include_bhava: 0,
@@ -2816,6 +3079,7 @@ fn ffi_full_kundali_panchang_and_calendar() {
         include_panchang: 1,
         include_calendar: 1,
         node_dignity_policy: 0,
+        upagraha_config: dhruv_time_upagraha_config_default(),
         graha_positions_config: DhruvGrahaPositionsConfig {
             include_nakshatra: 0,
             include_lagna: 0,
@@ -2825,6 +3089,7 @@ fn ffi_full_kundali_panchang_and_calendar() {
         bindus_config: DhruvBindusConfig {
             include_nakshatra: 0,
             include_bhava: 0,
+            upagraha_config: dhruv_time_upagraha_config_default(),
         },
         drishti_config: DhruvDrishtiConfig {
             include_bhava: 0,
@@ -2907,6 +3172,7 @@ fn ffi_full_kundali_bhava_cusps_enabled() {
         include_panchang: 0,
         include_calendar: 0,
         node_dignity_policy: 0,
+        upagraha_config: dhruv_time_upagraha_config_default(),
         graha_positions_config: DhruvGrahaPositionsConfig {
             include_nakshatra: 0,
             include_lagna: 0,
@@ -2916,6 +3182,7 @@ fn ffi_full_kundali_bhava_cusps_enabled() {
         bindus_config: DhruvBindusConfig {
             include_nakshatra: 0,
             include_bhava: 0,
+            upagraha_config: dhruv_time_upagraha_config_default(),
         },
         drishti_config: DhruvDrishtiConfig {
             include_bhava: 0,
@@ -3001,6 +3268,7 @@ fn ffi_full_kundali_bhava_cusps_disabled() {
         include_panchang: 1,
         include_calendar: 0,
         node_dignity_policy: 0,
+        upagraha_config: dhruv_time_upagraha_config_default(),
         graha_positions_config: DhruvGrahaPositionsConfig {
             include_nakshatra: 0,
             include_lagna: 0,
@@ -3010,6 +3278,7 @@ fn ffi_full_kundali_bhava_cusps_disabled() {
         bindus_config: DhruvBindusConfig {
             include_nakshatra: 0,
             include_bhava: 0,
+            upagraha_config: dhruv_time_upagraha_config_default(),
         },
         drishti_config: DhruvDrishtiConfig {
             include_bhava: 0,

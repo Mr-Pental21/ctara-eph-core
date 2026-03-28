@@ -89,6 +89,30 @@ func cRiseSetConfig(cfg RiseSetConfig) C.DhruvRiseSetConfig {
 	}
 }
 
+func goTimeUpagrahaConfig(cfg C.DhruvTimeUpagrahaConfig) TimeUpagrahaConfig {
+	return TimeUpagrahaConfig{
+		GulikaPoint:  uint8(cfg.gulika_point),
+		MaandiPoint:  uint8(cfg.maandi_point),
+		OtherPoint:   uint8(cfg.other_point),
+		GulikaPlanet: uint8(cfg.gulika_planet),
+		MaandiPlanet: uint8(cfg.maandi_planet),
+	}
+}
+
+func cTimeUpagrahaConfig(cfg TimeUpagrahaConfig) C.DhruvTimeUpagrahaConfig {
+	return C.DhruvTimeUpagrahaConfig{
+		gulika_point:  C.int32_t(cfg.GulikaPoint),
+		maandi_point:  C.int32_t(cfg.MaandiPoint),
+		other_point:   C.int32_t(cfg.OtherPoint),
+		gulika_planet: C.int32_t(cfg.GulikaPlanet),
+		maandi_planet: C.int32_t(cfg.MaandiPlanet),
+	}
+}
+
+func TimeUpagrahaConfigDefault() TimeUpagrahaConfig {
+	return goTimeUpagrahaConfig(C.dhruv_time_upagraha_config_default())
+}
+
 func goRiseSetConfig(cfg C.DhruvRiseSetConfig) RiseSetConfig {
 	return RiseSetConfig{
 		UseRefraction:      cfg.use_refraction != 0,
@@ -1070,10 +1094,31 @@ func AllUpagrahasForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc Ge
 	}, st
 }
 
+func AllUpagrahasForDateWithConfig(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocation, ayanamshaSystem uint32, useNutation bool, cfg TimeUpagrahaConfig) (AllUpagrahas, Status) {
+	cutc, cloc, ccfg := cUTC(utc), cGeo(loc), cTimeUpagrahaConfig(cfg)
+	var out C.DhruvAllUpagrahas
+	st := Status(C.dhruv_all_upagrahas_for_date_with_config(
+		engine.ptr,
+		eop.ptr,
+		&cutc,
+		&cloc,
+		C.uint32_t(ayanamshaSystem),
+		boolU8(useNutation),
+		&ccfg,
+		&out,
+	))
+	return AllUpagrahas{
+		Gulika: float64(out.gulika), Maandi: float64(out.maandi), Kaala: float64(out.kaala), Mrityu: float64(out.mrityu),
+		ArthaPrahara: float64(out.artha_prahara), YamaGhantaka: float64(out.yama_ghantaka), Dhooma: float64(out.dhooma),
+		Vyatipata: float64(out.vyatipata), Parivesha: float64(out.parivesha), IndraChapa: float64(out.indra_chapa), Upaketu: float64(out.upaketu),
+	}, st
+}
+
 func goDashaPeriod(out C.DhruvDashaPeriod) DashaPeriod {
 	return DashaPeriod{
 		EntityType:  uint8(out.entity_type),
 		EntityIndex: uint8(out.entity_index),
+		EntityName:  cString((*C.char)(unsafe.Pointer(out.entity_name))),
 		StartJD:     float64(out.start_jd),
 		EndJD:       float64(out.end_jd),
 		Level:       uint8(out.level),
@@ -1086,6 +1131,7 @@ func cDashaPeriod(period DashaPeriod) C.DhruvDashaPeriod {
 	return C.DhruvDashaPeriod{
 		entity_type:  C.uint8_t(period.EntityType),
 		entity_index: C.uint8_t(period.EntityIndex),
+		entity_name:  nil,
 		start_jd:     C.double(period.StartJD),
 		end_jd:       C.double(period.EndJD),
 		level:        C.uint8_t(period.Level),
@@ -1187,6 +1233,7 @@ func FullKundaliConfigDefault() FullKundaliConfig {
 		IncludeCharakaraka:    cfg.include_charakaraka != 0,
 		CharakarakaScheme:     uint8(cfg.charakaraka_scheme),
 		NodeDignityPolicy:     uint32(cfg.node_dignity_policy),
+		UpagrahaConfig:        goTimeUpagrahaConfig(cfg.upagraha_config),
 		GrahaPositionsConfig: GrahaPositionsConfig{
 			IncludeNakshatra:    cfg.graha_positions_config.include_nakshatra != 0,
 			IncludeLagna:        cfg.graha_positions_config.include_lagna != 0,
@@ -1196,6 +1243,7 @@ func FullKundaliConfigDefault() FullKundaliConfig {
 		BindusConfig: BindusConfig{
 			IncludeNakshatra: cfg.bindus_config.include_nakshatra != 0,
 			IncludeBhava:     cfg.bindus_config.include_bhava != 0,
+			UpagrahaConfig:   goTimeUpagrahaConfig(cfg.bindus_config.upagraha_config),
 		},
 		DrishtiConfig: DrishtiConfig{
 			IncludeBhava:  cfg.drishti_config.include_bhava != 0,
@@ -1235,6 +1283,7 @@ func cFullKundaliConfig(cfg FullKundaliConfig) C.DhruvFullKundaliConfig {
 	out.include_charakaraka = boolU8(cfg.IncludeCharakaraka)
 	out.charakaraka_scheme = C.uint8_t(cfg.CharakarakaScheme)
 	out.node_dignity_policy = C.uint32_t(cfg.NodeDignityPolicy)
+	out.upagraha_config = cTimeUpagrahaConfig(cfg.UpagrahaConfig)
 	out.graha_positions_config = C.DhruvGrahaPositionsConfig{
 		include_nakshatra:     boolU8(cfg.GrahaPositionsConfig.IncludeNakshatra),
 		include_lagna:         boolU8(cfg.GrahaPositionsConfig.IncludeLagna),
@@ -1244,6 +1293,7 @@ func cFullKundaliConfig(cfg FullKundaliConfig) C.DhruvFullKundaliConfig {
 	out.bindus_config = C.DhruvBindusConfig{
 		include_nakshatra: boolU8(cfg.BindusConfig.IncludeNakshatra),
 		include_bhava:     boolU8(cfg.BindusConfig.IncludeBhava),
+		upagraha_config:   cTimeUpagrahaConfig(cfg.BindusConfig.UpagrahaConfig),
 	}
 	out.drishti_config = C.DhruvDrishtiConfig{
 		include_bhava:  boolU8(cfg.DrishtiConfig.IncludeBhava),
@@ -1815,6 +1865,7 @@ func goFullKundaliDashaHierarchy(handle C.DhruvDashaHierarchyHandle, system uint
 			level.Periods[idx] = DashaPeriod{
 				EntityType:  uint8(period.entity_type),
 				EntityIndex: uint8(period.entity_index),
+				EntityName:  cString((*C.char)(unsafe.Pointer(period.entity_name))),
 				StartJD:     float64(period.start_jd),
 				EndJD:       float64(period.end_jd),
 				Level:       uint8(period.level),
@@ -2013,7 +2064,7 @@ func FullKundaliForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc Geo
 			for j := 0; j < len(snap.Periods); j++ {
 				p := s.periods[j]
 				snap.Periods[j] = DashaPeriod{
-					EntityType: uint8(p.entity_type), EntityIndex: uint8(p.entity_index), StartJD: float64(p.start_jd),
+					EntityType: uint8(p.entity_type), EntityIndex: uint8(p.entity_index), EntityName: cString((*C.char)(unsafe.Pointer(p.entity_name))), StartJD: float64(p.start_jd),
 					EndJD: float64(p.end_jd), Level: uint8(p.level), Order: uint16(p.order), ParentIdx: uint32(p.parent_idx),
 				}
 			}

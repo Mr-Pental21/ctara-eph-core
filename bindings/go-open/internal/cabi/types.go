@@ -30,6 +30,17 @@ const (
 	CharakarakaRoleMatriPutra uint8 = 8
 )
 
+const (
+	UpagrahaPointStart  uint8 = 0
+	UpagrahaPointMiddle uint8 = 1
+	UpagrahaPointEnd    uint8 = 2
+)
+
+const (
+	GulikaMaandiPlanetRahu   uint8 = 0
+	GulikaMaandiPlanetSaturn uint8 = 1
+)
+
 type Status int32
 
 const (
@@ -452,9 +463,18 @@ type GrahaPositionsConfig struct {
 	IncludeBhava        bool
 }
 
+type TimeUpagrahaConfig struct {
+	GulikaPoint  uint8
+	MaandiPoint  uint8
+	OtherPoint   uint8
+	GulikaPlanet uint8
+	MaandiPlanet uint8
+}
+
 type BindusConfig struct {
 	IncludeNakshatra bool
 	IncludeBhava     bool
+	UpagrahaConfig   TimeUpagrahaConfig
 }
 
 type TaraConfig struct {
@@ -493,6 +513,7 @@ type TaraComputeResult struct {
 type DashaPeriod struct {
 	EntityType  uint8
 	EntityIndex uint8
+	EntityName  string
 	StartJD     float64
 	EndJD       float64
 	Level       uint8
@@ -846,6 +867,7 @@ type FullKundaliConfig struct {
 	IncludeCharakaraka    bool
 	CharakarakaScheme     uint8
 	NodeDignityPolicy     uint32
+	UpagrahaConfig        TimeUpagrahaConfig
 	GrahaPositionsConfig  GrahaPositionsConfig
 	BindusConfig          BindusConfig
 	DrishtiConfig         DrishtiConfig

@@ -68,9 +68,11 @@ function arudhaPadasForDate(engine, eop, utc, location, ayanamshaSystem = 0, use
   return r.results;
 }
 
-function allUpagrahasForDate(engine, eop, utc, location, ayanamshaSystem = 0, useNutation = true) {
-  const r = addon.allUpagrahasForDate(engine._handle, eop._handle, utc, location, ayanamshaSystem, !!useNutation);
-  checkStatus('all_upagrahas_for_date', r.status);
+function allUpagrahasForDate(engine, eop, utc, location, ayanamshaSystem = 0, useNutation = true, upagrahaConfig = undefined) {
+  const r = upagrahaConfig === undefined
+    ? addon.allUpagrahasForDate(engine._handle, eop._handle, utc, location, ayanamshaSystem, !!useNutation)
+    : addon.allUpagrahasForDate(engine._handle, eop._handle, utc, location, ayanamshaSystem, !!useNutation, upagrahaConfig);
+  checkStatus(upagrahaConfig === undefined ? 'all_upagrahas_for_date' : 'all_upagrahas_for_date_with_config', r.status);
   return r.upagrahas;
 }
 
@@ -199,7 +201,7 @@ function yogaName(index) { return addon.yogaName(index); }
 function vaarName(index) { return addon.vaarName(index); }
 function horaName(index) { return addon.horaName(index); }
 function grahaName(index) { return addon.grahaName(index); }
-function grahaEnglishName(index) { return addon.grahaEnglishName(index); }
+function yoginiName(index) { return addon.yoginiName(index); }
 function sphutaName(index) { return addon.sphutaName(index); }
 function specialLagnaName(index) { return addon.specialLagnaName(index); }
 function arudhaPadaName(index) { return addon.arudhaPadaName(index); }
@@ -249,7 +251,7 @@ module.exports = {
   vaarName,
   horaName,
   grahaName,
-  grahaEnglishName,
+  yoginiName,
   sphutaName,
   specialLagnaName,
   arudhaPadaName,

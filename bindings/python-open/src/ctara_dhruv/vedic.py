@@ -109,6 +109,52 @@ def _drishti_entry(e) -> DrishtiEntry:
     )
 
 
+_UPAGRAHA_POINT_CODES = {
+    "start": 0,
+    "middle": 1,
+    "end": 2,
+}
+
+_GULIKA_MAANDI_PLANET_CODES = {
+    "rahu": 0,
+    "saturn": 1,
+}
+
+
+def _normalize_upagraha_point(value) -> int:
+    if isinstance(value, str):
+        key = value.strip().lower().replace("_", "-")
+        if key in _UPAGRAHA_POINT_CODES:
+            return _UPAGRAHA_POINT_CODES[key]
+        raise ValueError(f"invalid upagraha point: {value}")
+    return int(value)
+
+
+def _normalize_gulika_maandi_planet(value) -> int:
+    if isinstance(value, str):
+        key = value.strip().lower().replace("_", "-")
+        if key in _GULIKA_MAANDI_PLANET_CODES:
+            return _GULIKA_MAANDI_PLANET_CODES[key]
+        raise ValueError(f"invalid Gulika/Maandi planet: {value}")
+    return int(value)
+
+
+def _make_time_upagraha_config(config):
+    if config is None:
+        return ffi.NULL
+    if isinstance(config, ffi.CData):
+        return ffi.addressof(config) if ffi.typeof(config) != ffi.typeof("DhruvTimeUpagrahaConfig *") else config
+
+    cfg = ffi.new("DhruvTimeUpagrahaConfig *")
+    cfg[0] = lib.dhruv_time_upagraha_config_default()
+    cfg.gulika_point = _normalize_upagraha_point(config.get("gulika_point", cfg.gulika_point))
+    cfg.maandi_point = _normalize_upagraha_point(config.get("maandi_point", cfg.maandi_point))
+    cfg.other_point = _normalize_upagraha_point(config.get("other_point", cfg.other_point))
+    cfg.gulika_planet = _normalize_gulika_maandi_planet(config.get("gulika_planet", cfg.gulika_planet))
+    cfg.maandi_planet = _normalize_gulika_maandi_planet(config.get("maandi_planet", cfg.maandi_planet))
+    return cfg
+
+
 # ---------------------------------------------------------------------------
 # 1. Rise / Set
 # ---------------------------------------------------------------------------
@@ -655,9 +701,9 @@ def graha_name(index: int) -> Optional[str]:
     return _str_or_none(lib.dhruv_graha_name(index))
 
 
-def graha_english_name(index: int) -> Optional[str]:
-    """Return graha English name by index (0-8), or None."""
-    return _str_or_none(lib.dhruv_graha_english_name(index))
+def yogini_name(index: int) -> Optional[str]:
+    """Return Yogini dasha entity name by index (0-7), or None."""
+    return _str_or_none(lib.dhruv_yogini_name(index))
 
 
 def tithi_name(index: int) -> Optional[str]:
@@ -1072,9 +1118,14 @@ def sun_based_upagrahas(sun_sid_lon: float) -> AllUpagrahas:
     )
 
 
+def time_upagraha_config_default():
+    """Return the default DhruvTimeUpagrahaConfig (FFI struct, by value)."""
+    return lib.dhruv_time_upagraha_config_default()
+
+
 def time_upagraha_jd(index: int, weekday: int, is_day: int,
                      sunrise_jd: float, sunset_jd: float,
-                     next_sunrise_jd: float) -> float:
+                     next_sunrise_jd: float, upagraha_config=None) -> float:
     """Compute JD for a time-based upagraha (pure math).
 
     Args:
@@ -1082,42 +1133,69 @@ def time_upagraha_jd(index: int, weekday: int, is_day: int,
                4=ArthaPrahara, 5=YamaGhantaka.
         weekday: 0=Sunday .. 6=Saturday.
         is_day: 1=daytime, 0=nighttime.
+        upagraha_config: Optional DhruvTimeUpagrahaConfig or dict with
+            gulika_point, maandi_point, other_point, gulika_planet,
+            maandi_planet. Point values accept start/middle/end; planet values
+            accept rahu/saturn.
     """
     out = ffi.new("double *")
-    status = lib.dhruv_time_upagraha_jd(index, weekday, is_day,
-                                        sunrise_jd, sunset_jd,
-                                        next_sunrise_jd, out)
-    check(status, "dhruv_time_upagraha_jd")
+    cfg = _make_time_upagraha_config(upagraha_config)
+    if cfg == ffi.NULL:
+        status = lib.dhruv_time_upagraha_jd(index, weekday, is_day,
+                                            sunrise_jd, sunset_jd,
+                                            next_sunrise_jd, out)
+        check(status, "dhruv_time_upagraha_jd")
+    else:
+        status = lib.dhruv_time_upagraha_jd_with_config(
+            index, weekday, is_day, sunrise_jd, sunset_jd, next_sunrise_jd, cfg, out
+        )
+        check(status, "dhruv_time_upagraha_jd_with_config")
     return out[0]
 
 
 def time_upagraha_jd_utc(engine, eop, utc: UtcTime,
                          location: GeoLocation,
                          index: int,
-                         riseset_config=None) -> float:
+                         riseset_config=None,
+                         upagraha_config=None) -> float:
     """Compute JD for a time-based upagraha from UTC date and location."""
     t = _make_utc(utc)
     geo = _make_geo(location)
     out = ffi.new("double *")
     cfg = riseset_config if riseset_config is not None else ffi.NULL
-    status = lib.dhruv_time_upagraha_jd_utc(engine, eop, t, geo, cfg,
-                                            index, out)
-    check(status, "dhruv_time_upagraha_jd_utc")
+    upa_cfg = _make_time_upagraha_config(upagraha_config)
+    if upa_cfg == ffi.NULL:
+        status = lib.dhruv_time_upagraha_jd_utc(engine, eop, t, geo, cfg,
+                                                index, out)
+        check(status, "dhruv_time_upagraha_jd_utc")
+    else:
+        status = lib.dhruv_time_upagraha_jd_utc_with_config(
+            engine, eop, t, geo, cfg, index, upa_cfg, out
+        )
+        check(status, "dhruv_time_upagraha_jd_utc_with_config")
     return out[0]
 
 
 def all_upagrahas_for_date(engine, eop, utc: UtcTime,
                            location: GeoLocation,
                            ayanamsha_system: int = 0,
-                           use_nutation: int = 1) -> AllUpagrahas:
+                           use_nutation: int = 1,
+                           upagraha_config=None) -> AllUpagrahas:
     """Compute all 11 upagrahas for a date and location."""
     t = _make_utc(utc)
     geo = _make_geo(location)
     out = ffi.new("DhruvAllUpagrahas *")
-    status = lib.dhruv_all_upagrahas_for_date(
-        engine, eop, t, geo, ayanamsha_system, use_nutation, out
-    )
-    check(status, "dhruv_all_upagrahas_for_date")
+    cfg = _make_time_upagraha_config(upagraha_config)
+    if cfg == ffi.NULL:
+        status = lib.dhruv_all_upagrahas_for_date(
+            engine, eop, t, geo, ayanamsha_system, use_nutation, out
+        )
+        check(status, "dhruv_all_upagrahas_for_date")
+    else:
+        status = lib.dhruv_all_upagrahas_for_date_with_config(
+            engine, eop, t, geo, ayanamsha_system, use_nutation, cfg, out
+        )
+        check(status, "dhruv_all_upagrahas_for_date_with_config")
     return AllUpagrahas(
         gulika=out.gulika,
         maandi=out.maandi,

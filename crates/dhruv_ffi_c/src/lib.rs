@@ -39,7 +39,7 @@ use dhruv_vedic_base::{
     karana_from_elongation, lunar_node_deg, lunar_node_deg_for_epoch, masa_from_rashi_index,
     nakshatra_from_longitude, nakshatra_from_tropical, nakshatra28_from_longitude,
     nakshatra28_from_tropical, nth_rashi_from, rashi_from_longitude, rashi_from_tropical,
-    samvatsara_from_year, time_upagraha_jd, tithi_from_elongation, vaar_from_jd, yoga_from_sum,
+    samvatsara_from_year, tithi_from_elongation, utc_day_start_jd, vaar_from_jd, yoga_from_sum,
 };
 use dhruv_vedic_ops::{
     PANCHANG_INCLUDE_AYANA, PANCHANG_INCLUDE_GHATIKA, PANCHANG_INCLUDE_HORA,
@@ -49,7 +49,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 47;
+pub const DHRUV_API_VERSION: u32 = 48;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -363,6 +363,49 @@ fn graha_positions_config_from_ffi(
     }
 }
 
+fn time_upagraha_point_from_code(code: i32) -> Option<dhruv_vedic_base::TimeUpagrahaPoint> {
+    match code {
+        DHRUV_UPAGRAHA_POINT_START => Some(dhruv_vedic_base::TimeUpagrahaPoint::Start),
+        DHRUV_UPAGRAHA_POINT_MIDDLE => Some(dhruv_vedic_base::TimeUpagrahaPoint::Middle),
+        DHRUV_UPAGRAHA_POINT_END => Some(dhruv_vedic_base::TimeUpagrahaPoint::End),
+        _ => None,
+    }
+}
+
+fn gulika_maandi_planet_from_code(code: i32) -> Option<dhruv_vedic_base::GulikaMaandiPlanet> {
+    match code {
+        DHRUV_GULIKA_MAANDI_PLANET_RAHU => Some(dhruv_vedic_base::GulikaMaandiPlanet::Rahu),
+        DHRUV_GULIKA_MAANDI_PLANET_SATURN => Some(dhruv_vedic_base::GulikaMaandiPlanet::Saturn),
+        _ => None,
+    }
+}
+
+fn time_upagraha_config_from_ffi(
+    cfg: &DhruvTimeUpagrahaConfig,
+) -> Result<dhruv_vedic_base::TimeUpagrahaConfig, DhruvStatus> {
+    Ok(dhruv_vedic_base::TimeUpagrahaConfig {
+        gulika_point: time_upagraha_point_from_code(cfg.gulika_point)
+            .ok_or(DhruvStatus::InvalidQuery)?,
+        maandi_point: time_upagraha_point_from_code(cfg.maandi_point)
+            .ok_or(DhruvStatus::InvalidQuery)?,
+        other_point: time_upagraha_point_from_code(cfg.other_point)
+            .ok_or(DhruvStatus::InvalidQuery)?,
+        gulika_planet: gulika_maandi_planet_from_code(cfg.gulika_planet)
+            .ok_or(DhruvStatus::InvalidQuery)?,
+        maandi_planet: gulika_maandi_planet_from_code(cfg.maandi_planet)
+            .ok_or(DhruvStatus::InvalidQuery)?,
+    })
+}
+
+fn resolve_time_upagraha_config_ptr(
+    config: *const DhruvTimeUpagrahaConfig,
+) -> Result<dhruv_vedic_base::TimeUpagrahaConfig, DhruvStatus> {
+    if let Some(cfg) = unsafe { config.as_ref() } {
+        return time_upagraha_config_from_ffi(cfg);
+    }
+    Ok(dhruv_vedic_base::TimeUpagrahaConfig::default())
+}
+
 fn resolve_graha_positions_config_ptr(
     config: *const DhruvGrahaPositionsConfig,
 ) -> Result<dhruv_search::GrahaPositionsConfig, DhruvStatus> {
@@ -387,6 +430,7 @@ fn bindus_config_from_ffi(cfg: &DhruvBindusConfig) -> dhruv_search::BindusConfig
     dhruv_search::BindusConfig {
         include_nakshatra: cfg.include_nakshatra != 0,
         include_bhava: cfg.include_bhava != 0,
+        upagraha_config: time_upagraha_config_from_ffi(&cfg.upagraha_config).unwrap_or_default(),
     }
 }
 
@@ -405,6 +449,7 @@ fn resolve_bindus_config_ptr(
     Ok(dhruv_search::BindusConfig {
         include_nakshatra: false,
         include_bhava: false,
+        upagraha_config: dhruv_vedic_base::TimeUpagrahaConfig::default(),
     })
 }
 
@@ -469,6 +514,7 @@ fn full_kundali_config_from_ffi(
         include_charakaraka: cfg.include_charakaraka != 0,
         charakaraka_scheme,
         node_dignity_policy,
+        upagraha_config: time_upagraha_config_from_ffi(&cfg.upagraha_config)?,
         graha_positions_config: graha_positions_config_from_ffi(&cfg.graha_positions_config),
         bindus_config: bindus_config_from_ffi(&cfg.bindus_config),
         drishti_config: drishti_config_from_ffi(&cfg.drishti_config),
@@ -4803,7 +4849,9 @@ pub unsafe extern "C" fn dhruv_compute_rise_set_utc(
             Ok(c) => c,
             Err(status) => return status,
         };
-        let jd_utc_noon = ffi_utc_to_jd_utc(unsafe { &*utc });
+        let jd_utc = ffi_utc_to_jd_utc(unsafe { &*utc });
+        let jd_utc_noon =
+            approximate_local_noon_jd(utc_day_start_jd(jd_utc), loc_ref.longitude_deg);
         match compute_rise_set(
             engine_ref,
             lsk_ref,
@@ -4860,7 +4908,9 @@ pub unsafe extern "C" fn dhruv_compute_all_events_utc(
             Ok(c) => c,
             Err(status) => return status,
         };
-        let jd_utc_noon = ffi_utc_to_jd_utc(unsafe { &*utc });
+        let jd_utc = ffi_utc_to_jd_utc(unsafe { &*utc });
+        let jd_utc_noon =
+            approximate_local_noon_jd(utc_day_start_jd(jd_utc), loc_ref.longitude_deg);
         match compute_all_events(engine_ref, lsk_ref, eop_ref, &geo, jd_utc_noon, &rs_config) {
             Ok(results) => {
                 let out_slice = unsafe { std::slice::from_raw_parts_mut(out_results, 8) };
@@ -6836,21 +6886,20 @@ pub extern "C" fn dhruv_graha_name(index: u32) -> *const std::ffi::c_char {
     NAMES[index as usize].as_ptr() as *const std::ffi::c_char
 }
 
-/// Return the English name of a graha by index (0-8). Returns null for invalid index.
+/// Return the name of a Yogini dasha entity by index (0-7). Returns null for invalid index.
 ///
 /// The returned pointer is a NUL-terminated static string and must not be freed.
 #[unsafe(no_mangle)]
-pub extern "C" fn dhruv_graha_english_name(index: u32) -> *const std::ffi::c_char {
-    static NAMES: [&str; 9] = [
-        "Sun\0",
-        "Moon\0",
-        "Mars\0",
-        "Mercury\0",
-        "Jupiter\0",
-        "Venus\0",
-        "Saturn\0",
-        "Rahu\0",
-        "Ketu\0",
+pub extern "C" fn dhruv_yogini_name(index: u32) -> *const std::ffi::c_char {
+    static NAMES: [&str; 8] = [
+        "Mangala\0",
+        "Pingala\0",
+        "Dhanya\0",
+        "Bhramari\0",
+        "Bhadrika\0",
+        "Ulka\0",
+        "Siddha\0",
+        "Sankata\0",
     ];
     if index as usize >= NAMES.len() {
         return ptr::null();
@@ -7314,6 +7363,47 @@ pub unsafe extern "C" fn dhruv_arudha_padas_for_date(
 /// Number of upagrahas.
 pub const DHRUV_UPAGRAHA_COUNT: u32 = 11;
 
+/// Time-based upagraha point: start of the selected portion.
+pub const DHRUV_UPAGRAHA_POINT_START: i32 = 0;
+/// Time-based upagraha point: midpoint of the selected portion.
+pub const DHRUV_UPAGRAHA_POINT_MIDDLE: i32 = 1;
+/// Time-based upagraha point: end of the selected portion.
+pub const DHRUV_UPAGRAHA_POINT_END: i32 = 2;
+
+/// Gulika/Maandi should use Rahu's portion.
+pub const DHRUV_GULIKA_MAANDI_PLANET_RAHU: i32 = 0;
+/// Gulika/Maandi should use Saturn's portion.
+pub const DHRUV_GULIKA_MAANDI_PLANET_SATURN: i32 = 1;
+
+/// C-compatible configuration for time-based upagraha period selection.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvTimeUpagrahaConfig {
+    /// 0=Start, 1=Middle, 2=End.
+    pub gulika_point: i32,
+    /// 0=Start, 1=Middle, 2=End.
+    pub maandi_point: i32,
+    /// Shared point for Kaala, Mrityu, Artha Prahara, Yama Ghantaka.
+    /// 0=Start, 1=Middle, 2=End.
+    pub other_point: i32,
+    /// 0=Rahu, 1=Saturn.
+    pub gulika_planet: i32,
+    /// 0=Rahu, 1=Saturn.
+    pub maandi_planet: i32,
+}
+
+/// Returns the default time-based upagraha configuration.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_time_upagraha_config_default() -> DhruvTimeUpagrahaConfig {
+    DhruvTimeUpagrahaConfig {
+        gulika_point: DHRUV_UPAGRAHA_POINT_START,
+        maandi_point: DHRUV_UPAGRAHA_POINT_END,
+        other_point: DHRUV_UPAGRAHA_POINT_START,
+        gulika_planet: DHRUV_GULIKA_MAANDI_PLANET_RAHU,
+        maandi_planet: DHRUV_GULIKA_MAANDI_PLANET_RAHU,
+    }
+}
+
 /// C-compatible result for all 11 upagrahas (sidereal longitudes).
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
@@ -7416,6 +7506,36 @@ pub unsafe extern "C" fn dhruv_time_upagraha_jd(
     next_sunrise_jd: f64,
     out_jd: *mut f64,
 ) -> DhruvStatus {
+    unsafe {
+        dhruv_time_upagraha_jd_with_config(
+            upagraha_index,
+            weekday,
+            is_day,
+            sunrise_jd,
+            sunset_jd,
+            next_sunrise_jd,
+            std::ptr::null(),
+            out_jd,
+        )
+    }
+}
+
+/// Compute the JD at which to evaluate a time-based upagraha's lagna using
+/// configurable period selection.
+///
+/// # Safety
+/// `out_jd` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_time_upagraha_jd_with_config(
+    upagraha_index: u32,
+    weekday: u32,
+    is_day: u8,
+    sunrise_jd: f64,
+    sunset_jd: f64,
+    next_sunrise_jd: f64,
+    upagraha_config: *const DhruvTimeUpagrahaConfig,
+    out_jd: *mut f64,
+) -> DhruvStatus {
     if out_jd.is_null() {
         return DhruvStatus::NullPointer;
     }
@@ -7426,13 +7546,18 @@ pub unsafe extern "C" fn dhruv_time_upagraha_jd(
     if weekday > 6 {
         return DhruvStatus::InvalidQuery;
     }
-    let jd = time_upagraha_jd(
+    let upagraha_config = match resolve_time_upagraha_config_ptr(upagraha_config) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
+    let jd = dhruv_vedic_base::time_upagraha_jd_with_config(
         upa,
         weekday as u8,
         is_day != 0,
         sunrise_jd,
         sunset_jd,
         next_sunrise_jd,
+        &upagraha_config,
     );
     unsafe { *out_jd = jd };
     DhruvStatus::Ok
@@ -7453,6 +7578,36 @@ pub unsafe extern "C" fn dhruv_time_upagraha_jd_utc(
     utc: *const DhruvUtcTime,
     location: *const DhruvGeoLocation,
     riseset_config: *const DhruvRiseSetConfig,
+    upagraha_index: u32,
+    out_jd: *mut f64,
+) -> DhruvStatus {
+    unsafe {
+        dhruv_time_upagraha_jd_utc_with_config(
+            engine,
+            eop,
+            utc,
+            location,
+            riseset_config,
+            std::ptr::null(),
+            upagraha_index,
+            out_jd,
+        )
+    }
+}
+
+/// Compute the JD for a time-based upagraha from a UTC date and location using
+/// configurable period selection.
+///
+/// # Safety
+/// All pointer arguments must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_time_upagraha_jd_utc_with_config(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    riseset_config: *const DhruvRiseSetConfig,
+    upagraha_config: *const DhruvTimeUpagrahaConfig,
     upagraha_index: u32,
     out_jd: *mut f64,
 ) -> DhruvStatus {
@@ -7486,6 +7641,10 @@ pub unsafe extern "C" fn dhruv_time_upagraha_jd_utc(
         Ok(c) => c,
         Err(status) => return status,
     };
+    let upagraha_config = match resolve_time_upagraha_config_ptr(upagraha_config) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
 
     // Compute sunrise pair (vedic day boundaries)
     let (jd_sunrise, jd_next_sunrise) =
@@ -7496,7 +7655,7 @@ pub unsafe extern "C" fn dhruv_time_upagraha_jd_utc(
 
     // Compute sunset
     let jd_utc = ffi_utc_to_jd_utc(utc_c);
-    let noon_jd = approximate_local_noon_jd(jd_utc.floor() + 0.5, loc_c.longitude_deg);
+    let noon_jd = approximate_local_noon_jd(utc_day_start_jd(jd_utc), loc_c.longitude_deg);
     let jd_sunset = match compute_rise_set(
         engine,
         engine.lsk(),
@@ -7518,7 +7677,15 @@ pub unsafe extern "C" fn dhruv_time_upagraha_jd_utc(
     // Weekday from sunrise
     let weekday = vaar_from_jd(jd_sunrise).index();
 
-    let jd = time_upagraha_jd(upa, weekday, is_day, jd_sunrise, jd_sunset, jd_next_sunrise);
+    let jd = dhruv_vedic_base::time_upagraha_jd_with_config(
+        upa,
+        weekday,
+        is_day,
+        jd_sunrise,
+        jd_sunset,
+        jd_next_sunrise,
+        &upagraha_config,
+    );
     unsafe { *out_jd = jd };
     DhruvStatus::Ok
 }
@@ -7535,6 +7702,36 @@ pub unsafe extern "C" fn dhruv_all_upagrahas_for_date(
     location: *const DhruvGeoLocation,
     ayanamsha_system: u32,
     use_nutation: u8,
+    out: *mut DhruvAllUpagrahas,
+) -> DhruvStatus {
+    unsafe {
+        dhruv_all_upagrahas_for_date_with_config(
+            engine,
+            eop,
+            utc,
+            location,
+            ayanamsha_system,
+            use_nutation,
+            std::ptr::null(),
+            out,
+        )
+    }
+}
+
+/// Compute all 11 upagrahas for a given date and location using configurable
+/// time-based period selection.
+///
+/// # Safety
+/// All pointers must be valid. `out` must point to a valid `DhruvAllUpagrahas`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_all_upagrahas_for_date_with_config(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    utc: *const DhruvUtcTime,
+    location: *const DhruvGeoLocation,
+    ayanamsha_system: u32,
+    use_nutation: u8,
+    upagraha_config: *const DhruvTimeUpagrahaConfig,
     out: *mut DhruvAllUpagrahas,
 ) -> DhruvStatus {
     if engine.is_null() || eop.is_null() || utc.is_null() || location.is_null() || out.is_null() {
@@ -7564,14 +7761,19 @@ pub unsafe extern "C" fn dhruv_all_upagrahas_for_date(
 
     let rs_config = dhruv_vedic_base::RiseSetConfig::default();
     let aya_config = SankrantiConfig::new(system, use_nutation != 0);
+    let upagraha_config = match resolve_time_upagraha_config_ptr(upagraha_config) {
+        Ok(c) => c,
+        Err(status) => return status,
+    };
 
-    match dhruv_search::all_upagrahas_for_date(
+    match dhruv_search::all_upagrahas_for_date_with_config(
         engine,
         eop,
         &utc_time,
         &location,
         &rs_config,
         &aya_config,
+        &upagraha_config,
     ) {
         Ok(result) => {
             let out = unsafe { &mut *out };
@@ -8166,6 +8368,8 @@ pub struct DhruvBindusConfig {
     pub include_nakshatra: u8,
     /// Include bhava placement: 1 = yes, 0 = no.
     pub include_bhava: u8,
+    /// Time-based Gulika/Maandi configuration.
+    pub upagraha_config: DhruvTimeUpagrahaConfig,
 }
 
 /// C-compatible bindus result.
@@ -9025,6 +9229,8 @@ pub struct DhruvFullKundaliConfig {
     pub charakaraka_scheme: u8,
     /// Node dignity policy for vimsopaka/avastha: 0=SignLordBased (default), 1=AlwaysSama.
     pub node_dignity_policy: u32,
+    /// Time-based upagraha configuration shared by root upagrahas and sphutas.
+    pub upagraha_config: DhruvTimeUpagrahaConfig,
     /// Graha positions config.
     pub graha_positions_config: DhruvGrahaPositionsConfig,
     /// Bindus config.
@@ -9173,6 +9379,7 @@ pub extern "C" fn dhruv_full_kundali_config_default() -> DhruvFullKundaliConfig 
         include_charakaraka: 0,
         charakaraka_scheme: CharakarakaScheme::default() as u8,
         node_dignity_policy: 0, // SignLordBased
+        upagraha_config: dhruv_time_upagraha_config_default(),
         graha_positions_config: DhruvGrahaPositionsConfig {
             include_nakshatra: 0,
             include_lagna: 1,
@@ -9182,6 +9389,7 @@ pub extern "C" fn dhruv_full_kundali_config_default() -> DhruvFullKundaliConfig 
         bindus_config: DhruvBindusConfig {
             include_nakshatra: 0,
             include_bhava: 0,
+            upagraha_config: dhruv_time_upagraha_config_default(),
         },
         drishti_config: DhruvDrishtiConfig {
             include_bhava: 0,
@@ -10316,6 +10524,8 @@ pub struct DhruvDashaPeriod {
     pub entity_type: u8,
     /// Entity index: Graha index (0-8), rashi (0-11), yogini (0-7).
     pub entity_index: u8,
+    /// Exact canonical entity name as a static NUL-terminated UTF-8 string.
+    pub entity_name: *const std::ffi::c_char,
     /// JD UTC, inclusive.
     pub start_jd: f64,
     /// JD UTC, exclusive.
@@ -10351,6 +10561,7 @@ fn dasha_period_to_ffi(p: &dhruv_vedic_base::dasha::DashaPeriod) -> DhruvDashaPe
     DhruvDashaPeriod {
         entity_type: p.entity.type_code(),
         entity_index: p.entity.entity_index(),
+        entity_name: dasha_entity_name_ptr(p.entity),
         start_jd: p.start_jd,
         end_jd: p.end_jd,
         level: p.level as u8,
@@ -10392,6 +10603,16 @@ fn dasha_entity_from_ffi(
             Ok(dhruv_vedic_base::dasha::DashaEntity::Yogini(entity_index))
         }
         _ => Err(DhruvStatus::InvalidInput),
+    }
+}
+
+fn dasha_entity_name_ptr(entity: dhruv_vedic_base::dasha::DashaEntity) -> *const std::ffi::c_char {
+    match entity {
+        dhruv_vedic_base::dasha::DashaEntity::Graha(graha) => {
+            dhruv_graha_name(graha.index() as u32)
+        }
+        dhruv_vedic_base::dasha::DashaEntity::Rashi(index) => dhruv_rashi_name(index as u32),
+        dhruv_vedic_base::dasha::DashaEntity::Yogini(index) => dhruv_yogini_name(index as u32),
     }
 }
 
@@ -10841,6 +11062,7 @@ pub unsafe extern "C" fn dhruv_dasha_snapshot_utc(
             out.periods = [DhruvDashaPeriod {
                 entity_type: 0,
                 entity_index: 0,
+                entity_name: ptr::null(),
                 start_jd: 0.0,
                 end_jd: 0.0,
                 level: 0,
@@ -12462,8 +12684,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_47() {
-        assert_eq!(dhruv_api_version(), 47);
+    fn ffi_api_version_is_48() {
+        assert_eq!(dhruv_api_version(), 48);
     }
 
     #[test]
@@ -13887,8 +14109,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_graha_english_name_valid() {
-        let name = dhruv_graha_english_name(0);
+    fn ffi_yogini_name_valid() {
+        let name = dhruv_yogini_name(0);
         assert!(!name.is_null());
     }
 
@@ -14432,6 +14654,7 @@ mod tests {
         let cfg = DhruvBindusConfig {
             include_nakshatra: 0,
             include_bhava: 0,
+            upagraha_config: dhruv_time_upagraha_config_default(),
         };
         let bhava_cfg = dhruv_bhava_config_default();
         let rs_cfg = dhruv_riseset_config_default();
@@ -14643,6 +14866,25 @@ mod tests {
         assert_eq!(s, DhruvStatus::Ok);
         // Result should be between sunrise and sunset
         assert!(out >= 2451545.0 && out <= 2451545.3, "out={out}");
+    }
+
+    #[test]
+    fn ffi_time_upagraha_jd_with_config_supports_saturn_middle() {
+        let cfg = DhruvTimeUpagrahaConfig {
+            gulika_point: DHRUV_UPAGRAHA_POINT_MIDDLE,
+            maandi_point: DHRUV_UPAGRAHA_POINT_END,
+            other_point: DHRUV_UPAGRAHA_POINT_START,
+            gulika_planet: DHRUV_GULIKA_MAANDI_PLANET_SATURN,
+            maandi_planet: DHRUV_GULIKA_MAANDI_PLANET_RAHU,
+        };
+        let mut out: f64 = 0.0;
+        let s = unsafe {
+            dhruv_time_upagraha_jd_with_config(
+                0, 0, 1, 2451545.0, 2451545.8, 2451546.0, &cfg, &mut out,
+            )
+        };
+        assert_eq!(s, DhruvStatus::Ok);
+        assert!((out - 2451545.65).abs() < 1e-9, "out={out}");
     }
 
     #[test]

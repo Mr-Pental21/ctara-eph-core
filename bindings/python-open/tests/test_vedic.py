@@ -100,11 +100,11 @@ class TestNameLookups:
         assert nakshatra_name(27) is None
 
     def test_graha_names(self):
-        from ctara_dhruv.vedic import graha_name, graha_english_name
+        from ctara_dhruv.vedic import graha_name, yogini_name
         assert graha_name(0) == "Surya"
-        assert graha_english_name(0) == "Sun"
         assert graha_name(1) == "Chandra"
-        assert graha_english_name(1) == "Moon"
+        assert yogini_name(0) == "Mangala"
+        assert yogini_name(7) == "Sankata"
 
     def test_tithi_name(self):
         from ctara_dhruv.vedic import tithi_name

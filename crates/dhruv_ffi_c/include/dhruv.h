@@ -23,7 +23,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       47
+#define DHRUV_API_VERSION       48
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 
@@ -800,6 +800,25 @@ typedef struct {
 
 /* --- Upagrahas --- */
 
+enum {
+    DHRUV_UPAGRAHA_POINT_START = 0,
+    DHRUV_UPAGRAHA_POINT_MIDDLE = 1,
+    DHRUV_UPAGRAHA_POINT_END = 2
+};
+
+enum {
+    DHRUV_GULIKA_MAANDI_PLANET_RAHU = 0,
+    DHRUV_GULIKA_MAANDI_PLANET_SATURN = 1
+};
+
+typedef struct {
+    int32_t gulika_point;
+    int32_t maandi_point;
+    int32_t other_point;
+    int32_t gulika_planet;
+    int32_t maandi_planet;
+} DhruvTimeUpagrahaConfig;
+
 typedef struct {
     double gulika;
     double maandi;
@@ -887,6 +906,7 @@ typedef struct {
 typedef struct {
     uint8_t include_nakshatra;
     uint8_t include_bhava;
+    DhruvTimeUpagrahaConfig upagraha_config;
 } DhruvBindusConfig;
 
 typedef struct {
@@ -1079,6 +1099,7 @@ typedef struct {
 typedef struct {
     uint8_t  entity_type;
     uint8_t  entity_index;
+    const char *entity_name;
     double   start_jd;
     double   end_jd;
     uint8_t  level;
@@ -1130,6 +1151,7 @@ typedef struct {
     uint8_t  include_charakaraka;
     uint8_t  charakaraka_scheme;
     uint32_t node_dignity_policy;
+    DhruvTimeUpagrahaConfig  upagraha_config;
     DhruvGrahaPositionsConfig graha_positions_config;
     DhruvBindusConfig         bindus_config;
     DhruvDrishtiConfig        drishti_config;
@@ -1683,7 +1705,7 @@ DhruvStatus dhruv_ghatika_from_sunrises(
 
 /* --- Graha identifiers --- */
 const char *dhruv_graha_name(uint32_t index);
-const char *dhruv_graha_english_name(uint32_t index);
+const char *dhruv_yogini_name(uint32_t index);
 int32_t dhruv_rashi_lord(uint32_t rashi_index);
 
 /* --- Sphuta --- */
@@ -1748,6 +1770,7 @@ DhruvStatus dhruv_arudha_padas_for_date(
 
 /* --- Upagrahas --- */
 const char *dhruv_upagraha_name(uint32_t index);
+DhruvTimeUpagrahaConfig dhruv_time_upagraha_config_default(void);
 DhruvStatus dhruv_sun_based_upagrahas(
     double sun_sid_lon,
     DhruvAllUpagrahas *out);
@@ -1759,12 +1782,30 @@ DhruvStatus dhruv_time_upagraha_jd(
     double sunset_jd,
     double next_sunrise_jd,
     double *out_jd);
+DhruvStatus dhruv_time_upagraha_jd_with_config(
+    uint32_t upagraha_index,
+    uint32_t weekday,
+    uint8_t is_day,
+    double sunrise_jd,
+    double sunset_jd,
+    double next_sunrise_jd,
+    const DhruvTimeUpagrahaConfig *upagraha_config,
+    double *out_jd);
 DhruvStatus dhruv_time_upagraha_jd_utc(
     const DhruvEngineHandle *engine,
     const DhruvEopHandle *eop,
     const DhruvUtcTime *utc,
     const DhruvGeoLocation *location,
     const DhruvRiseSetConfig *riseset_config,
+    uint32_t upagraha_index,
+    double *out_jd);
+DhruvStatus dhruv_time_upagraha_jd_utc_with_config(
+    const DhruvEngineHandle *engine,
+    const DhruvEopHandle *eop,
+    const DhruvUtcTime *utc,
+    const DhruvGeoLocation *location,
+    const DhruvRiseSetConfig *riseset_config,
+    const DhruvTimeUpagrahaConfig *upagraha_config,
     uint32_t upagraha_index,
     double *out_jd);
 DhruvStatus dhruv_all_upagrahas_for_date(
@@ -1774,6 +1815,15 @@ DhruvStatus dhruv_all_upagrahas_for_date(
     const DhruvGeoLocation *location,
     uint32_t ayanamsha_system,
     uint8_t use_nutation,
+    DhruvAllUpagrahas *out);
+DhruvStatus dhruv_all_upagrahas_for_date_with_config(
+    const DhruvEngineHandle *engine,
+    const DhruvEopHandle *eop,
+    const DhruvUtcTime *utc,
+    const DhruvGeoLocation *location,
+    uint32_t ayanamsha_system,
+    uint8_t use_nutation,
+    const DhruvTimeUpagrahaConfig *upagraha_config,
     DhruvAllUpagrahas *out);
 
 /* --- Ashtakavarga --- */

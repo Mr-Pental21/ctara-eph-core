@@ -7,6 +7,11 @@ The public API uses `DhruvContext` (no global singleton).
 
 Users only need `use dhruv_rs::*` — core types are re-exported.
 
+For end-user guides and examples, start with
+[`docs/end_user/rust_lib/README.md`](end_user/rust_lib/README.md). This page
+stays reference-oriented and should match the public Rust code in
+`crates/dhruv_rs/src/`.
+
 ## Quick Start
 
 ```rust
@@ -144,8 +149,21 @@ let d: UtcDate = "2024-03-20T12:30:45.5Z".parse().unwrap();
 | `arudha_padas(date, eop, location, system, nutation)` | `[ArudhaResult; 12]` | All 12 arudha padas |
 | `ashtakavarga(date, system, nutation)` | `AshtakavargaResult` | Full BAV + SAV (+ BAV contributor matrix) |
 | `upagrahas(date, eop, location, system, nutation)` | `AllUpagrahas` | All 11 upagrahas |
-| `core_bindus(date, eop, location, system, nutation, nak, bhava)` | `Vec<CoreBindu>` | 19 curated sensitive points |
+| `upagrahas_with_config(date, eop, location, system, nutation, upagraha_config)` | `AllUpagrahas` | All 11 upagrahas with configurable Gulika/Maandi period selection |
+| `core_bindus(date, eop, location, system, nutation, config)` | `BindusResult` | Curated sensitive points plus optional nakshatra/bhava enrichment |
 | `drishti(date, eop, location, system, nutation, config)` | `DrishtiResult` | Graha drishti with optional bhava/lagna/bindus |
+
+Relevant config types for this family:
+
+- `TimeUpagrahaConfig { gulika_point, maandi_point, other_point, gulika_planet, maandi_planet }`
+- `BindusConfig { include_nakshatra, include_bhava, upagraha_config }`
+- `FullKundaliConfig`, which carries both `upagraha_config` and `bindus_config`
+
+`TimeUpagrahaConfig::default()` preserves the current behavior:
+
+- Gulika = Rahu period start
+- Maandi = Rahu period end
+- Kaala, Mrityu, Artha Prahara, and Yama Ghantaka = respective period start
 
 #### Amsha (Divisional Charts)
 
@@ -403,7 +421,7 @@ const char* nak = dhruv_nakshatra_name(0);     // -> "Ashwini"
 | `dhruv_ayana_name(index)` | `*const c_char` | Ayana name (0-1) |
 | `dhruv_samvatsara_name(index)` | `*const c_char` | Samvatsara name (0-59) |
 | `dhruv_graha_name(index)` | `*const c_char` | Graha Sanskrit name (0-8) |
-| `dhruv_graha_english_name(index)` | `*const c_char` | Graha English name (0-8) |
+| `dhruv_yogini_name(index)` | `*const c_char` | Yogini name (0-7) |
 | `dhruv_sphuta_name(index)` | `*const c_char` | Sphuta name (0-15) |
 | `dhruv_special_lagna_name(index)` | `*const c_char` | Special lagna name (0-7) |
 | `dhruv_arudha_pada_name(index)` | `*const c_char` | Arudha pada name (0-11) |
@@ -422,7 +440,6 @@ use dhruv_vedic_base::*;
 ALL_RASHIS[0].name()                    // "Mesha"
 ALL_RASHIS.len()                        // 12
 ALL_GRAHAS[4].name()                    // "Guru"
-ALL_GRAHAS[4].english_name()            // "Jupiter"
 ALL_NAKSHATRAS[0].name()                // "Ashwini"
 Sphuta::BhriguBindu.name()             // "Bhrigu Bindu"
 SpecialLagna::BhavaLagna.name()         // "Bhava Lagna"
