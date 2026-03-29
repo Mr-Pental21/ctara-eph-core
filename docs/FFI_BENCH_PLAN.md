@@ -36,7 +36,7 @@ Bench file: `crates/dhruv_ffi_c/benches/ffi_bench.rs`
 - Upagraha wrapper:
   - `dhruv_time_upagraha_jd`
 - Search wrappers:
-  - `dhruv_graha_sidereal_longitudes`
+  - `dhruv_graha_longitudes`
   - `dhruv_nakshatra_at`
 - Core ABI wrappers:
   - `dhruv_engine_query`

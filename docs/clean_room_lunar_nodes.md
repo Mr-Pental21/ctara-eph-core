@@ -78,7 +78,7 @@ Programs from 4000 B.C. to A.D. 8000." Willmann-Bell.
 - Mean mode requires no kernel files (pure mathematical computation).
 - Osculating true mode requires kernel-backed Moon state queries.
 - **Default mode is True** (`NodeMode::True`), matching standard Vedic/jyotish
-  practice. The jyotish pipeline (`graha_sidereal_longitudes`) uses true nodes.
+  practice. The jyotish longitude pipeline (`graha_longitudes` with sidereal config) uses true nodes.
   Mean nodes remain available for research/comparison via the `NodeMode` parameter.
 
 ## Denylisted Sources

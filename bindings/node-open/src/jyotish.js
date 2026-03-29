@@ -22,6 +22,18 @@ const CHARAKARAKA_ROLE = Object.freeze({
   MATRI_PUTRA: 8,
 });
 
+const GRAHA_LONGITUDE_KIND = Object.freeze({
+  SIDEREAL: 0,
+  TROPICAL: 1,
+});
+
+const PRECESSION_MODEL = Object.freeze({
+  NEWCOMB1895: 0,
+  LIESKE1977: 1,
+  IAU2006: 2,
+  VONDRAK2011: 3,
+});
+
 function normalizeCharakarakaScheme(scheme) {
   if (typeof scheme === 'number') {
     return scheme >>> 0;
@@ -44,15 +56,11 @@ function normalizeCharakarakaScheme(scheme) {
   throw new Error(`invalid charakaraka scheme: ${scheme}`);
 }
 
-function grahaSiderealLongitudes(engine, jdTdb, ayanamshaSystem = 0, useNutation = true) {
-  const r = addon.grahaSiderealLongitudes(engine._handle, jdTdb, ayanamshaSystem, !!useNutation);
-  checkStatus('graha_sidereal_longitudes', r.status);
-  return r.longitudes;
-}
-
-function grahaTropicalLongitudes(engine, jdTdb) {
-  const r = addon.grahaTropicalLongitudes(engine._handle, jdTdb);
-  checkStatus('graha_tropical_longitudes', r.status);
+function grahaLongitudes(engine, jdTdb, config = undefined) {
+  const r = config === undefined
+    ? addon.grahaLongitudes(engine._handle, jdTdb)
+    : addon.grahaLongitudes(engine._handle, jdTdb, config);
+  checkStatus('graha_longitudes', r.status);
   return r.longitudes;
 }
 
@@ -215,8 +223,9 @@ function rashiLord(rashiIndex) { return addon.rashiLord(rashiIndex); }
 function horaAt(vaarIndex, horaIndex) { return addon.horaAt(vaarIndex, horaIndex); }
 
 module.exports = {
-  grahaSiderealLongitudes,
-  grahaTropicalLongitudes,
+  GRAHA_LONGITUDE_KIND,
+  PRECESSION_MODEL,
+  grahaLongitudes,
   specialLagnasForDate,
   arudhaPadasForDate,
   allUpagrahasForDate,

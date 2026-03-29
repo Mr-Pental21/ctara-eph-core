@@ -48,7 +48,7 @@ For each bhava (house 1-12):
 
 - **Bhava cusps** (sidereal): from `compute_bhavas()` with ayanamsha subtracted
 - **Rashi lordship**: standard mapping from `rashi_lord_by_index()`
-- **Graha sidereal longitudes**: from `graha_sidereal_longitudes()` for lord positions
+- **Graha longitudes**: from `graha_longitudes()` with sidereal config for lord positions
 
 ## Exception Rule Rationale
 

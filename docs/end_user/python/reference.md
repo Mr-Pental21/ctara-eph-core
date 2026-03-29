@@ -230,7 +230,7 @@ The fuller public surface is module-based.
 `kundali`:
 
 - `graha_longitudes`
-- `graha_tropical_longitudes`
+  Accepts optional `GrahaLongitudesConfig` with `GrahaLongitudeKind` / `PrecessionModel` selectors, or the default sidereal settings via keyword args.
 - `graha_positions`
 - `core_bindus`
 - `charakaraka_for_date`

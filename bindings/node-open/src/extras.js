@@ -121,13 +121,12 @@ function arudhaPada(bhavaCuspLon, lordLon, rashiHint = 0) {
 function sunBasedUpagrahas(engineOrSunSiderealLongitude, jdTdb, ayanamshaSystem = 0, useNutation = true) {
   let sunSiderealLongitude = engineOrSunSiderealLongitude;
   if (engineOrSunSiderealLongitude && engineOrSunSiderealLongitude._handle) {
-    const sid = addon.grahaSiderealLongitudes(
-      engineOrSunSiderealLongitude._handle,
-      jdTdb,
+    const sid = addon.grahaLongitudes(engineOrSunSiderealLongitude._handle, jdTdb, {
+      kind: 0,
       ayanamshaSystem,
-      !!useNutation,
-    );
-    checkStatus('graha_sidereal_longitudes', sid.status);
+      useNutation: !!useNutation,
+    });
+    checkStatus('graha_longitudes', sid.status);
     sunSiderealLongitude = sid.longitudes[0];
   }
   const r = addon.sunBasedUpagrahas(sunSiderealLongitude);

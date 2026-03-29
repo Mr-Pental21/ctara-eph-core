@@ -645,7 +645,7 @@ fn bhava_and_outer_planets_combined() {
     }
 }
 
-// ===== Consistency: graha_positions matches graha_sidereal_longitudes =====
+// ===== Consistency: graha_positions matches graha_longitudes =====
 
 #[test]
 fn graha_positions_matches_sidereal_longitudes() {
@@ -668,15 +668,17 @@ fn graha_positions_matches_sidereal_longitudes() {
     )
     .expect("graha_positions should succeed");
 
-    // Also compute directly via graha_sidereal_longitudes
+    // Also compute directly via graha_longitudes
     let jd_tdb = utc.to_jd_tdb(engine.lsk());
-    let direct = dhruv_search::graha_sidereal_longitudes(
+    let direct = dhruv_search::graha_longitudes(
         &engine,
         jd_tdb,
-        dhruv_vedic_base::AyanamshaSystem::Lahiri,
-        false,
+        &dhruv_search::GrahaLongitudesConfig::sidereal(
+            dhruv_vedic_base::AyanamshaSystem::Lahiri,
+            false,
+        ),
     )
-    .expect("graha_sidereal_longitudes should succeed");
+    .expect("graha_longitudes should succeed");
 
     // All 9 longitudes should match exactly
     for i in 0..9 {

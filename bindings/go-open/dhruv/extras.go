@@ -217,12 +217,22 @@ func ArudhaPada(bhavaCuspLon, lordLon float64) (ArudhaResult, error) {
 }
 
 func (e *Engine) SunBasedUpagrahas(jdTdb float64, ayanamshaSystem uint32, useNutation bool) (AllUpagrahas, error) {
-	lons, err := e.GrahaSiderealLongitudes(jdTdb, ayanamshaSystem, useNutation)
+	lons, err := e.GrahaLongitudes(jdTdb, GrahaLongitudesConfig{
+		Kind:            GrahaLongitudeKindSidereal,
+		AyanamshaSystem: int32(ayanamshaSystem),
+		UseNutation:     useNutation,
+		PrecessionModel: PrecessionModelVondrak2011,
+		ReferencePlane:  -1,
+	})
 	if err != nil {
 		return AllUpagrahas{}, err
 	}
 	out, st := cabi.SunBasedUpagrahas(lons.Longitudes[0])
 	return out, statusErr("sun_based_upagrahas", st)
+}
+
+func GrahaLongitudesConfigDefault() GrahaLongitudesConfig {
+	return cabi.GrahaLongitudesConfigDefault()
 }
 
 func TimeUpagrahaConfigDefault() TimeUpagrahaConfig {

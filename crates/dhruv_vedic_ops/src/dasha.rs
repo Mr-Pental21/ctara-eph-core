@@ -30,7 +30,8 @@ use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig, RiseSetEvent, 
 use dhruv_frames::{ReferencePlane, ecliptic_lon_to_invariable_lon};
 
 use crate::error::SearchError;
-use crate::jyotish::graha_sidereal_longitudes_with_model;
+use crate::jyotish::graha_longitudes;
+use crate::jyotish_types::GrahaLongitudesConfig;
 use crate::panchang::moon_sidereal_longitude_at;
 use dhruv_search::sankranti_types::SankrantiConfig;
 
@@ -103,13 +104,15 @@ fn assemble_rashi_inputs(
     aya_config: &SankrantiConfig,
 ) -> Result<RashiDashaInputs, SearchError> {
     let jd_tdb = crate::search_util::utc_to_jd_tdb_with_eop(engine, Some(eop), utc);
-    let graha_lons = graha_sidereal_longitudes_with_model(
+    let graha_lons = graha_longitudes(
         engine,
         jd_tdb,
-        aya_config.ayanamsha_system,
-        aya_config.use_nutation,
-        aya_config.precession_model,
-        aya_config.reference_plane,
+        &GrahaLongitudesConfig::sidereal_with_model(
+            aya_config.ayanamsha_system,
+            aya_config.use_nutation,
+            aya_config.precession_model,
+            aya_config.reference_plane,
+        ),
     )?;
 
     let jd_utc = utc_to_jd_utc(utc);

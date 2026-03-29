@@ -7,9 +7,9 @@ use std::path::Path;
 use dhruv_core::{Engine, EngineConfig};
 use dhruv_search::sankranti_types::SankrantiConfig;
 use dhruv_search::{
-    DashaInputs, DashaSelectionConfig, FullKundaliConfig, dasha_children_for_birth,
-    dasha_complete_level_for_birth, dasha_hierarchy_for_birth, dasha_hierarchy_with_inputs,
-    dasha_snapshot_at, full_kundali_for_date, graha_sidereal_longitudes,
+    DashaInputs, DashaSelectionConfig, FullKundaliConfig, GrahaLongitudesConfig,
+    dasha_children_for_birth, dasha_complete_level_for_birth, dasha_hierarchy_for_birth,
+    dasha_hierarchy_with_inputs, dasha_snapshot_at, full_kundali_for_date, graha_longitudes,
 };
 use dhruv_time::{EopKernel, UtcTime, jd_to_tdb_seconds, tdb_seconds_to_jd};
 use dhruv_vedic_base::BhavaConfig;
@@ -521,11 +521,10 @@ fn dasha_hierarchy_with_inputs_api() {
 
     // Compute prerequisite data
     let jd_tdb = utc.to_jd_tdb(engine.lsk());
-    let graha_lons = graha_sidereal_longitudes(
+    let graha_lons = graha_longitudes(
         &engine,
         jd_tdb,
-        aya_config.ayanamsha_system,
-        aya_config.use_nutation,
+        &GrahaLongitudesConfig::sidereal(aya_config.ayanamsha_system, aya_config.use_nutation),
     )
     .unwrap();
     let moon_sid = graha_lons.longitudes[1]; // Chandra
@@ -627,11 +626,10 @@ fn deprecated_with_moon_parity() {
     let variation = DashaVariationConfig::default();
 
     let jd_tdb = utc.to_jd_tdb(engine.lsk());
-    let graha_lons = graha_sidereal_longitudes(
+    let graha_lons = graha_longitudes(
         &engine,
         jd_tdb,
-        aya_config.ayanamsha_system,
-        aya_config.use_nutation,
+        &GrahaLongitudesConfig::sidereal(aya_config.ayanamsha_system, aya_config.use_nutation),
     )
     .unwrap();
     let moon_sid = graha_lons.longitudes[1];
@@ -1029,11 +1027,10 @@ fn moon_lon_graha_vs_standalone() {
     let aya_config = default_aya_config();
     let jd_tdb = utc.to_jd_tdb(engine.lsk());
 
-    let graha_lons = graha_sidereal_longitudes(
+    let graha_lons = graha_longitudes(
         &engine,
         jd_tdb,
-        aya_config.ayanamsha_system,
-        aya_config.use_nutation,
+        &GrahaLongitudesConfig::sidereal(aya_config.ayanamsha_system, aya_config.use_nutation),
     )
     .unwrap();
     let moon_from_graha = graha_lons.longitudes[1];
@@ -1059,12 +1056,11 @@ fn rashi_inputs_from_ctx_vs_standalone() {
 
     let jd_tdb = utc.to_jd_tdb(engine.lsk());
 
-    // Method 1: same as what _with_ctx uses (graha_sidereal_longitudes + lagna_sid)
-    let graha_lons = graha_sidereal_longitudes(
+    // Method 1: same as what the internal context uses (graha_longitudes + lagna_sid)
+    let graha_lons = graha_longitudes(
         &engine,
         jd_tdb,
-        aya_config.ayanamsha_system,
-        aya_config.use_nutation,
+        &GrahaLongitudesConfig::sidereal(aya_config.ayanamsha_system, aya_config.use_nutation),
     )
     .unwrap();
 

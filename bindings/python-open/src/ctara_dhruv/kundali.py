@@ -34,6 +34,7 @@ from .types import (
     GrahaAvasthas,
     GrahaEntry,
     GrahaLongitudes,
+    GrahaLongitudesConfig,
     GrahaPositions,
     HoraInfo,
     KaranaInfo,
@@ -125,6 +126,31 @@ def _make_sankranti_config(sankranti_config):
     return cfg
 
 
+def _make_graha_longitudes_config(config):
+    """Build DhruvGrahaLongitudesConfig from a dataclass/dict or return NULL."""
+    if config is None:
+        return ffi.NULL
+    if hasattr(config, "kind"):
+        kind = config.kind
+        ayanamsha_system = config.ayanamsha_system
+        use_nutation = config.use_nutation
+        precession_model = config.precession_model
+        reference_plane = config.reference_plane
+    else:
+        kind = config.get("kind", 0)
+        ayanamsha_system = config.get("ayanamsha_system", 0)
+        use_nutation = config.get("use_nutation", False)
+        precession_model = config.get("precession_model", 3)
+        reference_plane = config.get("reference_plane", -1)
+    cfg = ffi.new("DhruvGrahaLongitudesConfig *")
+    cfg.kind = kind
+    cfg.ayanamsha_system = ayanamsha_system
+    cfg.use_nutation = 1 if use_nutation else 0
+    cfg.precession_model = precession_model
+    cfg.reference_plane = reference_plane
+    return cfg
+
+
 def _graha_entry_from_ffi(e):
     """Convert a DhruvGrahaEntry to a GrahaEntry dataclass."""
     return GrahaEntry(
@@ -149,42 +175,29 @@ def _utc_from_ffi(u):
 # ---------------------------------------------------------------------------
 
 
-def graha_longitudes(engine, jd_tdb, ayanamsha_system=0, use_nutation=1):
-    """Return sidereal longitudes of 9 grahas as a list of 9 floats.
+def graha_longitudes(engine, jd_tdb, config=None, ayanamsha_system=0, use_nutation=1):
+    """Return graha longitudes of 9 grahas as a list of 9 floats.
 
     Args:
         engine: Engine instance (use engine._ptr).
         jd_tdb: Julian date in TDB.
-        ayanamsha_system: Ayanamsha system code (0=Lahiri default).
-        use_nutation: Whether to apply nutation (1=yes, 0=no).
+        config: Optional `GrahaLongitudesConfig` or dict.
+        ayanamsha_system: Back-compat shortcut for sidereal config when `config` is omitted.
+        use_nutation: Back-compat shortcut for sidereal config when `config` is omitted.
 
     Returns:
-        GrahaLongitudes with a list of 9 sidereal longitudes.
+        GrahaLongitudes with a list of 9 longitudes.
     """
-    out = ffi.new("DhruvGrahaLongitudes *")
-    check(
-        lib.dhruv_graha_sidereal_longitudes(
-            engine._ptr, jd_tdb, ayanamsha_system, use_nutation, out
-        ),
-        "graha_sidereal_longitudes",
+    cfg = _make_graha_longitudes_config(
+        config if config is not None else GrahaLongitudesConfig(
+            ayanamsha_system=ayanamsha_system,
+            use_nutation=bool(use_nutation),
+        )
     )
-    return GrahaLongitudes(longitudes=[out.longitudes[i] for i in range(9)])
-
-
-def graha_tropical_longitudes(engine, jd_tdb):
-    """Return tropical longitudes of 9 grahas as a list of 9 floats.
-
-    Args:
-        engine: Engine instance.
-        jd_tdb: Julian date in TDB.
-
-    Returns:
-        GrahaLongitudes with a list of 9 tropical longitudes.
-    """
     out = ffi.new("DhruvGrahaLongitudes *")
     check(
-        lib.dhruv_graha_tropical_longitudes(engine._ptr, jd_tdb, out),
-        "graha_tropical_longitudes",
+        lib.dhruv_graha_longitudes(engine._ptr, jd_tdb, cfg, out),
+        "graha_longitudes",
     )
     return GrahaLongitudes(longitudes=[out.longitudes[i] for i in range(9)])
 

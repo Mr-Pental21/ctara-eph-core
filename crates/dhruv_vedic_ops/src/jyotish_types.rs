@@ -1,9 +1,10 @@
 //! Types for Vedic jyotish orchestration (graha longitudes, etc.).
 
 use crate::panchang_types::PanchangInfo;
+use dhruv_frames::{DEFAULT_PRECESSION_MODEL, PrecessionModel, ReferencePlane};
 use dhruv_vedic_base::{
     AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AmshaVariation, AshtakavargaResult,
-    BhavaResult, CharakarakaResult, CharakarakaScheme, Dms, DrishtiEntry, Graha,
+    AyanamshaSystem, BhavaResult, CharakarakaResult, CharakarakaScheme, Dms, DrishtiEntry, Graha,
     GrahaDrishtiMatrix, KalaBalaBreakdown, Nakshatra, NodeDignityPolicy, Rashi, ShadbalaBreakdown,
     SthanaBalaBreakdown, TimeUpagrahaConfig,
 };
@@ -37,17 +38,79 @@ impl GrahaLongitudes {
     }
 }
 
-/// Tropical (ecliptic-of-date) longitudes of all 9 grahas.
-#[derive(Debug, Clone, Copy)]
-pub struct GrahaTropicalLongitudes {
-    /// Tropical longitudes indexed by `Graha::index()` (0-8).
-    pub longitudes: [f64; 9],
+/// Output frame for graha longitude computation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GrahaLongitudeKind {
+    /// Sidereal longitudes on the selected reference plane.
+    Sidereal,
+    /// Reference-plane longitudes without ayanamsha subtraction.
+    ///
+    /// On the ecliptic plane this is tropical longitude. On the invariable
+    /// plane, this is the raw invariable-plane longitude.
+    Tropical,
 }
 
-impl GrahaTropicalLongitudes {
-    /// Get the tropical longitude for a specific graha.
-    pub fn longitude(&self, graha: Graha) -> f64 {
-        self.longitudes[graha.index() as usize]
+/// Configuration for graha longitude computation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GrahaLongitudesConfig {
+    pub kind: GrahaLongitudeKind,
+    pub ayanamsha_system: AyanamshaSystem,
+    pub use_nutation: bool,
+    pub precession_model: PrecessionModel,
+    pub reference_plane: ReferencePlane,
+}
+
+impl GrahaLongitudesConfig {
+    pub fn sidereal(ayanamsha_system: AyanamshaSystem, use_nutation: bool) -> Self {
+        Self::sidereal_with_model(
+            ayanamsha_system,
+            use_nutation,
+            DEFAULT_PRECESSION_MODEL,
+            ayanamsha_system.default_reference_plane(),
+        )
+    }
+
+    pub fn sidereal_with_model(
+        ayanamsha_system: AyanamshaSystem,
+        use_nutation: bool,
+        precession_model: PrecessionModel,
+        reference_plane: ReferencePlane,
+    ) -> Self {
+        Self {
+            kind: GrahaLongitudeKind::Sidereal,
+            ayanamsha_system,
+            use_nutation,
+            precession_model,
+            reference_plane,
+        }
+    }
+
+    pub fn tropical(use_nutation: bool) -> Self {
+        Self::tropical_with_model(
+            use_nutation,
+            DEFAULT_PRECESSION_MODEL,
+            ReferencePlane::Ecliptic,
+        )
+    }
+
+    pub fn tropical_with_model(
+        use_nutation: bool,
+        precession_model: PrecessionModel,
+        reference_plane: ReferencePlane,
+    ) -> Self {
+        Self {
+            kind: GrahaLongitudeKind::Tropical,
+            ayanamsha_system: AyanamshaSystem::Lahiri,
+            use_nutation,
+            precession_model,
+            reference_plane,
+        }
+    }
+}
+
+impl Default for GrahaLongitudesConfig {
+    fn default() -> Self {
+        Self::sidereal(AyanamshaSystem::Lahiri, false)
     }
 }
 

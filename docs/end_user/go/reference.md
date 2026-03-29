@@ -244,8 +244,8 @@ Panchang and vedic basics:
 
 Jyotish and charts:
 
-- `(*Engine).GrahaSiderealLongitudes`
-- `(*Engine).GrahaTropicalLongitudes`
+- `(*Engine).GrahaLongitudes`
+  Uses `GrahaLongitudesConfig` with `GrahaLongitudeKindSidereal` or `GrahaLongitudeKindTropical`, plus optional `PrecessionModel*` and `ReferencePlane*` choices.
 - `(*Engine).SpecialLagnasForDate`
 - `(*Engine).ArudhaPadasForDate`
 - `(*Engine).AllUpagrahasForDate`

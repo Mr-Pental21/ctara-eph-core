@@ -19,6 +19,8 @@ __all__ = [
     "MaxSpeedType",
     "DashaSystem",
     "ReferencePlane",
+    "PrecessionModel",
+    "GrahaLongitudeKind",
     "SearchQueryMode",
     "GrahanKind",
     "MotionKind",
@@ -323,6 +325,22 @@ class ReferencePlane(IntEnum):
 
     ECLIPTIC = 0
     INVARIABLE = 1
+
+
+class PrecessionModel(IntEnum):
+    """Precession-model selector."""
+
+    NEWCOMB1895 = 0
+    LIESKE1977 = 1
+    IAU2006 = 2
+    VONDRAK2011 = 3
+
+
+class GrahaLongitudeKind(IntEnum):
+    """Graha longitude output selector."""
+
+    SIDEREAL = 0
+    TROPICAL = 1
 
 
 # ---------------------------------------------------------------------------

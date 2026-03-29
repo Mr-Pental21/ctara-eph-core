@@ -6,8 +6,8 @@
 
 use dhruv_core::{Body, Engine};
 use dhruv_frames::{
-    DEFAULT_PRECESSION_MODEL, PrecessionModel, ReferencePlane, ecliptic_lon_to_invariable_lon,
-    invariable_lon_to_ecliptic_lon, mean_obliquity_of_date_rad,
+    ReferencePlane, ecliptic_lon_to_invariable_lon, invariable_lon_to_ecliptic_lon,
+    mean_obliquity_of_date_rad,
 };
 use dhruv_time::{EopKernel, UtcTime, jd_to_tdb_seconds, tdb_seconds_to_jd};
 use dhruv_vedic_base::arudha::all_arudha_padas;
@@ -18,8 +18,8 @@ use dhruv_vedic_base::upagraha::TIME_BASED_UPAGRAHAS;
 use dhruv_vedic_base::vaar::vaar_from_jd;
 use dhruv_vedic_base::{
     ALL_GRAHAS, AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AmshaRequest,
-    AmshaVariation, ArudhaResult, AshtakavargaResult, AvasthaInputs, AyanamshaSystem, BhavaConfig,
-    BhavaResult, CharakarakaResult, CharakarakaScheme, Dignity, DrishtiEntry, Graha, GrahaAvasthas,
+    AmshaVariation, ArudhaResult, AshtakavargaResult, AvasthaInputs, BhavaConfig, BhavaResult,
+    CharakarakaResult, CharakarakaScheme, Dignity, DrishtiEntry, Graha, GrahaAvasthas,
     KalaBalaInputs, LajjitadiInputs, LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS,
     SayanadiInputs, ShadbalaInputs, TimeUpagrahaConfig, Upagraha, all_avasthas,
     all_combustion_status, all_dashavarga_vimsopaka, all_saptavarga_vimsopaka,
@@ -42,9 +42,9 @@ use crate::error::SearchError;
 use crate::jyotish_types::{
     AmshaChart, AmshaChartScope, AmshaEntry, AmshaResult, AmshaSelectionConfig, BindusConfig,
     BindusResult, DashaSelectionConfig, DrishtiConfig, DrishtiResult, FullKundaliConfig,
-    FullKundaliResult, GrahaEntry, GrahaLongitudes, GrahaPositions, GrahaPositionsConfig,
-    GrahaTropicalLongitudes, MAX_AMSHA_REQUESTS, ShadbalaEntry, ShadbalaResult, SphutalResult,
-    VimsopakaEntry, VimsopakaResult,
+    FullKundaliResult, GrahaEntry, GrahaLongitudeKind, GrahaLongitudes, GrahaLongitudesConfig,
+    GrahaPositions, GrahaPositionsConfig, MAX_AMSHA_REQUESTS, ShadbalaEntry, ShadbalaResult,
+    SphutalResult, VimsopakaEntry, VimsopakaResult,
 };
 use crate::panchang::{
     hora_from_sunrises, masa_for_date, panchang_for_date, varsha_for_date, vedic_day_sunrises,
@@ -145,13 +145,15 @@ impl JyotishContext {
         aya_config: &SankrantiConfig,
     ) -> Result<&'a GrahaLongitudes, SearchError> {
         if self.graha_lons.is_none() {
-            let lons = graha_sidereal_longitudes_with_model(
+            let lons = graha_longitudes(
                 engine,
                 self.jd_tdb,
-                aya_config.ayanamsha_system,
-                aya_config.use_nutation,
-                aya_config.precession_model,
-                aya_config.reference_plane,
+                &GrahaLongitudesConfig::sidereal_with_model(
+                    aya_config.ayanamsha_system,
+                    aya_config.use_nutation,
+                    aya_config.precession_model,
+                    aya_config.reference_plane,
+                ),
             )?;
             self.graha_lons = Some(lons);
         }
@@ -330,47 +332,39 @@ fn query_sapta_graha_declinations(engine: &Engine, jd_tdb: f64) -> Result<[f64; 
 /// For the 7 physical planets, queries the engine for tropical ecliptic
 /// longitude and subtracts ayanamsha. For Rahu/Ketu, uses true node
 /// positions from the Moon's osculating orbital plane.
-pub fn graha_sidereal_longitudes(
+pub fn graha_longitudes(
     engine: &Engine,
     jd_tdb: f64,
-    system: AyanamshaSystem,
-    use_nutation: bool,
+    config: &GrahaLongitudesConfig,
 ) -> Result<GrahaLongitudes, SearchError> {
-    graha_sidereal_longitudes_with_model(
-        engine,
-        jd_tdb,
-        system,
-        use_nutation,
-        DEFAULT_PRECESSION_MODEL,
-        system.default_reference_plane(),
-    )
+    match config.kind {
+        GrahaLongitudeKind::Sidereal => {
+            graha_sidereal_longitudes_for_config(engine, jd_tdb, config)
+        }
+        GrahaLongitudeKind::Tropical => graha_reference_plane_longitudes(engine, jd_tdb, config),
+    }
 }
 
-/// Query all 9 graha sidereal longitudes at a given TDB epoch using a specific
-/// precession model and reference plane.
-///
-/// The `plane` parameter controls which plane body longitudes and the ayanamsha
-/// are measured on.  When the caller holds a `SankrantiConfig` that may carry a
-/// non-default plane, pass `config.reference_plane` here to keep all quantities
-/// in the same frame.
-pub fn graha_sidereal_longitudes_with_model(
+fn graha_sidereal_longitudes_for_config(
     engine: &Engine,
     jd_tdb: f64,
-    system: AyanamshaSystem,
-    use_nutation: bool,
-    precession_model: PrecessionModel,
-    plane: ReferencePlane,
+    config: &GrahaLongitudesConfig,
 ) -> Result<GrahaLongitudes, SearchError> {
     let t = jd_tdb_to_centuries(jd_tdb);
-    let aya =
-        dhruv_vedic_base::ayanamsha_deg_on_plane(system, t, use_nutation, precession_model, plane);
+    let aya = dhruv_vedic_base::ayanamsha_deg_on_plane(
+        config.ayanamsha_system,
+        t,
+        config.use_nutation,
+        config.precession_model,
+        config.reference_plane,
+    );
     let rahu_on_plane = lunar_node_deg_for_epoch_on_plane(
         engine,
         LunarNode::Rahu,
         jd_tdb,
         NodeMode::True,
-        precession_model,
-        plane,
+        config.precession_model,
+        config.reference_plane,
     )?;
     let ketu_on_plane = normalize(rahu_on_plane + 180.0);
 
@@ -387,8 +381,13 @@ pub fn graha_sidereal_longitudes_with_model(
             }
             _ => {
                 let body = graha_to_body(graha).expect("sapta graha has body");
-                let (lon, _lat) =
-                    body_lon_lat_on_plane(engine, body, jd_tdb, precession_model, plane)?;
+                let (lon, _lat) = body_lon_lat_on_plane(
+                    engine,
+                    body,
+                    jd_tdb,
+                    config.precession_model,
+                    config.reference_plane,
+                )?;
                 longitudes[idx] = normalize(lon - aya);
             }
         }
@@ -397,29 +396,12 @@ pub fn graha_sidereal_longitudes_with_model(
     Ok(GrahaLongitudes { longitudes })
 }
 
-/// Query all 9 graha tropical (ecliptic-of-date) longitudes at a given TDB epoch.
-///
-/// Returns ecliptic-of-date longitudes without ayanamsha subtraction.
-/// For the 7 physical planets, queries the engine for ecliptic longitude.
-/// For Rahu/Ketu, uses true node formulas on the ecliptic plane.
-pub fn graha_tropical_longitudes(
+fn graha_reference_plane_longitudes(
     engine: &Engine,
     jd_tdb: f64,
-) -> Result<GrahaTropicalLongitudes, SearchError> {
-    graha_tropical_longitudes_with_model(engine, jd_tdb, DEFAULT_PRECESSION_MODEL, false)
-}
-
-/// Model-aware variant of [`graha_tropical_longitudes`].
-///
-/// When `use_nutation` is true, adds the nutation in longitude (Δψ) to the
-/// mean ecliptic longitudes, producing true ecliptic-of-date positions.
-pub fn graha_tropical_longitudes_with_model(
-    engine: &Engine,
-    jd_tdb: f64,
-    precession_model: PrecessionModel,
-    use_nutation: bool,
-) -> Result<GrahaTropicalLongitudes, SearchError> {
-    let dpsi_deg = if use_nutation {
+    config: &GrahaLongitudesConfig,
+) -> Result<GrahaLongitudes, SearchError> {
+    let dpsi_deg = if config.use_nutation && config.reference_plane == ReferencePlane::Ecliptic {
         let t = jd_tdb_to_centuries(jd_tdb);
         let (dpsi_arcsec, _deps_arcsec) = dhruv_frames::nutation_iau2000b(t);
         dpsi_arcsec / 3600.0
@@ -432,8 +414,8 @@ pub fn graha_tropical_longitudes_with_model(
         LunarNode::Rahu,
         jd_tdb,
         NodeMode::True,
-        precession_model,
-        ReferencePlane::Ecliptic,
+        config.precession_model,
+        config.reference_plane,
     )?;
     let ketu_tropical = normalize(rahu_tropical + 180.0);
 
@@ -449,14 +431,14 @@ pub fn graha_tropical_longitudes_with_model(
                     engine,
                     body,
                     jd_tdb,
-                    precession_model,
-                    ReferencePlane::Ecliptic,
+                    config.precession_model,
+                    config.reference_plane,
                 )?;
                 longitudes[idx] = normalize(lon + dpsi_deg);
             }
         }
     }
-    Ok(GrahaTropicalLongitudes { longitudes })
+    Ok(GrahaLongitudes { longitudes })
 }
 
 /// Compute all 8 special lagnas for a given moment and location.

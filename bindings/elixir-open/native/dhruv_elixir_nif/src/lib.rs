@@ -5,7 +5,8 @@ use std::sync::{Arc, RwLock};
 use dhruv_config::{ConfigResolver, DefaultsMode, load_from_path};
 use dhruv_core::{Body, Engine, EngineConfig, Frame, Observer, Query, StateVector};
 use dhruv_frames::{
-    ReferencePlane, cartesian_state_to_spherical_state, cartesian_to_spherical, nutation_iau2000b,
+    PrecessionModel, ReferencePlane, cartesian_state_to_spherical_state, cartesian_to_spherical,
+    nutation_iau2000b,
 };
 use dhruv_search::ConjunctionConfig;
 use dhruv_search::operations::{
@@ -16,17 +17,18 @@ use dhruv_search::operations::{
     SankrantiQuery, SankrantiResult, SankrantiTarget, TaraOperation, TaraOutputKind, TaraResult,
 };
 use dhruv_search::{
-    PANCHANG_INCLUDE_ALL, PANCHANG_INCLUDE_AYANA, PANCHANG_INCLUDE_MASA, PANCHANG_INCLUDE_VARSHA,
-    SankrantiConfig, StationaryConfig, ayanamsha, conjunction, dasha_hierarchy_for_birth,
-    dasha_snapshot_at, full_kundali_for_date, graha_sidereal_longitudes, lunar_node, motion,
-    panchang, set_time_conversion_policy, tara as tara_op,
+    GrahaLongitudeKind, GrahaLongitudesConfig, all_upagrahas_for_date,
+    all_upagrahas_for_date_with_config, amsha_charts_for_date, arudha_padas_for_date,
+    ashtakavarga_for_date, avastha_for_date, balas_for_date, bhavabala_for_date,
+    charakaraka_for_date, core_bindus, drishti_for_date, graha_positions as graha_positions_fn,
+    shadbala_for_date, sidereal_bhavas_for_date, sidereal_lagna_for_date, sidereal_mc_for_date,
+    special_lagnas_for_date, vimsopaka_for_date,
 };
 use dhruv_search::{
-    all_upagrahas_for_date, all_upagrahas_for_date_with_config, amsha_charts_for_date,
-    arudha_padas_for_date, ashtakavarga_for_date, avastha_for_date, balas_for_date,
-    bhavabala_for_date, charakaraka_for_date, core_bindus, drishti_for_date,
-    graha_positions as graha_positions_fn, shadbala_for_date, sidereal_bhavas_for_date,
-    sidereal_lagna_for_date, sidereal_mc_for_date, special_lagnas_for_date, vimsopaka_for_date,
+    PANCHANG_INCLUDE_ALL, PANCHANG_INCLUDE_AYANA, PANCHANG_INCLUDE_MASA, PANCHANG_INCLUDE_VARSHA,
+    SankrantiConfig, StationaryConfig, ayanamsha, conjunction, dasha_hierarchy_for_birth,
+    dasha_snapshot_at, full_kundali_for_date, graha_longitudes, lunar_node, motion, panchang,
+    set_time_conversion_policy, tara as tara_op,
 };
 use dhruv_tara::{TaraAccuracy, TaraCatalog, TaraConfig, TaraId};
 use dhruv_time::{
@@ -223,6 +225,7 @@ struct JyotishRequest {
     jd_tdb: Option<f64>,
     utc: Option<UtcInput>,
     location: Option<GeoLocationInput>,
+    kind: Option<EnumInput>,
     system: Option<EnumInput>,
     scheme: Option<EnumInput>,
     node_dignity_policy: Option<EnumInput>,
@@ -279,6 +282,7 @@ struct BhavaConfigInput {
 struct SankrantiConfigInput {
     ayanamsha_system: Option<EnumInput>,
     use_nutation: Option<bool>,
+    precession_model: Option<EnumInput>,
     reference_plane: Option<EnumInput>,
     step_size_days: Option<f64>,
     max_iterations: Option<u32>,
@@ -758,6 +762,46 @@ fn parse_ayanamsha_system(input: Option<&EnumInput>) -> Result<AyanamshaSystem, 
     }
 }
 
+fn parse_precession_model(input: Option<&EnumInput>) -> Result<Option<PrecessionModel>, Value> {
+    match input {
+        None => Ok(None),
+        Some(EnumInput::Int(0)) => Ok(Some(PrecessionModel::Newcomb1895)),
+        Some(EnumInput::Int(1)) => Ok(Some(PrecessionModel::Lieske1977)),
+        Some(EnumInput::Int(2)) => Ok(Some(PrecessionModel::Iau2006)),
+        Some(EnumInput::Int(3)) => Ok(Some(PrecessionModel::Vondrak2011)),
+        Some(EnumInput::Int(_)) => {
+            Err(error_payload("invalid_request", "unknown precession model"))
+        }
+        Some(EnumInput::Str(value)) => match value.to_ascii_lowercase().as_str() {
+            "newcomb1895" | "newcomb" => Ok(Some(PrecessionModel::Newcomb1895)),
+            "lieske1977" | "lieske" => Ok(Some(PrecessionModel::Lieske1977)),
+            "iau2006" => Ok(Some(PrecessionModel::Iau2006)),
+            "vondrak2011" | "vondrak" => Ok(Some(PrecessionModel::Vondrak2011)),
+            _ => Err(error_payload("invalid_request", "unknown precession model")),
+        },
+    }
+}
+
+fn parse_graha_longitude_kind(input: Option<&EnumInput>) -> Result<GrahaLongitudeKind, Value> {
+    match input {
+        None => Ok(GrahaLongitudeKind::Sidereal),
+        Some(EnumInput::Int(0)) => Ok(GrahaLongitudeKind::Sidereal),
+        Some(EnumInput::Int(1)) => Ok(GrahaLongitudeKind::Tropical),
+        Some(EnumInput::Int(_)) => Err(error_payload(
+            "invalid_request",
+            "unknown graha longitude kind",
+        )),
+        Some(EnumInput::Str(value)) => match value.to_ascii_lowercase().as_str() {
+            "sidereal" => Ok(GrahaLongitudeKind::Sidereal),
+            "tropical" => Ok(GrahaLongitudeKind::Tropical),
+            _ => Err(error_payload(
+                "invalid_request",
+                "unknown graha longitude kind",
+            )),
+        },
+    }
+}
+
 fn parse_charakaraka_scheme(input: Option<&EnumInput>) -> Result<CharakarakaScheme, Value> {
     match input {
         None => Ok(CharakarakaScheme::default()),
@@ -1087,6 +1131,9 @@ fn to_sankranti_config(
         }
         if let Some(plane) = parse_reference_plane(input.reference_plane.as_ref())? {
             config.reference_plane = plane;
+        }
+        if let Some(model) = parse_precession_model(input.precession_model.as_ref())? {
+            config.precession_model = model;
         }
         if let Some(step) = input.step_size_days {
             config.step_size_days = step;
@@ -2858,14 +2905,32 @@ fn handle_jyotish(resource: &ResourceArc<EngineResource>, request: JyotishReques
         let bhava_config = to_bhava_config(state, request.bhava_config.as_ref())?;
         match request.op.as_str() {
             "graha_longitudes" => {
-                let system = parse_ayanamsha_system(request.system.as_ref())?;
-                graha_sidereal_longitudes(
+                let kind = parse_graha_longitude_kind(request.kind.as_ref())?;
+                let system = request
+                    .system
+                    .as_ref()
+                    .map(|_| parse_ayanamsha_system(request.system.as_ref()))
+                    .transpose()?
+                    .unwrap_or(sankranti_config.ayanamsha_system);
+                let config = match kind {
+                    GrahaLongitudeKind::Sidereal => GrahaLongitudesConfig::sidereal_with_model(
+                        system,
+                        sankranti_config.use_nutation,
+                        sankranti_config.precession_model,
+                        sankranti_config.reference_plane,
+                    ),
+                    GrahaLongitudeKind::Tropical => GrahaLongitudesConfig::tropical_with_model(
+                        sankranti_config.use_nutation,
+                        sankranti_config.precession_model,
+                        sankranti_config.reference_plane,
+                    ),
+                };
+                graha_longitudes(
                     engine,
                     request
                         .jd_tdb
                         .ok_or_else(|| error_payload("invalid_request", "jd_tdb is required"))?,
-                    system,
-                    sankranti_config.use_nutation,
+                    &config,
                 )
                 .map(graha_longitudes_json)
                 .map_err(|err| map_error("search_error", err))

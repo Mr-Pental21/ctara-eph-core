@@ -2,14 +2,9 @@ package dhruv
 
 import "ctara-dhruv-core/bindings/go-open/internal/cabi"
 
-func (e *Engine) GrahaSiderealLongitudes(jdTdb float64, ayanamshaSystem uint32, useNutation bool) (GrahaLongitudes, error) {
-	out, st := cabi.GrahaSiderealLongitudes(e.h, jdTdb, ayanamshaSystem, useNutation)
-	return out, statusErr("graha_sidereal_longitudes", st)
-}
-
-func (e *Engine) GrahaTropicalLongitudes(jdTdb float64) (GrahaLongitudes, error) {
-	out, st := cabi.GrahaTropicalLongitudes(e.h, jdTdb)
-	return out, statusErr("graha_tropical_longitudes", st)
+func (e *Engine) GrahaLongitudes(jdTdb float64, cfg GrahaLongitudesConfig) (GrahaLongitudes, error) {
+	out, st := cabi.ComputeGrahaLongitudes(e.h, jdTdb, cfg)
+	return out, statusErr("graha_longitudes", st)
 }
 
 func (e *Engine) SpecialLagnasForDate(ep *EOP, utc UtcTime, loc GeoLocation, riseset RiseSetConfig, ayanamshaSystem uint32, useNutation bool) (SpecialLagnas, error) {

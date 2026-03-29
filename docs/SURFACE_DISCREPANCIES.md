@@ -150,20 +150,16 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 - Evidence:
   `crates/dhruv_frames/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`, `crates/dhruv_cli/src/main.rs`.
 
-### 9. Longitude-only APIs still require named variants instead of config attributes
+### 9. Longitude-only APIs should stay unified under config attributes
 
-- Missing or wrong:
-  The longitude-model gap has three parts:
-  - core still uses named variants (`graha_sidereal_longitudes_with_model`, `graha_tropical_longitudes_with_model`) to expose model selection,
-  - the primary longitude APIs do not yet carry a config/request attribute that replaces those variants,
-  - wrappers and the C ABI do not carry a complete model-bearing request/config shape for the longitude-only surface.
-  `dhruv_search::graha_positions` accepts `SankrantiConfig`, but that is a different assembled API rather than a direct replacement for longitude-only calls.
+- Current status:
+  The primary longitude-only surface is now the single `graha_longitudes` API family with typed config across Rust, C ABI, Python, Node.js, Go, Elixir, and CLI. Sidereal vs tropical/reference-plane output, ayanamsha choice, nutation, precession model, and reference-plane selection are all carried through config attributes rather than separate symbol names.
 - Affected surfaces:
   Rust public API, C ABI, Python, Node.js, Go, Elixir, CLI.
-- Correct behavior:
-  Treat this as a real gap for the longitude-only surface: add config-carrying replacements to the primary longitude APIs and wrappers so `PrecessionModel` is selected via attributes, then converge callers onto those main symbols rather than proliferating `*_with_model` variants. CLI already offers a partial workaround through `graha-positions --tropical --precession`, but `graha-longitudes` still lacks an equivalent config-driven path.
+- Required behavior:
+  Keep this surface unified. Do not reintroduce public `*_with_model`, sidereal-only, or tropical-only variants for longitude-only queries; new variations belong in the shared config shape.
 - Evidence:
-  `crates/dhruv_search/src/jyotish.rs`, `crates/dhruv_search/src/jyotish_types.rs`, `crates/dhruv_rs/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`, `crates/dhruv_cli/src/main.rs`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`.
+  `crates/dhruv_search/src/jyotish.rs`, `crates/dhruv_search/src/jyotish_types.rs`, `crates/dhruv_ffi_c/include/dhruv.h`, `crates/dhruv_cli/src/main.rs`, `bindings/go-open/dhruv/jyotish.go`, `bindings/node-open/src/jyotish.js`, `bindings/python-open/src/ctara_dhruv/kundali.py`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`.
 
 ### 10. Search range APIs can truncate outside Rust
 
@@ -434,18 +430,14 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 - Evidence:
   `bindings/elixir-open/lib/ctara_dhruv/*.ex`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`.
 
-### 30. Elixir jyotish longitude behavior is still narrower than core Rust
+### 30. Elixir jyotish longitude behavior should remain config-driven
 
-- Missing or wrong:
-  The Elixir longitude gap has three parts:
-  - it exposes `graha_longitudes` but not `graha_tropical_longitudes`,
-  - it does not expose model-selectable longitude behavior on the direct longitude surface,
-  - its higher-level request/config transport also omits `precession_model`, so even assembled jyotish requests cannot select a non-default model.
-  This is a real gap, not an intentional config replacement, because `graha_longitudes` currently maps only to the base sidereal path.
+- Current status:
+  Elixir now uses the shared `graha_longitudes` surface and carries longitude kind through the request/config path. The NIF transport also carries `precession_model`, so direct longitude calls and higher-level jyotish requests can select non-default model behavior without separate symbol names.
 - Affected surfaces:
   Elixir bindings.
-- Correct behavior:
-  Carry sidereal-vs-tropical output choice and precession-model selection through the main longitude request/config surface instead of relying on narrower base-only helpers. If Elixir intentionally stays narrower, document that restriction explicitly.
+- Required behavior:
+  Keep the Elixir longitude surface aligned with the shared Rust/C ABI contract. Do not reintroduce separate tropical or model-specific public names; future variations belong in the same request/config transport.
 - Evidence:
   `bindings/elixir-open/lib/ctara_dhruv/jyotish.ex`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_search/src/jyotish.rs`.
 

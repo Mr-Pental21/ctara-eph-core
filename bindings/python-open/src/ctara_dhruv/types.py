@@ -212,6 +212,17 @@ class UtcToTdbResult:
 
 
 @dataclass(frozen=True)
+class GrahaLongitudesConfig:
+    """Config for unified graha longitude computation."""
+
+    kind: int = 0
+    ayanamsha_system: int = 0
+    use_nutation: bool = False
+    precession_model: int = 3
+    reference_plane: int = -1
+
+
+@dataclass(frozen=True)
 class GeoLocation:
     """Observer geographic location."""
 

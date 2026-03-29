@@ -93,8 +93,8 @@ This page summarizes the public Node wrapper exported from
 
 `jyotish.js` exports:
 
-- `grahaSiderealLongitudes`
-- `grahaTropicalLongitudes`
+- `grahaLongitudes`
+  Accepts an optional config object with `kind`, `ayanamshaSystem`, `useNutation`, `precessionModel`, and `referencePlane`.
 - `specialLagnasForDate`
 - `arudhaPadasForDate`
 - `allUpagrahasForDate`

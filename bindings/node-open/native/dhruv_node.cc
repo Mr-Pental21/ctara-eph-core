@@ -334,6 +334,26 @@ bool ReadSankrantiConfig(napi_env env, napi_value obj, DhruvSankrantiConfig* out
     return true;
 }
 
+bool ReadGrahaLongitudesConfig(napi_env env, napi_value obj, DhruvGrahaLongitudesConfig* out) {
+    napi_value v;
+    bool has = false;
+    if (napi_has_named_property(env, obj, "kind", &has) != napi_ok) return false;
+    if (has && (!GetNamedProperty(env, obj, "kind", &v) || !GetInt32(env, v, &out->kind))) return false;
+    if (napi_has_named_property(env, obj, "ayanamshaSystem", &has) != napi_ok) return false;
+    if (has && (!GetNamedProperty(env, obj, "ayanamshaSystem", &v) || !GetInt32(env, v, &out->ayanamsha_system))) return false;
+    if (napi_has_named_property(env, obj, "useNutation", &has) != napi_ok) return false;
+    if (has) {
+        bool b = false;
+        if (!GetNamedProperty(env, obj, "useNutation", &v) || !GetBool(env, v, &b)) return false;
+        out->use_nutation = b ? 1 : 0;
+    }
+    if (napi_has_named_property(env, obj, "precessionModel", &has) != napi_ok) return false;
+    if (has && (!GetNamedProperty(env, obj, "precessionModel", &v) || !GetInt32(env, v, &out->precession_model))) return false;
+    if (napi_has_named_property(env, obj, "referencePlane", &has) != napi_ok) return false;
+    if (has && (!GetNamedProperty(env, obj, "referencePlane", &v) || !GetInt32(env, v, &out->reference_plane))) return false;
+    return true;
+}
+
 bool ReadDrishtiConfig(napi_env env, napi_value obj, DhruvDrishtiConfig* out) {
     napi_value v;
     bool b = false;
@@ -2469,17 +2489,19 @@ napi_value Nakshatra28FromTropicalUtc(napi_env env, napi_callback_info info) {
     return out;
 }
 
-napi_value GrahaTropicalLongitudes(napi_env env, napi_callback_info info) {
-    size_t argc = 2;
-    napi_value args[2];
+napi_value GrahaLongitudes(napi_env env, napi_callback_info info) {
+    size_t argc = 3;
+    napi_value args[3];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     if (argc < 2) return MakeStatusResult(env, STATUS_INVALID_INPUT);
     void* ptr = nullptr;
     if (!ReadExternalPtr(env, args[0], &ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
     double jd = 0.0;
     if (!GetDouble(env, args[1], &jd)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvGrahaLongitudesConfig cfg = dhruv_graha_longitudes_config_default();
+    if (argc >= 3 && !ReadGrahaLongitudesConfig(env, args[2], &cfg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
     DhruvGrahaLongitudes out_lons{};
-    int32_t status = dhruv_graha_tropical_longitudes(static_cast<const DhruvEngineHandle*>(ptr), jd, &out_lons);
+    int32_t status = dhruv_graha_longitudes(static_cast<const DhruvEngineHandle*>(ptr), jd, &cfg, &out_lons);
     napi_value out = MakeStatusResult(env, status);
     if (status == STATUS_OK) {
         napi_value arr;
@@ -3767,46 +3789,6 @@ napi_value PanchangComputeEx(napi_env env, napi_callback_info info) {
     napi_value out = MakeStatusResult(env, status);
     if (status == STATUS_OK) {
         SetNamed(env, out, "result", WritePanchangOperationResult(env, result));
-    }
-    return out;
-}
-
-napi_value GrahaSiderealLongitudes(napi_env env, napi_callback_info info) {
-    size_t argc = 4;
-    napi_value args[4];
-    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
-    if (argc < 4) {
-        return MakeStatusResult(env, STATUS_INVALID_INPUT);
-    }
-
-    void* ptr = nullptr;
-    if (!ReadExternalPtr(env, args[0], &ptr)) {
-        return MakeStatusResult(env, STATUS_INVALID_INPUT);
-    }
-
-    double jd = 0.0;
-    uint32_t ayanamsha = 0;
-    bool use_nutation = false;
-    if (!GetDouble(env, args[1], &jd) || !GetUint32(env, args[2], &ayanamsha) || !GetBool(env, args[3], &use_nutation)) {
-        return MakeStatusResult(env, STATUS_INVALID_INPUT);
-    }
-
-    DhruvGrahaLongitudes out_lons{};
-    int32_t status = dhruv_graha_sidereal_longitudes(
-        static_cast<const DhruvEngineHandle*>(ptr),
-        jd,
-        ayanamsha,
-        use_nutation ? 1 : 0,
-        &out_lons);
-
-    napi_value out = MakeStatusResult(env, status);
-    if (status == STATUS_OK) {
-        napi_value arr;
-        napi_create_array_with_length(env, DHRUV_GRAHA_COUNT, &arr);
-        for (uint32_t i = 0; i < DHRUV_GRAHA_COUNT; ++i) {
-            napi_set_element(env, arr, i, MakeDouble(env, out_lons.longitudes[i]));
-        }
-        SetNamed(env, out, "longitudes", arr);
     }
     return out;
 }
@@ -6251,7 +6233,7 @@ napi_value Init(napi_env env, napi_value exports) {
         {"rashiFromTropicalUtc", nullptr, RashiFromTropicalUtc, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"nakshatraFromTropicalUtc", nullptr, NakshatraFromTropicalUtc, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"nakshatra28FromTropicalUtc", nullptr, Nakshatra28FromTropicalUtc, nullptr, nullptr, nullptr, napi_default, nullptr},
-        {"grahaTropicalLongitudes", nullptr, GrahaTropicalLongitudes, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"grahaLongitudes", nullptr, GrahaLongitudes, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"rashiName", nullptr, RashiName, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"nakshatraName", nullptr, NakshatraName, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"nakshatra28Name", nullptr, Nakshatra28Name, nullptr, nullptr, nullptr, napi_default, nullptr},
@@ -6378,7 +6360,6 @@ napi_value Init(napi_env env, napi_value exports) {
         {"amshaRashiInfo", nullptr, AmshaRashiInfo, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"amshaLongitudes", nullptr, AmshaLongitudes, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"amshaChartForDate", nullptr, AmshaChartForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
-        {"grahaSiderealLongitudes", nullptr, GrahaSiderealLongitudes, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"specialLagnasForDate", nullptr, SpecialLagnasForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"arudhaPadasForDate", nullptr, ArudhaPadasForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"allUpagrahasForDate", nullptr, AllUpagrahasForDate, nullptr, nullptr, nullptr, napi_default, nullptr},

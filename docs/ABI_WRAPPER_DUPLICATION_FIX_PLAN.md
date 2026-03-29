@@ -106,7 +106,7 @@ Plan:
 
 Targets:
 
-- `graha_sidereal_longitudes`: `crates/dhruv_search/src/jyotish.rs:52`
+- `graha_longitudes` (sidereal config path): `crates/dhruv_search/src/jyotish.rs:52`
 - conjunction separation fetch path: `crates/dhruv_search/src/conjunction.rs:60`
 
 Rule:

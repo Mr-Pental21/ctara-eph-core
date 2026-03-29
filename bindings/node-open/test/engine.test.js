@@ -381,7 +381,11 @@ test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
   assert.ok(Number.isInteger(horaFromSunrises.horaIndex));
   assert.ok(Number.isInteger(ghatikaFromSunrises.value));
 
-  const moonSidereal = dhruv.grahaSiderealLongitudes(engine, jdNow, 0, true)[1];
+  const moonSidereal = dhruv.grahaLongitudes(engine, jdNow, {
+    kind: dhruv.GRAHA_LONGITUDE_KIND.SIDEREAL,
+    ayanamshaSystem: 0,
+    useNutation: true,
+  })[1];
   const nakshatraAt = dhruv.nakshatraAt(engine, jdNow, moonSidereal, sankCfg);
   assert.ok(Number.isInteger(nakshatraAt.nakshatraIndex));
 
@@ -410,7 +414,11 @@ test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
   const arudhaPada = dhruv.arudhaPada(100, 130, 0);
   assert.ok(Number.isFinite(arudhaPada.longitudeDeg));
 
-  const sunUpagrahas = dhruv.sunBasedUpagrahas(dhruv.grahaSiderealLongitudes(engine, jdNow, 0, true)[0]);
+  const sunUpagrahas = dhruv.sunBasedUpagrahas(dhruv.grahaLongitudes(engine, jdNow, {
+    kind: dhruv.GRAHA_LONGITUDE_KIND.SIDEREAL,
+    ayanamshaSystem: 0,
+    useNutation: true,
+  })[0]);
   assert.ok(Number.isFinite(sunUpagrahas.dhooma));
   try {
     const weekday = dhruv.vaarFromJd(sunrises.sunriseJd);

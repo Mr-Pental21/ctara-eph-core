@@ -69,6 +69,16 @@ typedef int32_t DhruvStatus;
 #define DHRUV_REFERENCE_PLANE_ECLIPTIC   0
 #define DHRUV_REFERENCE_PLANE_INVARIABLE 1
 
+/* Precession model selector */
+#define DHRUV_PRECESSION_MODEL_NEWCOMB1895 0
+#define DHRUV_PRECESSION_MODEL_LIESKE1977  1
+#define DHRUV_PRECESSION_MODEL_IAU2006     2
+#define DHRUV_PRECESSION_MODEL_VONDRAK2011 3
+
+/* Graha longitude selector */
+#define DHRUV_GRAHA_LONGITUDE_KIND_SIDEREAL 0
+#define DHRUV_GRAHA_LONGITUDE_KIND_TROPICAL 1
+
 /* Query time selectors */
 #define DHRUV_QUERY_TIME_JD_TDB 0
 #define DHRUV_QUERY_TIME_UTC    1
@@ -1061,11 +1071,19 @@ typedef struct {
     DhruvGrahaEntry sree_lagna;
 } DhruvBindusResult;
 
-/* --- Graha sidereal/tropical longitudes --- */
+/* --- Graha longitudes --- */
 
 typedef struct {
     double longitudes[9];
 } DhruvGrahaLongitudes;
+
+typedef struct {
+    int32_t kind;
+    int32_t ayanamsha_system;
+    uint8_t use_nutation;
+    int32_t precession_model;
+    int32_t reference_plane;
+} DhruvGrahaLongitudesConfig;
 
 /* --- Amsha (divisional chart) --- */
 
@@ -2039,16 +2057,12 @@ DhruvStatus dhruv_core_bindus(
     const DhruvBindusConfig *config,
     DhruvBindusResult *out);
 
-/* --- Graha sidereal/tropical longitudes --- */
-DhruvStatus dhruv_graha_sidereal_longitudes(
+/* --- Graha longitudes --- */
+DhruvGrahaLongitudesConfig dhruv_graha_longitudes_config_default(void);
+DhruvStatus dhruv_graha_longitudes(
     const DhruvEngineHandle *engine,
     double jd_tdb,
-    uint32_t ayanamsha_system,
-    uint8_t use_nutation,
-    DhruvGrahaLongitudes *out);
-DhruvStatus dhruv_graha_tropical_longitudes(
-    const DhruvEngineHandle *engine,
-    double jd_tdb,
+    const DhruvGrahaLongitudesConfig *config,
     DhruvGrahaLongitudes *out);
 
 /* --- Nakshatra at --- */

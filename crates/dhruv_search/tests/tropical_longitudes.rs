@@ -1,11 +1,11 @@
-//! Integration tests for `graha_tropical_longitudes()`.
+//! Integration tests for config-driven `graha_longitudes()`.
 //!
 //! Requires kernel files. Skips gracefully if absent.
 
 use std::path::Path;
 
 use dhruv_core::{Engine, EngineConfig};
-use dhruv_search::{graha_sidereal_longitudes, graha_tropical_longitudes};
+use dhruv_search::{GrahaLongitudesConfig, graha_longitudes};
 use dhruv_vedic_base::{ALL_GRAHAS, AyanamshaSystem, ayanamsha_deg, jd_tdb_to_centuries};
 
 const SPK_PATH: &str = "../../kernels/data/de442s.bsp";
@@ -31,8 +31,8 @@ fn tropical_equals_sidereal_plus_ayanamsha() {
     };
 
     let jd_tdb = 2_451_545.0; // J2000
-    let tropical =
-        graha_tropical_longitudes(&engine, jd_tdb).expect("tropical longitudes should succeed");
+    let tropical = graha_longitudes(&engine, jd_tdb, &GrahaLongitudesConfig::tropical(false))
+        .expect("tropical longitudes should succeed");
 
     // Test against all ecliptic-plane systems (skip Jagganatha = invariable plane)
     let systems = AyanamshaSystem::all()
@@ -41,8 +41,12 @@ fn tropical_equals_sidereal_plus_ayanamsha() {
         .filter(|s| *s != AyanamshaSystem::Jagganatha);
 
     for system in systems {
-        let sidereal = graha_sidereal_longitudes(&engine, jd_tdb, system, false)
-            .expect("sidereal longitudes should succeed");
+        let sidereal = graha_longitudes(
+            &engine,
+            jd_tdb,
+            &GrahaLongitudesConfig::sidereal(system, false),
+        )
+        .expect("sidereal longitudes should succeed");
         let t = jd_tdb_to_centuries(jd_tdb);
         let aya = ayanamsha_deg(system, t, false);
 
@@ -71,8 +75,8 @@ fn tropical_longitudes_in_valid_range() {
     };
 
     let jd_tdb = 2_451_545.0;
-    let result =
-        graha_tropical_longitudes(&engine, jd_tdb).expect("tropical longitudes should succeed");
+    let result = graha_longitudes(&engine, jd_tdb, &GrahaLongitudesConfig::tropical(false))
+        .expect("tropical longitudes should succeed");
 
     for graha in ALL_GRAHAS {
         let lon = result.longitude(graha);

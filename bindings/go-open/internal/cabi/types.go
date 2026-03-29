@@ -53,6 +53,18 @@ const (
 )
 
 const (
+	PrecessionModelNewcomb1895 int32 = 0
+	PrecessionModelLieske1977  int32 = 1
+	PrecessionModelIau2006     int32 = 2
+	PrecessionModelVondrak2011 int32 = 3
+)
+
+const (
+	GrahaLongitudeKindSidereal int32 = 0
+	GrahaLongitudeKindTropical int32 = 1
+)
+
+const (
 	TimePolicyStrictLSK     int32 = 0
 	TimePolicyHybridDeltaT  int32 = 1
 )
@@ -392,6 +404,14 @@ type SankrantiConfig struct {
 	StepSizeDays    float64
 	MaxIterations   uint32
 	ConvergenceDays float64
+}
+
+type GrahaLongitudesConfig struct {
+	Kind            int32
+	AyanamshaSystem int32
+	UseNutation     bool
+	PrecessionModel int32
+	ReferencePlane  int32
 }
 
 type SankrantiEvent struct {

@@ -16,7 +16,7 @@ use dhruv_frames::{
 };
 use dhruv_search::sankranti_types::SankrantiConfig;
 use dhruv_search::{
-    body_ecliptic_lon_lat, body_lon_lat_on_plane, graha_sidereal_longitudes,
+    GrahaLongitudesConfig, body_ecliptic_lon_lat, body_lon_lat_on_plane, graha_longitudes,
     next_specific_sankranti, search_sankrantis,
 };
 use dhruv_time::UtcTime;
@@ -231,14 +231,18 @@ fn body_lon_on_invariable_vs_ecliptic_bounded() {
 }
 
 #[test]
-fn graha_sidereal_longitudes_jagganatha_in_range() {
+fn graha_longitudes_sidereal_jagganatha_in_range() {
     // All 9 graha sidereal longitudes should be in [0, 360) with Jagganatha
     let Some(engine) = load_engine() else { return };
     let utc = UtcTime::new(2024, 3, 20, 12, 0, 0.0);
     let jd_tdb = utc.to_jd_tdb(engine.lsk());
 
-    let lons =
-        graha_sidereal_longitudes(&engine, jd_tdb, AyanamshaSystem::Jagganatha, true).unwrap();
+    let lons = graha_longitudes(
+        &engine,
+        jd_tdb,
+        &GrahaLongitudesConfig::sidereal(AyanamshaSystem::Jagganatha, true),
+    )
+    .unwrap();
 
     for i in 0..9 {
         let lon = lons.longitudes[i];
@@ -256,9 +260,18 @@ fn graha_sidereal_jagganatha_vs_lahiri_bounded() {
     let utc = UtcTime::new(2024, 6, 15, 12, 0, 0.0);
     let jd_tdb = utc.to_jd_tdb(engine.lsk());
 
-    let jagg =
-        graha_sidereal_longitudes(&engine, jd_tdb, AyanamshaSystem::Jagganatha, true).unwrap();
-    let lahiri = graha_sidereal_longitudes(&engine, jd_tdb, AyanamshaSystem::Lahiri, true).unwrap();
+    let jagg = graha_longitudes(
+        &engine,
+        jd_tdb,
+        &GrahaLongitudesConfig::sidereal(AyanamshaSystem::Jagganatha, true),
+    )
+    .unwrap();
+    let lahiri = graha_longitudes(
+        &engine,
+        jd_tdb,
+        &GrahaLongitudesConfig::sidereal(AyanamshaSystem::Lahiri, true),
+    )
+    .unwrap();
 
     // Sapta grahas (0-6): longitudes should be within ~2° (planes ~1.58° apart).
     for i in 0..7 {
@@ -300,8 +313,12 @@ fn graha_sidereal_jagganatha_self_consistent() {
         ReferencePlane::Invariable,
     );
 
-    let lons =
-        graha_sidereal_longitudes(&engine, jd_tdb, AyanamshaSystem::Jagganatha, false).unwrap();
+    let lons = graha_longitudes(
+        &engine,
+        jd_tdb,
+        &GrahaLongitudesConfig::sidereal(AyanamshaSystem::Jagganatha, false),
+    )
+    .unwrap();
 
     // Check Sun (index 0)
     let (sun_inv_lon, _) = body_lon_lat_on_plane(

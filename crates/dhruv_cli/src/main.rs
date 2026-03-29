@@ -7,7 +7,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use dhruv_config::{ConfigResolver, DefaultsMode, EngineConfigPatch, load_with_discovery};
 use dhruv_core::{Body, Engine, EngineConfig, Frame, Observer, Query};
 use dhruv_frames::{
-    PrecessionModel, cartesian_to_spherical, icrf_to_ecliptic, nutation_iau2000b,
+    PrecessionModel, ReferencePlane, cartesian_to_spherical, icrf_to_ecliptic, nutation_iau2000b,
     precess_ecliptic_j2000_to_date,
 };
 use dhruv_search::conjunction_types::{ConjunctionConfig, ConjunctionEvent};
@@ -1427,6 +1427,15 @@ struct GrahaLongitudesArgs {
     /// Apply nutation correction
     #[arg(long)]
     nutation: bool,
+    /// Output reference-plane longitudes without ayanamsha subtraction
+    #[arg(long)]
+    tropical: bool,
+    /// Precession model: vondrak2011 (default), iau2006, lieske1977, newcomb1895
+    #[arg(long, default_value = "vondrak2011")]
+    precession: String,
+    /// Reference plane: default, ecliptic, invariable
+    #[arg(long, default_value = "default")]
+    reference_plane: String,
     /// Path to SPK kernel
     #[arg(long)]
     bsp: Option<PathBuf>,
@@ -2544,6 +2553,18 @@ fn parse_precession_model(s: &str) -> PrecessionModel {
     }
 }
 
+fn parse_reference_plane_arg(s: &str, default_plane: ReferencePlane) -> ReferencePlane {
+    match s {
+        "default" => default_plane,
+        "ecliptic" => ReferencePlane::Ecliptic,
+        "invariable" => ReferencePlane::Invariable,
+        _ => {
+            eprintln!("Invalid reference plane: {s} (default, ecliptic, invariable)");
+            std::process::exit(1);
+        }
+    }
+}
+
 fn load_eop(path: &Path) -> EopKernel {
     let c04_path = EOP_C04_PATH
         .get()
@@ -3446,12 +3467,15 @@ fn main() {
                 Some(&eop_kernel),
                 time_policy,
             );
-            let graha_lons =
-                dhruv_search::graha_sidereal_longitudes(&engine, jd_tdb, system, args.nutation)
-                    .unwrap_or_else(|e| {
-                        eprintln!("Error computing graha longitudes: {e}");
-                        std::process::exit(1);
-                    });
+            let graha_lons = dhruv_search::graha_longitudes(
+                &engine,
+                jd_tdb,
+                &dhruv_search::GrahaLongitudesConfig::sidereal(system, args.nutation),
+            )
+            .unwrap_or_else(|e| {
+                eprintln!("Error computing graha longitudes: {e}");
+                std::process::exit(1);
+            });
 
             // Get lagna (sidereal)
             let jd_utc = jd_tdb; // approximate; for more precision would use LSK
@@ -3890,11 +3914,14 @@ fn main() {
                     time_policy,
                 );
                 let prec = parse_precession_model(&args.precession);
-                let result = dhruv_search::graha_tropical_longitudes_with_model(
+                let result = dhruv_search::graha_longitudes(
                     &engine,
                     jd_tdb,
-                    prec,
-                    args.nutation,
+                    &dhruv_search::GrahaLongitudesConfig::tropical_with_model(
+                        args.nutation,
+                        prec,
+                        dhruv_frames::ReferencePlane::Ecliptic,
+                    ),
                 )
                 .unwrap_or_else(|e| {
                     eprintln!("Error: {e}");
@@ -6075,17 +6102,55 @@ fn main() {
             let system = require_aya_system(args.ayanamsha);
             let engine = load_engine(&args.bsp, &args.lsk);
             let jd_tdb = utc_to_jd_tdb_with_policy(&utc, engine.lsk(), time_policy);
-            let lons =
-                dhruv_search::graha_sidereal_longitudes(&engine, jd_tdb, system, args.nutation)
-                    .unwrap_or_else(|e| {
-                        eprintln!("Error: {e}");
-                        std::process::exit(1);
-                    });
+            let precession_model = parse_precession_model(&args.precession);
+            let default_plane = if args.tropical {
+                ReferencePlane::Ecliptic
+            } else {
+                system.default_reference_plane()
+            };
+            let reference_plane = parse_reference_plane_arg(&args.reference_plane, default_plane);
+            let lons = dhruv_search::graha_longitudes(
+                &engine,
+                jd_tdb,
+                &if args.tropical {
+                    dhruv_search::GrahaLongitudesConfig::tropical_with_model(
+                        args.nutation,
+                        precession_model,
+                        reference_plane,
+                    )
+                } else {
+                    dhruv_search::GrahaLongitudesConfig::sidereal_with_model(
+                        system,
+                        args.nutation,
+                        precession_model,
+                        reference_plane,
+                    )
+                },
+            )
+            .unwrap_or_else(|e| {
+                eprintln!("Error: {e}");
+                std::process::exit(1);
+            });
 
             println!(
-                "Graha sidereal longitudes ({:?}{}):\n",
-                system,
-                if args.nutation { " +nutation" } else { "" }
+                "Graha {} longitudes (plane={:?}, precession={:?}{}):\n",
+                if args.tropical {
+                    "reference-plane"
+                } else {
+                    "sidereal"
+                },
+                reference_plane,
+                precession_model,
+                if !args.tropical {
+                    format!(
+                        ", system={system:?}{}",
+                        if args.nutation { " +nutation" } else { "" }
+                    )
+                } else if args.nutation {
+                    ", +nutation".to_string()
+                } else {
+                    String::new()
+                }
             );
             let graha_names = [
                 "Surya", "Chandra", "Mangal", "Budha", "Guru", "Shukra", "Shani", "Rahu", "Ketu",

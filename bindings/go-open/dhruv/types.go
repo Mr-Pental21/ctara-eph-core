@@ -55,6 +55,18 @@ const (
 )
 
 const (
+	PrecessionModelNewcomb1895 = cabi.PrecessionModelNewcomb1895
+	PrecessionModelLieske1977  = cabi.PrecessionModelLieske1977
+	PrecessionModelIau2006     = cabi.PrecessionModelIau2006
+	PrecessionModelVondrak2011 = cabi.PrecessionModelVondrak2011
+)
+
+const (
+	GrahaLongitudeKindSidereal = cabi.GrahaLongitudeKindSidereal
+	GrahaLongitudeKindTropical = cabi.GrahaLongitudeKindTropical
+)
+
+const (
 	TimePolicyStrictLSK    = cabi.TimePolicyStrictLSK
 	TimePolicyHybridDeltaT = cabi.TimePolicyHybridDeltaT
 )
@@ -149,18 +161,19 @@ type (
 	PanchangComputeRequest  = cabi.PanchangComputeRequest
 	PanchangOperationResult = cabi.PanchangOperationResult
 
-	GrahaLongitudes      = cabi.GrahaLongitudes
-	SpecialLagnas        = cabi.SpecialLagnas
-	ArudhaResult         = cabi.ArudhaResult
-	AllUpagrahas         = cabi.AllUpagrahas
-	TimeUpagrahaConfig   = cabi.TimeUpagrahaConfig
-	DrishtiConfig        = cabi.DrishtiConfig
-	GrahaPositionsConfig = cabi.GrahaPositionsConfig
-	BindusConfig         = cabi.BindusConfig
-	DashaSelectionConfig = cabi.DashaSelectionConfig
-	DashaVariationConfig = cabi.DashaVariationConfig
-	AmshaSelectionConfig = cabi.AmshaSelectionConfig
-	FullKundaliConfig    = cabi.FullKundaliConfig
+	GrahaLongitudes       = cabi.GrahaLongitudes
+	GrahaLongitudesConfig = cabi.GrahaLongitudesConfig
+	SpecialLagnas         = cabi.SpecialLagnas
+	ArudhaResult          = cabi.ArudhaResult
+	AllUpagrahas          = cabi.AllUpagrahas
+	TimeUpagrahaConfig    = cabi.TimeUpagrahaConfig
+	DrishtiConfig         = cabi.DrishtiConfig
+	GrahaPositionsConfig  = cabi.GrahaPositionsConfig
+	BindusConfig          = cabi.BindusConfig
+	DashaSelectionConfig  = cabi.DashaSelectionConfig
+	DashaVariationConfig  = cabi.DashaVariationConfig
+	AmshaSelectionConfig  = cabi.AmshaSelectionConfig
+	FullKundaliConfig     = cabi.FullKundaliConfig
 
 	TaraConfig         = cabi.TaraConfig
 	EarthState         = cabi.EarthState

@@ -3638,7 +3638,7 @@ fn ffi_lunar_node_fitted_tracks_osculating_utc() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn ffi_graha_tropical_longitudes_basic() {
+fn ffi_graha_longitudes_tropical_basic() {
     let config = match real_config() {
         Some(c) => c,
         None => return,
@@ -3651,8 +3651,10 @@ fn ffi_graha_tropical_longitudes_basic() {
     let mut out = DhruvGrahaLongitudes {
         longitudes: [0.0; 9],
     };
+    let mut cfg = dhruv_graha_longitudes_config_default();
+    cfg.kind = DHRUV_GRAHA_LONGITUDE_KIND_TROPICAL;
     let s = unsafe {
-        dhruv_graha_tropical_longitudes(engine_ptr.cast::<dhruv_core::Engine>(), jd, &mut out)
+        dhruv_graha_longitudes(engine_ptr.cast::<dhruv_core::Engine>(), jd, &cfg, &mut out)
     };
     assert_eq!(s, DhruvStatus::Ok);
 
@@ -3682,13 +3684,16 @@ fn ffi_tropical_equals_sidereal_plus_ayanamsha() {
     let mut tropical_out = DhruvGrahaLongitudes {
         longitudes: [0.0; 9],
     };
-    let s = unsafe { dhruv_graha_tropical_longitudes(engine_raw, jd, &mut tropical_out) };
+    let mut tropical_cfg = dhruv_graha_longitudes_config_default();
+    tropical_cfg.kind = DHRUV_GRAHA_LONGITUDE_KIND_TROPICAL;
+    let s = unsafe { dhruv_graha_longitudes(engine_raw, jd, &tropical_cfg, &mut tropical_out) };
     assert_eq!(s, DhruvStatus::Ok);
 
     let mut sidereal_out = DhruvGrahaLongitudes {
         longitudes: [0.0; 9],
     };
-    let s = unsafe { dhruv_graha_sidereal_longitudes(engine_raw, jd, 0, 0, &mut sidereal_out) };
+    let sidereal_cfg = dhruv_graha_longitudes_config_default();
+    let s = unsafe { dhruv_graha_longitudes(engine_raw, jd, &sidereal_cfg, &mut sidereal_out) };
     assert_eq!(s, DhruvStatus::Ok);
 
     let t = dhruv_vedic_base::jd_tdb_to_centuries(jd);

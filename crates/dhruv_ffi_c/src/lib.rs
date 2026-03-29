@@ -7,15 +7,16 @@ use std::sync::{LazyLock, RwLock};
 
 use dhruv_config::{ConfigResolver, DefaultsMode, load_with_discovery};
 use dhruv_core::{Body, Engine, EngineConfig, EngineError, Frame, Observer, Query, StateVector};
+use dhruv_frames::PrecessionModel;
 use dhruv_search::{
-    ChandraGrahan, ChandraGrahanType, ConjunctionConfig, ConjunctionEvent, GrahanConfig,
-    LunarPhase, MaxSpeedEvent, MaxSpeedType, SankrantiConfig, SearchError, StationType,
-    StationaryConfig, StationaryEvent, SuryaGrahan, SuryaGrahanType, amsha_charts_for_date,
-    avastha_for_date, ayana_for_date, balas_for_date, bhavabala_for_date, body_ecliptic_lon_lat,
-    charakaraka_for_date, dasha_child_period_for_birth, dasha_children_for_birth,
-    dasha_complete_level_for_birth, dasha_hierarchy_for_birth, dasha_level0_entity_for_birth,
-    dasha_level0_for_birth, dasha_snapshot_at, elongation_at, full_kundali_for_date,
-    ghatika_for_date, ghatika_from_sunrises, graha_sidereal_longitudes, graha_tropical_longitudes,
+    ChandraGrahan, ChandraGrahanType, ConjunctionConfig, ConjunctionEvent, GrahaLongitudeKind,
+    GrahaLongitudesConfig, GrahanConfig, LunarPhase, MaxSpeedEvent, MaxSpeedType, SankrantiConfig,
+    SearchError, StationType, StationaryConfig, StationaryEvent, SuryaGrahan, SuryaGrahanType,
+    amsha_charts_for_date, avastha_for_date, ayana_for_date, balas_for_date, bhavabala_for_date,
+    body_ecliptic_lon_lat, charakaraka_for_date, dasha_child_period_for_birth,
+    dasha_children_for_birth, dasha_complete_level_for_birth, dasha_hierarchy_for_birth,
+    dasha_level0_entity_for_birth, dasha_level0_for_birth, dasha_snapshot_at, elongation_at,
+    full_kundali_for_date, ghatika_for_date, ghatika_from_sunrises, graha_longitudes,
     hora_for_date, hora_from_sunrises, karana_at, karana_for_date, masa_for_date, nakshatra_at,
     nakshatra_for_date, next_amavasya, next_chandra_grahan, next_conjunction, next_max_speed,
     next_purnima, next_sankranti, next_specific_sankranti, next_stationary, next_surya_grahan,
@@ -95,6 +96,14 @@ pub enum DhruvReferencePlane {
     /// Invariable plane (fixed, no precession).
     Invariable = 1,
 }
+
+pub const DHRUV_PRECESSION_MODEL_NEWCOMB1895: i32 = 0;
+pub const DHRUV_PRECESSION_MODEL_LIESKE1977: i32 = 1;
+pub const DHRUV_PRECESSION_MODEL_IAU2006: i32 = 2;
+pub const DHRUV_PRECESSION_MODEL_VONDRAK2011: i32 = 3;
+
+pub const DHRUV_GRAHA_LONGITUDE_KIND_SIDEREAL: i32 = 0;
+pub const DHRUV_GRAHA_LONGITUDE_KIND_TROPICAL: i32 = 1;
 
 impl From<&EngineError> for DhruvStatus {
     fn from(value: &EngineError) -> Self {
@@ -4273,6 +4282,52 @@ fn reference_plane_from_code(code: i32, system: AyanamshaSystem) -> dhruv_frames
         1 => dhruv_frames::ReferencePlane::Invariable,
         _ => system.default_reference_plane(), // -1 or any other value → system default
     }
+}
+
+fn precession_model_from_code(code: i32) -> Option<PrecessionModel> {
+    match code {
+        DHRUV_PRECESSION_MODEL_NEWCOMB1895 => Some(PrecessionModel::Newcomb1895),
+        DHRUV_PRECESSION_MODEL_LIESKE1977 => Some(PrecessionModel::Lieske1977),
+        DHRUV_PRECESSION_MODEL_IAU2006 => Some(PrecessionModel::Iau2006),
+        DHRUV_PRECESSION_MODEL_VONDRAK2011 => Some(PrecessionModel::Vondrak2011),
+        _ => None,
+    }
+}
+
+fn resolve_graha_longitudes_config_ptr(
+    config: *const DhruvGrahaLongitudesConfig,
+) -> Result<GrahaLongitudesConfig, DhruvStatus> {
+    let raw = if config.is_null() {
+        dhruv_graha_longitudes_config_default()
+    } else {
+        unsafe { *config }
+    };
+    let kind = match raw.kind {
+        DHRUV_GRAHA_LONGITUDE_KIND_SIDEREAL => GrahaLongitudeKind::Sidereal,
+        DHRUV_GRAHA_LONGITUDE_KIND_TROPICAL => GrahaLongitudeKind::Tropical,
+        _ => return Err(DhruvStatus::InvalidQuery),
+    };
+    let precession_model =
+        precession_model_from_code(raw.precession_model).ok_or(DhruvStatus::InvalidQuery)?;
+    let ayanamsha_system =
+        ayanamsha_system_from_code(raw.ayanamsha_system).ok_or(DhruvStatus::InvalidQuery)?;
+    let reference_plane = match kind {
+        GrahaLongitudeKind::Sidereal => {
+            reference_plane_from_code(raw.reference_plane, ayanamsha_system)
+        }
+        GrahaLongitudeKind::Tropical => match raw.reference_plane {
+            0 => dhruv_frames::ReferencePlane::Ecliptic,
+            1 => dhruv_frames::ReferencePlane::Invariable,
+            _ => dhruv_frames::ReferencePlane::Ecliptic,
+        },
+    };
+    Ok(GrahaLongitudesConfig {
+        kind,
+        ayanamsha_system,
+        use_nutation: raw.use_nutation != 0,
+        precession_model,
+        reference_plane,
+    })
 }
 
 fn sankranti_config_from_ffi(cfg: &DhruvSankrantiConfig) -> Option<SankrantiConfig> {
@@ -10751,61 +10806,49 @@ pub struct DhruvGrahaLongitudes {
     pub longitudes: [f64; 9],
 }
 
-/// Query sidereal longitudes of all 9 grahas at a given JD (TDB).
-///
-/// # Safety
-/// `engine` and `out` must be valid, non-null pointers.
+/// Configuration for graha longitude computation.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DhruvGrahaLongitudesConfig {
+    /// `DHRUV_GRAHA_LONGITUDE_KIND_*`
+    pub kind: i32,
+    /// Ayanamsha system code (0-19). Used for sidereal output.
+    pub ayanamsha_system: i32,
+    /// Whether to apply nutation correction when meaningful.
+    pub use_nutation: u8,
+    /// `DHRUV_PRECESSION_MODEL_*`
+    pub precession_model: i32,
+    /// `DhruvReferencePlane` or -1 for system default.
+    pub reference_plane: i32,
+}
+
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn dhruv_graha_sidereal_longitudes(
-    engine: *const Engine,
-    jd_tdb: f64,
-    ayanamsha_system: u32,
-    use_nutation: u8,
-    out: *mut DhruvGrahaLongitudes,
-) -> DhruvStatus {
-    if engine.is_null() || out.is_null() {
-        return DhruvStatus::NullPointer;
-    }
-
-    let engine = unsafe { &*engine };
-    let system = match ayanamsha_system_from_code(ayanamsha_system as i32) {
-        Some(s) => s,
-        None => return DhruvStatus::InvalidQuery,
-    };
-
-    match graha_sidereal_longitudes(engine, jd_tdb, system, use_nutation != 0) {
-        Ok(result) => {
-            let out = unsafe { &mut *out };
-            out.longitudes = result.longitudes;
-            DhruvStatus::Ok
-        }
-        Err(e) => DhruvStatus::from(&e),
+pub extern "C" fn dhruv_graha_longitudes_config_default() -> DhruvGrahaLongitudesConfig {
+    DhruvGrahaLongitudesConfig {
+        kind: DHRUV_GRAHA_LONGITUDE_KIND_SIDEREAL,
+        ayanamsha_system: 0,
+        use_nutation: 0,
+        precession_model: DHRUV_PRECESSION_MODEL_VONDRAK2011,
+        reference_plane: -1,
     }
 }
 
-// ---------------------------------------------------------------------------
-// Graha Tropical Longitudes
-// ---------------------------------------------------------------------------
-
-/// Query tropical (ecliptic-of-date) longitudes of all 9 grahas at a given JD (TDB).
-///
-/// Returns ecliptic-of-date tropical longitudes (degrees, 0..360) without
-/// ayanamsha subtraction. For the 7 physical planets, queries the engine for
-/// ecliptic longitude. For Rahu/Ketu, uses true node formulas.
-///
-/// # Safety
-/// `engine` and `out` must be valid, non-null pointers.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn dhruv_graha_tropical_longitudes(
+pub unsafe extern "C" fn dhruv_graha_longitudes(
     engine: *const Engine,
     jd_tdb: f64,
+    config: *const DhruvGrahaLongitudesConfig,
     out: *mut DhruvGrahaLongitudes,
 ) -> DhruvStatus {
     if engine.is_null() || out.is_null() {
         return DhruvStatus::NullPointer;
     }
     let engine = unsafe { &*engine };
-    match graha_tropical_longitudes(engine, jd_tdb) {
+    let rust_config = match resolve_graha_longitudes_config_ptr(config) {
+        Ok(cfg) => cfg,
+        Err(status) => return status,
+    };
+    match graha_longitudes(engine, jd_tdb, &rust_config) {
         Ok(result) => {
             let out = unsafe { &mut *out };
             out.longitudes = result.longitudes;
@@ -15156,46 +15199,44 @@ mod tests {
     }
 
     #[test]
-    fn ffi_graha_sidereal_longitudes_rejects_null() {
+    fn ffi_graha_longitudes_rejects_null() {
         let mut out = std::mem::MaybeUninit::<DhruvGrahaLongitudes>::uninit();
-        let s = unsafe {
-            dhruv_graha_sidereal_longitudes(ptr::null(), 2451545.0, 0, 0, out.as_mut_ptr())
-        };
+        let cfg = dhruv_graha_longitudes_config_default();
+        let s = unsafe { dhruv_graha_longitudes(ptr::null(), 2451545.0, &cfg, out.as_mut_ptr()) };
         assert_eq!(s, DhruvStatus::NullPointer);
     }
 
     #[test]
-    fn ffi_graha_sidereal_longitudes_rejects_null_out() {
+    fn ffi_graha_longitudes_rejects_null_out() {
         // Use a non-null but invalid engine pointer would be UB, so just test null out
-        let s = unsafe {
-            dhruv_graha_sidereal_longitudes(ptr::null(), 2451545.0, 0, 0, ptr::null_mut())
-        };
+        let cfg = dhruv_graha_longitudes_config_default();
+        let s = unsafe { dhruv_graha_longitudes(ptr::null(), 2451545.0, &cfg, ptr::null_mut()) };
         assert_eq!(s, DhruvStatus::NullPointer);
     }
 
     #[test]
-    fn ffi_graha_sidereal_longitudes_rejects_invalid_ayanamsha() {
-        // Ayanamsha code 99 is invalid
+    fn ffi_graha_longitudes_rejects_invalid_ayanamsha() {
         let engine_ptr: *const Engine = ptr::null();
         let mut out = std::mem::MaybeUninit::<DhruvGrahaLongitudes>::uninit();
-        let s = unsafe {
-            dhruv_graha_sidereal_longitudes(engine_ptr, 2451545.0, 99, 0, out.as_mut_ptr())
-        };
+        let mut cfg = dhruv_graha_longitudes_config_default();
+        cfg.ayanamsha_system = 99;
+        let s = unsafe { dhruv_graha_longitudes(engine_ptr, 2451545.0, &cfg, out.as_mut_ptr()) };
         // Null engine is checked first
         assert_eq!(s, DhruvStatus::NullPointer);
     }
 
     #[test]
-    fn ffi_graha_tropical_longitudes_rejects_null_engine() {
+    fn ffi_graha_longitudes_rejects_null_engine() {
         let mut out = std::mem::MaybeUninit::<DhruvGrahaLongitudes>::uninit();
-        let s =
-            unsafe { dhruv_graha_tropical_longitudes(ptr::null(), 2451545.0, out.as_mut_ptr()) };
+        let cfg = dhruv_graha_longitudes_config_default();
+        let s = unsafe { dhruv_graha_longitudes(ptr::null(), 2451545.0, &cfg, out.as_mut_ptr()) };
         assert_eq!(s, DhruvStatus::NullPointer);
     }
 
     #[test]
-    fn ffi_graha_tropical_longitudes_rejects_null_out() {
-        let s = unsafe { dhruv_graha_tropical_longitudes(ptr::null(), 2451545.0, ptr::null_mut()) };
+    fn ffi_graha_longitudes_rejects_null_out_with_null_config() {
+        let s =
+            unsafe { dhruv_graha_longitudes(ptr::null(), 2451545.0, ptr::null(), ptr::null_mut()) };
         assert_eq!(s, DhruvStatus::NullPointer);
     }
 

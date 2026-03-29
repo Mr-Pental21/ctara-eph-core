@@ -9,7 +9,7 @@ J2000 = 2451545.0
 
 @skip_no_kernels
 class TestGrahaLongitudes:
-    def test_graha_sidereal_longitudes(self, engine_handles):
+    def test_graha_longitudes_sidereal(self, engine_handles):
         """Sidereal longitudes for all 9 grahas should be in [0, 360)."""
         from ctara_dhruv.kundali import graha_longitudes
         from ctara_dhruv.engine import engine
@@ -18,12 +18,17 @@ class TestGrahaLongitudes:
         for lon in result.longitudes:
             assert 0 <= lon < 360
 
-    def test_graha_tropical_longitudes(self, engine_handles):
+    def test_graha_longitudes_tropical(self, engine_handles):
         """Tropical longitudes should differ from sidereal by ~ayanamsha."""
-        from ctara_dhruv.kundali import graha_longitudes, graha_tropical_longitudes
+        from ctara_dhruv import GrahaLongitudeKind, GrahaLongitudesConfig
+        from ctara_dhruv.kundali import graha_longitudes
         from ctara_dhruv.engine import engine
         sid = graha_longitudes(engine(), jd_tdb=J2000, ayanamsha_system=0)
-        trop = graha_tropical_longitudes(engine(), jd_tdb=J2000)
+        trop = graha_longitudes(
+            engine(),
+            jd_tdb=J2000,
+            config=GrahaLongitudesConfig(kind=GrahaLongitudeKind.TROPICAL),
+        )
         # Difference should be approximately the ayanamsha (~23.85 at J2000)
         diff = (trop.longitudes[0] - sid.longitudes[0]) % 360
         assert 23.0 < diff < 25.0

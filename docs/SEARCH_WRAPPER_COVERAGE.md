@@ -5,7 +5,7 @@ Scope: crate-root runtime/query APIs re-exported by `dhruv_search` (58 functions
 Direct C ABI coverage is high: `57 / 58` runtime APIs have an exported
 `dhruv_ffi_c` entry point.
 Functional coverage is `58 / 58` when `moon_sidereal_longitude_at` is satisfied
-via `dhruv_graha_sidereal_longitudes` (Moon graha index).
+via `dhruv_graha_longitudes` with sidereal config (Moon graha index).
 
 ## Not Wrapped Directly
 
@@ -15,7 +15,7 @@ This crate-root runtime function does not currently have a direct C export:
 
 Functional coverage note:
 - `moon_sidereal_longitude_at` is obtainable from
-  `dhruv_graha_sidereal_longitudes` (Moon is one graha entry in that output).
+  `dhruv_graha_longitudes` with sidereal config (Moon is one graha entry in that output).
 
 ## Wrapped API Families (Direct)
 
@@ -42,8 +42,7 @@ Functional coverage note:
 - Jyotish orchestrators: `dhruv_special_lagnas_for_date`,
   `dhruv_arudha_padas_for_date`, `dhruv_all_upagrahas_for_date`,
   `dhruv_graha_positions`, `dhruv_ashtakavarga_for_date`, `dhruv_core_bindus`,
-  `dhruv_drishti`, `dhruv_graha_sidereal_longitudes`,
-  `dhruv_graha_tropical_longitudes`, `dhruv_nakshatra_at`
+  `dhruv_drishti`, `dhruv_graha_longitudes`, `dhruv_nakshatra_at`
 
 ## Amsha Parity Status
 

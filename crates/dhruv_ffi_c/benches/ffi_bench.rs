@@ -6,20 +6,22 @@ use criterion::{
 use dhruv_core::{Body, Frame, Observer};
 use dhruv_ffi_c::{
     DHRUV_AYANAMSHA_MODE_MEAN, DHRUV_AYANAMSHA_MODE_TRUE, DHRUV_AYANAMSHA_MODE_UNIFIED,
-    DHRUV_AYANAMSHA_TIME_JD_TDB, DHRUV_AYANAMSHA_TIME_UTC, DHRUV_PANCHANG_INCLUDE_ALL,
-    DHRUV_PANCHANG_TIME_UTC, DHRUV_QUERY_OUTPUT_SPHERICAL, DHRUV_QUERY_TIME_UTC,
-    DhruvAyanamshaComputeRequest, DhruvBhinnaAshtakavarga, DhruvDrishtiEntry, DhruvEngineConfig,
-    DhruvGrahaDrishtiMatrix, DhruvGrahaLongitudes, DhruvKaranaPosition, DhruvNakshatra28Info,
-    DhruvNakshatraInfo, DhruvPanchangComputeRequest, DhruvPanchangNakshatraInfo,
-    DhruvPanchangOperationResult, DhruvQuery, DhruvQueryRequest, DhruvQueryResult, DhruvRashiInfo,
-    DhruvSamvatsaraResult, DhruvSarvaAshtakavarga, DhruvSphericalCoords, DhruvStateVector,
-    DhruvStatus, DhruvTithiPosition, DhruvUtcTime, DhruvYogaPosition,
+    DHRUV_AYANAMSHA_TIME_JD_TDB, DHRUV_AYANAMSHA_TIME_UTC, DHRUV_GRAHA_LONGITUDE_KIND_TROPICAL,
+    DHRUV_PANCHANG_INCLUDE_ALL, DHRUV_PANCHANG_TIME_UTC, DHRUV_QUERY_OUTPUT_SPHERICAL,
+    DHRUV_QUERY_TIME_UTC, DHRUV_TIME_POLICY_STRICT_LSK, DhruvAyanamshaComputeRequest,
+    DhruvBhinnaAshtakavarga, DhruvDrishtiEntry, DhruvEngineConfig, DhruvGrahaDrishtiMatrix,
+    DhruvGrahaLongitudes, DhruvKaranaPosition, DhruvNakshatra28Info, DhruvNakshatraInfo,
+    DhruvPanchangComputeRequest, DhruvPanchangNakshatraInfo, DhruvPanchangOperationResult,
+    DhruvQuery, DhruvQueryRequest, DhruvQueryResult, DhruvRashiInfo, DhruvSamvatsaraResult,
+    DhruvSarvaAshtakavarga, DhruvSphericalCoords, DhruvStateVector, DhruvStatus,
+    DhruvTimeConversionOptions, DhruvTimePolicy, DhruvTithiPosition, DhruvUtcTime,
+    DhruvUtcToTdbRequest, DhruvUtcToTdbResult, DhruvYogaPosition,
     dhruv_ayana_from_sidereal_longitude, dhruv_ayanamsha_compute_ex, dhruv_calculate_all_bav,
     dhruv_calculate_bav, dhruv_calculate_sav, dhruv_cartesian_to_spherical,
     dhruv_ekadhipatya_sodhana, dhruv_engine_new_internal, dhruv_engine_query,
     dhruv_engine_query_internal, dhruv_engine_query_request, dhruv_engine_query_request_internal,
     dhruv_ghatika_from_elapsed, dhruv_ghatikas_since_sunrise, dhruv_graha_drishti,
-    dhruv_graha_drishti_matrix, dhruv_graha_sidereal_longitudes, dhruv_graha_tropical_longitudes,
+    dhruv_graha_drishti_matrix, dhruv_graha_longitudes, dhruv_graha_longitudes_config_default,
     dhruv_hora_at, dhruv_jd_tdb_to_utc, dhruv_karana_from_elongation, dhruv_lunar_node_deg,
     dhruv_masa_from_rashi_index, dhruv_nakshatra_at, dhruv_nakshatra_from_longitude,
     dhruv_nakshatra_from_tropical, dhruv_nakshatra28_from_longitude, dhruv_nth_rashi_from,
@@ -34,8 +36,8 @@ use dhruv_frames::{
     nutation_iau2000b as rust_nutation_iau2000b,
 };
 use dhruv_search::{
-    SankrantiConfig, graha_sidereal_longitudes as rust_graha_sidereal_longitudes,
-    graha_tropical_longitudes as rust_graha_tropical_longitudes, nakshatra_at as rust_nakshatra_at,
+    GrahaLongitudesConfig, SankrantiConfig, graha_longitudes as rust_graha_longitudes,
+    nakshatra_at as rust_nakshatra_at,
 };
 use dhruv_time::{Epoch, UtcTime};
 use dhruv_vedic_base::{
@@ -269,19 +271,40 @@ fn ffi_time_frame_bench(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("ffi_time_frame");
 
-    let (year, month, day, hour, min, sec) = (2024_i32, 3_u32, 20_u32, 12_u32, 0_u32, 0.0_f64);
-    let mut out_jd = 0.0_f64;
+    let request = DhruvUtcToTdbRequest {
+        utc: DhruvUtcTime {
+            year: 2024,
+            month: 3,
+            day: 20,
+            hour: 12,
+            minute: 0,
+            second: 0.0,
+        },
+        policy: DhruvTimePolicy {
+            mode: DHRUV_TIME_POLICY_STRICT_LSK,
+            options: DhruvTimeConversionOptions {
+                warn_on_fallback: 0,
+                delta_t_model: 0,
+                freeze_future_dut1: 0,
+                pre_range_dut1: 0.0,
+                future_delta_t_transition: 0,
+                future_transition_years: 0.0,
+                smh_future_family: 0,
+            },
+        },
+    };
+    let mut out_jd: DhruvUtcToTdbResult = zeroed();
     bench_pair(
         &mut group,
         "utc_to_tdb_jd",
         || {
             Epoch::from_utc(
-                black_box(year),
-                black_box(month),
-                black_box(day),
-                black_box(hour),
-                black_box(min),
-                black_box(sec),
+                black_box(request.utc.year),
+                black_box(request.utc.month),
+                black_box(request.utc.day),
+                black_box(request.utc.hour),
+                black_box(request.utc.minute),
+                black_box(request.utc.second),
                 black_box(&ctx.lsk),
             )
             .as_jd_tdb()
@@ -289,15 +312,11 @@ fn ffi_time_frame_bench(c: &mut Criterion) {
         || unsafe {
             expect_ok(dhruv_utc_to_tdb_jd(
                 black_box(&ctx.lsk as *const _),
-                year,
-                month,
-                day,
-                hour,
-                min,
-                sec,
+                std::ptr::null(),
+                black_box(&request as *const _),
                 &mut out_jd,
             ));
-            out_jd
+            out_jd.jd_tdb
         },
     );
 
@@ -1089,11 +1108,15 @@ fn ffi_search_sidereal_bench(c: &mut Criterion) {
     let jd = 2_460_000.5_f64;
     let cfg_rust = SankrantiConfig::new(AyanamshaSystem::Lahiri, false);
     let cfg_ffi = dhruv_sankranti_config_default();
-    let ayanamsha_code = cfg_ffi.ayanamsha_system as u32;
+    let sidereal_cfg_ffi = dhruv_graha_longitudes_config_default();
 
-    let moon_lon = rust_graha_sidereal_longitudes(&ctx.engine, jd, AyanamshaSystem::Lahiri, false)
-        .expect("graha sidereal longitudes should succeed")
-        .longitudes[1];
+    let moon_lon = rust_graha_longitudes(
+        &ctx.engine,
+        jd,
+        &GrahaLongitudesConfig::sidereal(AyanamshaSystem::Lahiri, false),
+    )
+    .expect("graha sidereal longitudes should succeed")
+    .longitudes[1];
 
     let mut group = c.benchmark_group("ffi_search_sidereal");
     group.sample_size(20);
@@ -1101,23 +1124,21 @@ fn ffi_search_sidereal_bench(c: &mut Criterion) {
     let mut longitudes_out: DhruvGrahaLongitudes = zeroed();
     bench_pair(
         &mut group,
-        "graha_sidereal_longitudes",
+        "graha_longitudes_sidereal",
         || {
-            rust_graha_sidereal_longitudes(
+            rust_graha_longitudes(
                 black_box(&ctx.engine),
                 black_box(jd),
-                AyanamshaSystem::Lahiri,
-                false,
+                &GrahaLongitudesConfig::sidereal(AyanamshaSystem::Lahiri, false),
             )
             .expect("graha sidereal longitudes should succeed")
             .longitudes[1]
         },
         || unsafe {
-            let _ = dhruv_graha_sidereal_longitudes(
+            let _ = dhruv_graha_longitudes(
                 black_box(&ctx.engine as *const _),
                 black_box(jd),
-                black_box(ayanamsha_code),
-                black_box(0),
+                black_box(&sidereal_cfg_ffi),
                 &mut longitudes_out,
             );
             longitudes_out.longitudes[1]
@@ -1125,18 +1146,25 @@ fn ffi_search_sidereal_bench(c: &mut Criterion) {
     );
 
     let mut tropical_out: DhruvGrahaLongitudes = zeroed();
+    let mut tropical_cfg_ffi = dhruv_graha_longitudes_config_default();
+    tropical_cfg_ffi.kind = DHRUV_GRAHA_LONGITUDE_KIND_TROPICAL;
     bench_pair(
         &mut group,
-        "graha_tropical_longitudes",
+        "graha_longitudes_tropical",
         || {
-            rust_graha_tropical_longitudes(black_box(&ctx.engine), black_box(jd))
-                .expect("graha tropical longitudes should succeed")
-                .longitudes[1]
+            rust_graha_longitudes(
+                black_box(&ctx.engine),
+                black_box(jd),
+                &GrahaLongitudesConfig::tropical(false),
+            )
+            .expect("graha tropical longitudes should succeed")
+            .longitudes[1]
         },
         || unsafe {
-            let _ = dhruv_graha_tropical_longitudes(
+            let _ = dhruv_graha_longitudes(
                 black_box(&ctx.engine as *const _),
                 black_box(jd),
+                black_box(&tropical_cfg_ffi),
                 &mut tropical_out,
             );
             tropical_out.longitudes[1]

@@ -230,6 +230,27 @@ func goSankrantiConfig(cfg C.DhruvSankrantiConfig) SankrantiConfig {
 	}
 }
 
+func cGrahaLongitudesConfig(cfg GrahaLongitudesConfig) C.DhruvGrahaLongitudesConfig {
+	return C.DhruvGrahaLongitudesConfig{
+		kind:             C.int32_t(cfg.Kind),
+		ayanamsha_system: C.int32_t(cfg.AyanamshaSystem),
+		use_nutation:     boolU8(cfg.UseNutation),
+		precession_model: C.int32_t(cfg.PrecessionModel),
+		reference_plane:  C.int32_t(cfg.ReferencePlane),
+	}
+}
+
+func GrahaLongitudesConfigDefault() GrahaLongitudesConfig {
+	cfg := C.dhruv_graha_longitudes_config_default()
+	return GrahaLongitudesConfig{
+		Kind:            int32(cfg.kind),
+		AyanamshaSystem: int32(cfg.ayanamsha_system),
+		UseNutation:     cfg.use_nutation != 0,
+		PrecessionModel: int32(cfg.precession_model),
+		ReferencePlane:  int32(cfg.reference_plane),
+	}
+}
+
 func cEngineConfig(cfg EngineConfig) (C.DhruvEngineConfig, error) {
 	if len(cfg.SpkPaths) == 0 {
 		return C.DhruvEngineConfig{}, fmt.Errorf("at least one SPK path is required")
@@ -1096,19 +1117,10 @@ func PanchangComputeEx(engine EngineHandle, eop EopHandle, lsk LskHandle, req Pa
 	return res, st
 }
 
-func GrahaSiderealLongitudes(engine EngineHandle, jdTdb float64, ayanamshaSystem uint32, useNutation bool) (GrahaLongitudes, Status) {
+func ComputeGrahaLongitudes(engine EngineHandle, jdTdb float64, cfg GrahaLongitudesConfig) (GrahaLongitudes, Status) {
 	var out C.DhruvGrahaLongitudes
-	st := Status(C.dhruv_graha_sidereal_longitudes(engine.ptr, C.double(jdTdb), C.uint32_t(ayanamshaSystem), boolU8(useNutation), &out))
-	var goOut GrahaLongitudes
-	for i := 0; i < GrahaCount; i++ {
-		goOut.Longitudes[i] = float64(out.longitudes[i])
-	}
-	return goOut, st
-}
-
-func GrahaTropicalLongitudes(engine EngineHandle, jdTdb float64) (GrahaLongitudes, Status) {
-	var out C.DhruvGrahaLongitudes
-	st := Status(C.dhruv_graha_tropical_longitudes(engine.ptr, C.double(jdTdb), &out))
+	ccfg := cGrahaLongitudesConfig(cfg)
+	st := Status(C.dhruv_graha_longitudes(engine.ptr, C.double(jdTdb), &ccfg, &out))
 	var goOut GrahaLongitudes
 	for i := 0; i < GrahaCount; i++ {
 		goOut.Longitudes[i] = float64(out.longitudes[i])

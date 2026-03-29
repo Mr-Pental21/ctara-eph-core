@@ -16,7 +16,7 @@ Audit high-level wrappers that trigger repeated internal calculations for the sa
 
 1. The panchang stack already exposes enough low-level functions to avoid repeated work, but callers can still accidentally recompute by calling high-level functions separately.
 2. `drishti_for_date(... include_bindus=true)` currently recomputes several expensive intermediates inside `core_bindus`.
-3. `graha_sidereal_longitudes` and conjunction internals do same-epoch per-body queries serially instead of using `Engine::query_batch`.
+3. `graha_longitudes` sidereal-mode internals and conjunction internals do same-epoch per-body queries serially instead of using `Engine::query_batch`.
 4. C ABI does not expose batch query APIs, which limits throughput and shared memoization benefits for Go and other FFI consumers.
 5. The removed Rust convenience-wrapper layer had at least one clear same-input repeat conversion/query pattern (`sidereal_longitude` path). This remains relevant only as historical cleanup context.
 6. For a strict stateless core goal, reusable cross-call state should live in wrappers, not in core/ABI context handles.
@@ -92,7 +92,7 @@ Engine supports same-epoch batch sharing:
 
 - `Engine::query_batch`: `crates/dhruv_core/src/lib.rs:506`
 
-But `graha_sidereal_longitudes` currently loops and queries one graha at a time:
+But `graha_longitudes` in sidereal mode currently loops and queries one graha at a time:
 
 - `crates/dhruv_search/src/jyotish.rs:63`
 - per-graha query call through `body_ecliptic_lon_lat`: `crates/dhruv_search/src/jyotish.rs:76`

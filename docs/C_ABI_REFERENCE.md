@@ -1376,7 +1376,7 @@ Compute the rashi index that is `offset` signs from `rashi_index`. Returns 0-bas
 
 ---
 
-### Graha Sidereal Longitudes
+### Graha Longitudes
 
 ```c
 typedef struct {
@@ -1385,30 +1385,27 @@ typedef struct {
 ```
 
 ```c
-DhruvStatus dhruv_graha_sidereal_longitudes(
-    const Engine*           engine,
-    double                  jd_tdb,
-    uint32_t                ayanamsha_system,   // 0-19
-    uint8_t                 use_nutation,        // 0=false, 1=true
-    DhruvGrahaLongitudes*   out
-);
+typedef struct {
+    int32_t kind;               // DHRUV_GRAHA_LONGITUDE_KIND_*
+    uint32_t ayanamsha_system;  // 0-19
+    uint8_t use_nutation;       // 0=false, 1=true
+    int32_t precession_model;   // DHRUV_PRECESSION_MODEL_*
+    int32_t reference_plane;    // DHRUV_REFERENCE_PLANE_*
+} DhruvGrahaLongitudesConfig;
 ```
-
-Query sidereal longitudes (degrees, 0..360) of all 9 grahas at a given JD (TDB). For the 7 physical planets, queries the engine for tropical ecliptic longitude and subtracts ayanamsha. For Rahu/Ketu, uses true node formulas.
-
----
-
-### Graha Tropical Longitudes
 
 ```c
-DhruvStatus dhruv_graha_tropical_longitudes(
-    const Engine*           engine,
-    double                  jd_tdb,
-    DhruvGrahaLongitudes*   out
+DhruvGrahaLongitudesConfig dhruv_graha_longitudes_config_default(void);
+
+DhruvStatus dhruv_graha_longitudes(
+    const Engine*                         engine,
+    double                                jd_tdb,
+    const DhruvGrahaLongitudesConfig*     config,
+    DhruvGrahaLongitudes*                 out
 );
 ```
 
-Query tropical (ecliptic-of-date) longitudes (degrees, 0..360) of all 9 grahas at a given JD (TDB). Returns raw ecliptic-of-date longitudes without ayanamsha subtraction. No `ayanamsha_system` or `use_nutation` parameters — tropical is frame-only. Uses the same `DhruvGrahaLongitudes` output struct as `dhruv_graha_sidereal_longitudes`.
+Query graha longitudes (degrees, 0..360) of all 9 grahas at a given JD (TDB). `config->kind` selects sidereal vs tropical/reference-plane output. The same config carries ayanamsha choice, nutation, precession model, and reference-plane selection instead of splitting those variations across separate symbol names.
 
 ---
 
@@ -1424,7 +1421,7 @@ DhruvStatus dhruv_nakshatra_at(
 );
 ```
 
-Determine the Moon's Nakshatra (27-scheme) from a pre-computed sidereal longitude. The engine is still needed for boundary bisection (finding start/end times). Returns nakshatra index, pada, and start/end times (UTC). Useful when the Moon's sidereal longitude has already been computed (e.g., from `dhruv_graha_sidereal_longitudes`).
+Determine the Moon's Nakshatra (27-scheme) from a pre-computed sidereal longitude. The engine is still needed for boundary bisection (finding start/end times). Returns nakshatra index, pada, and start/end times (UTC). Useful when the Moon's sidereal longitude has already been computed (e.g., from `dhruv_graha_longitudes` with sidereal config).
 
 ---
 
@@ -1729,8 +1726,8 @@ Use the unified `*_search_ex` / `*_compute_ex` entries documented above.
 | 31 | `dhruv_conjunction_config_default` | | | | yes |
 | 35 | `dhruv_grahan_config_default` | | | | yes |
 | 42 | `dhruv_stationary_config_default` | | | | yes |
-| 49 | `dhruv_graha_sidereal_longitudes` | yes | | | |
-| 50 | `dhruv_graha_tropical_longitudes` | yes | | | |
+| 49 | `dhruv_graha_longitudes_config_default` | yes | | | |
+| 50 | `dhruv_graha_longitudes` | yes | | | |
 | 51 | `dhruv_nakshatra_at` | yes | | | |
 | 52 | `dhruv_ramc_deg` | | yes | yes | |
 | 53 | `dhruv_ramc_deg_utc` | | yes | yes | |
