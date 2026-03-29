@@ -4,7 +4,8 @@
 It includes:
 
 - `DhruvContext` and request/operation APIs
-- convenience helpers for common ephemeris, vedic, search, and tara flows
+- canonical request/context-driven jyotish operations such as `upagraha_op`,
+  `avastha_op`, and `full_kundali`
 - re-exported config/result types used by end users
 
 Start here:

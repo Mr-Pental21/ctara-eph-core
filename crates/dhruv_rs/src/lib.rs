@@ -22,11 +22,13 @@ pub use context::DhruvContext;
 pub use date::UtcDate;
 pub use error::DhruvError;
 pub use ops::{
-    AyanamshaRequest, AyanamshaRequestMode, CharakarakaRequest, ConjunctionRequest,
-    ConjunctionRequestQuery, GrahanRequest, GrahanRequestQuery, LunarPhaseRequest,
-    LunarPhaseRequestQuery, MotionRequest, MotionRequestQuery, NodeRequest, PanchangRequest,
-    SankrantiRequest, SankrantiRequestQuery, TaraRequest, TimeInput, ayanamsha_op, charakaraka,
-    conjunction, grahan, lunar_node_op, lunar_phase, motion, panchang_op, sankranti, tara_op,
+    AvasthaRequest, AvasthaResult, AvasthaTarget, AyanamshaRequest, AyanamshaRequestMode,
+    CharakarakaRequest, ConjunctionRequest, ConjunctionRequestQuery, FullKundaliRequest,
+    GrahanRequest, GrahanRequestQuery, LunarPhaseRequest, LunarPhaseRequestQuery, MotionRequest,
+    MotionRequestQuery, NodeRequest, PanchangRequest, SankrantiRequest, SankrantiRequestQuery,
+    TaraRequest, TimeInput, UpagrahaRequest, avastha_op, ayanamsha_op, charakaraka, conjunction,
+    full_kundali, grahan, lunar_node_op, lunar_phase, motion, panchang_op, sankranti, tara_op,
+    upagraha_op,
 };
 
 // Re-export core types so callers don't need to depend on dhruv_core directly.
@@ -64,11 +66,12 @@ pub use dhruv_vedic_base::riseset_types::{
     GeoLocation, RiseSetConfig, RiseSetEvent, RiseSetResult,
 };
 pub use dhruv_vedic_base::{
-    AshtakavargaResult, AyanamshaSystem, BhavaBalaBirthPeriod, BhavaBalaEntry, BhavaBalaInputs,
-    BhavaBalaResult, BhavaConfig, BhinnaAshtakavarga, CharakarakaEntry, CharakarakaResult,
-    CharakarakaRole, CharakarakaScheme, GulikaMaandiPlanet, LunarNode, NodeDignityPolicy, NodeMode,
-    SarvaAshtakavarga, TimeUpagrahaConfig, TimeUpagrahaPoint, calculate_all_bav,
-    calculate_ashtakavarga, calculate_bav, calculate_bhava_bala, calculate_sav,
+    AllGrahaAvasthas, AllUpagrahas, AshtakavargaResult, AyanamshaSystem, BhavaBalaBirthPeriod,
+    BhavaBalaEntry, BhavaBalaInputs, BhavaBalaResult, BhavaConfig, BhinnaAshtakavarga,
+    CharakarakaEntry, CharakarakaResult, CharakarakaRole, CharakarakaScheme, Graha, GrahaAvasthas,
+    GulikaMaandiPlanet, LunarNode, NodeDignityPolicy, NodeMode, SarvaAshtakavarga,
+    TimeUpagrahaConfig, TimeUpagrahaPoint, calculate_all_bav, calculate_ashtakavarga,
+    calculate_bav, calculate_bhava_bala, calculate_sav,
 };
 pub use dhruv_vedic_ops::{
     NodeBackend, PANCHANG_INCLUDE_ALL, PANCHANG_INCLUDE_ALL_CALENDAR, PANCHANG_INCLUDE_ALL_CORE,

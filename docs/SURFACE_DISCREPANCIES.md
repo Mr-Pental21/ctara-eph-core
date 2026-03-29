@@ -49,16 +49,14 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 - Missing or wrong:
   `crates/dhruv_rs/src/lib.rs` exports only `amsha`, `context`, `date`, `error`, and `ops`, but the crate also contains additional high-level Rust surface area that is not reachable through the facade:
   - convenience query helpers such as `position`, `sidereal_longitude`, `graha_positions`, and `tara_*`,
-  - convenience jyotish helpers such as `avastha` and `avastha_for_graha`,
-  - assembled domain helpers such as `full_kundali`,
-  - gaps between the dormant convenience layer and the intended request/context facade, for example avastha has convenience wrappers but no canonical request-style `dhruv_rs::ops` entrypoint,
+  - additional dormant convenience wrappers outside the intended request/context facade,
   - dormant global singleton helpers in `global.rs` that should be removed in favor of explicit `DhruvContext` usage,
   - additional top-level utility functions beyond the request-based `ops` module.
   As a result, the facade hides a meaningful part of the implemented high-level Rust API.
 - Affected surfaces:
   Rust public API.
 - Correct behavior:
-  If `dhruv_rs` is meant to be the main Rust facade, `lib.rs` should expose the intended high-level convenience helpers explicitly or replace them with canonical request/context-driven `ops` entrypoints. For avastha specifically, the facade should not leave the feature stranded in dormant convenience wrappers while `ops` has no corresponding request-style operation. The dormant singleton-style helpers in `global.rs` should not be surfaced again; they should be removed and any remaining callers should use a reusable explicit `DhruvContext` plus request/context-driven APIs instead of process-global singleton state.
+  If `dhruv_rs` is meant to be the main Rust facade, `lib.rs` should expose the intended high-level helpers explicitly or replace them with canonical request/context-driven `ops` entrypoints. The facade now has canonical request/context entrypoints for `upagraha`, `avastha`, and `full_kundali`, and the remaining cleanup should follow that model rather than reviving dormant convenience wrappers or global singleton state. The dormant singleton-style helpers in `global.rs` should not be surfaced again; they should be removed and any remaining callers should use a reusable explicit `DhruvContext` plus request/context-driven APIs instead of process-global singleton state.
 - Evidence:
   `crates/dhruv_rs/src/lib.rs`, `crates/dhruv_rs/src/convenience.rs`, `crates/dhruv_rs/src/global.rs`.
 

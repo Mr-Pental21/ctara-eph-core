@@ -153,3 +153,97 @@ fn amsha_chart_for_date_runs() {
     );
     assert!(chart.lagna.sidereal_longitude >= 0.0 && chart.lagna.sidereal_longitude < 360.0);
 }
+
+#[test]
+fn upagraha_op_runs() {
+    let Some(ctx) = make_context() else {
+        return;
+    };
+    let Some(eop) = load_eop() else {
+        return;
+    };
+
+    let request = UpagrahaRequest {
+        at: TimeInput::Utc(UtcDate::new(2024, 1, 15, 12, 0, 0.0)),
+        location: GeoLocation::new(28.6139, 77.2090, 0.0),
+        riseset_config: Some(RiseSetConfig::default()),
+        sankranti_config: Some(SankrantiConfig::default_lahiri()),
+        upagraha_config: Some(TimeUpagrahaConfig::default()),
+    };
+
+    let out = upagraha_op(&ctx, &eop, &request).expect("upagraha op should run");
+    assert!((0.0..360.0).contains(&out.gulika));
+    assert!((0.0..360.0).contains(&out.maandi));
+}
+
+#[test]
+fn avastha_op_runs_for_single_graha() {
+    let Some(ctx) = make_context() else {
+        return;
+    };
+    let Some(eop) = load_eop() else {
+        return;
+    };
+
+    let request = AvasthaRequest {
+        at: TimeInput::Utc(UtcDate::new(2024, 1, 15, 12, 0, 0.0)),
+        location: GeoLocation::new(28.6139, 77.2090, 0.0),
+        bhava_config: Some(BhavaConfig::default()),
+        riseset_config: Some(RiseSetConfig::default()),
+        sankranti_config: Some(SankrantiConfig::default_lahiri()),
+        node_policy: Some(NodeDignityPolicy::default()),
+        target: AvasthaTarget::Graha(Graha::Surya),
+    };
+
+    let out = avastha_op(&ctx, &eop, &request).expect("avastha op should run");
+    match out {
+        AvasthaResult::Graha(entry) => {
+            let _ = entry.baladi;
+        }
+        AvasthaResult::All(_) => panic!("expected single-graha avastha result"),
+    }
+}
+
+#[test]
+fn full_kundali_op_runs() {
+    let Some(ctx) = make_context() else {
+        return;
+    };
+    let Some(eop) = load_eop() else {
+        return;
+    };
+
+    let config = FullKundaliConfig {
+        include_bhava_cusps: false,
+        include_graha_positions: false,
+        include_bindus: false,
+        include_drishti: false,
+        include_ashtakavarga: false,
+        include_upagrahas: false,
+        include_sphutas: false,
+        include_special_lagnas: false,
+        include_amshas: false,
+        include_shadbala: false,
+        include_bhavabala: false,
+        include_vimsopaka: false,
+        include_avastha: true,
+        include_charakaraka: false,
+        include_panchang: false,
+        include_calendar: false,
+        include_dasha: false,
+        ..FullKundaliConfig::default()
+    };
+    let request = FullKundaliRequest {
+        at: TimeInput::Utc(UtcDate::new(2024, 1, 15, 12, 0, 0.0)),
+        location: GeoLocation::new(28.6139, 77.2090, 0.0),
+        bhava_config: Some(BhavaConfig::default()),
+        riseset_config: Some(RiseSetConfig::default()),
+        sankranti_config: Some(SankrantiConfig::default_lahiri()),
+        config: Some(config),
+    };
+
+    let out = full_kundali(&ctx, &eop, &request).expect("full kundali op should run");
+    assert!(out.ayanamsha_deg.is_finite());
+    assert!(out.avastha.is_some());
+    assert!(out.graha_positions.is_none());
+}

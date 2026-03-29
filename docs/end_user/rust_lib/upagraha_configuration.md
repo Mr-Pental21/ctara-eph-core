@@ -10,7 +10,9 @@ Default behavior:
 
 ```rust
 use dhruv_rs::{
-    GulikaMaandiPlanet, TimeUpagrahaConfig, TimeUpagrahaPoint,
+    DhruvContext, EngineConfig, GeoLocation, GulikaMaandiPlanet, RiseSetConfig,
+    SankrantiConfig, TimeInput, TimeUpagrahaConfig, TimeUpagrahaPoint,
+    UpagrahaRequest, UtcDate, upagraha_op,
 };
 
 let config = TimeUpagrahaConfig {
@@ -21,14 +23,16 @@ let config = TimeUpagrahaConfig {
     other_point: TimeUpagrahaPoint::Start,
 };
 
-let upagrahas = dhruv_rs::upagrahas_with_config(
-    &date,
-    &eop,
-    location,
-    system,
-    false,
-    &config,
-)?;
+let ctx = DhruvContext::new(engine_config)?;
+let request = UpagrahaRequest {
+    at: TimeInput::Utc(UtcDate::new(2024, 1, 15, 12, 0, 0.0)),
+    location: GeoLocation::new(28.6139, 77.2090, 0.0),
+    riseset_config: Some(RiseSetConfig::default()),
+    sankranti_config: Some(SankrantiConfig::default_lahiri()),
+    upagraha_config: Some(config),
+};
+
+let upagrahas = upagraha_op(&ctx, &eop, &request)?;
 ```
 
 If you are building `BindusConfig` or `FullKundaliConfig`, pass the same
