@@ -17,7 +17,8 @@ defmodule CtaraDhruvTest do
           spk_paths: [@spk],
           lsk_path: @lsk,
           cache_capacity: 64,
-          strict_validation: false
+          strict_validation: false,
+          time_policy: %{mode: :hybrid_delta_t}
         })
 
       on_exit(fn -> Engine.close(engine) end)
@@ -33,7 +34,6 @@ defmodule CtaraDhruvTest do
         assert true
 
       {:ok, engine} ->
-        assert {:ok, _} = Engine.set_time_policy(engine, %{mode: :hybrid_delta_t})
         assert {:ok, _} = Ephemeris.cartesian_to_spherical(%{x: 1.0, y: 0.0, z: 0.0})
         assert {:ok, _} = Time.nutation(%{jd_tdb: 2_451_545.0})
 
@@ -45,10 +45,12 @@ defmodule CtaraDhruvTest do
                    epoch_tdb_jd: 2_451_545.0
                  })
 
-        assert {:ok, _} =
+        assert {:ok, %{diagnostics: diagnostics}} =
                  Time.utc_to_jd_tdb(engine, %{
                    utc: %{year: 2015, month: 1, day: 1, hour: 12, minute: 0, second: 0.0}
                  })
+
+        assert is_map(diagnostics)
 
         if File.exists?(@eop) do
           assert {:ok, _} = Engine.load_eop(engine, @eop)

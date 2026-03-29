@@ -32,7 +32,6 @@ using `bindings/elixir-open/lib/` as the source of truth.
 - `clear_eop/1`
 - `load_tara_catalog/2`
 - `reset_tara_catalog/1`
-- `set_time_policy/2`
 
 `CtaraDhruv.Ephemeris`:
 
@@ -43,6 +42,7 @@ using `bindings/elixir-open/lib/` as the source of truth.
 `CtaraDhruv.Time`:
 
 - `utc_to_jd_tdb/2`
+  Requests may include `time_policy`; results now include `diagnostics`.
 - `jd_tdb_to_utc/2`
 - `nutation/1`
 
@@ -124,6 +124,7 @@ Common request maps can include:
 - `sankranti_config`
 - `riseset_config`
 - `bhava_config`
+- `time_policy`
 
 Chart-related config maps:
 

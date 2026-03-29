@@ -34,6 +34,7 @@ This page summarizes the public Node wrapper exported from
 `time.js` exports:
 
 - `utcToTdbJd`
+  `utcToTdbJd` now accepts a request object with `utc` plus optional `timePolicy`, and returns `{ jdTdb, diagnostics }`.
 - `jdTdbToUtc`
 - `nutationIau2000b`
 - `nutationIau2000bUtc`

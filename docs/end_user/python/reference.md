@@ -12,6 +12,7 @@ This page summarizes the public Python wrapper by module, using
 - selected dataclasses from `types`
 - ephemeris helpers: `query`, `body_ecliptic_lon_lat`, `cartesian_to_spherical`
 - time helpers: `utc_to_jd_tdb`, `jd_tdb_to_utc`, `nutation`
+  `utc_to_jd_tdb` now takes a typed `UtcToTdbRequest` and returns `UtcToTdbResult`, including `TimeDiagnostics` / `TimeWarning`.
 - ayanamsha helpers: `ayanamsha`, `system_count`, `reference_plane_default`
 - tara: `TaraCatalog`
 - dasha classes and helpers
@@ -58,6 +59,8 @@ The fuller public surface is module-based.
 - `nutation`
 - `nutation_utc`
 - `approximate_local_noon_jd`
+- typed UTC-conversion support types from `types`:
+  `UtcToTdbRequest`, `UtcToTdbResult`, `TimePolicy`, `TimeConversionOptions`, `TimeDiagnostics`, `TimeWarning`
 
 `ayanamsha`:
 

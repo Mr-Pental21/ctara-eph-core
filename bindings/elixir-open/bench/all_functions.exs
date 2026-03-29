@@ -130,9 +130,6 @@ defmodule CtaraDhruv.Bench.AllFunctions do
           close_quietly(engine)
         end
       end),
-      case_spec("CtaraDhruv.Engine.set_time_policy/2", [:shared_engine], fn ctx ->
-        assert_ok!(Engine.set_time_policy(ctx.shared_engine, %{mode: :hybrid_delta_t}))
-      end),
       case_spec("CtaraDhruv.Ephemeris.query/2", [:shared_engine], fn ctx ->
         assert_ok!(
           Ephemeris.query(ctx.shared_engine, %{
@@ -438,8 +435,6 @@ defmodule CtaraDhruv.Bench.AllFunctions do
         if available?(context, :tara_file) do
           assert_ok!(Engine.load_tara_catalog(engine, context.tara))
         end
-
-        assert_ok!(Engine.set_time_policy(engine, %{mode: :hybrid_delta_t}))
         engine
       rescue
         error ->
@@ -525,7 +520,8 @@ defmodule CtaraDhruv.Bench.AllFunctions do
       spk_paths: [context.spk],
       lsk_path: context.lsk,
       cache_capacity: 64,
-      strict_validation: false
+      strict_validation: false,
+      time_policy: %{mode: :hybrid_delta_t}
     }
   end
 

@@ -85,6 +85,7 @@ Default-config helpers:
 Time and ayanamsha:
 
 - `UTCToTdbJD`
+  `UTCToTdbJD` now takes `(*LSK, *EOP, UtcToTdbRequest)` and returns `UtcToTdbResult`, including typed diagnostics.
 - `JdTdbToUTC`
 - `NutationIau2000b`
 - `NutationIau2000bUTC`

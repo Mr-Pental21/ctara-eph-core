@@ -74,13 +74,15 @@ alias CtaraDhruv.{Engine, Ephemeris, Time}
     epoch_tdb_jd: 2_451_545.0
   })
 
-{:ok, jd} =
+{:ok, time_result} =
   Time.utc_to_jd_tdb(engine, %{
-    utc: %{year: 2024, month: 1, day: 1, hour: 12, minute: 0, second: 0.0}
+    utc: %{year: 2024, month: 1, day: 1, hour: 12, minute: 0, second: 0.0},
+    time_policy: %{mode: :hybrid_delta_t}
   })
 
 IO.inspect(state)
-IO.inspect(jd)
+IO.inspect(time_result.jd_tdb)
+IO.inspect(time_result.diagnostics)
 
 :ok = Engine.close(engine)
 ```

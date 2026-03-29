@@ -76,6 +76,12 @@ struct Cli {
     /// By default DUT1 is frozen to last known EOP value.
     #[arg(long, global = true, default_value_t = false)]
     no_freeze_future_dut1: bool,
+    /// For hybrid-deltat policy: suppress fallback warnings in diagnostics/output.
+    #[arg(long, global = true, default_value_t = false)]
+    no_warn_on_fallback: bool,
+    /// For hybrid-deltat policy: DUT1 fallback to use before EOP coverage (seconds).
+    #[arg(long, global = true)]
+    pre_range_dut1: Option<f64>,
     /// Transition window in years for blending from leap-table anchor TT-UTC
     /// to model fallback when `--future-delta-t-transition bridge-modern-endpoint` is active.
     #[arg(long, global = true)]
@@ -2708,16 +2714,22 @@ fn parse_time_policy(
     smh_future_family: SmhFutureParabolaFamily,
     future_delta_t_transition: FutureDeltaTTransition,
     no_freeze_future_dut1: bool,
+    no_warn_on_fallback: bool,
+    pre_range_dut1: Option<f64>,
     future_transition_years: Option<f64>,
 ) -> TimeConversionPolicy {
     match s {
         "strict-lsk" => TimeConversionPolicy::StrictLsk,
         "hybrid-deltat" => {
             let mut opts = TimeConversionOptions::default();
+            opts.warn_on_fallback = !no_warn_on_fallback;
             opts.delta_t_model = delta_t_model;
             opts.smh_future_family = smh_future_family;
             opts.future_delta_t_transition = future_delta_t_transition;
             opts.freeze_future_dut1 = !no_freeze_future_dut1;
+            if let Some(v) = pre_range_dut1 {
+                opts.pre_range_dut1 = v;
+            }
             if let Some(v) = future_transition_years {
                 opts.future_transition_years = v;
             }
@@ -2947,6 +2959,8 @@ fn main() {
         smh_future_family,
         future_delta_t_transition,
         cli.no_freeze_future_dut1,
+        cli.no_warn_on_fallback,
+        cli.pre_range_dut1,
         cli.future_transition_years,
     );
     dhruv_search::set_time_conversion_policy(time_policy);
@@ -9678,10 +9692,13 @@ mod tests {
             SmhFutureParabolaFamily::ConstantCMinus17p52,
             FutureDeltaTTransition::BridgeFromModernEndpoint,
             false,
+            true,
+            Some(0.25),
             Some(25.0),
         );
         match out {
             TimeConversionPolicy::HybridDeltaT(opts) => {
+                assert!(!opts.warn_on_fallback);
                 assert_eq!(opts.delta_t_model, DeltaTModel::Smh2016WithPre720Quadratic);
                 assert_eq!(
                     opts.smh_future_family,
@@ -9691,6 +9708,7 @@ mod tests {
                     opts.future_delta_t_transition,
                     FutureDeltaTTransition::BridgeFromModernEndpoint
                 );
+                assert_eq!(opts.pre_range_dut1, 0.25);
                 assert_eq!(opts.future_transition_years, 25.0);
             }
             TimeConversionPolicy::StrictLsk => panic!("expected hybrid policy"),

@@ -115,36 +115,23 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 
 ### 6. Time diagnostics and most time-policy controls stop at the Rust crates
 
-- Missing or wrong:
-  The missing non-Rust time surface spans several categories:
-  - policy/config types such as `TimeConversionPolicy`, `TimeConversionOptions`, `DeltaTModel`, `SmhFutureParabolaFamily`, and `FutureDeltaTTransition`,
-  - diagnostic/result types such as `TimeDiagnostics`, `TimeWarning`, and EOP lookup/diagnostics results,
-  - internal setup behavior for SMH2016 reconstruction data.
-  The C ABI does not currently expose a full typed transport for the public policy/options and diagnostic surfaces. The SMH reconstruction parse/install helpers should not be treated as public cross-surface APIs; instead `dhruv_time` should auto-load the bundled in-repo reconstruction asset internally when the SMH model is selected.
+- Status:
+  Resolved for the shared UTC-conversion contract.
+- Current behavior:
+  The C ABI now exposes one typed UTC-conversion request/result transport carrying `TimeConversionPolicy`, `TimeConversionOptions`, diagnostics, warnings, and the model-selection enums needed for fallback behavior. Python, Node.js, and Go consume that same shape. The SMH reconstruction parse/install helpers remain internal, and `dhruv_time` auto-loads the bundled reconstruction asset when the SMH model is selected.
 - Affected surfaces:
-  C ABI, Python, Node.js, Go. CLI and Elixir are only partial.
-- Correct behavior:
-  Non-Rust surfaces should be able to configure the same fallback policy knobs and receive diagnostics/warnings when the engine falls back outside leap/EOP coverage.
+  C ABI, Python, Node.js, Go.
 - Evidence:
   `crates/dhruv_time/src/lib.rs`, `crates/dhruv_time/src/scales.rs`, `crates/dhruv_ffi_c/include/dhruv.h`.
 
 ### 7. CLI and Elixir expose only part of the time-policy surface
 
-- Missing or wrong:
-  The gap spans three different layers:
-  - policy/config fields:
-    - CLI exposes `time_policy`, `delta_t_model`, `smh_future_family`, `future_delta_t_transition`, `freeze_future_dut1`, and `future_transition_years`, but not `warn_on_fallback` or `pre_range_dut1`,
-    - Elixir exposes `warn_on_fallback`, `freeze_future_dut1`, `pre_range_dut1`, and `future_transition_years`, but not `delta_t_model`, `future_delta_t_transition`, or `smh_future_family`,
-  - diagnostics/results:
-    - neither surface returns the full diagnostics/warning output that accompanies fallback behavior,
-  - API shape:
-    - CLI appropriately carries policy through flags and layered config, but does not expose the full underlying policy/config shape or diagnostics,
-    - Elixir still uses a separate mutable `engine_set_time_policy` surface instead of a unified typed request/context or config transport.
-  So neither surface carries the full time-policy contract end-to-end.
+- Status:
+  Resolved for the current CLI and Elixir time surfaces.
+- Current behavior:
+  CLI flags now carry the full `TimeConversionOptions` shape, including `warn_on_fallback` and `pre_range_dut1`, while retaining normal flag-plus-config layering. Elixir now carries time policy through engine/config data and optional `Time.utc_to_jd_tdb/2` request attributes, returns diagnostics on UTC conversion, and no longer exposes a separate mutable `engine_set_time_policy` public surface.
 - Affected surfaces:
   CLI, Elixir.
-- Correct behavior:
-  These surfaces should expose the full `TimeConversionOptions` shape and return diagnostics if they claim to support configurable UTC conversion. Time policy should ultimately be carried in typed request/context or config data, and redundant setter-style policy APIs should be removed rather than preserved as parallel surfaces.
 - Evidence:
   `crates/dhruv_cli/src/main.rs`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_time/src/scales.rs`.
 
@@ -270,12 +257,12 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 
 ### 16. The Python wrapper has no access to time-policy configuration
 
-- Missing or wrong:
-  Python can load config, LSK, and EOP handles, but it cannot set `TimeConversionPolicy` or inspect diagnostics.
+- Status:
+  Resolved for the UTC-conversion surface.
+- Current behavior:
+  Python exposes typed `UtcToTdbRequest`, `UtcToTdbResult`, `TimePolicy`, `TimeConversionOptions`, `TimeDiagnostics`, and `TimeWarning` through `ctara_dhruv.time.utc_to_jd_tdb(...)`.
 - Affected surfaces:
   Python bindings.
-- Correct behavior:
-  Expose one typed Python policy/diagnostics surface matching the core UTC-conversion options instead of leaving callers with hard-coded defaults.
 - Evidence:
   `bindings/python-open/src/ctara_dhruv/engine.py`, `bindings/python-open/src/ctara_dhruv/time.py`, `crates/dhruv_time/src/scales.rs`.
 
@@ -305,12 +292,12 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 
 ### 19. The Node wrapper has no time-policy or diagnostics surface
 
-- Missing or wrong:
-  Node exposes UTC conversion helpers but no equivalent of `TimeConversionPolicy`, `TimeConversionOptions`, `DeltaTModel`, or diagnostics.
+- Status:
+  Resolved for the UTC-conversion surface.
+- Current behavior:
+  Node exposes typed `timePolicy` request attributes, policy/model constants, and UTC-conversion diagnostics through `utcToTdbJd(...)`.
 - Affected surfaces:
   Node.js bindings.
-- Correct behavior:
-  Add a policy/diagnostics surface rather than forcing Node callers onto hard-coded defaults.
 - Evidence:
   `bindings/node-open/src/time.js`, `bindings/node-open/src/engine.js`, `crates/dhruv_time/src/scales.rs`.
 
@@ -340,12 +327,12 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 
 ### 22. The Go wrapper has no time-policy or diagnostics surface
 
-- Missing or wrong:
-  Go exposes UTC conversion helpers, but not the policy/options/diagnostics that back core UTC conversion.
+- Status:
+  Resolved for the UTC-conversion surface.
+- Current behavior:
+  Go now exposes typed `UtcToTdbRequest`, `UtcToTdbResult`, `TimePolicy`, `TimeConversionOptions`, and `TimeDiagnostics` through `UTCToTdbJD(...)`.
 - Affected surfaces:
   Go bindings.
-- Correct behavior:
-  Expose one typed Go policy/diagnostics surface for `TimeConversionPolicy`, `TimeConversionOptions`, and any supported diagnostic results rather than leaving those controls outside the Go contract.
 - Evidence:
   `bindings/go-open/dhruv/time.go`, `crates/dhruv_time/src/scales.rs`.
 
@@ -389,12 +376,12 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 
 ### 26. Elixir only exposes a partial time-policy shape
 
-- Missing or wrong:
-  `engine_set_time_policy` supports `strict_lsk` vs a reduced hybrid config, but cannot select `delta_t_model`, `future_delta_t_transition`, or `smh_future_family`, and returns no diagnostics.
+- Status:
+  Resolved for the current Elixir time/config surface.
+- Current behavior:
+  Elixir accepts the full time-policy shape through engine config and optional `Time.utc_to_jd_tdb/2` request attributes, returns diagnostics on UTC conversion, and no longer keeps a standalone setter-style policy API.
 - Affected surfaces:
   Elixir bindings.
-- Correct behavior:
-  Accept the full `TimeConversionOptions` structure through typed request/context or config data and return diagnostics comparable to core behavior. The standalone `engine_set_time_policy` surface should be removed as part of that consolidation instead of preserved as a parallel API.
 - Evidence:
   `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_time/src/scales.rs`.
 

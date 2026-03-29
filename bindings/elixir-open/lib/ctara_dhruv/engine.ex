@@ -35,7 +35,4 @@ defmodule CtaraDhruv.Engine do
 
   def reset_tara_catalog(%__MODULE__{} = engine),
     do: Native.call_engine_noarg(&Native.engine_reset_tara_catalog/1, engine)
-
-  def set_time_policy(%__MODULE__{} = engine, policy),
-    do: Native.call_engine(&Native.engine_set_time_policy/2, engine, policy)
 end

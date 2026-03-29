@@ -44,7 +44,6 @@ defmodule CtaraDhruv.Native do
   def engine_clear_config(_resource), do: :erlang.nif_error(:nif_not_loaded)
   def engine_load_eop(_resource, _request), do: :erlang.nif_error(:nif_not_loaded)
   def engine_clear_eop(_resource), do: :erlang.nif_error(:nif_not_loaded)
-  def engine_set_time_policy(_resource, _request), do: :erlang.nif_error(:nif_not_loaded)
   def engine_load_tara_catalog(_resource, _request), do: :erlang.nif_error(:nif_not_loaded)
   def engine_reset_tara_catalog(_resource), do: :erlang.nif_error(:nif_not_loaded)
   def ephemeris_run(_resource, _request), do: :erlang.nif_error(:nif_not_loaded)

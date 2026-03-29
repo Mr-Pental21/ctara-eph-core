@@ -30,7 +30,8 @@ use dhruv_search::{
 };
 use dhruv_tara::{TaraAccuracy, TaraCatalog, TaraConfig, TaraId};
 use dhruv_time::{
-    EopKernel, TimeConversionOptions, TimeConversionPolicy, UtcTime, jd_to_tdb_seconds,
+    DeltaTModel, EopKernel, FutureDeltaTTransition, SmhFutureParabolaFamily, TimeConversionOptions,
+    TimeConversionPolicy, TimeDiagnostics, TimeWarning, TtUtcSource, UtcTime, jd_to_tdb_seconds,
     tdb_seconds_to_jd,
 };
 use dhruv_vedic_base::bhava_types::ALL_BHAVA_SYSTEMS;
@@ -78,12 +79,12 @@ struct EngineState {
 }
 
 impl EngineState {
-    fn new(engine: Engine) -> Self {
+    fn new(engine: Engine, time_policy: TimeConversionPolicy) -> Self {
         Self {
             engine: Some(engine),
             resolver: None,
             eop: None,
-            time_policy: TimeConversionPolicy::default(),
+            time_policy,
             tara_catalog: Arc::new(TaraCatalog::embedded().clone()),
         }
     }
@@ -102,6 +103,7 @@ struct EngineConfigInput {
     lsk_path: String,
     cache_capacity: Option<usize>,
     strict_validation: Option<bool>,
+    time_policy: Option<TimePolicyInput>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -154,6 +156,7 @@ struct TimeRunInput {
     op: String,
     utc: Option<UtcInput>,
     jd_tdb: Option<f64>,
+    time_policy: Option<TimePolicyInput>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -165,9 +168,12 @@ struct TimePolicyInput {
 #[derive(Debug, Clone, Deserialize)]
 struct TimePolicyOptionsInput {
     warn_on_fallback: Option<bool>,
+    delta_t_model: Option<EnumInput>,
     freeze_future_dut1: Option<bool>,
     pre_range_dut1: Option<f64>,
+    future_delta_t_transition: Option<EnumInput>,
     future_transition_years: Option<f64>,
+    smh_future_family: Option<EnumInput>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -532,12 +538,24 @@ fn debug_name<T: Debug>(value: T) -> String {
     camel_to_snake(&format!("{value:?}"))
 }
 
-fn time_policy_name(policy: TimeConversionPolicy) -> &'static str {
-    match policy {
-        TimeConversionPolicy::StrictLsk => "strict_lsk",
-        TimeConversionPolicy::HybridDeltaT(_) => "hybrid_delta_t",
-    }
-}
+const DELTA_T_MODEL_VARIANTS: [DeltaTModel; 2] = [
+    DeltaTModel::LegacyEspenakMeeus2006,
+    DeltaTModel::Smh2016WithPre720Quadratic,
+];
+
+const FUTURE_DELTA_T_TRANSITION_VARIANTS: [FutureDeltaTTransition; 2] = [
+    FutureDeltaTTransition::LegacyTtUtcBlend,
+    FutureDeltaTTransition::BridgeFromModernEndpoint,
+];
+
+const SMH_FUTURE_FAMILY_VARIANTS: [SmhFutureParabolaFamily; 6] = [
+    SmhFutureParabolaFamily::Addendum2020Piecewise,
+    SmhFutureParabolaFamily::ConstantCMinus20,
+    SmhFutureParabolaFamily::ConstantCMinus17p52,
+    SmhFutureParabolaFamily::ConstantCMinus15p32,
+    SmhFutureParabolaFamily::Stephenson1997,
+    SmhFutureParabolaFamily::Stephenson2016,
+];
 
 fn parse_named<T: Copy + Debug>(value: &str, variants: &[T]) -> Option<T> {
     let normalized = value.trim().to_ascii_lowercase();
@@ -545,6 +563,149 @@ fn parse_named<T: Copy + Debug>(value: &str, variants: &[T]) -> Option<T> {
         .iter()
         .copied()
         .find(|variant| debug_name(*variant) == normalized)
+}
+
+fn parse_delta_t_model(input: &EnumInput) -> Result<DeltaTModel, Value> {
+    match input {
+        EnumInput::Int(index) => DELTA_T_MODEL_VARIANTS
+            .get(*index as usize)
+            .copied()
+            .ok_or_else(|| error_payload("invalid_request", "unknown delta_t_model")),
+        EnumInput::Str(value) => parse_named(value, &DELTA_T_MODEL_VARIANTS)
+            .ok_or_else(|| error_payload("invalid_request", "unknown delta_t_model")),
+    }
+}
+
+fn parse_future_delta_t_transition(input: &EnumInput) -> Result<FutureDeltaTTransition, Value> {
+    match input {
+        EnumInput::Int(index) => FUTURE_DELTA_T_TRANSITION_VARIANTS
+            .get(*index as usize)
+            .copied()
+            .ok_or_else(|| error_payload("invalid_request", "unknown future_delta_t_transition")),
+        EnumInput::Str(value) => parse_named(value, &FUTURE_DELTA_T_TRANSITION_VARIANTS)
+            .ok_or_else(|| error_payload("invalid_request", "unknown future_delta_t_transition")),
+    }
+}
+
+fn parse_smh_future_family(input: &EnumInput) -> Result<SmhFutureParabolaFamily, Value> {
+    match input {
+        EnumInput::Int(index) => SMH_FUTURE_FAMILY_VARIANTS
+            .get(*index as usize)
+            .copied()
+            .ok_or_else(|| error_payload("invalid_request", "unknown smh_future_family")),
+        EnumInput::Str(value) => parse_named(value, &SMH_FUTURE_FAMILY_VARIANTS)
+            .ok_or_else(|| error_payload("invalid_request", "unknown smh_future_family")),
+    }
+}
+
+fn parse_time_policy_input(input: Option<TimePolicyInput>) -> Result<TimeConversionPolicy, Value> {
+    let request = input.unwrap_or(TimePolicyInput {
+        mode: EnumInput::Str("hybrid_delta_t".to_string()),
+        options: None,
+    });
+    match request.mode {
+        EnumInput::Str(ref value) if value == "strict_lsk" => Ok(TimeConversionPolicy::StrictLsk),
+        EnumInput::Int(0) => Ok(TimeConversionPolicy::StrictLsk),
+        _ => {
+            let options = request.options.unwrap_or(TimePolicyOptionsInput {
+                warn_on_fallback: None,
+                delta_t_model: None,
+                freeze_future_dut1: None,
+                pre_range_dut1: None,
+                future_delta_t_transition: None,
+                future_transition_years: None,
+                smh_future_family: None,
+            });
+            Ok(TimeConversionPolicy::HybridDeltaT(TimeConversionOptions {
+                warn_on_fallback: options.warn_on_fallback.unwrap_or(true),
+                delta_t_model: options
+                    .delta_t_model
+                    .as_ref()
+                    .map(parse_delta_t_model)
+                    .transpose()?
+                    .unwrap_or_default(),
+                freeze_future_dut1: options.freeze_future_dut1.unwrap_or(true),
+                pre_range_dut1: options.pre_range_dut1.unwrap_or(0.0),
+                future_delta_t_transition: options
+                    .future_delta_t_transition
+                    .as_ref()
+                    .map(parse_future_delta_t_transition)
+                    .transpose()?
+                    .unwrap_or_default(),
+                future_transition_years: options.future_transition_years.unwrap_or(100.0),
+                smh_future_family: options
+                    .smh_future_family
+                    .as_ref()
+                    .map(parse_smh_future_family)
+                    .transpose()?
+                    .unwrap_or_default(),
+            }))
+        }
+    }
+}
+
+fn time_warning_json(warning: &TimeWarning) -> Value {
+    match warning {
+        TimeWarning::LskFutureFrozen {
+            utc_seconds,
+            last_entry_utc_seconds,
+            used_delta_at_seconds,
+        } => json!({
+            "kind": "lsk_future_frozen",
+            "utc_seconds": utc_seconds,
+            "last_entry_utc_seconds": last_entry_utc_seconds,
+            "used_delta_at_seconds": used_delta_at_seconds
+        }),
+        TimeWarning::LskPreRangeFallback {
+            utc_seconds,
+            first_entry_utc_seconds,
+        } => json!({
+            "kind": "lsk_pre_range_fallback",
+            "utc_seconds": utc_seconds,
+            "first_entry_utc_seconds": first_entry_utc_seconds
+        }),
+        TimeWarning::EopFutureFrozen {
+            mjd,
+            last_entry_mjd,
+            used_dut1_seconds,
+        } => json!({
+            "kind": "eop_future_frozen",
+            "mjd": mjd,
+            "last_entry_mjd": last_entry_mjd,
+            "used_dut1_seconds": used_dut1_seconds
+        }),
+        TimeWarning::EopPreRangeFallback {
+            mjd,
+            first_entry_mjd,
+            used_dut1_seconds,
+        } => json!({
+            "kind": "eop_pre_range_fallback",
+            "mjd": mjd,
+            "first_entry_mjd": first_entry_mjd,
+            "used_dut1_seconds": used_dut1_seconds
+        }),
+        TimeWarning::DeltaTModelUsed {
+            model,
+            segment,
+            assumed_dut1_seconds,
+        } => json!({
+            "kind": "delta_t_model_used",
+            "delta_t_model": debug_name(*model),
+            "delta_t_segment": debug_name(*segment),
+            "used_dut1_seconds": assumed_dut1_seconds
+        }),
+    }
+}
+
+fn time_diagnostics_json(diagnostics: &TimeDiagnostics) -> Value {
+    json!({
+        "source": match diagnostics.source {
+            TtUtcSource::LskDeltaAt => "lsk_delta_at",
+            TtUtcSource::DeltaTModel => "delta_t_model"
+        },
+        "tt_minus_utc_s": diagnostics.tt_minus_utc_s,
+        "warnings": diagnostics.warnings.iter().map(time_warning_json).collect::<Vec<_>>()
+    })
 }
 
 fn parse_body(input: &EnumInput) -> Result<Body, Value> {
@@ -2172,8 +2333,24 @@ fn handle_time(resource: &ResourceArc<EngineResource>, request: TimeRunInput) ->
                         .utc
                         .ok_or_else(|| error_payload("invalid_request", "utc is required"))?,
                 )?;
-                let jd = utc.to_jd_tdb(engine.lsk());
-                Ok(json!({ "jd_tdb": jd }))
+                let policy = parse_time_policy_input(request.time_policy)?;
+                let utc_seconds = jd_to_tdb_seconds(dhruv_time::calendar_to_jd(
+                    utc.year,
+                    utc.month,
+                    utc.day as f64
+                        + utc.hour as f64 / 24.0
+                        + utc.minute as f64 / 1440.0
+                        + utc.second / 86_400.0,
+                ));
+                let result = engine.lsk().utc_to_tdb_with_policy_and_eop(
+                    utc_seconds,
+                    state.eop.as_ref(),
+                    policy,
+                );
+                Ok(json!({
+                    "jd_tdb": tdb_seconds_to_jd(result.tdb_seconds),
+                    "diagnostics": time_diagnostics_json(&result.diagnostics)
+                }))
             }
             "jd_tdb_to_utc" => {
                 let jd_tdb = request
@@ -3018,6 +3195,8 @@ fn handle_tara(resource: &ResourceArc<EngineResource>, request: TaraRequest) -> 
 #[rustler::nif(schedule = "DirtyCpu")]
 fn engine_new<'a>(env: Env<'a>, config: Term<'a>) -> Result<Term<'a>, rustler::Error> {
     let config = decode_term::<EngineConfigInput>(config)?;
+    let time_policy =
+        parse_time_policy_input(config.time_policy).map_err(|_| rustler::Error::BadArg)?;
     let engine_config = EngineConfig {
         spk_paths: config.spk_paths.into_iter().map(PathBuf::from).collect(),
         lsk_path: PathBuf::from(config.lsk_path),
@@ -3033,7 +3212,7 @@ fn engine_new<'a>(env: Env<'a>, config: Term<'a>) -> Result<Term<'a>, rustler::E
         }
     };
     let resource = ResourceArc::new(EngineResource {
-        state: RwLock::new(EngineState::new(engine)),
+        state: RwLock::new(EngineState::new(engine, time_policy)),
     });
     Ok((atoms::ok(), resource).encode(env))
 }
@@ -3103,39 +3282,6 @@ fn engine_clear_eop<'a>(
     let response = write_state(&resource, |state| {
         state.eop = None;
         Ok(json!({ "cleared": true }))
-    });
-    encode_json(env, response)
-}
-
-#[rustler::nif(schedule = "DirtyCpu")]
-fn engine_set_time_policy<'a>(
-    env: Env<'a>,
-    resource: ResourceArc<EngineResource>,
-    request: Term<'a>,
-) -> Result<Term<'a>, rustler::Error> {
-    let request = decode_term::<TimePolicyInput>(request)?;
-    let response = write_state(&resource, |state| {
-        state.time_policy = match request.mode {
-            EnumInput::Str(value) if value == "strict_lsk" => TimeConversionPolicy::StrictLsk,
-            EnumInput::Int(0) => TimeConversionPolicy::StrictLsk,
-            _ => {
-                let options = request.options.unwrap_or(TimePolicyOptionsInput {
-                    warn_on_fallback: None,
-                    freeze_future_dut1: None,
-                    pre_range_dut1: None,
-                    future_transition_years: None,
-                });
-                TimeConversionPolicy::HybridDeltaT(TimeConversionOptions {
-                    warn_on_fallback: options.warn_on_fallback.unwrap_or(true),
-                    freeze_future_dut1: options.freeze_future_dut1.unwrap_or(true),
-                    pre_range_dut1: options.pre_range_dut1.unwrap_or(0.0),
-                    future_transition_years: options.future_transition_years.unwrap_or(100.0),
-                    ..TimeConversionOptions::default()
-                })
-            }
-        };
-        apply_time_policy(state);
-        Ok(json!({ "mode": time_policy_name(state.time_policy) }))
     });
     encode_json(env, response)
 }
