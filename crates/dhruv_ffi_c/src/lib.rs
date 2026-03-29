@@ -49,7 +49,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 48;
+pub const DHRUV_API_VERSION: u32 = 49;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -241,6 +241,26 @@ pub struct DhruvQuery {
     pub epoch_tdb_jd: f64,
 }
 
+pub const DHRUV_QUERY_TIME_JD_TDB: i32 = 0;
+pub const DHRUV_QUERY_TIME_UTC: i32 = 1;
+
+pub const DHRUV_QUERY_OUTPUT_CARTESIAN: i32 = 0;
+pub const DHRUV_QUERY_OUTPUT_SPHERICAL: i32 = 1;
+pub const DHRUV_QUERY_OUTPUT_BOTH: i32 = 2;
+
+/// Unified query transport carrying either JD(TDB) or UTC input.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvQueryRequest {
+    pub target: i32,
+    pub observer: i32,
+    pub frame: i32,
+    pub time_kind: i32,
+    pub epoch_tdb_jd: f64,
+    pub utc: DhruvUtcTime,
+    pub output_mode: i32,
+}
+
 impl TryFrom<DhruvQuery> for Query {
     type Error = EngineError;
 
@@ -276,6 +296,14 @@ impl From<StateVector> for DhruvStateVector {
             velocity_km_s: value.velocity_km_s,
         }
     }
+}
+
+/// Unified query result carrying cartesian and/or spherical output.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvQueryResult {
+    pub state_vector: DhruvStateVector,
+    pub spherical_state: DhruvSphericalState,
 }
 
 /// Opaque config handle for FFI callers.
@@ -566,6 +594,102 @@ pub fn dhruv_engine_query_internal(
     Ok(DhruvStateVector::from(state))
 }
 
+fn spherical_state_from_state(state: &StateVector) -> DhruvSphericalState {
+    let ss =
+        dhruv_frames::cartesian_state_to_spherical_state(&state.position_km, &state.velocity_km_s);
+    DhruvSphericalState {
+        lon_deg: ss.lon_deg,
+        lat_deg: ss.lat_deg,
+        distance_km: ss.distance_km,
+        lon_speed: ss.lon_speed,
+        lat_speed: ss.lat_speed,
+        distance_speed: ss.distance_speed,
+    }
+}
+
+fn validate_query_request_selectors(request: DhruvQueryRequest) -> Result<(), DhruvStatus> {
+    match request.time_kind {
+        DHRUV_QUERY_TIME_JD_TDB | DHRUV_QUERY_TIME_UTC => {}
+        _ => return Err(DhruvStatus::InvalidQuery),
+    }
+    match request.output_mode {
+        DHRUV_QUERY_OUTPUT_CARTESIAN | DHRUV_QUERY_OUTPUT_SPHERICAL | DHRUV_QUERY_OUTPUT_BOTH => {}
+        _ => return Err(DhruvStatus::InvalidQuery),
+    }
+    Ok(())
+}
+
+fn query_from_request(engine: &Engine, request: DhruvQueryRequest) -> Result<Query, DhruvStatus> {
+    validate_query_request_selectors(request)?;
+    let target = Body::from_code(request.target).ok_or(DhruvStatus::InvalidQuery)?;
+    let observer = Observer::from_code(request.observer).ok_or(DhruvStatus::InvalidQuery)?;
+    let frame = Frame::from_code(request.frame).ok_or(DhruvStatus::InvalidQuery)?;
+    let epoch_tdb_jd = match request.time_kind {
+        DHRUV_QUERY_TIME_JD_TDB => request.epoch_tdb_jd,
+        DHRUV_QUERY_TIME_UTC => dhruv_time::Epoch::from_utc(
+            request.utc.year,
+            request.utc.month,
+            request.utc.day,
+            request.utc.hour,
+            request.utc.minute,
+            request.utc.second,
+            engine.lsk(),
+        )
+        .as_jd_tdb(),
+        _ => unreachable!("validated above"),
+    };
+
+    Ok(Query {
+        target,
+        observer,
+        frame,
+        epoch_tdb_jd,
+    })
+}
+
+fn query_result_from_state(state: StateVector, output_mode: i32) -> DhruvQueryResult {
+    let zero_state = DhruvStateVector {
+        position_km: [0.0; 3],
+        velocity_km_s: [0.0; 3],
+    };
+    let zero_spherical = DhruvSphericalState {
+        lon_deg: 0.0,
+        lat_deg: 0.0,
+        distance_km: 0.0,
+        lon_speed: 0.0,
+        lat_speed: 0.0,
+        distance_speed: 0.0,
+    };
+    match output_mode {
+        DHRUV_QUERY_OUTPUT_CARTESIAN => DhruvQueryResult {
+            state_vector: DhruvStateVector::from(state),
+            spherical_state: zero_spherical,
+        },
+        DHRUV_QUERY_OUTPUT_SPHERICAL => DhruvQueryResult {
+            state_vector: zero_state,
+            spherical_state: spherical_state_from_state(&state),
+        },
+        DHRUV_QUERY_OUTPUT_BOTH => DhruvQueryResult {
+            state_vector: DhruvStateVector::from(state),
+            spherical_state: spherical_state_from_state(&state),
+        },
+        _ => DhruvQueryResult {
+            state_vector: zero_state,
+            spherical_state: zero_spherical,
+        },
+    }
+}
+
+/// Query the engine using the unified request transport.
+pub fn dhruv_engine_query_request_internal(
+    engine: &Engine,
+    request: DhruvQueryRequest,
+) -> Result<DhruvQueryResult, DhruvStatus> {
+    let query = query_from_request(engine, request)?;
+    let state = engine.query(query).map_err(|err| DhruvStatus::from(&err))?;
+    Ok(query_result_from_state(state, request.output_mode))
+}
+
 /// Convenience helper for one-shot callers.
 pub fn dhruv_query_once_internal(
     config: &DhruvEngineConfig,
@@ -727,6 +851,34 @@ pub unsafe extern "C" fn dhruv_engine_query(
             Ok(state) => {
                 // SAFETY: Pointer is checked for null and written once.
                 unsafe { *out_state = state };
+                DhruvStatus::Ok
+            }
+            Err(status) => status,
+        }
+    })
+}
+
+/// Query an existing engine handle using the unified request transport.
+///
+/// # Safety
+/// `engine`, `request`, and `out_result` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_engine_query_request(
+    engine: *const DhruvEngineHandle,
+    request: *const DhruvQueryRequest,
+    out_result: *mut DhruvQueryResult,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || request.is_null() || out_result.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        let engine_ref = unsafe { &*engine };
+        let request_value = unsafe { *request };
+
+        match dhruv_engine_query_request_internal(engine_ref, request_value) {
+            Ok(result) => {
+                unsafe { *out_result = result };
                 DhruvStatus::Ok
             }
             Err(status) => status,
@@ -934,90 +1086,6 @@ pub unsafe extern "C" fn dhruv_cartesian_to_spherical(
             };
         }
         DhruvStatus::Ok
-    })
-}
-
-/// Query engine with UTC input, return spherical state with angular velocities.
-#[allow(clippy::too_many_arguments)]
-pub fn dhruv_query_utc_spherical_internal(
-    engine: &Engine,
-    target_code: i32,
-    observer_code: i32,
-    frame_code: i32,
-    year: i32,
-    month: u32,
-    day: u32,
-    hour: u32,
-    min: u32,
-    sec: f64,
-) -> Result<DhruvSphericalState, DhruvStatus> {
-    let target = Body::from_code(target_code).ok_or(DhruvStatus::InvalidQuery)?;
-    let observer = Observer::from_code(observer_code).ok_or(DhruvStatus::InvalidQuery)?;
-    let frame = Frame::from_code(frame_code).ok_or(DhruvStatus::InvalidQuery)?;
-
-    let epoch = dhruv_time::Epoch::from_utc(year, month, day, hour, min, sec, engine.lsk());
-
-    let query = Query {
-        target,
-        observer,
-        frame,
-        epoch_tdb_jd: epoch.as_jd_tdb(),
-    };
-
-    let state = engine.query(query).map_err(|e| DhruvStatus::from(&e))?;
-
-    let ss =
-        dhruv_frames::cartesian_state_to_spherical_state(&state.position_km, &state.velocity_km_s);
-
-    Ok(DhruvSphericalState {
-        lon_deg: ss.lon_deg,
-        lat_deg: ss.lat_deg,
-        distance_km: ss.distance_km,
-        lon_speed: ss.lon_speed,
-        lat_speed: ss.lat_speed,
-        distance_speed: ss.distance_speed,
-    })
-}
-
-/// Query engine from UTC calendar date, return spherical state with angular velocities.
-///
-/// Combines UTC→TDB conversion, Cartesian query, and spherical state conversion
-/// in a single call.
-///
-/// # Safety
-/// `engine` and `out` must be valid, non-null pointers.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn dhruv_query_utc_spherical(
-    engine: *const DhruvEngineHandle,
-    target: i32,
-    observer: i32,
-    frame: i32,
-    year: i32,
-    month: u32,
-    day: u32,
-    hour: u32,
-    min: u32,
-    sec: f64,
-    out: *mut DhruvSphericalState,
-) -> DhruvStatus {
-    ffi_boundary(|| {
-        if engine.is_null() || out.is_null() {
-            return DhruvStatus::NullPointer;
-        }
-
-        // SAFETY: Pointer is checked for null above.
-        let engine_ref = unsafe { &*engine };
-
-        match dhruv_query_utc_spherical_internal(
-            engine_ref, target, observer, frame, year, month, day, hour, min, sec,
-        ) {
-            Ok(state) => {
-                // SAFETY: Pointer is checked for null above; write one struct.
-                unsafe { *out = state };
-                DhruvStatus::Ok
-            }
-            Err(status) => status,
-        }
     })
 }
 
@@ -5430,50 +5498,6 @@ pub unsafe extern "C" fn dhruv_nakshatra28_from_tropical_utc(
             };
         }
         DhruvStatus::Ok
-    })
-}
-
-// ---------------------------------------------------------------------------
-// Group D: Core query with DhruvUtcTime (1 function)
-// ---------------------------------------------------------------------------
-
-/// Query engine with `DhruvUtcTime` input, return spherical state.
-///
-/// # Safety
-/// `engine`, `utc`, and `out` must be valid, non-null pointers.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn dhruv_query_utc(
-    engine: *const DhruvEngineHandle,
-    target: i32,
-    observer: i32,
-    frame: i32,
-    utc: *const DhruvUtcTime,
-    out: *mut DhruvSphericalState,
-) -> DhruvStatus {
-    ffi_boundary(|| {
-        if engine.is_null() || utc.is_null() || out.is_null() {
-            return DhruvStatus::NullPointer;
-        }
-        let engine_ref = unsafe { &*engine };
-        let utc_ref = unsafe { &*utc };
-        match dhruv_query_utc_spherical_internal(
-            engine_ref,
-            target,
-            observer,
-            frame,
-            utc_ref.year,
-            utc_ref.month,
-            utc_ref.day,
-            utc_ref.hour,
-            utc_ref.minute,
-            utc_ref.second,
-        ) {
-            Ok(state) => {
-                unsafe { *out = state };
-                DhruvStatus::Ok
-            }
-            Err(status) => status,
-        }
     })
 }
 
@@ -11859,6 +11883,75 @@ mod tests {
     }
 
     #[test]
+    fn ffi_query_request_rejects_null_input_pointer() {
+        let mut out = DhruvQueryResult {
+            state_vector: DhruvStateVector {
+                position_km: [0.0; 3],
+                velocity_km_s: [0.0; 3],
+            },
+            spherical_state: DhruvSphericalState {
+                lon_deg: 0.0,
+                lat_deg: 0.0,
+                distance_km: 0.0,
+                lon_speed: 0.0,
+                lat_speed: 0.0,
+                distance_speed: 0.0,
+            },
+        };
+        let status = unsafe { dhruv_engine_query_request(ptr::null(), ptr::null(), &mut out) };
+        assert_eq!(status, DhruvStatus::NullPointer);
+    }
+
+    #[test]
+    fn query_request_invalid_time_kind_rejected() {
+        let request = DhruvQueryRequest {
+            target: 399,
+            observer: 10,
+            frame: 0,
+            time_kind: 99,
+            epoch_tdb_jd: 2_451_545.0,
+            utc: ZEROED_UTC,
+            output_mode: DHRUV_QUERY_OUTPUT_BOTH,
+        };
+        let result = validate_query_request_selectors(request);
+        assert_eq!(result, Err(DhruvStatus::InvalidQuery));
+    }
+
+    #[test]
+    fn query_request_invalid_output_mode_rejected() {
+        let request = DhruvQueryRequest {
+            target: 399,
+            observer: 10,
+            frame: 0,
+            time_kind: DHRUV_QUERY_TIME_JD_TDB,
+            epoch_tdb_jd: 2_451_545.0,
+            utc: ZEROED_UTC,
+            output_mode: 99,
+        };
+        let result = validate_query_request_selectors(request);
+        assert_eq!(result, Err(DhruvStatus::InvalidQuery));
+    }
+
+    #[test]
+    fn query_result_from_state_honors_output_mode() {
+        let state = StateVector {
+            position_km: [1.0, 2.0, 3.0],
+            velocity_km_s: [0.1, 0.2, 0.3],
+        };
+        let cart = query_result_from_state(state, DHRUV_QUERY_OUTPUT_CARTESIAN);
+        assert_eq!(cart.state_vector.position_km, [1.0, 2.0, 3.0]);
+        assert_eq!(cart.spherical_state.distance_km, 0.0);
+
+        let sph = query_result_from_state(state, DHRUV_QUERY_OUTPUT_SPHERICAL);
+        assert_eq!(sph.state_vector.position_km, [0.0; 3]);
+        assert!(sph.spherical_state.distance_km > 0.0);
+
+        let both = query_result_from_state(state, DHRUV_QUERY_OUTPUT_BOTH);
+        assert_eq!(both.state_vector.position_km, [1.0, 2.0, 3.0]);
+        assert!(both.spherical_state.distance_km > 0.0);
+    }
+
+    #[test]
     fn ffi_lsk_load_rejects_null() {
         let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
         // SAFETY: Null path pointer is intentional for validation.
@@ -12217,24 +12310,6 @@ mod tests {
         assert_eq!(h, 6);
         assert_eq!(m, 0);
         assert!(s.abs() < 0.01);
-    }
-
-    #[test]
-    fn ffi_query_utc_spherical_rejects_null() {
-        let mut out = DhruvSphericalState {
-            lon_deg: 0.0,
-            lat_deg: 0.0,
-            distance_km: 0.0,
-            lon_speed: 0.0,
-            lat_speed: 0.0,
-            distance_speed: 0.0,
-        };
-
-        // SAFETY: Null engine pointer is intentional for validation.
-        let status = unsafe {
-            dhruv_query_utc_spherical(ptr::null(), 499, 10, 2, 2024, 3, 20, 12, 0, 0.0, &mut out)
-        };
-        assert_eq!(status, DhruvStatus::NullPointer);
     }
 
     // --- Bhava tests ---
@@ -12684,8 +12759,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_48() {
-        assert_eq!(dhruv_api_version(), 48);
+    fn ffi_api_version_is_49() {
+        assert_eq!(dhruv_api_version(), 49);
     }
 
     #[test]
@@ -13956,22 +14031,6 @@ mod tests {
                 out.as_mut_ptr(),
             )
         };
-        assert_eq!(status, DhruvStatus::NullPointer);
-    }
-
-    // Group D null rejection
-
-    #[test]
-    fn ffi_query_utc_rejects_null() {
-        let mut out = DhruvSphericalState {
-            lon_deg: 0.0,
-            lat_deg: 0.0,
-            distance_km: 0.0,
-            lon_speed: 0.0,
-            lat_speed: 0.0,
-            distance_speed: 0.0,
-        };
-        let status = unsafe { dhruv_query_utc(ptr::null(), 499, 10, 2, ptr::null(), &mut out) };
         assert_eq!(status, DhruvStatus::NullPointer);
     }
 

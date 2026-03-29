@@ -105,14 +105,11 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 ### 5. UTC query support is weaker than the core engine
 
 - Missing or wrong:
-  The UTC query gap has two parts:
-  - input-mode support: core can evaluate the same logical query from either JD(TDB) or UTC input,
-  - output-shape support: core can still return the full Cartesian `StateVector`, while the C ABI and current wrappers only expose spherical UTC helpers (`dhruv_query_utc` and `dhruv_query_utc_spherical`) returning `DhruvSphericalState`.
-  This means non-Rust surfaces lose both parity of output shape and the single-entrypoint request model for UTC-vs-JD selection.
+  This used to be split across JD-only main queries plus separate UTC helper names. The canonical shape is the main query request/context surface itself: callers should express JD-vs-UTC input and cartesian-vs-spherical output through request attributes, not suffixed helper entrypoints.
 - Affected surfaces:
   C ABI, Python, Node.js, Go.
 - Correct behavior:
-  Expose the full UTC-query behavior through the main query request/context shape in the ABI and wrappers, so callers can select UTC vs JD inputs and cartesian vs spherical outputs without separate suffixed entry points.
+  Expose the full UTC-query behavior through the main query request/context shape in the ABI and wrappers, so callers can select UTC vs JD inputs and cartesian vs spherical outputs without separate suffixed entry points. Any remaining split helper names should be removed rather than kept alongside the unified query surface.
 - Evidence:
   `crates/dhruv_core/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`, `bindings/python-open/src/ctara_dhruv/ephemeris.py`, `bindings/node-open/src/engine.js`, `bindings/go-open/dhruv/engine.go`.
 

@@ -7,26 +7,27 @@ use dhruv_core::{Body, Frame, Observer};
 use dhruv_ffi_c::{
     DHRUV_AYANAMSHA_MODE_MEAN, DHRUV_AYANAMSHA_MODE_TRUE, DHRUV_AYANAMSHA_MODE_UNIFIED,
     DHRUV_AYANAMSHA_TIME_JD_TDB, DHRUV_AYANAMSHA_TIME_UTC, DHRUV_PANCHANG_INCLUDE_ALL,
-    DHRUV_PANCHANG_TIME_UTC, DhruvAyanamshaComputeRequest, DhruvBhinnaAshtakavarga,
-    DhruvDrishtiEntry, DhruvEngineConfig, DhruvGrahaDrishtiMatrix, DhruvGrahaLongitudes,
-    DhruvKaranaPosition, DhruvNakshatra28Info, DhruvNakshatraInfo, DhruvPanchangComputeRequest,
-    DhruvPanchangNakshatraInfo, DhruvPanchangOperationResult, DhruvQuery, DhruvRashiInfo,
-    DhruvSamvatsaraResult, DhruvSarvaAshtakavarga, DhruvSphericalCoords, DhruvSphericalState,
-    DhruvStateVector, DhruvStatus, DhruvTithiPosition, DhruvUtcTime, DhruvYogaPosition,
+    DHRUV_PANCHANG_TIME_UTC, DHRUV_QUERY_OUTPUT_SPHERICAL, DHRUV_QUERY_TIME_UTC,
+    DhruvAyanamshaComputeRequest, DhruvBhinnaAshtakavarga, DhruvDrishtiEntry, DhruvEngineConfig,
+    DhruvGrahaDrishtiMatrix, DhruvGrahaLongitudes, DhruvKaranaPosition, DhruvNakshatra28Info,
+    DhruvNakshatraInfo, DhruvPanchangComputeRequest, DhruvPanchangNakshatraInfo,
+    DhruvPanchangOperationResult, DhruvQuery, DhruvQueryRequest, DhruvQueryResult, DhruvRashiInfo,
+    DhruvSamvatsaraResult, DhruvSarvaAshtakavarga, DhruvSphericalCoords, DhruvStateVector,
+    DhruvStatus, DhruvTithiPosition, DhruvUtcTime, DhruvYogaPosition,
     dhruv_ayana_from_sidereal_longitude, dhruv_ayanamsha_compute_ex, dhruv_calculate_all_bav,
     dhruv_calculate_bav, dhruv_calculate_sav, dhruv_cartesian_to_spherical,
     dhruv_ekadhipatya_sodhana, dhruv_engine_new_internal, dhruv_engine_query,
-    dhruv_engine_query_internal, dhruv_ghatika_from_elapsed, dhruv_ghatikas_since_sunrise,
-    dhruv_graha_drishti, dhruv_graha_drishti_matrix, dhruv_graha_sidereal_longitudes,
-    dhruv_graha_tropical_longitudes, dhruv_hora_at, dhruv_jd_tdb_to_utc,
-    dhruv_karana_from_elongation, dhruv_lunar_node_deg, dhruv_masa_from_rashi_index,
-    dhruv_nakshatra_at, dhruv_nakshatra_from_longitude, dhruv_nakshatra_from_tropical,
-    dhruv_nakshatra28_from_longitude, dhruv_nth_rashi_from, dhruv_nutation_iau2000b,
-    dhruv_query_once, dhruv_query_once_internal, dhruv_query_utc, dhruv_query_utc_spherical,
-    dhruv_query_utc_spherical_internal, dhruv_rashi_from_longitude, dhruv_rashi_from_tropical,
-    dhruv_rashi_lord, dhruv_samvatsara_from_year, dhruv_sankranti_config_default,
-    dhruv_time_upagraha_jd, dhruv_tithi_from_elongation, dhruv_trikona_sodhana,
-    dhruv_utc_to_tdb_jd, dhruv_vaar_from_jd, dhruv_yoga_from_sum,
+    dhruv_engine_query_internal, dhruv_engine_query_request, dhruv_engine_query_request_internal,
+    dhruv_ghatika_from_elapsed, dhruv_ghatikas_since_sunrise, dhruv_graha_drishti,
+    dhruv_graha_drishti_matrix, dhruv_graha_sidereal_longitudes, dhruv_graha_tropical_longitudes,
+    dhruv_hora_at, dhruv_jd_tdb_to_utc, dhruv_karana_from_elongation, dhruv_lunar_node_deg,
+    dhruv_masa_from_rashi_index, dhruv_nakshatra_at, dhruv_nakshatra_from_longitude,
+    dhruv_nakshatra_from_tropical, dhruv_nakshatra28_from_longitude, dhruv_nth_rashi_from,
+    dhruv_nutation_iau2000b, dhruv_query_once, dhruv_query_once_internal,
+    dhruv_rashi_from_longitude, dhruv_rashi_from_tropical, dhruv_rashi_lord,
+    dhruv_samvatsara_from_year, dhruv_sankranti_config_default, dhruv_time_upagraha_jd,
+    dhruv_tithi_from_elongation, dhruv_trikona_sodhana, dhruv_utc_to_tdb_jd, dhruv_vaar_from_jd,
+    dhruv_yoga_from_sum,
 };
 use dhruv_frames::{
     cartesian_to_spherical as rust_cartesian_to_spherical,
@@ -182,6 +183,22 @@ fn ffi_core_cabi_bench(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("ffi_core_cabi");
     group.sample_size(20);
+    let utc_request = DhruvQueryRequest {
+        target: Body::Mars.code(),
+        observer: Observer::Body(Body::Earth).code(),
+        frame: Frame::IcrfJ2000.code(),
+        time_kind: DHRUV_QUERY_TIME_UTC,
+        epoch_tdb_jd: 0.0,
+        utc: DhruvUtcTime {
+            year: 2024,
+            month: 3,
+            day: 20,
+            hour: 12,
+            minute: 0,
+            second: 0.0,
+        },
+        output_mode: DHRUV_QUERY_OUTPUT_SPHERICAL,
+    };
 
     let mut out_state: DhruvStateVector = zeroed();
     bench_pair(
@@ -221,82 +238,23 @@ fn ffi_core_cabi_bench(c: &mut Criterion) {
         },
     );
 
-    let mut out_spherical: DhruvSphericalState = zeroed();
+    let mut out_spherical: DhruvQueryResult = zeroed();
     bench_pair(
         &mut group,
-        "query_utc_spherical",
+        "engine_query_request_utc",
         || {
-            dhruv_query_utc_spherical_internal(
-                black_box(&ctx.engine),
-                Body::Mars.code(),
-                Observer::Body(Body::Earth).code(),
-                Frame::IcrfJ2000.code(),
-                2024,
-                3,
-                20,
-                12,
-                0,
-                0.0,
-            )
-            .expect("query should succeed")
-            .lon_deg
+            dhruv_engine_query_request_internal(black_box(&ctx.engine), black_box(utc_request))
+                .expect("query should succeed")
+                .spherical_state
+                .lon_deg
         },
         || unsafe {
-            expect_ok(dhruv_query_utc_spherical(
+            expect_ok(dhruv_engine_query_request(
                 black_box(&ctx.engine as *const _),
-                Body::Mars.code(),
-                Observer::Body(Body::Earth).code(),
-                Frame::IcrfJ2000.code(),
-                2024,
-                3,
-                20,
-                12,
-                0,
-                0.0,
+                black_box(&utc_request as *const _),
                 &mut out_spherical,
             ));
-            out_spherical.lon_deg
-        },
-    );
-
-    let utc = DhruvUtcTime {
-        year: 2024,
-        month: 3,
-        day: 20,
-        hour: 12,
-        minute: 0,
-        second: 0.0,
-    };
-    let mut out_utc_query: DhruvSphericalState = zeroed();
-    bench_pair(
-        &mut group,
-        "query_utc_struct",
-        || {
-            dhruv_query_utc_spherical_internal(
-                black_box(&ctx.engine),
-                Body::Mars.code(),
-                Observer::Body(Body::Earth).code(),
-                Frame::IcrfJ2000.code(),
-                utc.year,
-                utc.month,
-                utc.day,
-                utc.hour,
-                utc.minute,
-                utc.second,
-            )
-            .expect("query should succeed")
-            .lat_deg
-        },
-        || unsafe {
-            expect_ok(dhruv_query_utc(
-                black_box(&ctx.engine as *const _),
-                Body::Mars.code(),
-                Observer::Body(Body::Earth).code(),
-                Frame::IcrfJ2000.code(),
-                black_box(&utc as *const _),
-                &mut out_utc_query,
-            ));
-            out_utc_query.lat_deg
+            out_spherical.spherical_state.lon_deg
         },
     );
 

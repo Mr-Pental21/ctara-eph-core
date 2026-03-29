@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 48`
+**ABI version:** `DHRUV_API_VERSION = 49`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -662,6 +662,16 @@ DhruvStatus dhruv_engine_query(
 Query the engine for a Cartesian state vector (position + velocity) at a given epoch.
 
 ```c
+DhruvStatus dhruv_engine_query_request(
+    const DhruvEngineHandle* engine,
+    const DhruvQueryRequest* request,
+    DhruvQueryResult*        out
+);
+```
+
+Unified query entrypoint: carry JD(TDB)-vs-UTC input and cartesian-vs-spherical output selection through `DhruvQueryRequest`.
+
+```c
 DhruvStatus dhruv_query_once(
     const DhruvEngineConfig* config,
     const DhruvQuery*        query,
@@ -671,23 +681,6 @@ DhruvStatus dhruv_query_once(
 
 One-shot convenience: creates engine, queries, and tears down internally.
 
-```c
-DhruvStatus dhruv_query_utc_spherical(
-    const DhruvEngineHandle* engine,
-    int32_t  target,    // NAIF body code
-    int32_t  observer,  // NAIF body code
-    int32_t  frame,     // Frame code
-    int32_t  year,
-    uint32_t month,
-    uint32_t day,
-    uint32_t hour,
-    uint32_t min,
-    double   sec,
-    DhruvSphericalState* out
-);
-```
-
-Query from UTC calendar date, returns spherical state (lon/lat/dist + rates). Combines UTC-to-TDB conversion, Cartesian query, and spherical conversion in one call.
 
 ---
 
@@ -1708,8 +1701,8 @@ Use the unified `*_search_ex` / `*_compute_ex` entries documented above.
 | 2 | `dhruv_engine_new` | creates | | | |
 | 3 | `dhruv_engine_free` | destroys | | | |
 | 4 | `dhruv_engine_query` | yes | | | |
-| 5 | `dhruv_query_once` | internal | | | |
-| 6 | `dhruv_query_utc_spherical` | yes | | | |
+| 5 | `dhruv_engine_query_request` | yes | | | |
+| 6 | `dhruv_query_once` | internal | | | |
 | 7 | `dhruv_lsk_load` | | creates | | |
 | 8 | `dhruv_lsk_free` | | destroys | | |
 | 9 | `dhruv_eop_load` | | | creates | |

@@ -340,91 +340,93 @@ fn ffi_full_longitude_workflow() {
 }
 
 #[test]
-fn ffi_query_utc_spherical_mars_heliocentric() {
+fn ffi_query_request_utc_spherical_mars_heliocentric() {
     let engine_ptr = match make_engine() {
         Some(e) => e,
         None => return,
     };
 
-    let mut out = DhruvSphericalState {
-        lon_deg: 0.0,
-        lat_deg: 0.0,
-        distance_km: 0.0,
-        lon_speed: 0.0,
-        lat_speed: 0.0,
-        distance_speed: 0.0,
+    let request = DhruvQueryRequest {
+        target: Body::Mars.code(),
+        observer: Body::Sun.code(),
+        frame: Frame::EclipticJ2000.code(),
+        time_kind: DHRUV_QUERY_TIME_UTC,
+        epoch_tdb_jd: 0.0,
+        utc: DhruvUtcTime {
+            year: 2024,
+            month: 3,
+            day: 20,
+            hour: 12,
+            minute: 0,
+            second: 0.0,
+        },
+        output_mode: DHRUV_QUERY_OUTPUT_SPHERICAL,
     };
+    let mut out: DhruvQueryResult = unsafe { std::mem::zeroed() };
 
     // Mars heliocentric ecliptic at 2024-03-20 12:00:00 UTC
     // SAFETY: Engine handle and output are valid in this test.
-    let status = unsafe {
-        dhruv_query_utc_spherical(
-            engine_ptr,
-            Body::Mars.code(),
-            Body::Sun.code(),
-            Frame::EclipticJ2000.code(),
-            2024,
-            3,
-            20,
-            12,
-            0,
-            0.0,
-            &mut out,
-        )
-    };
+    let status = unsafe { dhruv_engine_query_request(engine_ptr, &request, &mut out) };
     assert_eq!(status, DhruvStatus::Ok);
 
     assert!(
-        out.lon_deg >= 0.0 && out.lon_deg < 360.0,
+        out.spherical_state.lon_deg >= 0.0 && out.spherical_state.lon_deg < 360.0,
         "longitude {} out of range",
-        out.lon_deg
+        out.spherical_state.lon_deg
     );
-    assert!(out.distance_km > 1.0e8, "Mars should be >1 AU from Sun");
+    assert!(
+        out.spherical_state.distance_km > 1.0e8,
+        "Mars should be >1 AU from Sun"
+    );
 
     // SAFETY: Pointer was returned by dhruv_engine_new.
     unsafe { dhruv_engine_free(engine_ptr) };
 }
 
 #[test]
-fn ffi_query_utc_spherical_speeds_finite() {
+fn ffi_query_request_utc_spherical_speeds_finite() {
     let engine_ptr = match make_engine() {
         Some(e) => e,
         None => return,
     };
 
-    let mut out = DhruvSphericalState {
-        lon_deg: 0.0,
-        lat_deg: 0.0,
-        distance_km: 0.0,
-        lon_speed: 0.0,
-        lat_speed: 0.0,
-        distance_speed: 0.0,
+    let request = DhruvQueryRequest {
+        target: Body::Earth.code(),
+        observer: Body::Sun.code(),
+        frame: Frame::EclipticJ2000.code(),
+        time_kind: DHRUV_QUERY_TIME_UTC,
+        epoch_tdb_jd: 0.0,
+        utc: DhruvUtcTime {
+            year: 2024,
+            month: 6,
+            day: 15,
+            hour: 0,
+            minute: 0,
+            second: 0.0,
+        },
+        output_mode: DHRUV_QUERY_OUTPUT_SPHERICAL,
     };
+    let mut out: DhruvQueryResult = unsafe { std::mem::zeroed() };
 
     // Earth ecliptic heliocentric — a moving body with known non-zero velocity
     // SAFETY: Engine handle and output are valid in this test.
-    let status = unsafe {
-        dhruv_query_utc_spherical(
-            engine_ptr,
-            Body::Earth.code(),
-            Body::Sun.code(),
-            Frame::EclipticJ2000.code(),
-            2024,
-            6,
-            15,
-            0,
-            0,
-            0.0,
-            &mut out,
-        )
-    };
+    let status = unsafe { dhruv_engine_query_request(engine_ptr, &request, &mut out) };
     assert_eq!(status, DhruvStatus::Ok);
 
-    assert!(out.lon_speed.is_finite(), "lon_speed not finite");
-    assert!(out.lat_speed.is_finite(), "lat_speed not finite");
-    assert!(out.distance_speed.is_finite(), "distance_speed not finite");
     assert!(
-        out.lon_speed != 0.0,
+        out.spherical_state.lon_speed.is_finite(),
+        "lon_speed not finite"
+    );
+    assert!(
+        out.spherical_state.lat_speed.is_finite(),
+        "lat_speed not finite"
+    );
+    assert!(
+        out.spherical_state.distance_speed.is_finite(),
+        "distance_speed not finite"
+    );
+    assert!(
+        out.spherical_state.lon_speed != 0.0,
         "lon_speed should be non-zero for orbiting body"
     );
 
@@ -1810,76 +1812,50 @@ fn ffi_utc_query_roundtrip() {
         None => return,
     };
 
-    // JD version: Mars heliocentric ecliptic
-    let mut out_jd = DhruvSphericalState {
-        lon_deg: 0.0,
-        lat_deg: 0.0,
-        distance_km: 0.0,
-        lon_speed: 0.0,
-        lat_speed: 0.0,
-        distance_speed: 0.0,
+    let request = DhruvQueryRequest {
+        target: Body::Mars.code(),
+        observer: Body::Sun.code(),
+        frame: Frame::EclipticJ2000.code(),
+        time_kind: DHRUV_QUERY_TIME_UTC,
+        epoch_tdb_jd: 0.0,
+        utc: DhruvUtcTime {
+            year: 2024,
+            month: 6,
+            day: 15,
+            hour: 0,
+            minute: 0,
+            second: 0.0,
+        },
+        output_mode: DHRUV_QUERY_OUTPUT_SPHERICAL,
     };
-    let status = unsafe {
-        dhruv_query_utc_spherical(
-            engine_ptr,
-            Body::Mars.code(),
-            Body::Sun.code(),
-            Frame::EclipticJ2000.code(),
-            2024,
-            6,
-            15,
-            0,
-            0,
-            0.0,
-            &mut out_jd,
-        )
-    };
+    let mut out_first: DhruvQueryResult = unsafe { std::mem::zeroed() };
+    let status = unsafe { dhruv_engine_query_request(engine_ptr, &request, &mut out_first) };
     assert_eq!(status, DhruvStatus::Ok);
 
-    // DhruvUtcTime struct version
-    let utc = DhruvUtcTime {
-        year: 2024,
-        month: 6,
-        day: 15,
-        hour: 0,
-        minute: 0,
-        second: 0.0,
+    let request_struct = DhruvQueryRequest {
+        utc: request.utc,
+        ..request
     };
-    let mut out_utc = DhruvSphericalState {
-        lon_deg: 0.0,
-        lat_deg: 0.0,
-        distance_km: 0.0,
-        lon_speed: 0.0,
-        lat_speed: 0.0,
-        distance_speed: 0.0,
-    };
-    let status = unsafe {
-        dhruv_query_utc(
-            engine_ptr,
-            Body::Mars.code(),
-            Body::Sun.code(),
-            Frame::EclipticJ2000.code(),
-            &utc,
-            &mut out_utc,
-        )
-    };
+    let mut out_second: DhruvQueryResult = unsafe { std::mem::zeroed() };
+    let status =
+        unsafe { dhruv_engine_query_request(engine_ptr, &request_struct, &mut out_second) };
     assert_eq!(status, DhruvStatus::Ok);
 
-    // Both should produce identical results (same internal path)
     assert!(
-        (out_utc.lon_deg - out_jd.lon_deg).abs() < 1e-12,
+        (out_second.spherical_state.lon_deg - out_first.spherical_state.lon_deg).abs() < 1e-12,
         "lon_deg mismatch"
     );
     assert!(
-        (out_utc.lat_deg - out_jd.lat_deg).abs() < 1e-12,
+        (out_second.spherical_state.lat_deg - out_first.spherical_state.lat_deg).abs() < 1e-12,
         "lat_deg mismatch"
     );
     assert!(
-        (out_utc.distance_km - out_jd.distance_km).abs() < 1e-6,
+        (out_second.spherical_state.distance_km - out_first.spherical_state.distance_km).abs()
+            < 1e-6,
         "distance_km mismatch"
     );
     assert!(
-        (out_utc.lon_speed - out_jd.lon_speed).abs() < 1e-12,
+        (out_second.spherical_state.lon_speed - out_first.spherical_state.lon_speed).abs() < 1e-12,
         "lon_speed mismatch"
     );
 
