@@ -28,6 +28,8 @@ This page summarizes the public Node wrapper exported from
 - `clearActiveConfig`
 - `queryOnce`
 - `cartesianToSpherical`
+- `QUERY_OUTPUT`
+- `QUERY_TIME`
 
 `time.js` exports:
 

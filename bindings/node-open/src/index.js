@@ -9,7 +9,7 @@ const extras = require('./extras');
 const shadbala = require('./shadbala');
 const dasha = require('./dasha');
 const tara = require('./tara');
-const { STATUS, EXPECTED_API_VERSION } = require('./status');
+const { STATUS, EXPECTED_API_VERSION, QUERY_OUTPUT, QUERY_TIME } = require('./status');
 
 module.exports = {
   ...engine,
@@ -23,4 +23,6 @@ module.exports = {
   ...tara,
   STATUS,
   EXPECTED_API_VERSION,
+  QUERY_OUTPUT,
+  QUERY_TIME,
 };

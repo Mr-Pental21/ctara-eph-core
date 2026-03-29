@@ -30,10 +30,25 @@ func main() {
 	}
 	defer engine.Close()
 
-	state, err := engine.Query(dhruv.Query{Target: 301, Observer: 399, Frame: 1, EpochTdbJD: 2451545.0})
+	result, err := engine.Query(dhruv.QueryRequest{
+		Target:     301,
+		Observer:   399,
+		Frame:      1,
+		TimeKind:   dhruv.QueryTimeJDTDB,
+		EpochTdbJD: 2451545.0,
+		OutputMode: dhruv.QueryOutputCartesian,
+	})
 	if err != nil {
 		log.Fatalf("query failed: %v", err)
 	}
+	if result.State == nil {
+		log.Fatal("query did not return cartesian state")
+	}
 
-	fmt.Printf("Moon position km: [%.3f %.3f %.3f]\n", state.PositionKm[0], state.PositionKm[1], state.PositionKm[2])
+	fmt.Printf(
+		"Moon position km: [%.3f %.3f %.3f]\n",
+		result.State.PositionKm[0],
+		result.State.PositionKm[1],
+		result.State.PositionKm[2],
+	)
 }

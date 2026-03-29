@@ -41,6 +41,17 @@ const (
 	GulikaMaandiPlanetSaturn uint8 = 1
 )
 
+const (
+	QueryTimeJDTDB int32 = 0
+	QueryTimeUTC   int32 = 1
+)
+
+const (
+	QueryOutputCartesian int32 = 0
+	QueryOutputSpherical int32 = 1
+	QueryOutputBoth      int32 = 2
+)
+
 type Status int32
 
 const (
@@ -75,9 +86,25 @@ type Query struct {
 	EpochTdbJD float64
 }
 
+type QueryRequest struct {
+	Target     int32
+	Observer   int32
+	Frame      int32
+	TimeKind   int32
+	EpochTdbJD float64
+	UTC        UtcTime
+	OutputMode int32
+}
+
 type StateVector struct {
 	PositionKm [3]float64
 	VelocityKm [3]float64
+}
+
+type QueryResult struct {
+	State          *StateVector
+	SphericalState *SphericalState
+	OutputMode     int32
 }
 
 type SphericalCoords struct {

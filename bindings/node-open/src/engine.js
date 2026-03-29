@@ -86,19 +86,7 @@ class Engine {
   query(query) {
     const r = addon.engineQuery(this._handle, query);
     checkStatus('engine_query', r.status);
-    return r.state;
-  }
-
-  queryUtcSpherical(target, observer, frame, utc) {
-    const r = addon.queryUtcSpherical(this._handle, target, observer, frame, utc);
-    checkStatus('query_utc', r.status);
-    return r.state;
-  }
-
-  queryUtc(target, observer, frame, utc) {
-    const r = addon.queryUtc(this._handle, target, observer, frame, utc);
-    checkStatus('query_utc', r.status);
-    return r.state;
+    return r.result;
   }
 }
 

@@ -4,7 +4,7 @@ Open-source Go bindings for `ctara-dhruv-core`, implemented against the canonica
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=48`
+- ABI target: `DHRUV_API_VERSION=49`
 - Binding strategy: `cgo` over `crates/dhruv_ffi_c/include/dhruv.h`
 - Package: `ctara-dhruv-core/bindings/go-open/dhruv`
 
@@ -74,7 +74,7 @@ canonical Sanskrit entity name alongside the numeric kind/index fields.
 The public `dhruv` package includes wrappers for:
 
 - engine/config/LSK/EOP lifecycle
-- ephemeris query and UTC query helpers
+- unified ephemeris query requests with selectable JD-vs-UTC input and cartesian-vs-spherical output
 - time conversion and nutation
 - ayanamsha and lunar-node APIs
 - riseset/bhava APIs

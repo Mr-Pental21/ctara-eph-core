@@ -1,6 +1,6 @@
 'use strict';
 
-const EXPECTED_API_VERSION = 48;
+const EXPECTED_API_VERSION = 49;
 
 const STATUS = {
   OK: 0,
@@ -24,12 +24,25 @@ const STATUS_NAME = new Map(
   Object.entries(STATUS).map(([k, v]) => [v, k]),
 );
 
+const QUERY_TIME = {
+  JD_TDB: 0,
+  UTC: 1,
+};
+
+const QUERY_OUTPUT = {
+  CARTESIAN: 0,
+  SPHERICAL: 1,
+  BOTH: 2,
+};
+
 function statusName(code) {
   return STATUS_NAME.get(code) || `UNKNOWN_${code}`;
 }
 
 module.exports = {
   EXPECTED_API_VERSION,
+  QUERY_OUTPUT,
+  QUERY_TIME,
   STATUS,
   statusName,
 };

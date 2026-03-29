@@ -74,24 +74,14 @@ func (e *Engine) Close() error {
 	return statusErr("engine_free", e.h.Free())
 }
 
-func (e *Engine) Query(q Query) (StateVector, error) {
-	out, st := cabi.QueryEngine(e.h, q)
+func (e *Engine) Query(q QueryRequest) (QueryResult, error) {
+	out, st := cabi.QueryEngineRequest(e.h, q)
 	return out, statusErr("engine_query", st)
 }
 
 func QueryOnce(cfg EngineConfig, q Query) (StateVector, error) {
 	out, st, prior := cabi.QueryOnce(cfg, q)
 	return out, wrapStatus("query_once", st, prior)
-}
-
-func (e *Engine) QueryUTC(target, observer, frame int32, utc UtcTime) (SphericalState, error) {
-	out, st := cabi.QueryUTC(e.h, target, observer, frame, utc)
-	return out, statusErr("query_utc", st)
-}
-
-func (e *Engine) QueryUTCSpherical(target, observer, frame int32, utc UtcTime) (SphericalState, error) {
-	out, st := cabi.QueryUTCSpherical(e.h, target, observer, frame, utc)
-	return out, statusErr("query_utc_spherical", st)
 }
 
 func LoadLSK(path string) (*LSK, error) {

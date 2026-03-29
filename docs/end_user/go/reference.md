@@ -17,6 +17,8 @@ Core inputs and configs:
 
 - `EngineConfig`
 - `Query`
+- `QueryRequest`
+- `QueryResult`
 - `UtcTime`
 - `GeoLocation`
 - `RiseSetConfig`
@@ -35,6 +37,14 @@ Core inputs and configs:
 - `DashaSelectionConfig`
 - `DashaVariationConfig`
 - `TaraConfig`
+
+Query request constants:
+
+- `QueryTimeJDTDB`
+- `QueryTimeUTC`
+- `QueryOutputCartesian`
+- `QueryOutputSpherical`
+- `QueryOutputBoth`
 
 Upagraha config constants:
 

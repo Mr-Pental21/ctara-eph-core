@@ -202,6 +202,18 @@ func cQuery(q Query) C.DhruvQuery {
 	}
 }
 
+func cQueryRequest(q QueryRequest) C.DhruvQueryRequest {
+	return C.DhruvQueryRequest{
+		target:       C.int32_t(q.Target),
+		observer:     C.int32_t(q.Observer),
+		frame:        C.int32_t(q.Frame),
+		time_kind:    C.int32_t(q.TimeKind),
+		epoch_tdb_jd: C.double(q.EpochTdbJD),
+		utc:          cUTC(q.UTC),
+		output_mode:  C.int32_t(q.OutputMode),
+	}
+}
+
 func goStateVector(v C.DhruvStateVector) StateVector {
 	var out StateVector
 	for i := 0; i < 3; i++ {
@@ -220,6 +232,19 @@ func goSphericalState(v C.DhruvSphericalState) SphericalState {
 		LatSpeed:      float64(v.lat_speed),
 		DistanceSpeed: float64(v.distance_speed),
 	}
+}
+
+func goQueryResult(v C.DhruvQueryResult, outputMode int32) QueryResult {
+	out := QueryResult{OutputMode: outputMode}
+	if outputMode != QueryOutputSpherical {
+		state := goStateVector(v.state_vector)
+		out.State = &state
+	}
+	if outputMode != QueryOutputCartesian {
+		spherical := goSphericalState(v.spherical_state)
+		out.SphericalState = &spherical
+	}
+	return out
 }
 
 func goSphericalCoords(v C.DhruvSphericalCoords) SphericalCoords {
@@ -256,6 +281,13 @@ func QueryEngine(h EngineHandle, q Query) (StateVector, Status) {
 	return goStateVector(out), st
 }
 
+func QueryEngineRequest(h EngineHandle, q QueryRequest) (QueryResult, Status) {
+	cq := cQueryRequest(q)
+	var out C.DhruvQueryResult
+	st := Status(C.dhruv_engine_query_request(h.ptr, &cq, &out))
+	return goQueryResult(out, q.OutputMode), st
+}
+
 func QueryOnce(cfg EngineConfig, q Query) (StateVector, Status, error) {
 	ccfg, err := cEngineConfig(cfg)
 	if err != nil {
@@ -265,31 +297,6 @@ func QueryOnce(cfg EngineConfig, q Query) (StateVector, Status, error) {
 	var out C.DhruvStateVector
 	st := Status(C.dhruv_query_once(&ccfg, &cq, &out))
 	return goStateVector(out), st, nil
-}
-
-func QueryUTC(h EngineHandle, target, observer, frame int32, utc UtcTime) (SphericalState, Status) {
-	cutc := cUTC(utc)
-	var out C.DhruvSphericalState
-	st := Status(C.dhruv_query_utc(h.ptr, C.int32_t(target), C.int32_t(observer), C.int32_t(frame), &cutc, &out))
-	return goSphericalState(out), st
-}
-
-func QueryUTCSpherical(h EngineHandle, target, observer, frame int32, utc UtcTime) (SphericalState, Status) {
-	var out C.DhruvSphericalState
-	st := Status(C.dhruv_query_utc_spherical(
-		h.ptr,
-		C.int32_t(target),
-		C.int32_t(observer),
-		C.int32_t(frame),
-		C.int32_t(utc.Year),
-		C.uint32_t(utc.Month),
-		C.uint32_t(utc.Day),
-		C.uint32_t(utc.Hour),
-		C.uint32_t(utc.Minute),
-		C.double(utc.Second),
-		&out,
-	))
-	return goSphericalState(out), st
 }
 
 func CartesianToSpherical(position [3]float64) (SphericalCoords, Status) {

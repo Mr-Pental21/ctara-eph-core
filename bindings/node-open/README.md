@@ -4,7 +4,7 @@ Open-source Node.js bindings for `ctara-dhruv-core`, implemented against the can
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=48`
+- ABI target: `DHRUV_API_VERSION=49`
 - Binding strategy: Native Node-API addon (`native/dhruv_node.cc`) over `crates/dhruv_ffi_c/include/dhruv.h`
 - Package: `bindings/node-open`
 
@@ -51,14 +51,14 @@ const engine = dhruv.Engine.create({
   strictValidation: false,
 });
 
-const state = engine.query({
+const result = engine.query({
   target: 301,
   observer: 399,
   frame: 1,
   epochTdbJd: 2451545.0,
 });
 
-console.log(state);
+console.log(result.state);
 engine.close();
 ```
 

@@ -2,7 +2,7 @@ package dhruv
 
 import "ctara-dhruv-core/bindings/go-open/internal/cabi"
 
-const ExpectedAPIVersion = 48
+const ExpectedAPIVersion = 49
 
 const (
 	PathCapacity          = cabi.PathCapacity
@@ -43,9 +43,22 @@ const (
 	GulikaMaandiPlanetSaturn = cabi.GulikaMaandiPlanetSaturn
 )
 
+const (
+	QueryTimeJDTDB = cabi.QueryTimeJDTDB
+	QueryTimeUTC   = cabi.QueryTimeUTC
+)
+
+const (
+	QueryOutputCartesian = cabi.QueryOutputCartesian
+	QueryOutputSpherical = cabi.QueryOutputSpherical
+	QueryOutputBoth      = cabi.QueryOutputBoth
+)
+
 type (
 	EngineConfig            = cabi.EngineConfig
 	Query                   = cabi.Query
+	QueryRequest            = cabi.QueryRequest
+	QueryResult             = cabi.QueryResult
 	StateVector             = cabi.StateVector
 	SphericalCoords         = cabi.SphericalCoords
 	SphericalState          = cabi.SphericalState

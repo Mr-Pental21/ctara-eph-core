@@ -75,11 +75,22 @@ func TestEngineQueryAndTimeRoundTrip(t *testing.T) {
 	}
 	defer eng.Close()
 
-	q := Query{Target: 301, Observer: 399, Frame: 1, EpochTdbJD: 2451545.0}
-	sv, err := eng.Query(q)
+	q := QueryRequest{
+		Target:     301,
+		Observer:   399,
+		Frame:      1,
+		TimeKind:   QueryTimeJDTDB,
+		EpochTdbJD: 2451545.0,
+		OutputMode: QueryOutputCartesian,
+	}
+	result, err := eng.Query(q)
 	if err != nil {
 		t.Fatalf("Query: %v", err)
 	}
+	if result.State == nil {
+		t.Fatalf("expected cartesian state in query result")
+	}
+	sv := result.State
 	if math.IsNaN(sv.PositionKm[0]) || math.IsInf(sv.PositionKm[0], 0) {
 		t.Fatalf("invalid state vector output: %+v", sv)
 	}

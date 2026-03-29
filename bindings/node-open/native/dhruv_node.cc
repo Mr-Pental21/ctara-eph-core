@@ -580,6 +580,67 @@ napi_value WriteSphericalState(napi_env env, const DhruvSphericalState& st) {
     return obj;
 }
 
+napi_value WriteQueryResult(napi_env env, const DhruvQueryResult& result, int32_t output_mode) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+
+    napi_value nullv;
+    napi_get_null(env, &nullv);
+
+    if (output_mode == DHRUV_QUERY_OUTPUT_SPHERICAL) {
+        SetNamed(env, obj, "state", nullv);
+    } else {
+        SetNamed(env, obj, "state", WriteStateVector(env, result.state_vector));
+    }
+
+    if (output_mode == DHRUV_QUERY_OUTPUT_CARTESIAN) {
+        SetNamed(env, obj, "sphericalState", nullv);
+    } else {
+        SetNamed(env, obj, "sphericalState", WriteSphericalState(env, result.spherical_state));
+    }
+
+    SetNamed(env, obj, "outputMode", MakeInt32(env, output_mode));
+    return obj;
+}
+
+bool ReadQueryRequest(napi_env env, napi_value obj, DhruvQueryRequest* out) {
+    *out = DhruvQueryRequest{};
+
+    napi_value v;
+    if (!GetNamedProperty(env, obj, "target", &v) || !GetInt32(env, v, &out->target)) return false;
+    if (!GetNamedProperty(env, obj, "observer", &v) || !GetInt32(env, v, &out->observer)) return false;
+
+    bool has = false;
+    if (!GetOptionalNamedProperty(env, obj, "frame", &v, &has)) return false;
+    out->frame = 0;
+    if (has && !GetInt32(env, v, &out->frame)) return false;
+
+    out->output_mode = DHRUV_QUERY_OUTPUT_CARTESIAN;
+    if (!GetOptionalNamedProperty(env, obj, "outputMode", &v, &has)) return false;
+    if (has && !GetInt32(env, v, &out->output_mode)) return false;
+
+    bool has_time_kind = false;
+    if (!GetOptionalNamedProperty(env, obj, "timeKind", &v, &has_time_kind)) return false;
+    if (has_time_kind && !GetInt32(env, v, &out->time_kind)) return false;
+
+    bool has_epoch = false;
+    if (!GetOptionalNamedProperty(env, obj, "epochTdbJd", &v, &has_epoch)) return false;
+    if (has_epoch && !GetDouble(env, v, &out->epoch_tdb_jd)) return false;
+
+    bool has_utc = false;
+    if (!GetOptionalNamedProperty(env, obj, "utc", &v, &has_utc)) return false;
+    if (has_utc && !ReadUtcTime(env, v, &out->utc)) return false;
+
+    if (!has_time_kind) {
+        if (has_epoch == has_utc) return false;
+        out->time_kind = has_utc ? DHRUV_QUERY_TIME_UTC : DHRUV_QUERY_TIME_JD_TDB;
+    }
+
+    if (out->time_kind == DHRUV_QUERY_TIME_UTC) return has_utc;
+    if (out->time_kind == DHRUV_QUERY_TIME_JD_TDB) return has_epoch;
+    return true;
+}
+
 napi_value WriteLunarPhaseEvent(napi_env env, const DhruvLunarPhaseEvent& ev) {
     napi_value obj;
     napi_create_object(env, &obj);
@@ -1745,19 +1806,18 @@ napi_value EngineQuery(napi_env env, napi_callback_info info) {
         return MakeStatusResult(env, STATUS_INVALID_INPUT);
     }
 
-    DhruvQuery q{};
-    napi_value v;
-    if (!GetNamedProperty(env, args[1], "target", &v) || !GetInt32(env, v, &q.target)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
-    if (!GetNamedProperty(env, args[1], "observer", &v) || !GetInt32(env, v, &q.observer)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
-    if (!GetNamedProperty(env, args[1], "frame", &v) || !GetInt32(env, v, &q.frame)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
-    if (!GetNamedProperty(env, args[1], "epochTdbJd", &v) || !GetDouble(env, v, &q.epoch_tdb_jd)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvQueryRequest request{};
+    if (!ReadQueryRequest(env, args[1], &request)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
 
-    DhruvStateVector out_vec{};
-    int32_t status = dhruv_engine_query(static_cast<const DhruvEngineHandle*>(ptr), &q, &out_vec);
+    DhruvQueryResult out_result{};
+    int32_t status =
+        dhruv_engine_query_request(static_cast<const DhruvEngineHandle*>(ptr), &request, &out_result);
 
     napi_value out = MakeStatusResult(env, status);
     if (status == STATUS_OK) {
-        SetNamed(env, out, "state", WriteStateVector(env, out_vec));
+        SetNamed(env, out, "result", WriteQueryResult(env, out_result, request.output_mode));
     }
     return out;
 }
@@ -1855,51 +1915,6 @@ napi_value CartesianToSpherical(napi_env env, napi_callback_info info) {
         SetNamed(env, out, "coords", c);
     }
     return out;
-}
-
-napi_value QueryUtcSpherical(napi_env env, napi_callback_info info) {
-    size_t argc = 5;
-    napi_value args[5];
-    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
-    if (argc < 5) {
-        return MakeStatusResult(env, STATUS_INVALID_INPUT);
-    }
-
-    void* ptr = nullptr;
-    if (!ReadExternalPtr(env, args[0], &ptr)) {
-        return MakeStatusResult(env, STATUS_INVALID_INPUT);
-    }
-
-    int32_t target = 0;
-    int32_t observer = 0;
-    int32_t frame = 0;
-    if (!GetInt32(env, args[1], &target) || !GetInt32(env, args[2], &observer) || !GetInt32(env, args[3], &frame)) {
-        return MakeStatusResult(env, STATUS_INVALID_INPUT);
-    }
-
-    DhruvUtcTime utc{};
-    if (!ReadUtcTime(env, args[4], &utc)) {
-        return MakeStatusResult(env, STATUS_INVALID_INPUT);
-    }
-
-    DhruvSphericalState st{};
-    int32_t status = dhruv_query_utc(
-        static_cast<const DhruvEngineHandle*>(ptr),
-        target,
-        observer,
-        frame,
-        &utc,
-        &st);
-
-    napi_value out = MakeStatusResult(env, status);
-    if (status == STATUS_OK) {
-        SetNamed(env, out, "state", WriteSphericalState(env, st));
-    }
-    return out;
-}
-
-napi_value QueryUtc(napi_env env, napi_callback_info info) {
-    return QueryUtcSpherical(env, info);
 }
 
 napi_value UtcToTdbJd(napi_env env, napi_callback_info info) {
@@ -6107,8 +6122,6 @@ napi_value Init(napi_env env, napi_value exports) {
         {"engineQuery", nullptr, EngineQuery, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"queryOnce", nullptr, QueryOnce, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"cartesianToSpherical", nullptr, CartesianToSpherical, nullptr, nullptr, nullptr, napi_default, nullptr},
-        {"queryUtc", nullptr, QueryUtc, nullptr, nullptr, nullptr, napi_default, nullptr},
-        {"queryUtcSpherical", nullptr, QueryUtcSpherical, nullptr, nullptr, nullptr, napi_default, nullptr},
 
         {"lskLoad", nullptr, LskLoad, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"lskFree", nullptr, LskFree, nullptr, nullptr, nullptr, napi_default, nullptr},

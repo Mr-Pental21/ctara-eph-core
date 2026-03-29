@@ -30,17 +30,25 @@ test('engine query and UTC roundtrip', { skip: !hasKernels() }, () => {
     epochTdbJd: 2451545.0,
   });
 
-  assert.ok(Number.isFinite(state.positionKm[0]));
+  assert.ok(Number.isFinite(state.state.positionKm[0]));
+  assert.equal(state.sphericalState, null);
 
   const utc = { year: 2025, month: 1, day: 1, hour: 0, minute: 0, second: 0 };
   const jd = dhruv.utcToTdbJd(lsk, utc);
   const back = dhruv.jdTdbToUtc(lsk, jd);
-  const spherical = engine.queryUtc(301, 399, 1, utc);
+  const spherical = engine.query({
+    target: 301,
+    observer: 399,
+    frame: 1,
+    utc,
+    outputMode: dhruv.QUERY_OUTPUT.SPHERICAL,
+  });
 
   assert.equal(back.year, utc.year);
   assert.equal(back.month, utc.month);
   assert.equal(back.day, utc.day);
-  assert.ok(Number.isFinite(spherical.lonDeg));
+  assert.equal(spherical.state, null);
+  assert.ok(Number.isFinite(spherical.sphericalState.lonDeg));
 
   lsk.close();
   engine.close();
