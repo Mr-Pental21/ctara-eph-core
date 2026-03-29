@@ -6,7 +6,7 @@
 //! - `dasha_snapshot_at`: finds active periods at a query time (efficient)
 
 use dhruv_core::Engine;
-use dhruv_time::{EopKernel, UtcTime};
+use dhruv_time::{EopKernel, UtcTime, jd_to_tdb_seconds, tdb_seconds_to_jd};
 use dhruv_vedic_base::BhavaConfig;
 use dhruv_vedic_base::dasha::{
     BirthPeriod, DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot, DashaSystem,
@@ -69,16 +69,10 @@ pub(crate) fn needs_sunrise_sunset(system: DashaSystem) -> bool {
 
 /// Classify birth period from sunrise/sunset JDs.
 ///
-/// IMPORTANT: All three JD values MUST be in the same timescale.
-/// Currently the codebase has a pre-existing mismatch (birth_jd is UTC,
-/// sunrise/sunset are TDB — ~69s delta). This function is timescale-agnostic;
-/// callers are responsible for consistency. See Risk R1.
-///
 /// Note: `BirthPeriod::Twilight` is not returned by this function. Computing
 /// twilight requires solar depression angle utilities not yet available.
 /// TODO: add Twilight classification when solar depression angle utilities are available
 fn determine_birth_period(birth_jd: f64, sunrise_jd: f64, sunset_jd: f64) -> BirthPeriod {
-    // KNOWN: UTC/TDB mismatch, see Risk R1
     if birth_jd >= sunrise_jd && birth_jd < sunset_jd {
         BirthPeriod::Day
     } else {
@@ -135,7 +129,13 @@ fn assemble_rashi_inputs(
     Ok(RashiDashaInputs::new(graha_lons.longitudes, lagna_sid))
 }
 
-/// Compute sunrise and sunset JD for Kala dasha.
+fn jd_tdb_to_jd_utc(engine: &Engine, jd_tdb: f64) -> f64 {
+    let tdb_s = jd_to_tdb_seconds(jd_tdb);
+    let utc_s = engine.lsk().tdb_to_utc(tdb_s);
+    tdb_seconds_to_jd(utc_s)
+}
+
+/// Compute sunrise and sunset JD UTC for Kala dasha.
 ///
 /// Uses the birth date's local noon as search seed for both events.
 fn compute_birth_sunrise_sunset(
@@ -146,7 +146,7 @@ fn compute_birth_sunrise_sunset(
     riseset_config: &RiseSetConfig,
 ) -> Result<(f64, f64), SearchError> {
     let jd_utc = utc_to_jd_utc(birth_utc);
-    let jd_midnight = jd_utc.floor() + 0.5;
+    let jd_midnight = dhruv_vedic_base::utc_day_start_jd(jd_utc);
     let jd_noon = dhruv_vedic_base::approximate_local_noon_jd(jd_midnight, location.longitude_deg);
 
     let sunrise_result = compute_rise_set(
@@ -159,7 +159,7 @@ fn compute_birth_sunrise_sunset(
         riseset_config,
     )
     .map_err(|_| SearchError::NoConvergence("sunrise computation failed"))?;
-    let sunrise_jd = match sunrise_result {
+    let sunrise_jd_tdb = match sunrise_result {
         RiseSetResult::Event { jd_tdb, .. } => jd_tdb,
         _ => {
             return Err(SearchError::NoConvergence(
@@ -178,7 +178,7 @@ fn compute_birth_sunrise_sunset(
         riseset_config,
     )
     .map_err(|_| SearchError::NoConvergence("sunset computation failed"))?;
-    let sunset_jd = match sunset_result {
+    let sunset_jd_tdb = match sunset_result {
         RiseSetResult::Event { jd_tdb, .. } => jd_tdb,
         _ => {
             return Err(SearchError::NoConvergence(
@@ -187,7 +187,10 @@ fn compute_birth_sunrise_sunset(
         }
     };
 
-    Ok((sunrise_jd, sunset_jd))
+    Ok((
+        jd_tdb_to_jd_utc(engine, sunrise_jd_tdb),
+        jd_tdb_to_jd_utc(engine, sunset_jd_tdb),
+    ))
 }
 
 /// Convert UtcTime to JD UTC (calendar only, no TDB).
@@ -1195,7 +1198,8 @@ pub fn dasha_complete_level_for_birth(
 /// Callers populate only the fields needed by the target system:
 /// - `moon_sid_lon`: required for nakshatra-based, Yogini, KaalChakra
 /// - `rashi_inputs`: required for rashi-based systems (10)
-/// - `sunrise_sunset`: required for Kala, optional for Chakra (BirthPeriod)
+/// - `sunrise_sunset`: required for Kala as `(sunrise_jd_utc, sunset_jd_utc)`,
+///   optional for Chakra (BirthPeriod)
 #[derive(Debug, Clone, Default)]
 pub struct DashaInputs<'a> {
     pub moon_sid_lon: Option<f64>,
@@ -1252,7 +1256,7 @@ pub fn dasha_snapshot_with_inputs(
 ///
 /// Takes a pre-computed Moon sidereal longitude to avoid redundant queries.
 /// For rashi-based systems, also accepts optional RashiDashaInputs.
-/// For Kala dasha, requires sunrise/sunset JDs.
+/// For Kala dasha, requires sunrise/sunset JD UTC values.
 #[deprecated(since = "0.2.0", note = "Use dasha_hierarchy_with_inputs instead")]
 pub fn dasha_hierarchy_with_moon(
     birth_jd: f64,
@@ -1273,7 +1277,7 @@ pub fn dasha_hierarchy_with_moon(
 
 /// Context-sharing snapshot variant.
 ///
-/// For Kala dasha, requires sunrise/sunset JDs.
+/// For Kala dasha, requires sunrise/sunset JD UTC values.
 #[deprecated(since = "0.2.0", note = "Use dasha_snapshot_with_inputs instead")]
 #[allow(clippy::too_many_arguments)]
 pub fn dasha_snapshot_with_moon(
@@ -1469,23 +1473,12 @@ mod tests {
     }
 
     #[test]
-    fn test_determine_birth_period_timescale_note() {
-        // Documents ~69s UTC/TDB boundary as known limitation (R1).
-        // In JD, 69s = 69/86400 ≈ 0.000799 days.
-        // A birth_utc 30s before sunrise_tdb may still classify as Day
-        // because UTC is ~69s behind TDB. This is a pre-existing mismatch.
-        let sunrise_tdb = 2460000.25; // example sunrise in TDB
-        let delta_69s = 69.0 / 86400.0;
-        let birth_utc_30s_before = sunrise_tdb - (30.0 / 86400.0);
-        // birth_utc is ~30s before sunrise_tdb, but in the same timescale
-        // this would be Day (because birth >= sunrise is true).
-        // In reality, birth_utc is ~69s behind TDB, so the actual birth
-        // time in TDB would be birth_utc + delta_69s, which is ~39s AFTER
-        // sunrise_tdb. This test documents the ambiguity.
-        let _ = delta_69s; // acknowledged
+    fn test_determine_birth_period_requires_consistent_scale_inputs() {
+        let sunrise_utc = 2460000.25;
+        let birth_utc_30s_before = sunrise_utc - (30.0 / 86400.0);
         assert_eq!(
-            determine_birth_period(birth_utc_30s_before, sunrise_tdb, sunrise_tdb + 0.5),
-            BirthPeriod::Night // 30s before → Night in direct comparison
+            determine_birth_period(birth_utc_30s_before, sunrise_utc, sunrise_utc + 0.5),
+            BirthPeriod::Night
         );
     }
 }

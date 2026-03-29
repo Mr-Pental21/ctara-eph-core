@@ -11,7 +11,7 @@ use dhruv_search::{
     dasha_complete_level_for_birth, dasha_hierarchy_for_birth, dasha_hierarchy_with_inputs,
     dasha_snapshot_at, full_kundali_for_date, graha_sidereal_longitudes,
 };
-use dhruv_time::{EopKernel, UtcTime};
+use dhruv_time::{EopKernel, UtcTime, jd_to_tdb_seconds, tdb_seconds_to_jd};
 use dhruv_vedic_base::BhavaConfig;
 use dhruv_vedic_base::dasha::{
     DashaEntity, DashaLevel, DashaSystem, DashaVariationConfig, RashiDashaInputs,
@@ -55,6 +55,27 @@ fn birth_utc() -> UtcTime {
 /// Query: 2024-06-01 12:00 UTC
 fn query_utc() -> UtcTime {
     UtcTime::new(2024, 6, 1, 12, 0, 0.0)
+}
+
+fn utc_to_jd(utc: &UtcTime) -> f64 {
+    let y = utc.year as f64;
+    let m = utc.month as f64;
+    let d =
+        utc.day as f64 + utc.hour as f64 / 24.0 + utc.minute as f64 / 1440.0 + utc.second / 86400.0;
+    let (y2, m2) = if m <= 2.0 {
+        (y - 1.0, m + 12.0)
+    } else {
+        (y, m)
+    };
+    let a = (y2 / 100.0).floor();
+    let b = 2.0 - a + (a / 4.0).floor();
+    (365.25 * (y2 + 4716.0)).floor() + (30.6001 * (m2 + 1.0)).floor() + d + b - 1524.5
+}
+
+fn jd_tdb_to_utc_jd(engine: &Engine, jd_tdb: f64) -> f64 {
+    let tdb_s = jd_to_tdb_seconds(jd_tdb);
+    let utc_s = engine.lsk().tdb_to_utc(tdb_s);
+    tdb_seconds_to_jd(utc_s)
 }
 
 #[test]
@@ -510,22 +531,7 @@ fn dasha_hierarchy_with_inputs_api() {
     let moon_sid = graha_lons.longitudes[1]; // Chandra
 
     // Nakshatra system (Vimshottari) — needs moon
-    let birth_jd = {
-        let y = utc.year as f64;
-        let m = utc.month as f64;
-        let d = utc.day as f64
-            + utc.hour as f64 / 24.0
-            + utc.minute as f64 / 1440.0
-            + utc.second / 86400.0;
-        let (y2, m2) = if m <= 2.0 {
-            (y - 1.0, m + 12.0)
-        } else {
-            (y, m)
-        };
-        let a = (y2 / 100.0).floor();
-        let b = 2.0 - a + (a / 4.0).floor();
-        (365.25 * (y2 + 4716.0)).floor() + (30.6001 * (m2 + 1.0)).floor() + d + b - 1524.5
-    };
+    let birth_jd = utc_to_jd(&utc);
 
     let inputs_nak = DashaInputs {
         moon_sid_lon: Some(moon_sid),
@@ -566,7 +572,7 @@ fn dasha_hierarchy_with_inputs_api() {
 
     // Kala system — needs sunrise/sunset
     let rs_config = RiseSetConfig::default();
-    let jd_midnight = birth_jd.floor() + 0.5;
+    let jd_midnight = dhruv_vedic_base::utc_day_start_jd(birth_jd);
     let jd_noon = dhruv_vedic_base::approximate_local_noon_jd(jd_midnight, location.longitude_deg);
     let sunrise_result = dhruv_vedic_base::riseset::compute_rise_set(
         &engine,
@@ -579,7 +585,9 @@ fn dasha_hierarchy_with_inputs_api() {
     )
     .unwrap();
     let sunrise_jd = match sunrise_result {
-        dhruv_vedic_base::riseset_types::RiseSetResult::Event { jd_tdb, .. } => jd_tdb,
+        dhruv_vedic_base::riseset_types::RiseSetResult::Event { jd_tdb, .. } => {
+            jd_tdb_to_utc_jd(&engine, jd_tdb)
+        }
         _ => panic!("expected sunrise event"),
     };
     let sunset_result = dhruv_vedic_base::riseset::compute_rise_set(
@@ -593,7 +601,9 @@ fn dasha_hierarchy_with_inputs_api() {
     )
     .unwrap();
     let sunset_jd = match sunset_result {
-        dhruv_vedic_base::riseset_types::RiseSetResult::Event { jd_tdb, .. } => jd_tdb,
+        dhruv_vedic_base::riseset_types::RiseSetResult::Event { jd_tdb, .. } => {
+            jd_tdb_to_utc_jd(&engine, jd_tdb)
+        }
         _ => panic!("expected sunset event"),
     };
     let inputs_kala = DashaInputs {
@@ -626,22 +636,7 @@ fn deprecated_with_moon_parity() {
     .unwrap();
     let moon_sid = graha_lons.longitudes[1];
 
-    let birth_jd = {
-        let y = utc.year as f64;
-        let m = utc.month as f64;
-        let d = utc.day as f64
-            + utc.hour as f64 / 24.0
-            + utc.minute as f64 / 1440.0
-            + utc.second / 86400.0;
-        let (y2, m2) = if m <= 2.0 {
-            (y - 1.0, m + 12.0)
-        } else {
-            (y, m)
-        };
-        let a = (y2 / 100.0).floor();
-        let b = 2.0 - a + (a / 4.0).floor();
-        (365.25 * (y2 + 4716.0)).floor() + (30.6001 * (m2 + 1.0)).floor() + d + b - 1524.5
-    };
+    let birth_jd = utc_to_jd(&utc);
 
     // Via deprecated _with_moon
     let h_old = dhruv_search::dasha_hierarchy_with_moon(
@@ -1073,22 +1068,7 @@ fn rashi_inputs_from_ctx_vs_standalone() {
     )
     .unwrap();
 
-    let birth_jd = {
-        let y = utc.year as f64;
-        let m = utc.month as f64;
-        let d = utc.day as f64
-            + utc.hour as f64 / 24.0
-            + utc.minute as f64 / 1440.0
-            + utc.second / 86400.0;
-        let (y2, m2) = if m <= 2.0 {
-            (y - 1.0, m + 12.0)
-        } else {
-            (y, m)
-        };
-        let a = (y2 / 100.0).floor();
-        let b = 2.0 - a + (a / 4.0).floor();
-        (365.25 * (y2 + 4716.0)).floor() + (30.6001 * (m2 + 1.0)).floor() + d + b - 1524.5
-    };
+    let birth_jd = utc_to_jd(&utc);
 
     let lagna_rad =
         dhruv_vedic_base::lagna_longitude_rad(engine.lsk(), &eop, &location, birth_jd).unwrap();
@@ -1146,6 +1126,104 @@ fn rashi_inputs_from_ctx_vs_standalone() {
             p2.end_jd,
         );
         assert_eq!(p1.entity, p2.entity, "period {i} entity mismatch");
+    }
+}
+
+#[test]
+fn kala_auto_inputs_match_explicit_utc_inputs_for_afternoon_birth() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = UtcTime::new(1990, 1, 15, 15, 30, 0.0);
+    let birth_jd = utc_to_jd(&utc);
+    let location = new_delhi();
+    let bhava_config = BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+    let variation = DashaVariationConfig::default();
+
+    let automatic = dasha_hierarchy_for_birth(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        DashaSystem::Kala,
+        1,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &variation,
+    )
+    .expect("automatic Kala hierarchy should succeed");
+
+    let jd_midnight = dhruv_vedic_base::utc_day_start_jd(birth_jd);
+    let jd_noon = dhruv_vedic_base::approximate_local_noon_jd(jd_midnight, location.longitude_deg);
+    let sunrise_jd = match dhruv_vedic_base::riseset::compute_rise_set(
+        &engine,
+        engine.lsk(),
+        &eop,
+        &location,
+        dhruv_vedic_base::riseset_types::RiseSetEvent::Sunrise,
+        jd_noon,
+        &rs_config,
+    )
+    .expect("sunrise should converge")
+    {
+        dhruv_vedic_base::riseset_types::RiseSetResult::Event { jd_tdb, .. } => {
+            jd_tdb_to_utc_jd(&engine, jd_tdb)
+        }
+        _ => panic!("expected sunrise event"),
+    };
+    let sunset_jd = match dhruv_vedic_base::riseset::compute_rise_set(
+        &engine,
+        engine.lsk(),
+        &eop,
+        &location,
+        dhruv_vedic_base::riseset_types::RiseSetEvent::Sunset,
+        jd_noon,
+        &rs_config,
+    )
+    .expect("sunset should converge")
+    {
+        dhruv_vedic_base::riseset_types::RiseSetResult::Event { jd_tdb, .. } => {
+            jd_tdb_to_utc_jd(&engine, jd_tdb)
+        }
+        _ => panic!("expected sunset event"),
+    };
+    let manual = dasha_hierarchy_with_inputs(
+        birth_jd,
+        DashaSystem::Kala,
+        1,
+        &variation,
+        &DashaInputs {
+            moon_sid_lon: None,
+            rashi_inputs: None,
+            sunrise_sunset: Some((sunrise_jd, sunset_jd)),
+        },
+    )
+    .expect("manual Kala hierarchy should succeed");
+
+    assert_eq!(automatic.system, manual.system);
+    assert_eq!(automatic.levels.len(), manual.levels.len());
+    for (auto_level, manual_level) in automatic.levels.iter().zip(&manual.levels) {
+        assert_eq!(auto_level.len(), manual_level.len());
+        for (auto_period, manual_period) in auto_level.iter().zip(manual_level) {
+            assert_eq!(auto_period.entity, manual_period.entity);
+            assert_eq!(auto_period.level, manual_period.level);
+            assert_eq!(auto_period.order, manual_period.order);
+            assert_eq!(auto_period.parent_idx, manual_period.parent_idx);
+            assert!(
+                (auto_period.start_jd - manual_period.start_jd).abs() < 1e-10,
+                "start mismatch: auto={}, manual={}",
+                auto_period.start_jd,
+                manual_period.start_jd
+            );
+            assert!(
+                (auto_period.end_jd - manual_period.end_jd).abs() < 1e-10,
+                "end mismatch: auto={}, manual={}",
+                auto_period.end_jd,
+                manual_period.end_jd
+            );
+        }
     }
 }
 
