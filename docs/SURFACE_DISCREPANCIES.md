@@ -1,0 +1,503 @@
+# Surface Discrepancy Audit
+
+## Scope and authority
+
+This audit compares the library's authoritative Rust implementation against every public surface in the repository.
+
+Authoritative core crates used as the reference:
+
+- `crates/dhruv_core`
+- `crates/dhruv_time`
+- `crates/dhruv_frames`
+- `crates/dhruv_vedic_base`
+- `crates/dhruv_vedic_ops`
+- `crates/dhruv_search`
+- `crates/dhruv_tara`
+- `crates/dhruv_rs`
+
+Public surfaces audited:
+
+- CLI: `crates/dhruv_cli`
+- Rust crate facade: `crates/dhruv_rs/src/lib.rs`
+- C ABI: `crates/dhruv_ffi_c/include/dhruv.h`
+- Python: `bindings/python-open`
+- Node.js: `bindings/node-open`
+- Go: `bindings/go-open`
+- Elixir: `bindings/elixir-open`
+
+Other wrappers:
+
+- `bindings/README.md` lists only `python-open`, `node-open`, `go-open`, and `elixir-open`. There are no additional wrapper directories to audit.
+
+## Design note on request/context and `_with_*` APIs
+
+The desired public-API pattern is one stable entry point per logical feature, where optional behavior is expressed through typed request/context and config attributes rather than separate function names.
+
+- Existing `*_with_model`, `*_with_config`, and `*_with_inputs` symbols are treated here as current implementation details, not as the target API shape.
+- Existing setter-style policy APIs such as `set_time_conversion_policy` and `set_time_policy` are also treated as current implementation details when the same value can be carried by request/context or config data.
+- Existing naming and presentation variants such as `*_english_name`, `western_name`, or parallel `*_name` helper families for the same logical identifier are also treated as current implementation details when the variation can be carried by config attributes or result metadata instead of separate symbol names.
+- The preferred design is to move those knobs into request/context and config objects on the main symbols. Notable examples of the intended pattern are `dhruv_search::operations::*Operation`, `dhruv_rs::ops::*Request`, and the C ABI's `DhruvTaraComputeRequest`.
+- Request/context attributes should carry alternate inputs or precomputed invocation data, such as UTC vs JD inputs, `with_inputs`, or `with_moon` style variations.
+- Config attributes should carry behavior, policy, and presentation knobs, such as model selection, defaults, tolerances, feature options, locale, naming style, or output-format preferences.
+
+This audit therefore does not treat a missing `_with_*` symbol as a discrepancy by itself. The real discrepancy is when a surface cannot reach the same behavior through the primary symbol plus typed request/context and config attributes. When an area already has a request/context-based entrypoint, that is considered the preferred shape. There should be no long-term deprecation layer for unwanted public surfaces: once a request/context/config-driven replacement exists, redundant variants, setters, and naming-style helper symbols should be removed rather than kept around as aliases.
+
+## Cross-surface discrepancies
+
+### 1. `dhruv_rs` hides a large implemented API
+
+- Missing or wrong:
+  `crates/dhruv_rs/src/lib.rs` exports only `amsha`, `context`, `date`, `error`, and `ops`, but the crate also contains additional high-level Rust surface area that is not reachable through the facade:
+  - convenience query helpers such as `position`, `sidereal_longitude`, `graha_positions`, and `tara_*`,
+  - convenience jyotish helpers such as `avastha` and `avastha_for_graha`,
+  - assembled domain helpers such as `full_kundali`,
+  - gaps between the dormant convenience layer and the intended request/context facade, for example avastha has convenience wrappers but no canonical request-style `dhruv_rs::ops` entrypoint,
+  - dormant global singleton helpers in `global.rs` that should be removed in favor of explicit `DhruvContext` usage,
+  - additional top-level utility functions beyond the request-based `ops` module.
+  As a result, the facade hides a meaningful part of the implemented high-level Rust API.
+- Affected surfaces:
+  Rust public API.
+- Correct behavior:
+  If `dhruv_rs` is meant to be the main Rust facade, `lib.rs` should expose the intended high-level convenience helpers explicitly or replace them with canonical request/context-driven `ops` entrypoints. For avastha specifically, the facade should not leave the feature stranded in dormant convenience wrappers while `ops` has no corresponding request-style operation. The dormant singleton-style helpers in `global.rs` should not be surfaced again; they should be removed and any remaining callers should use a reusable explicit `DhruvContext` plus request/context-driven APIs instead of process-global singleton state.
+- Evidence:
+  `crates/dhruv_rs/src/lib.rs`, `crates/dhruv_rs/src/convenience.rs`, `crates/dhruv_rs/src/global.rs`.
+
+### 2. The Rust facade does not expose the full low-level core/query surface
+
+- Missing or wrong:
+  `dhruv_rs` currently mixes a high-level context/request facade with a partial set of low-level re-exports. Missing low-level pieces fall into several different roles:
+  - runtime/engine types such as `Engine` and `LeapSecondKernel`,
+  - low-level input/value types such as `Query`, `UtcTime`, and `Epoch`,
+  - low-level result/error/diagnostic types such as `EngineError`, `QueryStats`, `DerivedValue`, `TimeDiagnostics`, and `TimeWarning`,
+  - low-level policy/config enums such as `DeltaTModel`,
+  - Rust-only extension traits such as `DerivedComputation`,
+  - low-level helper APIs from `dhruv_frames`, `dhruv_search`, and `dhruv_vedic_base`.
+  As a result, `dhruv_rs` is neither a clean high-level facade nor a complete umbrella crate for Rust consumers.
+- Affected surfaces:
+  Rust public API.
+- Correct behavior:
+  Keep `dhruv_rs` as the high-level Rust facade rather than turning it into a full umbrella crate. Document that low-level engine, time, frame, diagnostics, and extension-trait surfaces live in `dhruv_core`, `dhruv_time`, `dhruv_frames`, `dhruv_search`, and `dhruv_vedic_base`. Re-export low-level types or APIs from `dhruv_rs` only when they are intentionally part of the stable high-level Rust contract.
+- Evidence:
+  `crates/dhruv_rs/src/lib.rs`, `crates/dhruv_core/src/lib.rs`, `crates/dhruv_time/src/lib.rs`, `crates/dhruv_frames/src/lib.rs`, `crates/dhruv_search/src/lib.rs`.
+
+### 3. Batch query, query telemetry, and derived-computation hooks are intentionally Rust-only
+
+- Missing or wrong:
+  Core exposes `Engine::query_batch`, `Engine::query_batch_with_stats`, `Engine::query_with_stats`, and `Engine::query_with_derived`, plus `QueryStats` and the `DerivedComputation` extension seam.
+- Affected surfaces:
+  CLI, C ABI, Python, Node.js, Go, Elixir.
+- Correct behavior:
+  Treat these as Rust-only low-level engine APIs. Do not treat the absence of wrapper/ABI/CLI surfaces for them as a discrepancy unless the project later decides to make them part of the cross-language contract.
+- Evidence:
+  `crates/dhruv_core/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`.
+
+### 4. The C ABI hard-limits engine configuration in ways the core does not
+
+- Missing or wrong:
+  Core `EngineConfig` accepts an arbitrary `Vec<PathBuf>` for `spk_paths`. The C ABI fixes this to `DHRUV_MAX_SPK_PATHS == 8` and `DHRUV_PATH_CAPACITY == 512`.
+- Affected surfaces:
+  C ABI, Python, Node.js, Go.
+- Correct behavior:
+  Treat this as an intentional ABI transport limitation unless project requirements change. The important requirement is to document it clearly as an ABI-specific limit imposed by the C transport layer rather than by core engine behavior.
+- Evidence:
+  `crates/dhruv_core/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`.
+
+### 5. UTC query support is weaker than the core engine
+
+- Missing or wrong:
+  The UTC query gap has two parts:
+  - input-mode support: core can evaluate the same logical query from either JD(TDB) or UTC input,
+  - output-shape support: core can still return the full Cartesian `StateVector`, while the C ABI and current wrappers only expose spherical UTC helpers (`dhruv_query_utc` and `dhruv_query_utc_spherical`) returning `DhruvSphericalState`.
+  This means non-Rust surfaces lose both parity of output shape and the single-entrypoint request model for UTC-vs-JD selection.
+- Affected surfaces:
+  C ABI, Python, Node.js, Go.
+- Correct behavior:
+  Expose the full UTC-query behavior through the main query request/context shape in the ABI and wrappers, so callers can select UTC vs JD inputs and cartesian vs spherical outputs without separate suffixed entry points.
+- Evidence:
+  `crates/dhruv_core/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`, `bindings/python-open/src/ctara_dhruv/ephemeris.py`, `bindings/node-open/src/engine.js`, `bindings/go-open/dhruv/engine.go`.
+
+### 6. Time diagnostics and most time-policy controls stop at the Rust crates
+
+- Missing or wrong:
+  The missing non-Rust time surface spans several categories:
+  - policy/config types such as `TimeConversionPolicy`, `TimeConversionOptions`, `DeltaTModel`, `SmhFutureParabolaFamily`, and `FutureDeltaTTransition`,
+  - diagnostic/result types such as `TimeDiagnostics`, `TimeWarning`, and EOP lookup/diagnostics results,
+  - internal setup behavior for SMH2016 reconstruction data.
+  The C ABI does not currently expose a full typed transport for the public policy/options and diagnostic surfaces. The SMH reconstruction parse/install helpers should not be treated as public cross-surface APIs; instead `dhruv_time` should auto-load the bundled in-repo reconstruction asset internally when the SMH model is selected.
+- Affected surfaces:
+  C ABI, Python, Node.js, Go. CLI and Elixir are only partial.
+- Correct behavior:
+  Non-Rust surfaces should be able to configure the same fallback policy knobs and receive diagnostics/warnings when the engine falls back outside leap/EOP coverage.
+- Evidence:
+  `crates/dhruv_time/src/lib.rs`, `crates/dhruv_time/src/scales.rs`, `crates/dhruv_ffi_c/include/dhruv.h`.
+
+### 7. CLI and Elixir expose only part of the time-policy surface
+
+- Missing or wrong:
+  The gap spans three different layers:
+  - policy/config fields:
+    - CLI exposes `time_policy`, `delta_t_model`, `smh_future_family`, `future_delta_t_transition`, `freeze_future_dut1`, and `future_transition_years`, but not `warn_on_fallback` or `pre_range_dut1`,
+    - Elixir exposes `warn_on_fallback`, `freeze_future_dut1`, `pre_range_dut1`, and `future_transition_years`, but not `delta_t_model`, `future_delta_t_transition`, or `smh_future_family`,
+  - diagnostics/results:
+    - neither surface returns the full diagnostics/warning output that accompanies fallback behavior,
+  - API shape:
+    - CLI appropriately carries policy through flags and layered config, but does not expose the full underlying policy/config shape or diagnostics,
+    - Elixir still uses a separate mutable `engine_set_time_policy` surface instead of a unified typed request/context or config transport.
+  So neither surface carries the full time-policy contract end-to-end.
+- Affected surfaces:
+  CLI, Elixir.
+- Correct behavior:
+  These surfaces should expose the full `TimeConversionOptions` shape and return diagnostics if they claim to support configurable UTC conversion. Time policy should ultimately be carried in typed request/context or config data, and redundant setter-style policy APIs should be removed rather than preserved as parallel surfaces.
+- Evidence:
+  `crates/dhruv_cli/src/main.rs`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_time/src/scales.rs`.
+
+### 8. Frame/precession/invariable-plane options are not carried consistently through public configs
+
+- Missing or wrong:
+  The real gap is not the absence of standalone helper exports. The gap is that frame/precession/invariable-plane choices are not carried consistently through the config/request shapes of the higher-level features that depend on them:
+  - model-selection concepts such as `PrecessionModel`,
+  - reference-plane choices including invariable-plane variants,
+  - related precession/frame-selection knobs used by higher-level longitude, position, or ayanamsha flows.
+  Outside Rust, only a very small subset of these choices is broadly configurable today, and some surfaces still expose them only through narrow special cases such as the CLI's tropical precession path.
+- Affected surfaces:
+  CLI, C ABI, Python, Node.js, Go, Elixir.
+- Correct behavior:
+  Do not add standalone public helper APIs for these low-level transforms. Instead, ensure every higher-level public surface that uses frame/precession/invariable-plane behavior carries the necessary options through typed config/request attributes.
+- Evidence:
+  `crates/dhruv_frames/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`, `crates/dhruv_cli/src/main.rs`.
+
+### 9. Longitude-only APIs still require named variants instead of config attributes
+
+- Missing or wrong:
+  The longitude-model gap has three parts:
+  - core still uses named variants (`graha_sidereal_longitudes_with_model`, `graha_tropical_longitudes_with_model`) to expose model selection,
+  - the primary longitude APIs do not yet carry a config/request attribute that replaces those variants,
+  - wrappers and the C ABI do not carry a complete model-bearing request/config shape for the longitude-only surface.
+  `dhruv_search::graha_positions` accepts `SankrantiConfig`, but that is a different assembled API rather than a direct replacement for longitude-only calls.
+- Affected surfaces:
+  Rust public API, C ABI, Python, Node.js, Go, Elixir, CLI.
+- Correct behavior:
+  Treat this as a real gap for the longitude-only surface: add config-carrying replacements to the primary longitude APIs and wrappers so `PrecessionModel` is selected via attributes, then converge callers onto those main symbols rather than proliferating `*_with_model` variants. CLI already offers a partial workaround through `graha-positions --tropical --precession`, but `graha-longitudes` still lacks an equivalent config-driven path.
+- Evidence:
+  `crates/dhruv_search/src/jyotish.rs`, `crates/dhruv_search/src/jyotish_types.rs`, `crates/dhruv_rs/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`, `crates/dhruv_cli/src/main.rs`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`.
+
+### 10. Search range APIs can truncate outside Rust
+
+- Missing or wrong:
+  Range-search truncation happens through different transport choices on each surface:
+  - Rust returns full `Vec`s,
+  - the C ABI uses caller-supplied output buffers,
+  - Node defaults capacities to `8`,
+  - Python hard-codes defaults such as `max_results=100` or `50`,
+  - Go requires the caller to choose a capacity and does not signal truncation directly.
+  The shared problem is not just limited capacity, but the lack of a consistent truncation contract.
+- Affected surfaces:
+  C ABI, Python, Node.js, Go.
+- Correct behavior:
+  Wrappers should either auto-page until exhaustion or explicitly report truncation whenever `out_count == out_capacity`.
+- Evidence:
+  `crates/dhruv_search/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`, `bindings/node-open/src/search.js`, `bindings/python-open/src/ctara_dhruv/search.py`, `bindings/go-open/dhruv/search.go`.
+
+### 11. Input-based dasha constructors remain Rust-only
+
+- Missing or wrong:
+  The dasha-input gap has several parts:
+  - Rust has explicit raw-input entrypoints such as `dasha_hierarchy_with_inputs` and `dasha_snapshot_with_inputs`,
+  - Rust still carries legacy named variants such as `*_with_moon`,
+  - the base birth/query entrypoints still recompute derived inputs internally,
+  - `DashaVariationConfig` and `DashaSelectionConfig` do not replace the separate `DashaInputs` transport,
+  - non-Rust surfaces expose only UTC/location-driven entrypoints.
+  So callers outside Rust cannot supply precomputed dasha inputs through the main request shape.
+- Affected surfaces:
+  CLI, C ABI, Python, Node.js, Go, Elixir.
+- Correct behavior:
+  Add typed request/context shapes for raw dasha inputs where callers already have birth moon/lagna-derived data and do not want the wrappers to recompute them, then route those through the main dasha entry points instead of separate named variants.
+- Evidence:
+  `crates/dhruv_search/src/dasha.rs`, `crates/dhruv_search/src/lib.rs`, `crates/dhruv_vedic_ops/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`.
+
+### 12. Most low-level graha relationship and combustion math is Rust-only, and some naming variants are still split into parallel APIs
+
+- Missing or wrong:
+  This area has two separate issues:
+  - `dhruv_vedic_base` publicly exposes `combustion`, `graha_relationships`, dignity helpers, benefic/malefic classification, lord lookups, and related primitives. Outside Rust, only a very small subset is surfaced (`rashi_lord`, `hora_at`, and a few helper lookups).
+  - Some naming and presentation helpers are still modeled as parallel APIs or methods for the same logical identifier surface, such as separate Sanskrit/English/western name helpers. Those variations should not become permanent parallel public surfaces.
+- Affected surfaces:
+  CLI, C ABI, Python, Node.js, Go, Elixir.
+- Correct behavior:
+  The relationship, combustion, dignity, and classification primitives are intended public library features and should be available across the supported public surfaces. Expose dedicated wrapper/ABI/CLI APIs for them instead of forcing downstream users onto Rust crates. For naming or presentation differences, use one identifier/lookup surface and carry locale/style/output preferences through config attributes or result metadata instead of keeping separate `*_english_name`-style APIs.
+- Evidence:
+  `crates/dhruv_vedic_base/src/lib.rs`, `crates/dhruv_vedic_base/src/graha_relationships.rs`, `crates/dhruv_vedic_base/src/graha.rs`, `crates/dhruv_vedic_base/src/rashi.rs`, `crates/dhruv_vedic_base/src/vaar.rs`, `crates/dhruv_ffi_c/include/dhruv.h`, `bindings/python-open/src/ctara_dhruv/vedic.py`, `bindings/go-open/internal/cabi/extras.go`.
+
+## CLI-specific discrepancies
+
+### 13. The CLI intentionally has no surface for batch/stats/derived-query features
+
+- Missing or wrong:
+  There is no command for `query_batch`, `query_with_stats`, or `query_with_derived`.
+- Affected surfaces:
+  CLI.
+- Correct behavior:
+  Keep these Rust-only unless the project explicitly decides that low-level engine telemetry or derived-query hooks belong in the CLI contract.
+- Evidence:
+  `crates/dhruv_core/src/lib.rs`, `crates/dhruv_cli/src/main.rs`.
+
+### 14. The CLI does not expose most low-level time/frame APIs
+
+- Missing or wrong:
+  There are no commands for `TimeDiagnostics`, `CalendarPolicy`, `Epoch`, `month_from_abbrev`, invariable-plane transforms, or raw precession/obliquity helpers.
+- Affected surfaces:
+  CLI.
+- Correct behavior:
+  If the CLI is expected to mirror more of the broader library, carry these capabilities through coherent diagnostic/utility command surfaces with typed flags/config rather than a pile of one-off helper commands. Otherwise explicitly scope the CLI to end-user workflows only.
+- Evidence:
+  `crates/dhruv_time/src/lib.rs`, `crates/dhruv_frames/src/lib.rs`, `crates/dhruv_cli/src/main.rs`.
+
+## Python-specific discrepancies
+
+### 15. The package root exports only a small subset of the implemented Python binding
+
+- Missing or wrong:
+  The package-root export gap spans several categories:
+  - engine lifecycle and a few ephemeris/time helpers are exported,
+  - some domain modules such as ayanamsha, `TaraCatalog`, and dasha are exported,
+  - implemented modules such as `search`, `panchang`, `vedic`, `kundali`, `shadbala`, and `amsha` are not exported from the root,
+  - helper entrypoints such as `tara_compute`, `query_once`, and `query_utc` are also not exported,
+  - most shared type/enum surfaces are missing from the root.
+  The binding is therefore much broader than the package-root surface suggests.
+- Affected surfaces:
+  Python bindings.
+- Correct behavior:
+  Re-export the implemented surface from `__init__.py`, or explicitly document that users must import submodules directly.
+- Evidence:
+  `bindings/python-open/src/ctara_dhruv/__init__.py`, `bindings/python-open/src/ctara_dhruv/*.py`.
+
+### 16. The Python wrapper has no access to time-policy configuration
+
+- Missing or wrong:
+  Python can load config, LSK, and EOP handles, but it cannot set `TimeConversionPolicy` or inspect diagnostics.
+- Affected surfaces:
+  Python bindings.
+- Correct behavior:
+  Expose one typed Python policy/diagnostics surface matching the core UTC-conversion options instead of leaving callers with hard-coded defaults.
+- Evidence:
+  `bindings/python-open/src/ctara_dhruv/engine.py`, `bindings/python-open/src/ctara_dhruv/time.py`, `crates/dhruv_time/src/scales.rs`.
+
+### 17. Python lacks a bidirectional specific-sankranti search shape
+
+- Missing or wrong:
+  Python exposes `next_specific_sankranti` but not `prev_specific_sankranti`, even though the underlying search request supports both directions.
+- Affected surfaces:
+  Python bindings.
+- Correct behavior:
+  Expose bidirectional specific-sankranti search through one direction-bearing request/helper shape rather than proliferating separate `next_*` and `prev_*` public helpers.
+- Evidence:
+  `bindings/python-open/src/ctara_dhruv/search.py`, `crates/dhruv_ffi_c/include/dhruv.h`.
+
+### 18. Python range-search helpers can silently truncate results
+
+- Missing or wrong:
+  Helpers such as `search_conjunctions`, `search_lunar_eclipses`, `search_solar_eclipses`, `search_stationary`, `search_max_speeds`, `search_lunar_phases`, and `search_sankrantis` all stop at `max_results`.
+- Affected surfaces:
+  Python bindings.
+- Correct behavior:
+  Keep fetching until the core result set is exhausted, or explicitly raise/report truncation when the requested range is larger than the buffer.
+- Evidence:
+  `bindings/python-open/src/ctara_dhruv/search.py`, `crates/dhruv_search/src/lib.rs`.
+
+## Node.js-specific discrepancies
+
+### 19. The Node wrapper has no time-policy or diagnostics surface
+
+- Missing or wrong:
+  Node exposes UTC conversion helpers but no equivalent of `TimeConversionPolicy`, `TimeConversionOptions`, `DeltaTModel`, or diagnostics.
+- Affected surfaces:
+  Node.js bindings.
+- Correct behavior:
+  Add a policy/diagnostics surface rather than forcing Node callers onto hard-coded defaults.
+- Evidence:
+  `bindings/node-open/src/time.js`, `bindings/node-open/src/engine.js`, `crates/dhruv_time/src/scales.rs`.
+
+### 20. Node range-search defaults are too small and can truncate
+
+- Missing or wrong:
+  `conjunctionSearch`, `grahanSearch`, `motionSearch`, `lunarPhaseSearch`, and `sankrantiSearch` all default `capacity = 8`.
+- Affected surfaces:
+  Node.js bindings.
+- Correct behavior:
+  Auto-page or at minimum warn/throw when `count == capacity`.
+- Evidence:
+  `bindings/node-open/src/search.js`, `crates/dhruv_search/src/lib.rs`.
+
+## Go-specific discrepancies
+
+### 21. Go config loading cannot use discovery mode or choose `DefaultsMode`
+
+- Missing or wrong:
+  The C ABI accepts a nullable path and an explicit `defaults_mode`. Go wraps this as `LoadConfig(path string)` only.
+- Affected surfaces:
+  Go bindings.
+- Correct behavior:
+  Carry discovery-vs-explicit path and `DefaultsMode` selection through one Go config-loading request/options shape instead of leaving them trapped behind a narrower `LoadConfig(path string)` wrapper.
+- Evidence:
+  `crates/dhruv_ffi_c/include/dhruv.h`, `bindings/go-open/dhruv/engine.go`.
+
+### 22. The Go wrapper has no time-policy or diagnostics surface
+
+- Missing or wrong:
+  Go exposes UTC conversion helpers, but not the policy/options/diagnostics that back core UTC conversion.
+- Affected surfaces:
+  Go bindings.
+- Correct behavior:
+  Expose one typed Go policy/diagnostics surface for `TimeConversionPolicy`, `TimeConversionOptions`, and any supported diagnostic results rather than leaving those controls outside the Go contract.
+- Evidence:
+  `bindings/go-open/dhruv/time.go`, `crates/dhruv_time/src/scales.rs`.
+
+### 23. Go range-search wrappers can truncate without signaling it
+
+- Missing or wrong:
+  Search methods take an explicit `capacity` and return the filled slice, but there is no truncation signal if the caller undersizes the buffer.
+- Affected surfaces:
+  Go bindings.
+- Correct behavior:
+  Return a truncation flag or internally loop until the result set is complete.
+- Evidence:
+  `bindings/go-open/dhruv/search.go`, `crates/dhruv_ffi_c/include/dhruv.h`.
+
+## Elixir-specific discrepancies
+
+### 24. Elixir injects ad-hoc engine defaults that are not defined by the core
+
+- Missing or wrong:
+  The Elixir engine constructor diverges in two ways:
+  - it injects implicit defaults even though core `EngineConfig` has no default for those fields,
+  - the chosen values (`cache_capacity = 64`, `strict_validation = false`) differ from the established wrapper/CLI convention of `256` and `true`.
+  This creates wrapper-specific behavior that is not anchored in the core contract.
+- Affected surfaces:
+  Elixir bindings.
+- Correct behavior:
+  Either require both fields explicitly, or align the implicit defaults with the established wrapper behavior. This point is an inference from surrounding surfaces because core itself does not define defaults.
+- Evidence:
+  `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `bindings/python-open/src/ctara_dhruv/engine.py`, `crates/dhruv_cli/src/main.rs`.
+
+### 25. Elixir config loading cannot use discovery mode or choose `DefaultsMode`
+
+- Missing or wrong:
+  `engine_load_config` uses `load_from_path(...)` and hard-codes `DefaultsMode::Recommended`. There is no discovery flow and no way to select `DefaultsMode::None`.
+- Affected surfaces:
+  Elixir bindings.
+- Correct behavior:
+  Carry discovery-vs-explicit path and `DefaultsMode` selection through one typed config-loading request/options shape so Elixir can reach the same loader behavior without wrapper-specific special cases.
+- Evidence:
+  `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_cli/src/main.rs`, `bindings/python-open/src/ctara_dhruv/engine.py`, `bindings/node-open/src/engine.js`.
+
+### 26. Elixir only exposes a partial time-policy shape
+
+- Missing or wrong:
+  `engine_set_time_policy` supports `strict_lsk` vs a reduced hybrid config, but cannot select `delta_t_model`, `future_delta_t_transition`, or `smh_future_family`, and returns no diagnostics.
+- Affected surfaces:
+  Elixir bindings.
+- Correct behavior:
+  Accept the full `TimeConversionOptions` structure through typed request/context or config data and return diagnostics comparable to core behavior. The standalone `engine_set_time_policy` surface should be removed as part of that consolidation instead of preserved as a parallel API.
+- Evidence:
+  `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_time/src/scales.rs`.
+
+### 27. Elixir time helpers are much thinner than the implemented library
+
+- Missing or wrong:
+  Elixir time currently exposes only a very small subset:
+  - basic conversions: `utc_to_jd_tdb`, `jd_tdb_to_utc`,
+  - one frame/time helper: `nutation`.
+  It does not expose:
+  - system/default metadata such as ayanamsha system count or reference-plane defaults,
+  - lunar-node and local-noon helpers,
+  - delta-T and reconstruction helpers,
+  - diagnostics or time-policy result objects.
+- Affected surfaces:
+  Elixir bindings.
+- Correct behavior:
+  Expand `CtaraDhruv.Time` if it is intended to represent the library's time surface.
+- Evidence:
+  `bindings/elixir-open/lib/ctara_dhruv/time.ex`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_time/src/lib.rs`.
+
+### 28. Elixir omits the composable panchang/intermediate APIs
+
+- Missing or wrong:
+  The missing Elixir panchang surface includes several composable intermediate layers:
+  - low-level astronomical intermediates such as `elongation_at`, `sidereal_sum_at`, `vedic_day_sunrises`, and `body_ecliptic_lon_lat`,
+  - direct calendar-factor evaluators such as `tithi_at`, `karana_at`, `yoga_at`, and `nakshatra_at`,
+  - sunrise-derived helpers such as `vaar_from_sunrises`, `hora_from_sunrises`, and `ghatika_from_sunrises`,
+  - elapsed-time helpers such as `ghatika_from_elapsed` and `ghatikas_since_sunrise`.
+- Affected surfaces:
+  Elixir bindings.
+- Correct behavior:
+  Expose the same composable intermediate APIs that Python, Node, Go, CLI, and the Rust crates already support.
+- Evidence:
+  `bindings/elixir-open/lib/ctara_dhruv/panchang.ex`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`.
+
+### 29. Elixir omits most pure-math helper APIs
+
+- Missing or wrong:
+  The missing Elixir pure-math helper surface spans several utility families:
+  - formatting/classification helpers such as DMS conversion and rashi/nakshatra classifiers,
+  - lookup helpers such as name lookups,
+  - formula helpers such as sphuta and special-lagna calculations,
+  - upagraha and Ashtakavarga pure-math helpers,
+  - low-level graha-drishti primitives.
+- Affected surfaces:
+  Elixir bindings.
+- Correct behavior:
+  Add a utility module mirroring the low-level helper surface already exposed in the C ABI and other bindings.
+- Evidence:
+  `bindings/elixir-open/lib/ctara_dhruv/*.ex`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`.
+
+### 30. Elixir jyotish longitude behavior is still narrower than core Rust
+
+- Missing or wrong:
+  The Elixir longitude gap has three parts:
+  - it exposes `graha_longitudes` but not `graha_tropical_longitudes`,
+  - it does not expose model-selectable longitude behavior on the direct longitude surface,
+  - its higher-level request/config transport also omits `precession_model`, so even assembled jyotish requests cannot select a non-default model.
+  This is a real gap, not an intentional config replacement, because `graha_longitudes` currently maps only to the base sidereal path.
+- Affected surfaces:
+  Elixir bindings.
+- Correct behavior:
+  Carry sidereal-vs-tropical output choice and precession-model selection through the main longitude request/config surface instead of relying on narrower base-only helpers. If Elixir intentionally stays narrower, document that restriction explicitly.
+- Evidence:
+  `bindings/elixir-open/lib/ctara_dhruv/jyotish.ex`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_search/src/jyotish.rs`.
+
+### 31. Elixir dasha coverage stops at hierarchy and snapshot
+
+- Missing or wrong:
+  Elixir exposes only `hierarchy/2` and `snapshot/2`. It does not expose `level0`, `level0_entity`, `children`, `child_period`, or `complete_level`, even though those are available in other wrappers and the C ABI.
+- Affected surfaces:
+  Elixir bindings.
+- Correct behavior:
+  Add the low-tier dasha APIs so Elixir can inspect and paginate dasha trees incrementally instead of always materializing the full hierarchy.
+- Evidence:
+  `bindings/elixir-open/lib/ctara_dhruv/dasha.ex`, `crates/dhruv_ffi_c/include/dhruv.h`.
+
+## Tara-specific wrapper discrepancies
+
+### 32. Tara already uses a request/config pattern; the real remaining gap is the missing low-level primitives
+
+- Missing or wrong:
+  This area mixes one intentional non-gap and one real gap:
+  - intentional non-gap: non-Rust surfaces do not expose `position_equatorial_with_config`, `position_ecliptic_with_config`, or `sidereal_longitude_with_config` as separate symbols because request/config-driven replacements already exist through `dhruv_search::TaraOperation`, `dhruv_rs::ops::TaraRequest`, and the C ABI's `DhruvTaraComputeRequest`,
+  - real gap: lower-level primitives such as `propagate_position`, `apply_aberration`, `apply_light_deflection`, and `galactic_anticenter_icrs` remain Rust-only.
+  The important distinction is between redundant named variants, which should not be added, and genuinely missing low-level building blocks.
+- Affected surfaces:
+  C ABI, Python, Node.js, Go, Elixir, CLI.
+- Correct behavior:
+  Do not count the absence of one-for-one tara `*_with_config` symbols as a discrepancy when `tara_compute_ex`/`TaraOperation` is already present, because the single request/config-driven entrypoint is the preferred shape. If low-level star propagation or correction composition is intended to be public outside Rust, add dedicated wrappers for the remaining primitives.
+- Evidence:
+  `crates/dhruv_tara/src/lib.rs`, `crates/dhruv_search/src/operations.rs`, `crates/dhruv_rs/src/ops.rs`, `crates/dhruv_ffi_c/include/dhruv.h`, `bindings/python-open/src/ctara_dhruv/tara.py`, `bindings/node-open/src/tara.js`, `bindings/go-open/dhruv/tara.go`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_cli/src/main.rs`.
+
+## Summary
+
+The main structural choke points are:
+
+- `dhruv_rs` hides much of its own intended high-level API.
+- The C ABI is broad for assembled jyotish/search workflows, but narrow for low-level engine, time, frame, and tara primitives.
+- Python's package root is much smaller than the implemented binding behind it.
+- Node and Go are close to the C ABI, but inherit its missing time/frame surfaces and range-search truncation risk.
+- Elixir diverges the most: partial time-policy support, thinner panchang/time/jyotish coverage, and wrapper-specific defaults that do not come from core behavior.

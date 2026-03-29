@@ -7,11 +7,13 @@ Applies to: `dhruv_cli`, `dhruv_ffi_c`, `dhruv_rs`, `dhruv_config`
 
 Provide optional file-based configuration while keeping core computation crates stateless.
 
+This spec covers policy/default configuration only. Per-call input variations should be carried by typed request/context values, not by layered config files or suffixed public function names.
+
 ## Precedence
 
 Highest to lowest:
 
-1. Explicit function arguments / CLI flags / non-null FFI config pointers
+1. Explicit request/context inputs, function arguments, CLI flags, or non-null FFI config pointers
 2. Operation-specific config section from file (`operations.<family>`)
 3. Common config section from file (`common`)
 4. Recommended defaults (when enabled)
@@ -79,6 +81,7 @@ If both `config.toml` and `config.json` exist in the same candidate directory, l
 - High-level API is context-first via `DhruvContext`.
 - Global singleton APIs were removed from the public surface.
 - Context can hold an optional `ConfigResolver`.
+- `DhruvContext` or per-operation request values carry invocation-specific inputs; layered config remains for defaults and behavior/policy knobs.
 
 ## C ABI Behavior (`dhruv_ffi_c`)
 
@@ -88,4 +91,5 @@ If both `config.toml` and `config.json` exist in the same candidate directory, l
   - `dhruv_config_clear_active()`
 - For operation families, config pointers are nullable.
   - `NULL` uses resolver + layered precedence.
+- ABI request/context structs should carry invocation-specific inputs; config handles/pointers should carry behavior and defaults rather than replacing per-call request data.
   - Non-null pointer remains explicit highest-priority override.

@@ -44,6 +44,14 @@ Scope: this file governs AI agent behavior in `ctara-dhruv-core`.
 5. Keep CI license checks passing (`scripts/ci/license_gate.sh`).
 6. For significant changes plan it first extensivly - create plan file at ~/.codex/plans/.
 7. When implementing a plan dont stop untill complete plan is implemented and tested. Only if a issue is found that cannot be resolved, stop and ask for human approval.
+8. Prefer one public entry point per logical feature. Express variations through typed request/context inputs and `dhruv_config`-backed config attributes instead of separate ABI/function variations unless a genuinely new feature requires a new entry point.
+9. Use request/context attributes for alternate inputs or precomputed invocation data (for example UTC vs JD, `with_inputs`, `with_moon`). Use config attributes for behavior and policy knobs. Do not encode those variations in public function names.
+10. Do not keep parallel setter-style policy APIs such as `set_*` when the value can live in request/context or config data. Consolidation should remove redundant variant/setter surfaces instead of deprecating and keeping them alongside the main shape.
+11. Keep all public library surfaces in sync for shared features: C ABI, `dhruv_rs` public APIs, CLIs, and wrappers including Python, Go, Node, Elixir, plus future additions. Language-specific convenience features are allowed, but core library features, request/context shapes, configs, and functions should stay aligned across surfaces.
+12. When public behavior changes, update documentation before considering the task complete:
+   - update relevant internal/reference docs (for example `docs/`, wrapper READMEs, or other public-surface references),
+   - update relevant end-user docs under `docs/end_user/`,
+   - verify docs against the current code, not against older docs.
 
 ## Stop Conditions
 
@@ -69,3 +77,4 @@ Scope: this file governs AI agent behavior in `ctara-dhruv-core`.
 ## Git
 - Short commit messages, imperative mood
 - No boilerplate, signatures, or Co-Authored-By lines
+- Commit the changes after doing a logical set of changes
