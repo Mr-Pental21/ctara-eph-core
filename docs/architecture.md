@@ -8,7 +8,7 @@
 - `crates/dhruv_time`: UTC/TAI/TT/TDB conversion and leap-second handling.
 - `crates/dhruv_frames`: frame conversion helpers.
 - `crates/dhruv_core`: query engine, computation DAG, memoization, caching.
-- `crates/dhruv_rs`: Rust convenience wrapper (global singleton, UTC input, spherical output).
+- `crates/dhruv_rs`: Context-first Rust facade with typed request/config inputs.
 - `crates/dhruv_vedic_base`: open derived Vedic calculations built on core results.
 - `crates/dhruv_ffi_c`: C ABI facade with versioned contract.
 - `crates/dhruv_cli`: diagnostics and developer tooling.

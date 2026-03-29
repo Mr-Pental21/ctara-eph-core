@@ -7,7 +7,7 @@ Audit high-level wrappers that trigger repeated internal calculations for the sa
 ## Scope
 
 - C ABI surface in `crates/dhruv_ffi_c/src/lib.rs`
-- Rust convenience wrappers in `crates/dhruv_rs/src/convenience.rs`
+- historical Rust convenience wrappers in `crates/dhruv_rs/src/convenience.rs`
 - CLI command orchestration in `crates/dhruv_cli/src/main.rs`
 - Search orchestration internals in `crates/dhruv_search/src/panchang.rs`, `crates/dhruv_search/src/jyotish.rs`, and `crates/dhruv_search/src/conjunction.rs`
 - Engine batching/concurrency capability in `crates/dhruv_core/src/lib.rs`
@@ -18,7 +18,7 @@ Audit high-level wrappers that trigger repeated internal calculations for the sa
 2. `drishti_for_date(... include_bindus=true)` currently recomputes several expensive intermediates inside `core_bindus`.
 3. `graha_sidereal_longitudes` and conjunction internals do same-epoch per-body queries serially instead of using `Engine::query_batch`.
 4. C ABI does not expose batch query APIs, which limits throughput and shared memoization benefits for Go and other FFI consumers.
-5. Rust convenience wrappers have at least one clear same-input repeat conversion/query pattern (`sidereal_longitude` path).
+5. The removed Rust convenience-wrapper layer had at least one clear same-input repeat conversion/query pattern (`sidereal_longitude` path). This remains relevant only as historical cleanup context.
 6. For a strict stateless core goal, reusable cross-call state should live in wrappers, not in core/ABI context handles.
 7. `ashtakavarga_for_date` should be treated as part of duplication analysis because typical kundali workflows call overlapping orchestration functions for the same input.
 
@@ -107,9 +107,9 @@ Practical note:
 
 - This optimization should be benchmark-gated; expected gain may be modest for small fixed-size sets.
 
-### 5) Rust convenience wrapper repeat pattern
+### 5) Removed Rust convenience wrapper repeat pattern
 
-`sidereal_longitude` does:
+The removed `sidereal_longitude` convenience path did:
 
 - `longitude(...)` first (which already queries using UTC->TDB): `crates/dhruv_rs/src/convenience.rs:171`
 - then another UTC->TDB conversion for ayanamsha time argument: `crates/dhruv_rs/src/convenience.rs:172`

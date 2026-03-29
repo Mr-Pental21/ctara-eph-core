@@ -47,18 +47,20 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 ### 1. `dhruv_rs` hides a large implemented API
 
 - Missing or wrong:
-  `crates/dhruv_rs/src/lib.rs` exports only `amsha`, `context`, `date`, `error`, and `ops`, but the crate also contains additional high-level Rust surface area that is not reachable through the facade:
-  - convenience query helpers such as `position`, `sidereal_longitude`, `graha_positions`, and `tara_*`,
-  - additional dormant convenience wrappers outside the intended request/context facade,
-  - dormant global singleton helpers in `global.rs` that should be removed in favor of explicit `DhruvContext` usage,
-  - additional top-level utility functions beyond the request-based `ops` module.
-  As a result, the facade hides a meaningful part of the implemented high-level Rust API.
+  This discrepancy was previously driven by dormant `convenience.rs` and
+  `global.rs` surfaces that were not reachable through the live facade. Those
+  files have now been removed instead of being re-surfaced. The remaining
+  requirement is simply to keep extending `dhruv_rs` through canonical
+  request/context entrypoints and intentional re-exports, rather than adding a
+  second parallel helper layer.
 - Affected surfaces:
   Rust public API.
 - Correct behavior:
-  If `dhruv_rs` is meant to be the main Rust facade, `lib.rs` should expose the intended high-level helpers explicitly or replace them with canonical request/context-driven `ops` entrypoints. The facade now has canonical request/context entrypoints for `upagraha`, `avastha`, and `full_kundali`, and the remaining cleanup should follow that model rather than reviving dormant convenience wrappers or global singleton state. The dormant singleton-style helpers in `global.rs` should not be surfaced again; they should be removed and any remaining callers should use a reusable explicit `DhruvContext` plus request/context-driven APIs instead of process-global singleton state.
+  Keep `dhruv_rs` as a single context-first/request-based Rust facade. Add
+  new high-level capabilities through `ops` entrypoints or intentional
+  re-exports, not through a second singleton or convenience-wrapper layer.
 - Evidence:
-  `crates/dhruv_rs/src/lib.rs`, `crates/dhruv_rs/src/convenience.rs`, `crates/dhruv_rs/src/global.rs`.
+  `crates/dhruv_rs/src/lib.rs`, `crates/dhruv_rs/src/ops.rs`.
 
 ### 2. The Rust facade does not expose the full low-level core/query surface
 

@@ -124,5 +124,4 @@ explicitly re-exported here, depend on the source crates directly:
 - Use request/context attributes for invocation-specific inputs such as UTC vs
   JD(TDB), locations, and per-call selectors.
 - Use config objects for behavior and policy knobs.
-- Avoid relying on dormant internal files such as `global.rs`; they are not part
-  of the intended public surface.
+- `dhruv_rs` no longer carries public singleton or convenience-wrapper layers.

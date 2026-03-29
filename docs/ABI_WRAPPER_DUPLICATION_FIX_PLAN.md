@@ -89,9 +89,9 @@ Rollout shape:
 
 1. Rust API in `dhruv_search` (for internal sharing and wrapper adoption).
 2. C ABI export (for Go and other FFI consumers).
-3. `dhruv_rs` convenience wrapper.
+3. the historical `dhruv_rs` convenience-wrapper layer.
 
-### A3. Clean up Rust convenience repeat conversion path
+### A3. Clean up removed Rust convenience repeat conversion path
 
 Target:
 
@@ -99,8 +99,8 @@ Target:
 
 Plan:
 
-- use one engine acquisition + one JD conversion in that path
-- avoid repeated conversion/query plumbing from helper chaining
+- Completed by removing the dormant convenience-wrapper layer rather than
+  carrying its repeat-conversion path forward.
 
 ### A4. Evaluate `query_batch` migration only if benchmark gain is material
 
@@ -202,4 +202,3 @@ For each changed function/API:
 3. `ashtakavarga`-related repeated work is reduced in combined kundali workloads.
 4. `full_kundali_for_date` exists and reuses intermediates in a single stateless call.
 5. `query_batch` and batch ABIs are only adopted when backed by benchmark/profile evidence.
-

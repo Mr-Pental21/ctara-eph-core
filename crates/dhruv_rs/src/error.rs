@@ -7,14 +7,10 @@ use dhruv_time::TimeError;
 use dhruv_vedic_base::VedicError;
 use dhruv_vedic_ops::SearchError;
 
-/// Unified error type for the convenience wrapper.
+/// Unified error type for the high-level Rust facade.
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub enum DhruvError {
-    /// Global engine has not been initialized via [`crate::init`].
-    NotInitialized,
-    /// [`crate::init`] was called more than once.
-    AlreadyInitialized,
     /// Failed to parse a date string.
     DateParse(String),
     /// Error from the underlying engine.
@@ -34,10 +30,6 @@ pub enum DhruvError {
 impl Display for DhruvError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::NotInitialized => {
-                write!(f, "engine not initialized; call dhruv_rs::init() first")
-            }
-            Self::AlreadyInitialized => write!(f, "engine already initialized"),
             Self::DateParse(msg) => write!(f, "date parse error: {msg}"),
             Self::Engine(e) => write!(f, "engine error: {e}"),
             Self::Time(e) => write!(f, "time error: {e}"),
@@ -101,18 +93,6 @@ impl From<TaraError> for DhruvError {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn display_not_initialized() {
-        let e = DhruvError::NotInitialized;
-        assert!(e.to_string().contains("not initialized"));
-    }
-
-    #[test]
-    fn display_already_initialized() {
-        let e = DhruvError::AlreadyInitialized;
-        assert!(e.to_string().contains("already initialized"));
-    }
 
     #[test]
     fn display_date_parse() {
