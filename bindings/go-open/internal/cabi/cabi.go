@@ -73,6 +73,67 @@ func goUTC(utc C.DhruvUtcTime) UtcTime {
 	}
 }
 
+func cTimeConversionOptions(opts TimeConversionOptions) C.DhruvTimeConversionOptions {
+	return C.DhruvTimeConversionOptions{
+		warn_on_fallback:         boolU8(opts.WarnOnFallback),
+		delta_t_model:            C.int32_t(opts.DeltaTModel),
+		freeze_future_dut1:       boolU8(opts.FreezeFutureDut1),
+		pre_range_dut1:           C.double(opts.PreRangeDut1),
+		future_delta_t_transition: C.int32_t(opts.FutureDeltaTTransition),
+		future_transition_years:  C.double(opts.FutureTransitionYears),
+		smh_future_family:        C.int32_t(opts.SmhFutureFamily),
+	}
+}
+
+func cTimePolicy(policy TimePolicy) C.DhruvTimePolicy {
+	return C.DhruvTimePolicy{
+		mode:    C.int32_t(policy.Mode),
+		options: cTimeConversionOptions(policy.Options),
+	}
+}
+
+func cUtcToTdbRequest(req UtcToTdbRequest) C.DhruvUtcToTdbRequest {
+	return C.DhruvUtcToTdbRequest{
+		utc:    cUTC(req.UTC),
+		policy: cTimePolicy(req.Policy),
+	}
+}
+
+func goTimeWarning(w C.DhruvTimeWarning) TimeWarning {
+	return TimeWarning{
+		Kind:                 int32(w.kind),
+		UtcSeconds:           float64(w.utc_seconds),
+		FirstEntryUtcSeconds: float64(w.first_entry_utc_seconds),
+		LastEntryUtcSeconds:  float64(w.last_entry_utc_seconds),
+		UsedDeltaAtSeconds:   float64(w.used_delta_at_seconds),
+		Mjd:                  float64(w.mjd),
+		FirstEntryMjd:        float64(w.first_entry_mjd),
+		LastEntryMjd:         float64(w.last_entry_mjd),
+		UsedDut1Seconds:      float64(w.used_dut1_seconds),
+		DeltaTModel:          int32(w.delta_t_model),
+		DeltaTSegment:        int32(w.delta_t_segment),
+	}
+}
+
+func goTimeDiagnostics(diag C.DhruvTimeDiagnostics) TimeDiagnostics {
+	warnings := make([]TimeWarning, 0, int(diag.warning_count))
+	for i := 0; i < int(diag.warning_count) && i < MaxTimeWarnings; i++ {
+		warnings = append(warnings, goTimeWarning(diag.warnings[i]))
+	}
+	return TimeDiagnostics{
+		Source:      int32(diag.source),
+		TtMinusUtcS: float64(diag.tt_minus_utc_s),
+		Warnings:    warnings,
+	}
+}
+
+func goUtcToTdbResult(out C.DhruvUtcToTdbResult) UtcToTdbResult {
+	return UtcToTdbResult{
+		JdTdb:       float64(out.jd_tdb),
+		Diagnostics: goTimeDiagnostics(out.diagnostics),
+	}
+}
+
 func cGeo(loc GeoLocation) C.DhruvGeoLocation {
 	return C.DhruvGeoLocation{
 		latitude_deg:  C.double(loc.LatitudeDeg),
@@ -361,19 +422,11 @@ func (h *EopHandle) Free() Status {
 	return st
 }
 
-func UTCToTdbJD(lsk LskHandle, utc UtcTime) (float64, Status) {
-	var out C.double
-	st := Status(C.dhruv_utc_to_tdb_jd(
-		lsk.ptr,
-		C.int32_t(utc.Year),
-		C.uint32_t(utc.Month),
-		C.uint32_t(utc.Day),
-		C.uint32_t(utc.Hour),
-		C.uint32_t(utc.Minute),
-		C.double(utc.Second),
-		&out,
-	))
-	return float64(out), st
+func UTCToTdbJD(lsk LskHandle, eop EopHandle, req UtcToTdbRequest) (UtcToTdbResult, Status) {
+	creq := cUtcToTdbRequest(req)
+	var out C.DhruvUtcToTdbResult
+	st := Status(C.dhruv_utc_to_tdb_jd(lsk.ptr, eop.ptr, &creq, &out))
+	return goUtcToTdbResult(out), st
 }
 
 func JdTdbToUTC(lsk LskHandle, jdTdb float64) (UtcTime, Status) {

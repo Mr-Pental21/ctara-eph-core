@@ -54,6 +54,44 @@ const (
 	QueryOutputBoth      = cabi.QueryOutputBoth
 )
 
+const (
+	TimePolicyStrictLSK    = cabi.TimePolicyStrictLSK
+	TimePolicyHybridDeltaT = cabi.TimePolicyHybridDeltaT
+)
+
+const (
+	DeltaTModelLegacyEspenakMeeus2006     = cabi.DeltaTModelLegacyEspenakMeeus2006
+	DeltaTModelSmh2016WithPre720Quadratic = cabi.DeltaTModelSmh2016WithPre720Quadratic
+)
+
+const (
+	FutureDeltaTTransitionLegacyTtUtcBlend         = cabi.FutureDeltaTTransitionLegacyTtUtcBlend
+	FutureDeltaTTransitionBridgeFromModernEndpoint = cabi.FutureDeltaTTransitionBridgeFromModernEndpoint
+)
+
+const (
+	SmhFutureFamilyAddendum2020Piecewise = cabi.SmhFutureFamilyAddendum2020Piecewise
+	SmhFutureFamilyConstantCMinus20      = cabi.SmhFutureFamilyConstantCMinus20
+	SmhFutureFamilyConstantCMinus17p52   = cabi.SmhFutureFamilyConstantCMinus17p52
+	SmhFutureFamilyConstantCMinus15p32   = cabi.SmhFutureFamilyConstantCMinus15p32
+	SmhFutureFamilyStephenson1997        = cabi.SmhFutureFamilyStephenson1997
+	SmhFutureFamilyStephenson2016        = cabi.SmhFutureFamilyStephenson2016
+)
+
+const (
+	TtUtcSourceLskDeltaAt  = cabi.TtUtcSourceLskDeltaAt
+	TtUtcSourceDeltaTModel = cabi.TtUtcSourceDeltaTModel
+)
+
+const (
+	TimeWarningLskFutureFrozen     = cabi.TimeWarningLskFutureFrozen
+	TimeWarningLskPreRangeFallback = cabi.TimeWarningLskPreRangeFallback
+	TimeWarningEopFutureFrozen     = cabi.TimeWarningEopFutureFrozen
+	TimeWarningEopPreRangeFallback = cabi.TimeWarningEopPreRangeFallback
+	TimeWarningDeltaTModelUsed     = cabi.TimeWarningDeltaTModelUsed
+	MaxTimeWarnings                = cabi.MaxTimeWarnings
+)
+
 type (
 	EngineConfig            = cabi.EngineConfig
 	Query                   = cabi.Query
@@ -63,6 +101,12 @@ type (
 	SphericalCoords         = cabi.SphericalCoords
 	SphericalState          = cabi.SphericalState
 	UtcTime                 = cabi.UtcTime
+	TimeConversionOptions   = cabi.TimeConversionOptions
+	TimePolicy              = cabi.TimePolicy
+	TimeWarning             = cabi.TimeWarning
+	TimeDiagnostics         = cabi.TimeDiagnostics
+	UtcToTdbRequest         = cabi.UtcToTdbRequest
+	UtcToTdbResult          = cabi.UtcToTdbResult
 	GeoLocation             = cabi.GeoLocation
 	RiseSetConfig           = cabi.RiseSetConfig
 	RiseSetResult           = cabi.RiseSetResult

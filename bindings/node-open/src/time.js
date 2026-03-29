@@ -3,10 +3,13 @@
 const { addon } = require('./native');
 const { checkStatus } = require('./errors');
 
-function utcToTdbJd(lsk, utc) {
-  const r = addon.utcToTdbJd(lsk._handle, utc);
+function utcToTdbJd(lsk, request, eop = null) {
+  const r = addon.utcToTdbJd(lsk._handle, request, eop ? eop._handle : null);
   checkStatus('utc_to_tdb_jd', r.status);
-  return r.jdTdb;
+  return {
+    jdTdb: r.jdTdb,
+    diagnostics: r.diagnostics,
+  };
 }
 
 function jdTdbToUtc(lsk, jdTdb) {

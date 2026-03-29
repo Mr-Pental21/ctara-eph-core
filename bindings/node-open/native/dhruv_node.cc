@@ -150,6 +150,85 @@ napi_value WriteUtcTime(napi_env env, const DhruvUtcTime& utc) {
     return obj;
 }
 
+DhruvTimeConversionOptions DefaultTimeConversionOptions() {
+    DhruvTimeConversionOptions out{};
+    out.warn_on_fallback = 1;
+    out.delta_t_model = DHRUV_DELTA_T_MODEL_SMH2016_WITH_PRE720_QUADRATIC;
+    out.freeze_future_dut1 = 1;
+    out.pre_range_dut1 = 0.0;
+    out.future_delta_t_transition = DHRUV_FUTURE_DELTA_T_TRANSITION_LEGACY_TT_UTC_BLEND;
+    out.future_transition_years = 100.0;
+    out.smh_future_family = DHRUV_SMH_FUTURE_FAMILY_ADDENDUM_2020_PIECEWISE;
+    return out;
+}
+
+bool ReadTimeConversionOptions(napi_env env, napi_value obj, DhruvTimeConversionOptions* out) {
+    *out = DefaultTimeConversionOptions();
+    napi_value v;
+    bool has = false;
+    bool b = false;
+    if (!GetOptionalNamedProperty(env, obj, "warnOnFallback", &v, &has)) return false;
+    if (has && (!GetBool(env, v, &b))) return false;
+    if (has) out->warn_on_fallback = b ? 1 : 0;
+    if (!GetOptionalNamedProperty(env, obj, "deltaTModel", &v, &has)) return false;
+    if (has && (!GetInt32(env, v, &out->delta_t_model))) return false;
+    if (!GetOptionalNamedProperty(env, obj, "freezeFutureDut1", &v, &has)) return false;
+    if (has && (!GetBool(env, v, &b))) return false;
+    if (has) out->freeze_future_dut1 = b ? 1 : 0;
+    if (!GetOptionalNamedProperty(env, obj, "preRangeDut1", &v, &has)) return false;
+    if (has && (!GetDouble(env, v, &out->pre_range_dut1))) return false;
+    if (!GetOptionalNamedProperty(env, obj, "futureDeltaTTransition", &v, &has)) return false;
+    if (has && (!GetInt32(env, v, &out->future_delta_t_transition))) return false;
+    if (!GetOptionalNamedProperty(env, obj, "futureTransitionYears", &v, &has)) return false;
+    if (has && (!GetDouble(env, v, &out->future_transition_years))) return false;
+    if (!GetOptionalNamedProperty(env, obj, "smhFutureFamily", &v, &has)) return false;
+    if (has && (!GetInt32(env, v, &out->smh_future_family))) return false;
+    return true;
+}
+
+bool ReadTimePolicy(napi_env env, napi_value obj, DhruvTimePolicy* out) {
+    out->mode = DHRUV_TIME_POLICY_HYBRID_DELTA_T;
+    out->options = DefaultTimeConversionOptions();
+    napi_value v;
+    bool has = false;
+    if (!GetOptionalNamedProperty(env, obj, "mode", &v, &has)) return false;
+    if (has && (!GetInt32(env, v, &out->mode))) return false;
+    if (!GetOptionalNamedProperty(env, obj, "options", &v, &has)) return false;
+    if (has && !ReadTimeConversionOptions(env, v, &out->options)) return false;
+    return true;
+}
+
+napi_value WriteTimeWarning(napi_env env, const DhruvTimeWarning& warning) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "kind", MakeInt32(env, warning.kind));
+    SetNamed(env, obj, "utcSeconds", MakeDouble(env, warning.utc_seconds));
+    SetNamed(env, obj, "firstEntryUtcSeconds", MakeDouble(env, warning.first_entry_utc_seconds));
+    SetNamed(env, obj, "lastEntryUtcSeconds", MakeDouble(env, warning.last_entry_utc_seconds));
+    SetNamed(env, obj, "usedDeltaAtSeconds", MakeDouble(env, warning.used_delta_at_seconds));
+    SetNamed(env, obj, "mjd", MakeDouble(env, warning.mjd));
+    SetNamed(env, obj, "firstEntryMjd", MakeDouble(env, warning.first_entry_mjd));
+    SetNamed(env, obj, "lastEntryMjd", MakeDouble(env, warning.last_entry_mjd));
+    SetNamed(env, obj, "usedDut1Seconds", MakeDouble(env, warning.used_dut1_seconds));
+    SetNamed(env, obj, "deltaTModel", MakeInt32(env, warning.delta_t_model));
+    SetNamed(env, obj, "deltaTSegment", MakeInt32(env, warning.delta_t_segment));
+    return obj;
+}
+
+napi_value WriteTimeDiagnostics(napi_env env, const DhruvTimeDiagnostics& diagnostics) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "source", MakeInt32(env, diagnostics.source));
+    SetNamed(env, obj, "ttMinusUtcS", MakeDouble(env, diagnostics.tt_minus_utc_s));
+    napi_value warnings;
+    napi_create_array_with_length(env, diagnostics.warning_count, &warnings);
+    for (uint32_t i = 0; i < diagnostics.warning_count && i < DHRUV_MAX_TIME_WARNINGS; ++i) {
+        napi_set_element(env, warnings, i, WriteTimeWarning(env, diagnostics.warnings[i]));
+    }
+    SetNamed(env, obj, "warnings", warnings);
+    return obj;
+}
+
 bool ReadGeoLocation(napi_env env, napi_value obj, DhruvGeoLocation* out) {
     napi_value v;
     if (!GetNamedProperty(env, obj, "latitudeDeg", &v) || !GetDouble(env, v, &out->latitude_deg)) {
@@ -1918,8 +1997,8 @@ napi_value CartesianToSpherical(napi_env env, napi_callback_info info) {
 }
 
 napi_value UtcToTdbJd(napi_env env, napi_callback_info info) {
-    size_t argc = 2;
-    napi_value args[2];
+    size_t argc = 3;
+    napi_value args[3];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     if (argc < 2) {
         return MakeStatusResult(env, STATUS_INVALID_INPUT);
@@ -1930,25 +2009,44 @@ napi_value UtcToTdbJd(napi_env env, napi_callback_info info) {
         return MakeStatusResult(env, STATUS_INVALID_INPUT);
     }
 
-    DhruvUtcTime utc{};
-    if (!ReadUtcTime(env, args[1], &utc)) {
+    napi_value request_obj = args[1];
+    DhruvUtcToTdbRequest request{};
+    napi_value utc_value;
+    if (!GetNamedProperty(env, request_obj, "utc", &utc_value) || !ReadUtcTime(env, utc_value, &request.utc)) {
         return MakeStatusResult(env, STATUS_INVALID_INPUT);
     }
+    napi_value policy;
+    bool has_policy = false;
+    if (!GetOptionalNamedProperty(env, request_obj, "timePolicy", &policy, &has_policy)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+    request.policy.mode = DHRUV_TIME_POLICY_HYBRID_DELTA_T;
+    request.policy.options = DefaultTimeConversionOptions();
+    if (has_policy && !ReadTimePolicy(env, policy, &request.policy)) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+    void* eop_ptr = nullptr;
+    if (argc >= 3) {
+        napi_valuetype type;
+        if (napi_typeof(env, args[2], &type) != napi_ok) {
+            return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        }
+        if (type != napi_null && type != napi_undefined && !ReadExternalPtr(env, args[2], &eop_ptr)) {
+            return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        }
+    }
 
-    double jd = 0.0;
+    DhruvUtcToTdbResult result{};
     int32_t status = dhruv_utc_to_tdb_jd(
         static_cast<const DhruvLskHandle*>(ptr),
-        utc.year,
-        utc.month,
-        utc.day,
-        utc.hour,
-        utc.minute,
-        utc.second,
-        &jd);
+        static_cast<const DhruvEopHandle*>(eop_ptr),
+        &request,
+        &result);
 
     napi_value out = MakeStatusResult(env, status);
     if (status == STATUS_OK) {
-        SetNamed(env, out, "jdTdb", MakeDouble(env, jd));
+        SetNamed(env, out, "jdTdb", MakeDouble(env, result.jd_tdb));
+        SetNamed(env, out, "diagnostics", WriteTimeDiagnostics(env, result.diagnostics));
     }
     return out;
 }

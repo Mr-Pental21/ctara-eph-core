@@ -38,8 +38,8 @@ const state = engine.query({
 console.log('state.positionKm[0]=', state.positionKm[0]);
 
 const utc = { year: 2025, month: 1, day: 1, hour: 0, minute: 0, second: 0 };
-const jd = dhruv.utcToTdbJd(lskHandle, utc);
-console.log('jd=', jd);
+const converted = dhruv.utcToTdbJd(lskHandle, { utc });
+console.log('jd=', converted.jdTdb);
 
 const tithi = dhruv.tithiForDate(engine, { year: 2025, month: 1, day: 15, hour: 12, minute: 0, second: 0 });
 console.log('tithi=', tithi.tithiIndex);

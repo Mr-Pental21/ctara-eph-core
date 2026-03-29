@@ -60,6 +60,59 @@ typedef int32_t DhruvStatus;
 #define DHRUV_QUERY_OUTPUT_SPHERICAL 1
 #define DHRUV_QUERY_OUTPUT_BOTH      2
 
+/* Time policy */
+#define DHRUV_TIME_POLICY_STRICT_LSK      0
+#define DHRUV_TIME_POLICY_HYBRID_DELTA_T  1
+
+/* Delta-T model */
+#define DHRUV_DELTA_T_MODEL_LEGACY_ESPENAK_MEEUS_2006       0
+#define DHRUV_DELTA_T_MODEL_SMH2016_WITH_PRE720_QUADRATIC   1
+
+/* Future Delta-T transition */
+#define DHRUV_FUTURE_DELTA_T_TRANSITION_LEGACY_TT_UTC_BLEND          0
+#define DHRUV_FUTURE_DELTA_T_TRANSITION_BRIDGE_FROM_MODERN_ENDPOINT  1
+
+/* SMH future-family selector */
+#define DHRUV_SMH_FUTURE_FAMILY_ADDENDUM_2020_PIECEWISE 0
+#define DHRUV_SMH_FUTURE_FAMILY_CONSTANT_C_MINUS20      1
+#define DHRUV_SMH_FUTURE_FAMILY_CONSTANT_C_MINUS17P52   2
+#define DHRUV_SMH_FUTURE_FAMILY_CONSTANT_C_MINUS15P32   3
+#define DHRUV_SMH_FUTURE_FAMILY_STEPHENSON_1997         4
+#define DHRUV_SMH_FUTURE_FAMILY_STEPHENSON_2016         5
+
+/* TT-UTC diagnostic source */
+#define DHRUV_TT_UTC_SOURCE_LSK_DELTA_AT  0
+#define DHRUV_TT_UTC_SOURCE_DELTA_T_MODEL 1
+
+/* Time warning kinds */
+#define DHRUV_TIME_WARNING_LSK_FUTURE_FROZEN      0
+#define DHRUV_TIME_WARNING_LSK_PRE_RANGE_FALLBACK 1
+#define DHRUV_TIME_WARNING_EOP_FUTURE_FROZEN      2
+#define DHRUV_TIME_WARNING_EOP_PRE_RANGE_FALLBACK 3
+#define DHRUV_TIME_WARNING_DELTA_T_MODEL_USED     4
+
+/* Delta-T segment codes */
+#define DHRUV_DELTA_T_SEGMENT_PRE_MINUS720_QUADRATIC  0
+#define DHRUV_DELTA_T_SEGMENT_SMH2016_RECONSTRUCTION  1
+#define DHRUV_DELTA_T_SEGMENT_SMH_ASYMPTOTIC_FUTURE   2
+#define DHRUV_DELTA_T_SEGMENT_BEFORE_MINUS500         3
+#define DHRUV_DELTA_T_SEGMENT_MINUS500_TO_500         4
+#define DHRUV_DELTA_T_SEGMENT_YEAR500_TO1600          5
+#define DHRUV_DELTA_T_SEGMENT_YEAR1600_TO1700         6
+#define DHRUV_DELTA_T_SEGMENT_YEAR1700_TO1800         7
+#define DHRUV_DELTA_T_SEGMENT_YEAR1800_TO1860         8
+#define DHRUV_DELTA_T_SEGMENT_YEAR1860_TO1900         9
+#define DHRUV_DELTA_T_SEGMENT_YEAR1900_TO1920         10
+#define DHRUV_DELTA_T_SEGMENT_YEAR1920_TO1941         11
+#define DHRUV_DELTA_T_SEGMENT_YEAR1941_TO1961         12
+#define DHRUV_DELTA_T_SEGMENT_YEAR1961_TO1986         13
+#define DHRUV_DELTA_T_SEGMENT_YEAR1986_TO2005         14
+#define DHRUV_DELTA_T_SEGMENT_YEAR2005_TO2050         15
+#define DHRUV_DELTA_T_SEGMENT_YEAR2050_TO2150         16
+#define DHRUV_DELTA_T_SEGMENT_AFTER2150               17
+
+#define DHRUV_MAX_TIME_WARNINGS 8
+
 /* Sun limb */
 #define DHRUV_SUN_LIMB_UPPER     0
 #define DHRUV_SUN_LIMB_CENTER    1
@@ -314,6 +367,21 @@ typedef struct {
 } DhruvQueryResult;
 
 typedef struct {
+    uint8_t warn_on_fallback;
+    int32_t delta_t_model;
+    uint8_t freeze_future_dut1;
+    double  pre_range_dut1;
+    int32_t future_delta_t_transition;
+    double  future_transition_years;
+    int32_t smh_future_family;
+} DhruvTimeConversionOptions;
+
+typedef struct {
+    int32_t                   mode;
+    DhruvTimeConversionOptions options;
+} DhruvTimePolicy;
+
+typedef struct {
     int32_t  year;
     uint32_t month;
     uint32_t day;
@@ -321,6 +389,37 @@ typedef struct {
     uint32_t minute;
     double   second;
 } DhruvUtcTime;
+
+typedef struct {
+    int32_t kind;
+    double  utc_seconds;
+    double  first_entry_utc_seconds;
+    double  last_entry_utc_seconds;
+    double  used_delta_at_seconds;
+    double  mjd;
+    double  first_entry_mjd;
+    double  last_entry_mjd;
+    double  used_dut1_seconds;
+    int32_t delta_t_model;
+    int32_t delta_t_segment;
+} DhruvTimeWarning;
+
+typedef struct {
+    int32_t          source;
+    double           tt_minus_utc_s;
+    uint32_t         warning_count;
+    DhruvTimeWarning warnings[DHRUV_MAX_TIME_WARNINGS];
+} DhruvTimeDiagnostics;
+
+typedef struct {
+    DhruvUtcTime    utc;
+    DhruvTimePolicy policy;
+} DhruvUtcToTdbRequest;
+
+typedef struct {
+    double               jd_tdb;
+    DhruvTimeDiagnostics diagnostics;
+} DhruvUtcToTdbResult;
 
 typedef struct {
     int32_t      target;
@@ -1301,9 +1400,9 @@ DhruvStatus dhruv_lsk_free(DhruvLskHandle *lsk);
 /* --- Time conversion --- */
 DhruvStatus dhruv_utc_to_tdb_jd(
     const DhruvLskHandle *lsk,
-    int32_t year, uint32_t month, uint32_t day,
-    uint32_t hour, uint32_t minute, double second,
-    double *out);
+    const DhruvEopHandle *eop,
+    const DhruvUtcToTdbRequest *request,
+    DhruvUtcToTdbResult *out);
 
 /* --- Coordinate transform --- */
 DhruvStatus dhruv_cartesian_to_spherical(

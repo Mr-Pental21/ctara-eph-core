@@ -27,6 +27,31 @@ QUERY_OUTPUT_CARTESIAN = 0
 QUERY_OUTPUT_SPHERICAL = 1
 QUERY_OUTPUT_BOTH = 2
 
+TIME_POLICY_STRICT_LSK = 0
+TIME_POLICY_HYBRID_DELTA_T = 1
+
+DELTA_T_MODEL_LEGACY_ESPENAK_MEEUS_2006 = 0
+DELTA_T_MODEL_SMH2016_WITH_PRE720_QUADRATIC = 1
+
+FUTURE_DELTA_T_TRANSITION_LEGACY_TT_UTC_BLEND = 0
+FUTURE_DELTA_T_TRANSITION_BRIDGE_FROM_MODERN_ENDPOINT = 1
+
+SMH_FUTURE_FAMILY_ADDENDUM_2020_PIECEWISE = 0
+SMH_FUTURE_FAMILY_CONSTANT_C_MINUS20 = 1
+SMH_FUTURE_FAMILY_CONSTANT_C_MINUS17P52 = 2
+SMH_FUTURE_FAMILY_CONSTANT_C_MINUS15P32 = 3
+SMH_FUTURE_FAMILY_STEPHENSON_1997 = 4
+SMH_FUTURE_FAMILY_STEPHENSON_2016 = 5
+
+TT_UTC_SOURCE_LSK_DELTA_AT = 0
+TT_UTC_SOURCE_DELTA_T_MODEL = 1
+
+TIME_WARNING_LSK_FUTURE_FROZEN = 0
+TIME_WARNING_LSK_PRE_RANGE_FALLBACK = 1
+TIME_WARNING_EOP_FUTURE_FROZEN = 2
+TIME_WARNING_EOP_PRE_RANGE_FALLBACK = 3
+TIME_WARNING_DELTA_T_MODEL_USED = 4
+
 
 @dataclass(frozen=True)
 class StateVector:
@@ -121,6 +146,69 @@ class UtcTime:
         """Create a ``UtcTime`` from a ``datetime.datetime``."""
         sec = dt.second + dt.microsecond / 1_000_000.0
         return cls(dt.year, dt.month, dt.day, dt.hour, dt.minute, sec)
+
+
+@dataclass(frozen=True)
+class TimeConversionOptions:
+    """Hybrid UTC conversion behavior and fallback settings."""
+
+    warn_on_fallback: bool = True
+    delta_t_model: int = DELTA_T_MODEL_SMH2016_WITH_PRE720_QUADRATIC
+    freeze_future_dut1: bool = True
+    pre_range_dut1: float = 0.0
+    future_delta_t_transition: int = FUTURE_DELTA_T_TRANSITION_LEGACY_TT_UTC_BLEND
+    future_transition_years: float = 100.0
+    smh_future_family: int = SMH_FUTURE_FAMILY_ADDENDUM_2020_PIECEWISE
+
+
+@dataclass(frozen=True)
+class TimePolicy:
+    """UTC conversion policy selector plus optional hybrid settings."""
+
+    mode: int = TIME_POLICY_HYBRID_DELTA_T
+    options: TimeConversionOptions = field(default_factory=TimeConversionOptions)
+
+
+@dataclass(frozen=True)
+class TimeWarning:
+    """One warning entry emitted during UTC conversion."""
+
+    kind: int
+    utc_seconds: float
+    first_entry_utc_seconds: float
+    last_entry_utc_seconds: float
+    used_delta_at_seconds: float
+    mjd: float
+    first_entry_mjd: float
+    last_entry_mjd: float
+    used_dut1_seconds: float
+    delta_t_model: int
+    delta_t_segment: int
+
+
+@dataclass(frozen=True)
+class TimeDiagnostics:
+    """Diagnostics emitted by UTC conversion."""
+
+    source: int
+    tt_minus_utc_s: float
+    warnings: list[TimeWarning]
+
+
+@dataclass(frozen=True)
+class UtcToTdbRequest:
+    """Typed UTC->JD(TDB) request with policy."""
+
+    utc: UtcTime
+    time_policy: TimePolicy = field(default_factory=TimePolicy)
+
+
+@dataclass(frozen=True)
+class UtcToTdbResult:
+    """UTC->JD(TDB) result plus diagnostics."""
+
+    jd_tdb: float
+    diagnostics: TimeDiagnostics
 
 
 @dataclass(frozen=True)

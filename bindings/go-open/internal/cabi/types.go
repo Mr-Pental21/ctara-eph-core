@@ -52,6 +52,45 @@ const (
 	QueryOutputBoth      int32 = 2
 )
 
+const (
+	TimePolicyStrictLSK     int32 = 0
+	TimePolicyHybridDeltaT  int32 = 1
+)
+
+const (
+	DeltaTModelLegacyEspenakMeeus2006     int32 = 0
+	DeltaTModelSmh2016WithPre720Quadratic int32 = 1
+)
+
+const (
+	FutureDeltaTTransitionLegacyTtUtcBlend        int32 = 0
+	FutureDeltaTTransitionBridgeFromModernEndpoint int32 = 1
+)
+
+const (
+	SmhFutureFamilyAddendum2020Piecewise int32 = 0
+	SmhFutureFamilyConstantCMinus20      int32 = 1
+	SmhFutureFamilyConstantCMinus17p52   int32 = 2
+	SmhFutureFamilyConstantCMinus15p32   int32 = 3
+	SmhFutureFamilyStephenson1997        int32 = 4
+	SmhFutureFamilyStephenson2016        int32 = 5
+)
+
+const (
+	TtUtcSourceLskDeltaAt  int32 = 0
+	TtUtcSourceDeltaTModel int32 = 1
+)
+
+const (
+	TimeWarningLskFutureFrozen      int32 = 0
+	TimeWarningLskPreRangeFallback  int32 = 1
+	TimeWarningEopFutureFrozen      int32 = 2
+	TimeWarningEopPreRangeFallback  int32 = 3
+	TimeWarningDeltaTModelUsed      int32 = 4
+)
+
+const MaxTimeWarnings = 8
+
 type Status int32
 
 const (
@@ -129,6 +168,51 @@ type UtcTime struct {
 	Hour   uint32
 	Minute uint32
 	Second float64
+}
+
+type TimeConversionOptions struct {
+	WarnOnFallback          bool
+	DeltaTModel             int32
+	FreezeFutureDut1        bool
+	PreRangeDut1            float64
+	FutureDeltaTTransition  int32
+	FutureTransitionYears   float64
+	SmhFutureFamily         int32
+}
+
+type TimePolicy struct {
+	Mode    int32
+	Options TimeConversionOptions
+}
+
+type TimeWarning struct {
+	Kind                 int32
+	UtcSeconds           float64
+	FirstEntryUtcSeconds float64
+	LastEntryUtcSeconds  float64
+	UsedDeltaAtSeconds   float64
+	Mjd                  float64
+	FirstEntryMjd        float64
+	LastEntryMjd         float64
+	UsedDut1Seconds      float64
+	DeltaTModel          int32
+	DeltaTSegment        int32
+}
+
+type TimeDiagnostics struct {
+	Source      int32
+	TtMinusUtcS float64
+	Warnings    []TimeWarning
+}
+
+type UtcToTdbRequest struct {
+	UTC    UtcTime
+	Policy TimePolicy
+}
+
+type UtcToTdbResult struct {
+	JdTdb       float64
+	Diagnostics TimeDiagnostics
 }
 
 type GeoLocation struct {

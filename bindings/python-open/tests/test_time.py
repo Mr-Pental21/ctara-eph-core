@@ -12,14 +12,16 @@ class TestUtcToJdTdb:
         from ctara_dhruv.engine import lsk
         # UTC and TDB differ by ~64s of leap seconds at J2000,
         # so UTC 2000-01-01T12:00:00 maps to JD TDB ~2451545.0007
-        jd = utc_to_jd_tdb(lsk(), 2000, 1, 1, 12, 0, 0.0)
+        from ctara_dhruv.types import UtcTime, UtcToTdbRequest
+        jd = utc_to_jd_tdb(lsk(), UtcToTdbRequest(utc=UtcTime(2000, 1, 1, 12, 0, 0.0))).jd_tdb
         assert abs(jd - 2451545.0) < 0.01
 
     def test_2024_jan_1_noon(self, engine_handles):
         """2024-01-01T12:00:00 UTC => JD TDB ~2460311.0 (noon is 0.5 past midnight JD)."""
         from ctara_dhruv.time import utc_to_jd_tdb
         from ctara_dhruv.engine import lsk
-        jd = utc_to_jd_tdb(lsk(), 2024, 1, 1, 12, 0, 0.0)
+        from ctara_dhruv.types import UtcTime, UtcToTdbRequest
+        jd = utc_to_jd_tdb(lsk(), UtcToTdbRequest(utc=UtcTime(2024, 1, 1, 12, 0, 0.0))).jd_tdb
         assert abs(jd - 2460311.0) < 0.01
 
 
@@ -29,7 +31,8 @@ class TestJdTdbToUtc:
         """UTC -> JD TDB -> UTC should round-trip within seconds."""
         from ctara_dhruv.time import utc_to_jd_tdb, jd_tdb_to_utc
         from ctara_dhruv.engine import lsk
-        jd = utc_to_jd_tdb(lsk(), 2024, 6, 15, 10, 30, 0.0)
+        from ctara_dhruv.types import UtcTime, UtcToTdbRequest
+        jd = utc_to_jd_tdb(lsk(), UtcToTdbRequest(utc=UtcTime(2024, 6, 15, 10, 30, 0.0))).jd_tdb
         utc = jd_tdb_to_utc(lsk(), jd)
         assert utc.year == 2024
         assert utc.month == 6
@@ -67,7 +70,8 @@ class TestNutation:
         from ctara_dhruv.engine import lsk
         utc = UtcTime(2024, 1, 1, 0, 0, 0.0)
         dpsi_utc, deps_utc = nutation_utc(lsk(), utc)
-        jd = utc_to_jd_tdb(lsk(), 2024, 1, 1, 0, 0, 0.0)
+        from ctara_dhruv.types import UtcToTdbRequest
+        jd = utc_to_jd_tdb(lsk(), UtcToTdbRequest(utc=utc)).jd_tdb
         dpsi_jd, deps_jd = nutation(jd)
         # Should be very close (sub-arcsecond)
         assert abs(dpsi_utc - dpsi_jd) < 0.1

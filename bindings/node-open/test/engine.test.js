@@ -34,8 +34,8 @@ test('engine query and UTC roundtrip', { skip: !hasKernels() }, () => {
   assert.equal(state.sphericalState, null);
 
   const utc = { year: 2025, month: 1, day: 1, hour: 0, minute: 0, second: 0 };
-  const jd = dhruv.utcToTdbJd(lsk, utc);
-  const back = dhruv.jdTdbToUtc(lsk, jd);
+  const converted = dhruv.utcToTdbJd(lsk, { utc });
+  const back = dhruv.jdTdbToUtc(lsk, converted.jdTdb);
   const spherical = engine.query({
     target: 301,
     observer: 399,
@@ -47,6 +47,7 @@ test('engine query and UTC roundtrip', { skip: !hasKernels() }, () => {
   assert.equal(back.year, utc.year);
   assert.equal(back.month, utc.month);
   assert.equal(back.day, utc.day);
+  assert.ok(Array.isArray(converted.diagnostics.warnings));
   assert.equal(spherical.state, null);
   assert.ok(Number.isFinite(spherical.sphericalState.lonDeg));
 
@@ -339,7 +340,7 @@ test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
   assert.equal(kundaliFull.dasha[1].system, 1);
   assert.equal(kundaliFull.dasha[0].levels.length, 1);
   assert.equal(kundaliFull.dasha[1].levels.length, 2);
-  const jdNow = dhruv.utcToTdbJd(lsk, utc);
+  const jdNow = dhruv.utcToTdbJd(lsk, { utc }).jdTdb;
 
   const elongation = dhruv.elongationAt(engine, jdNow);
   assert.ok(Number.isFinite(elongation));

@@ -4,7 +4,15 @@ from __future__ import annotations
 
 from ._ffi import ffi, lib
 from ._check import check
-from .types import UtcTime
+from .types import (
+    TimeConversionOptions,
+    TimeDiagnostics,
+    TimePolicy,
+    TimeWarning,
+    UtcTime,
+    UtcToTdbRequest,
+    UtcToTdbResult,
+)
 
 
 def _utc_struct(utc: UtcTime):
@@ -19,30 +27,62 @@ def _utc_struct(utc: UtcTime):
     return u
 
 
-def utc_to_jd_tdb(
-    lsk_handle,
-    year: int,
-    month: int,
-    day: int,
-    hour: int = 0,
-    minute: int = 0,
-    sec: float = 0.0,
-) -> float:
-    """Convert UTC calendar date to JD TDB using a standalone LSK handle.
+def _time_policy_struct(policy: TimePolicy):
+    opts = ffi.new("DhruvTimeConversionOptions *")
+    opts.warn_on_fallback = 1 if policy.options.warn_on_fallback else 0
+    opts.delta_t_model = policy.options.delta_t_model
+    opts.freeze_future_dut1 = 1 if policy.options.freeze_future_dut1 else 0
+    opts.pre_range_dut1 = policy.options.pre_range_dut1
+    opts.future_delta_t_transition = policy.options.future_delta_t_transition
+    opts.future_transition_years = policy.options.future_transition_years
+    opts.smh_future_family = policy.options.smh_future_family
 
-    Args:
-        lsk_handle: DhruvLskHandle pointer.
-        year, month, day, hour, minute, sec: UTC calendar components.
+    out = ffi.new("DhruvTimePolicy *")
+    out.mode = policy.mode
+    out.options = opts[0]
+    return out
 
-    Returns:
-        Julian Date in TDB.
-    """
-    out = ffi.new("double *")
+
+def _decode_time_warning(value) -> TimeWarning:
+    return TimeWarning(
+        kind=value.kind,
+        utc_seconds=value.utc_seconds,
+        first_entry_utc_seconds=value.first_entry_utc_seconds,
+        last_entry_utc_seconds=value.last_entry_utc_seconds,
+        used_delta_at_seconds=value.used_delta_at_seconds,
+        mjd=value.mjd,
+        first_entry_mjd=value.first_entry_mjd,
+        last_entry_mjd=value.last_entry_mjd,
+        used_dut1_seconds=value.used_dut1_seconds,
+        delta_t_model=value.delta_t_model,
+        delta_t_segment=value.delta_t_segment,
+    )
+
+
+def _decode_time_diagnostics(value) -> TimeDiagnostics:
+    warnings = [_decode_time_warning(value.warnings[i]) for i in range(value.warning_count)]
+    return TimeDiagnostics(
+        source=value.source,
+        tt_minus_utc_s=value.tt_minus_utc_s,
+        warnings=warnings,
+    )
+
+
+def utc_to_jd_tdb(lsk_handle, request: UtcToTdbRequest, eop_handle=None) -> UtcToTdbResult:
+    """Convert UTC calendar date to JD TDB using typed policy and diagnostics."""
+    out = ffi.new("DhruvUtcToTdbResult *")
+    req = ffi.new("DhruvUtcToTdbRequest *")
+    req.utc = _utc_struct(request.utc)[0]
+    req.policy = _time_policy_struct(request.time_policy)[0]
+    eop_ptr = ffi.NULL if eop_handle is None else eop_handle
     check(
-        lib.dhruv_utc_to_tdb_jd(lsk_handle, year, month, day, hour, minute, sec, out),
+        lib.dhruv_utc_to_tdb_jd(lsk_handle, eop_ptr, req, out),
         "utc_to_tdb_jd",
     )
-    return out[0]
+    return UtcToTdbResult(
+        jd_tdb=out.jd_tdb,
+        diagnostics=_decode_time_diagnostics(out.diagnostics),
+    )
 
 
 def jd_tdb_to_utc(lsk_handle, jd_tdb: float) -> UtcTime:

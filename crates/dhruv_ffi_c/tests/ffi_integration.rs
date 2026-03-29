@@ -58,6 +58,52 @@ fn lsk_path_cstr() -> Option<std::ffi::CString> {
     Some(std::ffi::CString::new(path.to_str().unwrap()).unwrap())
 }
 
+fn default_utc_to_tdb_request(utc: DhruvUtcTime) -> DhruvUtcToTdbRequest {
+    DhruvUtcToTdbRequest {
+        utc,
+        policy: DhruvTimePolicy {
+            mode: DHRUV_TIME_POLICY_HYBRID_DELTA_T,
+            options: DhruvTimeConversionOptions {
+                warn_on_fallback: 1,
+                delta_t_model: DHRUV_DELTA_T_MODEL_SMH2016_WITH_PRE720_QUADRATIC,
+                freeze_future_dut1: 1,
+                pre_range_dut1: 0.0,
+                future_delta_t_transition: DHRUV_FUTURE_DELTA_T_TRANSITION_LEGACY_TT_UTC_BLEND,
+                future_transition_years: 100.0,
+                smh_future_family: DHRUV_SMH_FUTURE_FAMILY_ADDENDUM_2020_PIECEWISE,
+            },
+        },
+    }
+}
+
+fn utc_to_tdb_jd_default(lsk_ptr: *mut DhruvLskHandle, utc: DhruvUtcTime) -> f64 {
+    let request = default_utc_to_tdb_request(utc);
+    let mut out = DhruvUtcToTdbResult {
+        jd_tdb: 0.0,
+        diagnostics: DhruvTimeDiagnostics {
+            source: 0,
+            tt_minus_utc_s: 0.0,
+            warning_count: 0,
+            warnings: [DhruvTimeWarning {
+                kind: 0,
+                utc_seconds: 0.0,
+                first_entry_utc_seconds: 0.0,
+                last_entry_utc_seconds: 0.0,
+                used_delta_at_seconds: 0.0,
+                mjd: 0.0,
+                first_entry_mjd: 0.0,
+                last_entry_mjd: 0.0,
+                used_dut1_seconds: 0.0,
+                delta_t_model: 0,
+                delta_t_segment: 0,
+            }; DHRUV_MAX_TIME_WARNINGS],
+        },
+    };
+    let status = unsafe { dhruv_utc_to_tdb_jd(lsk_ptr, ptr::null(), &request, &mut out) };
+    assert_eq!(status, DhruvStatus::Ok);
+    out.jd_tdb
+}
+
 fn make_engine() -> Option<*mut DhruvEngineHandle> {
     let config = real_config()?;
     let mut engine_ptr: *mut DhruvEngineHandle = ptr::null_mut();
@@ -253,11 +299,17 @@ fn ffi_utc_to_tdb_jd_roundtrip() {
     let status = unsafe { dhruv_lsk_load(path.as_ptr() as *const u8, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
-    let mut jd_tdb: f64 = 0.0;
-    // J2000.0 = 2000-01-01 12:00:00 UTC (approximately)
-    // SAFETY: LSK handle and output are valid in this test.
-    let status = unsafe { dhruv_utc_to_tdb_jd(lsk_ptr, 2000, 1, 1, 12, 0, 0.0, &mut jd_tdb) };
-    assert_eq!(status, DhruvStatus::Ok);
+    let jd_tdb = utc_to_tdb_jd_default(
+        lsk_ptr,
+        DhruvUtcTime {
+            year: 2000,
+            month: 1,
+            day: 1,
+            hour: 12,
+            minute: 0,
+            second: 0.0,
+        },
+    );
 
     // Should be very close to J2000.0 (2451545.0), within ~1 minute of TDB-UTC offset.
     assert!(
@@ -294,10 +346,17 @@ fn ffi_full_longitude_workflow() {
     assert_eq!(status, DhruvStatus::Ok);
 
     // Step 1: UTC to TDB JD (uses LSK, not engine)
-    let mut jd_tdb: f64 = 0.0;
-    // SAFETY: LSK handle and output are valid.
-    let status = unsafe { dhruv_utc_to_tdb_jd(lsk_ptr, 2024, 3, 20, 12, 0, 0.0, &mut jd_tdb) };
-    assert_eq!(status, DhruvStatus::Ok);
+    let jd_tdb = utc_to_tdb_jd_default(
+        lsk_ptr,
+        DhruvUtcTime {
+            year: 2024,
+            month: 3,
+            day: 20,
+            hour: 12,
+            minute: 0,
+            second: 0.0,
+        },
+    );
 
     // Step 2: Query Mars heliocentric ecliptic
     let query = DhruvQuery {
@@ -1345,20 +1404,31 @@ fn assert_utc_matches_jd(
     expected_jd_tdb: f64,
     label: &str,
 ) {
-    let mut jd_roundtrip: f64 = 0.0;
-    let status = unsafe {
-        dhruv_utc_to_tdb_jd(
-            lsk_ptr,
-            utc.year,
-            utc.month,
-            utc.day,
-            utc.hour,
-            utc.minute,
-            utc.second,
-            &mut jd_roundtrip,
-        )
+    let request = default_utc_to_tdb_request(*utc);
+    let mut out = DhruvUtcToTdbResult {
+        jd_tdb: 0.0,
+        diagnostics: DhruvTimeDiagnostics {
+            source: 0,
+            tt_minus_utc_s: 0.0,
+            warning_count: 0,
+            warnings: [DhruvTimeWarning {
+                kind: 0,
+                utc_seconds: 0.0,
+                first_entry_utc_seconds: 0.0,
+                last_entry_utc_seconds: 0.0,
+                used_delta_at_seconds: 0.0,
+                mjd: 0.0,
+                first_entry_mjd: 0.0,
+                last_entry_mjd: 0.0,
+                used_dut1_seconds: 0.0,
+                delta_t_model: 0,
+                delta_t_segment: 0,
+            }; DHRUV_MAX_TIME_WARNINGS],
+        },
     };
+    let status = unsafe { dhruv_utc_to_tdb_jd(lsk_ptr, ptr::null(), &request, &mut out) };
     assert_eq!(status, DhruvStatus::Ok, "{label}: utc_to_tdb_jd failed");
+    let jd_roundtrip = out.jd_tdb;
     let diff_days = (jd_roundtrip - expected_jd_tdb).abs();
     assert!(
         diff_days < 2e-5, // ~1.7 seconds tolerance (roundtrip precision)
@@ -1413,20 +1483,7 @@ fn ffi_utc_conjunction_roundtrip() {
         minute: 0,
         second: 0.0,
     };
-    let mut jd_from_utc_start: f64 = 0.0;
-    let status = unsafe {
-        dhruv_utc_to_tdb_jd(
-            lsk_ptr,
-            utc_start.year,
-            utc_start.month,
-            utc_start.day,
-            utc_start.hour,
-            utc_start.minute,
-            utc_start.second,
-            &mut jd_from_utc_start,
-        )
-    };
-    assert_eq!(status, DhruvStatus::Ok);
+    let jd_from_utc_start = utc_to_tdb_jd_default(lsk_ptr, utc_start);
     let request_from_utc = DhruvConjunctionSearchRequest {
         at_jd_tdb: jd_from_utc_start,
         ..request_jd
@@ -1511,20 +1568,7 @@ fn ffi_utc_chandra_grahan_roundtrip() {
         minute: 0,
         second: 0.0,
     };
-    let mut jd_from_utc_start: f64 = 0.0;
-    let status = unsafe {
-        dhruv_utc_to_tdb_jd(
-            lsk_ptr,
-            utc_start.year,
-            utc_start.month,
-            utc_start.day,
-            utc_start.hour,
-            utc_start.minute,
-            utc_start.second,
-            &mut jd_from_utc_start,
-        )
-    };
-    assert_eq!(status, DhruvStatus::Ok);
+    let jd_from_utc_start = utc_to_tdb_jd_default(lsk_ptr, utc_start);
     let request_from_utc = DhruvGrahanSearchRequest {
         at_jd_tdb: jd_from_utc_start,
         ..request_jd
@@ -1631,20 +1675,7 @@ fn ffi_utc_surya_grahan_roundtrip() {
         minute: 0,
         second: 0.0,
     };
-    let mut jd_from_utc_start: f64 = 0.0;
-    let status = unsafe {
-        dhruv_utc_to_tdb_jd(
-            lsk_ptr,
-            utc_start.year,
-            utc_start.month,
-            utc_start.day,
-            utc_start.hour,
-            utc_start.minute,
-            utc_start.second,
-            &mut jd_from_utc_start,
-        )
-    };
-    assert_eq!(status, DhruvStatus::Ok);
+    let jd_from_utc_start = utc_to_tdb_jd_default(lsk_ptr, utc_start);
     let request_from_utc = DhruvGrahanSearchRequest {
         at_jd_tdb: jd_from_utc_start,
         ..request_jd
@@ -1752,20 +1783,7 @@ fn ffi_utc_stationary_roundtrip() {
         minute: 0,
         second: 0.0,
     };
-    let mut jd_from_utc_start: f64 = 0.0;
-    let status = unsafe {
-        dhruv_utc_to_tdb_jd(
-            lsk_ptr,
-            utc_start.year,
-            utc_start.month,
-            utc_start.day,
-            utc_start.hour,
-            utc_start.minute,
-            utc_start.second,
-            &mut jd_from_utc_start,
-        )
-    };
-    assert_eq!(status, DhruvStatus::Ok);
+    let jd_from_utc_start = utc_to_tdb_jd_default(lsk_ptr, utc_start);
     let request_from_utc = DhruvMotionSearchRequest {
         at_jd_tdb: jd_from_utc_start,
         ..request_jd
@@ -2091,20 +2109,7 @@ fn ffi_time_upagraha_jd_utc_matches_manual_night_window_after_noon_utc() {
     assert_eq!(status, DhruvStatus::Ok);
     assert_eq!(sunset.result_type, DHRUV_RISESET_EVENT);
 
-    let mut query_jd_tdb = 0.0;
-    let status = unsafe {
-        dhruv_utc_to_tdb_jd(
-            lsk_ptr,
-            utc.year,
-            utc.month,
-            utc.day,
-            utc.hour,
-            utc.minute,
-            utc.second,
-            &mut query_jd_tdb,
-        )
-    };
-    assert_eq!(status, DhruvStatus::Ok);
+    let query_jd_tdb = utc_to_tdb_jd_default(lsk_ptr, utc);
     assert!(
         query_jd_tdb >= sunset.jd_tdb,
         "query should be in the night interval for this regression case"

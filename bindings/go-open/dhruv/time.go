@@ -2,8 +2,12 @@ package dhruv
 
 import "ctara-dhruv-core/bindings/go-open/internal/cabi"
 
-func UTCToTdbJD(lsk *LSK, utc UtcTime) (float64, error) {
-	out, st := cabi.UTCToTdbJD(lsk.h, utc)
+func UTCToTdbJD(lsk *LSK, eop *EOP, req UtcToTdbRequest) (UtcToTdbResult, error) {
+	var eopHandle cabi.EopHandle
+	if eop != nil {
+		eopHandle = eop.h
+	}
+	out, st := cabi.UTCToTdbJD(lsk.h, eopHandle, req)
 	return out, statusErr("utc_to_tdb_jd", st)
 }
 

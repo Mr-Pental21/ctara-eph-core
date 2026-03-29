@@ -102,11 +102,25 @@ func TestEngineQueryAndTimeRoundTrip(t *testing.T) {
 	defer lsk.Close()
 
 	utc := UtcTime{Year: 2025, Month: 1, Day: 1, Hour: 0, Minute: 0, Second: 0}
-	jd, err := UTCToTdbJD(lsk, utc)
+	resultTime, err := UTCToTdbJD(lsk, nil, UtcToTdbRequest{
+		UTC: utc,
+		Policy: TimePolicy{
+			Mode: TimePolicyHybridDeltaT,
+			Options: TimeConversionOptions{
+				WarnOnFallback:         true,
+				DeltaTModel:            DeltaTModelSmh2016WithPre720Quadratic,
+				FreezeFutureDut1:       true,
+				PreRangeDut1:           0.0,
+				FutureDeltaTTransition: FutureDeltaTTransitionLegacyTtUtcBlend,
+				FutureTransitionYears:  100.0,
+				SmhFutureFamily:        SmhFutureFamilyAddendum2020Piecewise,
+			},
+		},
+	})
 	if err != nil {
 		t.Fatalf("UTCToTdbJD: %v", err)
 	}
-	back, err := JdTdbToUTC(lsk, jd)
+	back, err := JdTdbToUTC(lsk, resultTime.JdTdb)
 	if err != nil {
 		t.Fatalf("JdTdbToUTC: %v", err)
 	}

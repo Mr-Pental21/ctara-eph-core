@@ -40,7 +40,8 @@ class TestAyanamshaCompute:
         from ctara_dhruv.types import UtcTime
         from ctara_dhruv.engine import lsk
         utc = UtcTime(2024, 1, 1, 12, 0, 0.0)
-        jd = utc_to_jd_tdb(lsk(), 2024, 1, 1, 12, 0, 0.0)
+        from ctara_dhruv.types import UtcTime, UtcToTdbRequest
+        jd = utc_to_jd_tdb(lsk(), UtcToTdbRequest(utc=UtcTime(2024, 1, 1, 12, 0, 0.0))).jd_tdb
         aya_utc = ayanamsha(lsk(), system=0, utc=utc)
         aya_jd = ayanamsha(lsk(), system=0, jd_tdb=jd)
         assert abs(aya_utc - aya_jd) < 0.001

@@ -28,7 +28,11 @@ use dhruv_search::{
     vedic_day_sunrises, vimsopaka_for_date, yoga_at, yoga_for_date,
 };
 use dhruv_tara::{TaraAccuracy, TaraCatalog, TaraConfig, TaraError, TaraId};
-use dhruv_time::UtcTime;
+use dhruv_time::{
+    DeltaTModel, DeltaTSegment, FutureDeltaTTransition, SmhFutureParabolaFamily,
+    TimeConversionOptions, TimeConversionPolicy, TimeDiagnostics, TimeWarning, TtUtcSource,
+    UtcTime,
+};
 use dhruv_vedic_base::{
     Amsha, AmshaRequest, AmshaVariation, AyanamshaSystem, BhavaConfig, BhavaReferenceMode,
     BhavaStartingPoint, BhavaSystem, CharakarakaScheme, GeoLocation, LunarNode, NodeMode,
@@ -248,6 +252,52 @@ pub const DHRUV_QUERY_OUTPUT_CARTESIAN: i32 = 0;
 pub const DHRUV_QUERY_OUTPUT_SPHERICAL: i32 = 1;
 pub const DHRUV_QUERY_OUTPUT_BOTH: i32 = 2;
 
+pub const DHRUV_TIME_POLICY_STRICT_LSK: i32 = 0;
+pub const DHRUV_TIME_POLICY_HYBRID_DELTA_T: i32 = 1;
+
+pub const DHRUV_DELTA_T_MODEL_LEGACY_ESPENAK_MEEUS_2006: i32 = 0;
+pub const DHRUV_DELTA_T_MODEL_SMH2016_WITH_PRE720_QUADRATIC: i32 = 1;
+
+pub const DHRUV_FUTURE_DELTA_T_TRANSITION_LEGACY_TT_UTC_BLEND: i32 = 0;
+pub const DHRUV_FUTURE_DELTA_T_TRANSITION_BRIDGE_FROM_MODERN_ENDPOINT: i32 = 1;
+
+pub const DHRUV_SMH_FUTURE_FAMILY_ADDENDUM_2020_PIECEWISE: i32 = 0;
+pub const DHRUV_SMH_FUTURE_FAMILY_CONSTANT_C_MINUS20: i32 = 1;
+pub const DHRUV_SMH_FUTURE_FAMILY_CONSTANT_C_MINUS17P52: i32 = 2;
+pub const DHRUV_SMH_FUTURE_FAMILY_CONSTANT_C_MINUS15P32: i32 = 3;
+pub const DHRUV_SMH_FUTURE_FAMILY_STEPHENSON_1997: i32 = 4;
+pub const DHRUV_SMH_FUTURE_FAMILY_STEPHENSON_2016: i32 = 5;
+
+pub const DHRUV_TT_UTC_SOURCE_LSK_DELTA_AT: i32 = 0;
+pub const DHRUV_TT_UTC_SOURCE_DELTA_T_MODEL: i32 = 1;
+
+pub const DHRUV_TIME_WARNING_LSK_FUTURE_FROZEN: i32 = 0;
+pub const DHRUV_TIME_WARNING_LSK_PRE_RANGE_FALLBACK: i32 = 1;
+pub const DHRUV_TIME_WARNING_EOP_FUTURE_FROZEN: i32 = 2;
+pub const DHRUV_TIME_WARNING_EOP_PRE_RANGE_FALLBACK: i32 = 3;
+pub const DHRUV_TIME_WARNING_DELTA_T_MODEL_USED: i32 = 4;
+
+pub const DHRUV_DELTA_T_SEGMENT_PRE_MINUS720_QUADRATIC: i32 = 0;
+pub const DHRUV_DELTA_T_SEGMENT_SMH2016_RECONSTRUCTION: i32 = 1;
+pub const DHRUV_DELTA_T_SEGMENT_SMH_ASYMPTOTIC_FUTURE: i32 = 2;
+pub const DHRUV_DELTA_T_SEGMENT_BEFORE_MINUS500: i32 = 3;
+pub const DHRUV_DELTA_T_SEGMENT_MINUS500_TO_500: i32 = 4;
+pub const DHRUV_DELTA_T_SEGMENT_YEAR500_TO1600: i32 = 5;
+pub const DHRUV_DELTA_T_SEGMENT_YEAR1600_TO1700: i32 = 6;
+pub const DHRUV_DELTA_T_SEGMENT_YEAR1700_TO1800: i32 = 7;
+pub const DHRUV_DELTA_T_SEGMENT_YEAR1800_TO1860: i32 = 8;
+pub const DHRUV_DELTA_T_SEGMENT_YEAR1860_TO1900: i32 = 9;
+pub const DHRUV_DELTA_T_SEGMENT_YEAR1900_TO1920: i32 = 10;
+pub const DHRUV_DELTA_T_SEGMENT_YEAR1920_TO1941: i32 = 11;
+pub const DHRUV_DELTA_T_SEGMENT_YEAR1941_TO1961: i32 = 12;
+pub const DHRUV_DELTA_T_SEGMENT_YEAR1961_TO1986: i32 = 13;
+pub const DHRUV_DELTA_T_SEGMENT_YEAR1986_TO2005: i32 = 14;
+pub const DHRUV_DELTA_T_SEGMENT_YEAR2005_TO2050: i32 = 15;
+pub const DHRUV_DELTA_T_SEGMENT_YEAR2050_TO2150: i32 = 16;
+pub const DHRUV_DELTA_T_SEGMENT_AFTER2150: i32 = 17;
+
+pub const DHRUV_MAX_TIME_WARNINGS: usize = 8;
+
 /// Unified query transport carrying either JD(TDB) or UTC input.
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -304,6 +354,255 @@ impl From<StateVector> for DhruvStateVector {
 pub struct DhruvQueryResult {
     pub state_vector: DhruvStateVector,
     pub spherical_state: DhruvSphericalState,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvTimeConversionOptions {
+    pub warn_on_fallback: u8,
+    pub delta_t_model: i32,
+    pub freeze_future_dut1: u8,
+    pub pre_range_dut1: f64,
+    pub future_delta_t_transition: i32,
+    pub future_transition_years: f64,
+    pub smh_future_family: i32,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvTimePolicy {
+    pub mode: i32,
+    pub options: DhruvTimeConversionOptions,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvTimeWarning {
+    pub kind: i32,
+    pub utc_seconds: f64,
+    pub first_entry_utc_seconds: f64,
+    pub last_entry_utc_seconds: f64,
+    pub used_delta_at_seconds: f64,
+    pub mjd: f64,
+    pub first_entry_mjd: f64,
+    pub last_entry_mjd: f64,
+    pub used_dut1_seconds: f64,
+    pub delta_t_model: i32,
+    pub delta_t_segment: i32,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvTimeDiagnostics {
+    pub source: i32,
+    pub tt_minus_utc_s: f64,
+    pub warning_count: u32,
+    pub warnings: [DhruvTimeWarning; DHRUV_MAX_TIME_WARNINGS],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvUtcToTdbRequest {
+    pub utc: DhruvUtcTime,
+    pub policy: DhruvTimePolicy,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DhruvUtcToTdbResult {
+    pub jd_tdb: f64,
+    pub diagnostics: DhruvTimeDiagnostics,
+}
+
+fn delta_t_model_from_code(code: i32) -> Option<DeltaTModel> {
+    match code {
+        DHRUV_DELTA_T_MODEL_LEGACY_ESPENAK_MEEUS_2006 => Some(DeltaTModel::LegacyEspenakMeeus2006),
+        DHRUV_DELTA_T_MODEL_SMH2016_WITH_PRE720_QUADRATIC => {
+            Some(DeltaTModel::Smh2016WithPre720Quadratic)
+        }
+        _ => None,
+    }
+}
+
+fn delta_t_model_to_code(model: DeltaTModel) -> i32 {
+    match model {
+        DeltaTModel::LegacyEspenakMeeus2006 => DHRUV_DELTA_T_MODEL_LEGACY_ESPENAK_MEEUS_2006,
+        DeltaTModel::Smh2016WithPre720Quadratic => {
+            DHRUV_DELTA_T_MODEL_SMH2016_WITH_PRE720_QUADRATIC
+        }
+    }
+}
+
+fn delta_t_segment_to_code(segment: DeltaTSegment) -> i32 {
+    match segment {
+        DeltaTSegment::PreMinus720Quadratic => DHRUV_DELTA_T_SEGMENT_PRE_MINUS720_QUADRATIC,
+        DeltaTSegment::Smh2016Reconstruction => DHRUV_DELTA_T_SEGMENT_SMH2016_RECONSTRUCTION,
+        DeltaTSegment::SmhAsymptoticFuture => DHRUV_DELTA_T_SEGMENT_SMH_ASYMPTOTIC_FUTURE,
+        DeltaTSegment::BeforeMinus500 => DHRUV_DELTA_T_SEGMENT_BEFORE_MINUS500,
+        DeltaTSegment::Minus500To500 => DHRUV_DELTA_T_SEGMENT_MINUS500_TO_500,
+        DeltaTSegment::Year500To1600 => DHRUV_DELTA_T_SEGMENT_YEAR500_TO1600,
+        DeltaTSegment::Year1600To1700 => DHRUV_DELTA_T_SEGMENT_YEAR1600_TO1700,
+        DeltaTSegment::Year1700To1800 => DHRUV_DELTA_T_SEGMENT_YEAR1700_TO1800,
+        DeltaTSegment::Year1800To1860 => DHRUV_DELTA_T_SEGMENT_YEAR1800_TO1860,
+        DeltaTSegment::Year1860To1900 => DHRUV_DELTA_T_SEGMENT_YEAR1860_TO1900,
+        DeltaTSegment::Year1900To1920 => DHRUV_DELTA_T_SEGMENT_YEAR1900_TO1920,
+        DeltaTSegment::Year1920To1941 => DHRUV_DELTA_T_SEGMENT_YEAR1920_TO1941,
+        DeltaTSegment::Year1941To1961 => DHRUV_DELTA_T_SEGMENT_YEAR1941_TO1961,
+        DeltaTSegment::Year1961To1986 => DHRUV_DELTA_T_SEGMENT_YEAR1961_TO1986,
+        DeltaTSegment::Year1986To2005 => DHRUV_DELTA_T_SEGMENT_YEAR1986_TO2005,
+        DeltaTSegment::Year2005To2050 => DHRUV_DELTA_T_SEGMENT_YEAR2005_TO2050,
+        DeltaTSegment::Year2050To2150 => DHRUV_DELTA_T_SEGMENT_YEAR2050_TO2150,
+        DeltaTSegment::After2150 => DHRUV_DELTA_T_SEGMENT_AFTER2150,
+    }
+}
+
+fn smh_future_family_from_code(code: i32) -> Option<SmhFutureParabolaFamily> {
+    match code {
+        DHRUV_SMH_FUTURE_FAMILY_ADDENDUM_2020_PIECEWISE => {
+            Some(SmhFutureParabolaFamily::Addendum2020Piecewise)
+        }
+        DHRUV_SMH_FUTURE_FAMILY_CONSTANT_C_MINUS20 => {
+            Some(SmhFutureParabolaFamily::ConstantCMinus20)
+        }
+        DHRUV_SMH_FUTURE_FAMILY_CONSTANT_C_MINUS17P52 => {
+            Some(SmhFutureParabolaFamily::ConstantCMinus17p52)
+        }
+        DHRUV_SMH_FUTURE_FAMILY_CONSTANT_C_MINUS15P32 => {
+            Some(SmhFutureParabolaFamily::ConstantCMinus15p32)
+        }
+        DHRUV_SMH_FUTURE_FAMILY_STEPHENSON_1997 => Some(SmhFutureParabolaFamily::Stephenson1997),
+        DHRUV_SMH_FUTURE_FAMILY_STEPHENSON_2016 => Some(SmhFutureParabolaFamily::Stephenson2016),
+        _ => None,
+    }
+}
+
+fn future_delta_t_transition_from_code(code: i32) -> Option<FutureDeltaTTransition> {
+    match code {
+        DHRUV_FUTURE_DELTA_T_TRANSITION_LEGACY_TT_UTC_BLEND => {
+            Some(FutureDeltaTTransition::LegacyTtUtcBlend)
+        }
+        DHRUV_FUTURE_DELTA_T_TRANSITION_BRIDGE_FROM_MODERN_ENDPOINT => {
+            Some(FutureDeltaTTransition::BridgeFromModernEndpoint)
+        }
+        _ => None,
+    }
+}
+
+fn time_policy_from_ffi(policy: DhruvTimePolicy) -> Result<TimeConversionPolicy, DhruvStatus> {
+    match policy.mode {
+        DHRUV_TIME_POLICY_STRICT_LSK => Ok(TimeConversionPolicy::StrictLsk),
+        DHRUV_TIME_POLICY_HYBRID_DELTA_T => {
+            Ok(TimeConversionPolicy::HybridDeltaT(TimeConversionOptions {
+                warn_on_fallback: policy.options.warn_on_fallback != 0,
+                delta_t_model: delta_t_model_from_code(policy.options.delta_t_model)
+                    .ok_or(DhruvStatus::InvalidInput)?,
+                freeze_future_dut1: policy.options.freeze_future_dut1 != 0,
+                pre_range_dut1: policy.options.pre_range_dut1,
+                future_delta_t_transition: future_delta_t_transition_from_code(
+                    policy.options.future_delta_t_transition,
+                )
+                .ok_or(DhruvStatus::InvalidInput)?,
+                future_transition_years: policy.options.future_transition_years,
+                smh_future_family: smh_future_family_from_code(policy.options.smh_future_family)
+                    .ok_or(DhruvStatus::InvalidInput)?,
+            }))
+        }
+        _ => Err(DhruvStatus::InvalidInput),
+    }
+}
+
+fn empty_time_warning() -> DhruvTimeWarning {
+    DhruvTimeWarning {
+        kind: -1,
+        utc_seconds: 0.0,
+        first_entry_utc_seconds: 0.0,
+        last_entry_utc_seconds: 0.0,
+        used_delta_at_seconds: 0.0,
+        mjd: 0.0,
+        first_entry_mjd: 0.0,
+        last_entry_mjd: 0.0,
+        used_dut1_seconds: 0.0,
+        delta_t_model: -1,
+        delta_t_segment: -1,
+    }
+}
+
+fn time_warning_to_ffi(warning: &TimeWarning) -> DhruvTimeWarning {
+    match warning {
+        TimeWarning::LskFutureFrozen {
+            utc_seconds,
+            last_entry_utc_seconds,
+            used_delta_at_seconds,
+        } => DhruvTimeWarning {
+            kind: DHRUV_TIME_WARNING_LSK_FUTURE_FROZEN,
+            utc_seconds: *utc_seconds,
+            last_entry_utc_seconds: *last_entry_utc_seconds,
+            used_delta_at_seconds: *used_delta_at_seconds,
+            ..empty_time_warning()
+        },
+        TimeWarning::LskPreRangeFallback {
+            utc_seconds,
+            first_entry_utc_seconds,
+        } => DhruvTimeWarning {
+            kind: DHRUV_TIME_WARNING_LSK_PRE_RANGE_FALLBACK,
+            utc_seconds: *utc_seconds,
+            first_entry_utc_seconds: *first_entry_utc_seconds,
+            ..empty_time_warning()
+        },
+        TimeWarning::EopFutureFrozen {
+            mjd,
+            last_entry_mjd,
+            used_dut1_seconds,
+        } => DhruvTimeWarning {
+            kind: DHRUV_TIME_WARNING_EOP_FUTURE_FROZEN,
+            mjd: *mjd,
+            last_entry_mjd: *last_entry_mjd,
+            used_dut1_seconds: *used_dut1_seconds,
+            ..empty_time_warning()
+        },
+        TimeWarning::EopPreRangeFallback {
+            mjd,
+            first_entry_mjd,
+            used_dut1_seconds,
+        } => DhruvTimeWarning {
+            kind: DHRUV_TIME_WARNING_EOP_PRE_RANGE_FALLBACK,
+            mjd: *mjd,
+            first_entry_mjd: *first_entry_mjd,
+            used_dut1_seconds: *used_dut1_seconds,
+            ..empty_time_warning()
+        },
+        TimeWarning::DeltaTModelUsed {
+            model,
+            segment,
+            assumed_dut1_seconds,
+        } => DhruvTimeWarning {
+            kind: DHRUV_TIME_WARNING_DELTA_T_MODEL_USED,
+            used_dut1_seconds: *assumed_dut1_seconds,
+            delta_t_model: delta_t_model_to_code(*model),
+            delta_t_segment: delta_t_segment_to_code(*segment),
+            ..empty_time_warning()
+        },
+    }
+}
+
+fn time_diagnostics_to_ffi(diagnostics: &TimeDiagnostics) -> DhruvTimeDiagnostics {
+    let mut warnings = [empty_time_warning(); DHRUV_MAX_TIME_WARNINGS];
+    let warning_count = diagnostics.warnings.len().min(DHRUV_MAX_TIME_WARNINGS);
+    for (slot, warning) in warnings
+        .iter_mut()
+        .zip(diagnostics.warnings.iter().take(DHRUV_MAX_TIME_WARNINGS))
+    {
+        *slot = time_warning_to_ffi(warning);
+    }
+    DhruvTimeDiagnostics {
+        source: match diagnostics.source {
+            TtUtcSource::LskDeltaAt => DHRUV_TT_UTC_SOURCE_LSK_DELTA_AT,
+            TtUtcSource::DeltaTModel => DHRUV_TT_UTC_SOURCE_DELTA_T_MODEL,
+        },
+        tt_minus_utc_s: diagnostics.tt_minus_utc_s,
+        warning_count: warning_count as u32,
+        warnings,
+    }
 }
 
 /// Opaque config handle for FFI callers.
@@ -1024,33 +1323,59 @@ pub unsafe extern "C" fn dhruv_lsk_free(lsk: *mut DhruvLskHandle) -> DhruvStatus
 
 /// Convert UTC calendar date to TDB Julian Date using a standalone LSK handle.
 ///
-/// Writes the resulting JD TDB into `out_jd_tdb`.
+/// Writes the resulting JD TDB plus diagnostics into `out_result`.
 ///
 /// # Safety
-/// `lsk` and `out_jd_tdb` must be valid, non-null pointers.
+/// `lsk`, `request`, and `out_result` must be valid, non-null pointers.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_utc_to_tdb_jd(
     lsk: *const DhruvLskHandle,
-    year: i32,
-    month: u32,
-    day: u32,
-    hour: u32,
-    min: u32,
-    sec: f64,
-    out_jd_tdb: *mut f64,
+    eop: *const DhruvEopHandle,
+    request: *const DhruvUtcToTdbRequest,
+    out_result: *mut DhruvUtcToTdbResult,
 ) -> DhruvStatus {
     ffi_boundary(|| {
-        if lsk.is_null() || out_jd_tdb.is_null() {
+        if lsk.is_null() || request.is_null() || out_result.is_null() {
             return DhruvStatus::NullPointer;
         }
 
         // SAFETY: Pointer is checked for null above.
         let lsk_ref = unsafe { &*lsk };
+        // SAFETY: Pointer is checked for null above.
+        let request_ref = unsafe { &*request };
+        let eop_ref = unsafe { eop.as_ref() };
 
-        let epoch = dhruv_time::Epoch::from_utc(year, month, day, hour, min, sec, lsk_ref);
+        let utc = match dhruv_time::UtcTime::try_new(
+            request_ref.utc.year,
+            request_ref.utc.month,
+            request_ref.utc.day,
+            request_ref.utc.hour,
+            request_ref.utc.minute,
+            request_ref.utc.second,
+            Some(lsk_ref),
+        ) {
+            Ok(utc) => utc,
+            Err(_) => return DhruvStatus::InvalidInput,
+        };
+        let day_frac = utc.day as f64
+            + utc.hour as f64 / 24.0
+            + utc.minute as f64 / 1440.0
+            + utc.second / 86_400.0;
+        let utc_jd = dhruv_time::calendar_to_jd(utc.year, utc.month, day_frac);
+        let utc_seconds = dhruv_time::jd_to_tdb_seconds(utc_jd);
+        let policy = match time_policy_from_ffi(request_ref.policy) {
+            Ok(policy) => policy,
+            Err(status) => return status,
+        };
+        let out = lsk_ref.utc_to_tdb_with_policy_and_eop(utc_seconds, eop_ref, policy);
 
         // SAFETY: Pointer is checked for null above; write one value.
-        unsafe { *out_jd_tdb = epoch.as_jd_tdb() };
+        unsafe {
+            *out_result = DhruvUtcToTdbResult {
+                jd_tdb: dhruv_time::tdb_seconds_to_jd(out.tdb_seconds),
+                diagnostics: time_diagnostics_to_ffi(&out.diagnostics),
+            };
+        }
         DhruvStatus::Ok
     })
 }
@@ -11961,9 +12286,18 @@ mod tests {
 
     #[test]
     fn ffi_utc_to_tdb_jd_rejects_null() {
-        let mut jd: f64 = 0.0;
+        let mut out = DhruvUtcToTdbResult {
+            jd_tdb: 0.0,
+            diagnostics: DhruvTimeDiagnostics {
+                source: 0,
+                tt_minus_utc_s: 0.0,
+                warning_count: 0,
+                warnings: [empty_time_warning(); DHRUV_MAX_TIME_WARNINGS],
+            },
+        };
         // SAFETY: Null LSK pointer is intentional for validation.
-        let status = unsafe { dhruv_utc_to_tdb_jd(ptr::null(), 2000, 1, 1, 12, 0, 0.0, &mut jd) };
+        let status =
+            unsafe { dhruv_utc_to_tdb_jd(ptr::null(), ptr::null(), ptr::null(), &mut out) };
         assert_eq!(status, DhruvStatus::NullPointer);
     }
 
