@@ -3438,8 +3438,8 @@ fn engine_new<'a>(env: Env<'a>, config: Term<'a>) -> Result<Term<'a>, rustler::E
     let engine_config = EngineConfig {
         spk_paths: config.spk_paths.into_iter().map(PathBuf::from).collect(),
         lsk_path: PathBuf::from(config.lsk_path),
-        cache_capacity: config.cache_capacity.unwrap_or(64),
-        strict_validation: config.strict_validation.unwrap_or(false),
+        cache_capacity: config.cache_capacity.unwrap_or(256),
+        strict_validation: config.strict_validation.unwrap_or(true),
     };
     let engine = match Engine::new(engine_config) {
         Ok(engine) => engine,

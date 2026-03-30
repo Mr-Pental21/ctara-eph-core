@@ -90,6 +90,21 @@ defmodule CtaraDhruvTest do
     end
   end
 
+  test "elixir engine constructor accepts omitted shared default fields" do
+    if File.exists?(@spk) and File.exists?(@lsk) do
+      assert {:ok, engine} =
+               Engine.new(%{
+                 spk_paths: [@spk],
+                 lsk_path: @lsk,
+                 time_policy: %{mode: :hybrid_delta_t}
+               })
+
+      assert {:ok, %{closed: true}} = Engine.close(engine)
+    else
+      assert true
+    end
+  end
+
   test "elixir config loading supports typed request and defaults mode" do
     case with_engine() do
       :skip ->

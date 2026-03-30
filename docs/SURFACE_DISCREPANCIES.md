@@ -329,15 +329,12 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 
 ### 24. Elixir injects ad-hoc engine defaults that are not defined by the core
 
-- Missing or wrong:
-  The Elixir engine constructor diverges in two ways:
-  - it injects implicit defaults even though core `EngineConfig` has no default for those fields,
-  - the chosen values (`cache_capacity = 64`, `strict_validation = false`) differ from the established wrapper/CLI convention of `256` and `true`.
-  This creates wrapper-specific behavior that is not anchored in the core contract.
+- Status:
+  Resolved for the current Elixir bindings.
 - Affected surfaces:
   Elixir bindings.
-- Correct behavior:
-  Either require both fields explicitly, or align the implicit defaults with the established wrapper behavior. This point is an inference from surrounding surfaces because core itself does not define defaults.
+- Current behavior:
+  Elixir still allows `cache_capacity` and `strict_validation` to be omitted for convenience, but the injected values now align with the established wrapper/CLI convention of `256` and `true`.
 - Evidence:
   `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `bindings/python-open/src/ctara_dhruv/engine.py`, `crates/dhruv_cli/src/main.rs`.
 

@@ -40,6 +40,10 @@ using `bindings/elixir-open/lib/` as the source of truth.
 
 When `:path` is omitted, discovery mode is used.
 
+`new/1` accepts optional `:cache_capacity` and `:strict_validation`. When they
+are omitted, the Elixir wrapper aligns with the shared wrapper convention:
+`cache_capacity: 256` and `strict_validation: true`.
+
 `CtaraDhruv.Ephemeris`:
 
 - `query/2`
