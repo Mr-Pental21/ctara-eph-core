@@ -5,7 +5,7 @@ This page summarizes the public Python wrapper by module, using
 
 ## Top-Level Package Surface
 
-`ctara_dhruv.__init__` re-exports a compact surface:
+`ctara_dhruv.__init__` intentionally re-exports a compact surface:
 
 - engine lifecycle: `Engine`, `init`, `engine`, `lsk`, `eop`
 - selected enums from `enums`
@@ -17,7 +17,7 @@ This page summarizes the public Python wrapper by module, using
 - tara: `TaraCatalog`
 - dasha classes and helpers
 
-The fuller public surface is module-based.
+The fuller public surface is intentionally module-based.
 
 ## Public Modules
 

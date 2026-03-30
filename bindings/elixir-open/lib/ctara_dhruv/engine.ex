@@ -18,8 +18,11 @@ defmodule CtaraDhruv.Engine do
 
   def close(%__MODULE__{} = engine), do: Native.call_engine_noarg(&Native.engine_close/1, engine)
 
-  def load_config(%__MODULE__{} = engine, path),
+  def load_config(%__MODULE__{} = engine, path) when is_binary(path),
     do: Native.call_engine(&Native.engine_load_config/2, engine, %{path: path})
+
+  def load_config(%__MODULE__{} = engine, request) when is_map(request),
+    do: Native.call_engine(&Native.engine_load_config/2, engine, request)
 
   def clear_config(%__MODULE__{} = engine),
     do: Native.call_engine_noarg(&Native.engine_clear_config/1, engine)

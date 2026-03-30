@@ -90,6 +90,35 @@ defmodule CtaraDhruvTest do
     end
   end
 
+  test "elixir config loading supports typed request and defaults mode" do
+    case with_engine() do
+      :skip ->
+        assert true
+
+      {:ok, engine} ->
+        dir =
+          Path.join(System.tmp_dir!(), "dhruv-config-#{System.unique_integer([:positive])}")
+
+        config_path = Path.join(dir, "config.toml")
+        File.mkdir_p!(dir)
+        File.write!(config_path, "version = 1\n")
+
+        on_exit(fn ->
+          File.rm_rf(dir)
+        end)
+
+        loaded_recommended =
+          Engine.load_config(engine, %{path: config_path, defaults_mode: :recommended})
+
+        assert match?({:ok, %{loaded: true}}, loaded_recommended)
+
+        assert {:ok, %{cleared: true}} = Engine.clear_config(engine)
+
+        loaded_explicit = Engine.load_config(engine, %{path: config_path, defaults_mode: :none})
+        assert match?({:ok, %{loaded: true}}, loaded_explicit)
+    end
+  end
+
   test "elixir wrapper exposes sidereal bhavas and full_kundali defaults" do
     case with_engine() do
       :skip ->

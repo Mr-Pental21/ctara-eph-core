@@ -224,20 +224,14 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 
 ### 15. The package root exports only a small subset of the implemented Python binding
 
-- Missing or wrong:
-  The package-root export gap spans several categories:
-  - engine lifecycle and a few ephemeris/time helpers are exported,
-  - some domain modules such as ayanamsha, `TaraCatalog`, and dasha are exported,
-  - implemented modules such as `search`, `panchang`, `vedic`, `kundali`, `shadbala`, and `amsha` are not exported from the root,
-  - helper entrypoints such as `tara_compute`, `query_once`, and `query_utc` are also not exported,
-  - most shared type/enum surfaces are missing from the root.
-  The binding is therefore much broader than the package-root surface suggests.
+- Status:
+  Resolved by explicit documentation of the intended root surface.
 - Affected surfaces:
   Python bindings.
-- Correct behavior:
-  Re-export the implemented surface from `__init__.py`, or explicitly document that users must import submodules directly.
+- Current behavior:
+  `ctara_dhruv.__init__` is intentionally a compact convenience surface. The fuller public API is module-based, and the end-user docs now describe that explicitly instead of implying the root is the whole binding.
 - Evidence:
-  `bindings/python-open/src/ctara_dhruv/__init__.py`, `bindings/python-open/src/ctara_dhruv/*.py`.
+  `bindings/python-open/src/ctara_dhruv/__init__.py`, `docs/end_user/python/reference.md`.
 
 ### 16. The Python wrapper has no access to time-policy configuration
 
@@ -349,12 +343,12 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 
 ### 25. Elixir config loading cannot use discovery mode or choose `DefaultsMode`
 
-- Missing or wrong:
-  `engine_load_config` uses `load_from_path(...)` and hard-codes `DefaultsMode::Recommended`. There is no discovery flow and no way to select `DefaultsMode::None`.
+- Status:
+  Resolved for the current Elixir bindings.
 - Affected surfaces:
   Elixir bindings.
-- Correct behavior:
-  Carry discovery-vs-explicit path and `DefaultsMode` selection through one typed config-loading request/options shape so Elixir can reach the same loader behavior without wrapper-specific special cases.
+- Current behavior:
+  Elixir `load_config/2` now accepts the same main request shape as the shared loader contract: optional `path` plus explicit `defaults_mode`. Discovery mode is reachable when `path` is omitted, and the string-path form remains only as a small convenience wrapper.
 - Evidence:
   `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_cli/src/main.rs`, `bindings/python-open/src/ctara_dhruv/engine.py`, `bindings/node-open/src/engine.js`.
 

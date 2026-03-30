@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-use dhruv_config::{ConfigResolver, DefaultsMode, load_from_path};
+use dhruv_config::{ConfigResolver, DefaultsMode, load_with_discovery};
 use dhruv_core::{Body, Engine, EngineConfig, Frame, Observer, Query, StateVector};
 use dhruv_frames::{
     PrecessionModel, ReferencePlane, cartesian_state_to_spherical_state, cartesian_to_spherical,
@@ -112,6 +112,12 @@ struct EngineConfigInput {
 #[derive(Debug, Clone, Deserialize)]
 struct PathInput {
     path: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct ConfigLoadInput {
+    path: Option<String>,
+    defaults_mode: Option<EnumInput>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -1608,6 +1614,17 @@ fn utc_to_jd_utc(utc: &UtcTime) -> f64 {
     let a = (y2 / 100.0).floor();
     let b = 2.0 - a + (a / 4.0).floor();
     (365.25 * (y2 + 4716.0)).floor() + (30.6001 * (m2 + 1.0)).floor() + d + b - 1524.5
+}
+
+fn parse_defaults_mode(input: Option<&EnumInput>) -> Result<DefaultsMode, Value> {
+    match input {
+        None => Ok(DefaultsMode::Recommended),
+        Some(EnumInput::Int(0)) => Ok(DefaultsMode::Recommended),
+        Some(EnumInput::Int(1)) => Ok(DefaultsMode::None),
+        Some(EnumInput::Str(value)) if value == "recommended" => Ok(DefaultsMode::Recommended),
+        Some(EnumInput::Str(value)) if value == "none" => Ok(DefaultsMode::None),
+        _ => Err(error_payload("invalid_request", "unknown defaults mode")),
+    }
 }
 
 fn parse_dasha_inputs(input: Option<&DashaInputsInput>) -> Result<Option<OwnedDashaInputs>, Value> {
@@ -3456,12 +3473,17 @@ fn engine_load_config<'a>(
     resource: ResourceArc<EngineResource>,
     request: Term<'a>,
 ) -> Result<Term<'a>, rustler::Error> {
-    let request = decode_term::<PathInput>(request)?;
+    let request = decode_term::<ConfigLoadInput>(request)?;
     let response = write_state(&resource, |state| {
-        let loaded = load_from_path(PathBuf::from(&request.path).as_path())
+        let defaults_mode = parse_defaults_mode(request.defaults_mode.as_ref())?;
+        let explicit_path = request.path.as_ref().map(PathBuf::from);
+        let loaded = load_with_discovery(explicit_path.as_deref(), false)
             .map_err(|err| map_error("config_error", err))?;
-        state.resolver = Some(ConfigResolver::new(loaded.file, DefaultsMode::Recommended));
-        Ok(json!({ "loaded": true, "path": request.path }))
+        let loaded = loaded.ok_or_else(|| {
+            error_payload("config_error", "no config file found for discovery request")
+        })?;
+        state.resolver = Some(ConfigResolver::new(loaded.file, defaults_mode));
+        Ok(json!({ "loaded": true, "path": loaded.path }))
     });
     encode_json(env, response)
 }

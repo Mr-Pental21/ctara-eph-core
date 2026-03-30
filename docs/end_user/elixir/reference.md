@@ -33,6 +33,13 @@ using `bindings/elixir-open/lib/` as the source of truth.
 - `load_tara_catalog/2`
 - `reset_tara_catalog/1`
 
+`load_config/2` accepts either:
+
+- a string path convenience form
+- or a request map with optional `:path` and `:defaults_mode`
+
+When `:path` is omitted, discovery mode is used.
+
 `CtaraDhruv.Ephemeris`:
 
 - `query/2`
