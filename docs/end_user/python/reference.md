@@ -177,6 +177,25 @@ The fuller public surface is intentionally module-based.
   - `time_upagraha_jd`
   - `time_upagraha_jd_utc`
   - `all_upagrahas_for_date`
+- graha relationship, combustion, dignity, and classification helpers:
+  - `exaltation_degree`
+  - `debilitation_degree`
+  - `moolatrikone_range`
+  - `combustion_threshold`
+  - `is_combust`
+  - `all_combustion_status`
+  - `naisargika_maitri`
+  - `tatkalika_maitri`
+  - `panchadha_maitri`
+  - `dignity_in_rashi`
+  - `dignity_in_rashi_with_positions`
+  - `node_dignity_in_rashi`
+  - `natural_benefic_malefic`
+  - `moon_benefic_nature`
+  - `graha_gender`
+  - `hora_lord`
+  - `masa_lord`
+  - `samvatsara_lord`
 - ashtakavarga and drishti:
   - `calculate_bav`
   - `calculate_all_bav`
@@ -311,6 +330,10 @@ not a public truncation cap.
 
 - `TaraCatalog`
 - `tara_compute`
+- `propagate_position`
+- `apply_aberration`
+- `apply_light_deflection`
+- `galactic_anticenter_icrs`
 - `galactic_center_ecliptic`
 
 ## Public Config Families

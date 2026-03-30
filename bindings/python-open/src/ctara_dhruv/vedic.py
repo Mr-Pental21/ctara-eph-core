@@ -1528,3 +1528,229 @@ def ghatikas_since_sunrise(jd_moment: float, jd_sunrise: float,
 def hora_at(vaar_index: int, hora_index: int) -> int:
     """Determine hora lord for a weekday and position. Returns Chaldean index or -1."""
     return lib.dhruv_hora_at(vaar_index, hora_index)
+
+
+_NAISARGIKA_LABELS = {
+    0: "friend",
+    1: "enemy",
+    2: "neutral",
+}
+
+_TATKALIKA_LABELS = {
+    0: "friend",
+    1: "enemy",
+}
+
+_PANCHADHA_LABELS = {
+    0: "adhi_shatru",
+    1: "shatru",
+    2: "sama",
+    3: "mitra",
+    4: "adhi_mitra",
+}
+
+_DIGNITY_LABELS = {
+    0: "exalted",
+    1: "moolatrikone",
+    2: "own_sign",
+    3: "adhi_mitra",
+    4: "mitra",
+    5: "sama",
+    6: "shatru",
+    7: "adhi_shatru",
+    8: "debilitated",
+}
+
+_BENEFIC_LABELS = {
+    0: "benefic",
+    1: "malefic",
+}
+
+_GENDER_LABELS = {
+    0: "male",
+    1: "female",
+    2: "neuter",
+}
+
+
+def _label(code: int, mapping: dict[int, str], op_name: str) -> str:
+    if code not in mapping:
+        raise ValueError(f"{op_name} returned unknown code {code}")
+    return mapping[code]
+
+
+def _optional_degree(status_name: str, fn, *args):
+    has_value = ffi.new("uint8_t *")
+    value = ffi.new("double *")
+    check(fn(*args, has_value, value), status_name)
+    return value[0] if has_value[0] else None
+
+
+def exaltation_degree(graha_index: int):
+    """Return the exaltation degree for a graha, or ``None`` when undefined."""
+    return _optional_degree("dhruv_exaltation_degree", lib.dhruv_exaltation_degree, graha_index)
+
+
+def debilitation_degree(graha_index: int):
+    """Return the debilitation degree for a graha, or ``None`` when undefined."""
+    return _optional_degree("dhruv_debilitation_degree", lib.dhruv_debilitation_degree, graha_index)
+
+
+def moolatrikone_range(graha_index: int):
+    """Return ``(rashi_index, start_deg, end_deg)`` or ``None`` when undefined."""
+    has_value = ffi.new("uint8_t *")
+    rashi_index = ffi.new("uint8_t *")
+    start_deg = ffi.new("double *")
+    end_deg = ffi.new("double *")
+    check(
+        lib.dhruv_moolatrikone_range(
+            graha_index, has_value, rashi_index, start_deg, end_deg
+        ),
+        "dhruv_moolatrikone_range",
+    )
+    if not has_value[0]:
+        return None
+    return (int(rashi_index[0]), float(start_deg[0]), float(end_deg[0]))
+
+
+def combustion_threshold(graha_index: int, is_retrograde: bool = False):
+    """Return the combustion threshold in degrees, or ``None`` when undefined."""
+    return _optional_degree(
+        "dhruv_combustion_threshold",
+        lib.dhruv_combustion_threshold,
+        graha_index,
+        1 if is_retrograde else 0,
+    )
+
+
+def is_combust(
+    graha_index: int,
+    graha_sid_lon: float,
+    sun_sid_lon: float,
+    is_retrograde: bool = False,
+) -> bool:
+    """Return whether the graha is combust for the given longitudes."""
+    out = ffi.new("uint8_t *")
+    check(
+        lib.dhruv_is_combust(
+            graha_index,
+            graha_sid_lon,
+            sun_sid_lon,
+            1 if is_retrograde else 0,
+            out,
+        ),
+        "dhruv_is_combust",
+    )
+    return bool(out[0])
+
+
+def all_combustion_status(sidereal_lons_9: list[float], retrograde_flags_9: list[bool]) -> list[bool]:
+    """Return combustion flags for the 9 grahas."""
+    if len(sidereal_lons_9) != 9 or len(retrograde_flags_9) != 9:
+        raise ValueError("expected 9 longitudes and 9 retrograde flags")
+    lon_buf = ffi.new("double[9]", sidereal_lons_9)
+    retro_buf = ffi.new("uint8_t[9]", [1 if value else 0 for value in retrograde_flags_9])
+    out = ffi.new("uint8_t[9]")
+    check(
+        lib.dhruv_all_combustion_status(lon_buf, retro_buf, out),
+        "dhruv_all_combustion_status",
+    )
+    return [bool(out[i]) for i in range(9)]
+
+
+def naisargika_maitri(graha_index: int, other_index: int) -> str:
+    """Return the natural relationship label for two grahas."""
+    out = ffi.new("int32_t *")
+    check(lib.dhruv_naisargika_maitri(graha_index, other_index, out), "dhruv_naisargika_maitri")
+    return _label(out[0], _NAISARGIKA_LABELS, "dhruv_naisargika_maitri")
+
+
+def tatkalika_maitri(graha_rashi_index: int, other_rashi_index: int) -> str:
+    """Return the temporal relationship label for two rashi positions."""
+    out = ffi.new("int32_t *")
+    check(lib.dhruv_tatkalika_maitri(graha_rashi_index, other_rashi_index, out), "dhruv_tatkalika_maitri")
+    return _label(out[0], _TATKALIKA_LABELS, "dhruv_tatkalika_maitri")
+
+
+def panchadha_maitri(naisargika_code: int, tatkalika_code: int) -> str:
+    """Combine natural and temporal relationship codes into the five-fold relationship."""
+    out = ffi.new("int32_t *")
+    check(lib.dhruv_panchadha_maitri(naisargika_code, tatkalika_code, out), "dhruv_panchadha_maitri")
+    return _label(out[0], _PANCHADHA_LABELS, "dhruv_panchadha_maitri")
+
+
+def dignity_in_rashi(graha_index: int, sidereal_lon: float, rashi_index: int) -> str:
+    """Return the dignity label in the target rashi without temporal context."""
+    out = ffi.new("int32_t *")
+    check(lib.dhruv_dignity_in_rashi(graha_index, sidereal_lon, rashi_index, out), "dhruv_dignity_in_rashi")
+    return _label(out[0], _DIGNITY_LABELS, "dhruv_dignity_in_rashi")
+
+
+def dignity_in_rashi_with_positions(
+    graha_index: int, sidereal_lon: float, rashi_index: int, sapta_rashi_indices_7: list[int]
+) -> str:
+    """Return the dignity label using sapta-graha positions for compound friendship."""
+    if len(sapta_rashi_indices_7) != 7:
+        raise ValueError("expected 7 sapta-graha rashi indices")
+    positions = ffi.new("uint8_t[7]", sapta_rashi_indices_7)
+    out = ffi.new("int32_t *")
+    check(
+        lib.dhruv_dignity_in_rashi_with_positions(
+            graha_index, sidereal_lon, rashi_index, positions, out
+        ),
+        "dhruv_dignity_in_rashi_with_positions",
+    )
+    return _label(out[0], _DIGNITY_LABELS, "dhruv_dignity_in_rashi_with_positions")
+
+
+def node_dignity_in_rashi(
+    graha_index: int, rashi_index: int, graha_rashi_indices_9: list[int], policy_code: int = 0
+) -> str:
+    """Return the node dignity label for Rahu/Ketu using the selected policy code."""
+    if len(graha_rashi_indices_9) != 9:
+        raise ValueError("expected 9 graha rashi indices")
+    positions = ffi.new("uint8_t[9]", graha_rashi_indices_9)
+    out = ffi.new("int32_t *")
+    check(
+        lib.dhruv_node_dignity_in_rashi(
+            graha_index, rashi_index, positions, policy_code, out
+        ),
+        "dhruv_node_dignity_in_rashi",
+    )
+    return _label(out[0], _DIGNITY_LABELS, "dhruv_node_dignity_in_rashi")
+
+
+def natural_benefic_malefic(graha_index: int) -> str:
+    """Return whether the graha is naturally benefic or malefic."""
+    out = ffi.new("int32_t *")
+    check(lib.dhruv_natural_benefic_malefic(graha_index, out), "dhruv_natural_benefic_malefic")
+    return _label(out[0], _BENEFIC_LABELS, "dhruv_natural_benefic_malefic")
+
+
+def moon_benefic_nature(moon_sun_elongation: float) -> str:
+    """Return the Moon's benefic/malefic nature from elongation."""
+    out = ffi.new("int32_t *")
+    check(lib.dhruv_moon_benefic_nature(moon_sun_elongation, out), "dhruv_moon_benefic_nature")
+    return _label(out[0], _BENEFIC_LABELS, "dhruv_moon_benefic_nature")
+
+
+def graha_gender(graha_index: int) -> str:
+    """Return the graha gender label."""
+    out = ffi.new("int32_t *")
+    check(lib.dhruv_graha_gender(graha_index, out), "dhruv_graha_gender")
+    return _label(out[0], _GENDER_LABELS, "dhruv_graha_gender")
+
+
+def hora_lord(vaar_index: int, hora_index: int) -> int:
+    """Return the graha index of the hora lord, or ``-1`` for invalid input."""
+    return lib.dhruv_hora_lord(vaar_index, hora_index)
+
+
+def masa_lord(masa_index: int) -> int:
+    """Return the graha index of the masa lord, or ``-1`` for invalid input."""
+    return lib.dhruv_masa_lord(masa_index)
+
+
+def samvatsara_lord(samvatsara_index: int) -> int:
+    """Return the graha index of the samvatsara lord, or ``-1`` for invalid input."""
+    return lib.dhruv_samvatsara_lord(samvatsara_index)

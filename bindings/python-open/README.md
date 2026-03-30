@@ -5,7 +5,7 @@ canonical C ABI (`dhruv_ffi_c`) via `cffi`.
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=49`
+- ABI target: `DHRUV_API_VERSION=50`
 - Package root: `bindings/python-open`
 - Runtime dependency: `cffi`
 
@@ -118,3 +118,23 @@ kundali = full_kundali(
 For embedded amsha sections in `full_kundali`, remember that scoped amsha
 sub-sections depend on the corresponding root full-kundali sections also being
 enabled.
+
+## Low-Level Helper Coverage
+
+`ctara_dhruv.vedic` now also exposes the intended low-level helper family:
+
+- graha relationship and dignity helpers such as `naisargika_maitri`,
+  `tatkalika_maitri`, `panchadha_maitri`, `dignity_in_rashi`, and
+  `node_dignity_in_rashi`
+- combustion helpers such as `combustion_threshold`, `is_combust`, and
+  `all_combustion_status`
+- classification/lord helpers such as `natural_benefic_malefic`,
+  `moon_benefic_nature`, `graha_gender`, `hora_lord`, `masa_lord`, and
+  `samvatsara_lord`
+
+`ctara_dhruv.tara` also exposes the low-level tara primitives:
+
+- `propagate_position`
+- `apply_aberration`
+- `apply_light_deflection`
+- `galactic_anticenter_icrs`

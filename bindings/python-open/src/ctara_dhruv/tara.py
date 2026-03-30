@@ -176,3 +176,71 @@ def galactic_center_ecliptic(catalog, jd_tdb):
         lat_deg=out.lat_deg,
         distance_km=out.distance_km,
     )
+
+
+def propagate_position(
+    ra_deg: float,
+    dec_deg: float,
+    parallax_mas: float,
+    pm_ra_mas_yr: float,
+    pm_dec_mas_yr: float,
+    rv_km_s: float,
+    dt_years: float,
+) -> EquatorialPosition:
+    """Propagate a fixed star from raw astrometric parameters."""
+    out = ffi.new("DhruvEquatorialPosition *")
+    check(
+        lib.dhruv_tara_propagate_position(
+            ra_deg,
+            dec_deg,
+            parallax_mas,
+            pm_ra_mas_yr,
+            pm_dec_mas_yr,
+            rv_km_s,
+            dt_years,
+            out,
+        ),
+        "dhruv_tara_propagate_position",
+    )
+    return EquatorialPosition(
+        ra_deg=out.ra_deg,
+        dec_deg=out.dec_deg,
+        distance_au=out.distance_au,
+    )
+
+
+def apply_aberration(direction: tuple[float, float, float], earth_vel_au_day: tuple[float, float, float]) -> tuple[float, float, float]:
+    """Apply annual aberration to a unit direction vector."""
+    direction_buf = ffi.new("double[3]", list(direction))
+    velocity_buf = ffi.new("double[3]", list(earth_vel_au_day))
+    out = ffi.new("double[3]")
+    check(
+        lib.dhruv_tara_apply_aberration(direction_buf, velocity_buf, out),
+        "dhruv_tara_apply_aberration",
+    )
+    return (out[0], out[1], out[2])
+
+
+def apply_light_deflection(
+    direction: tuple[float, float, float],
+    sun_to_observer: tuple[float, float, float],
+    sun_observer_distance_au: float,
+) -> tuple[float, float, float]:
+    """Apply solar light deflection to a unit direction vector."""
+    direction_buf = ffi.new("double[3]", list(direction))
+    observer_buf = ffi.new("double[3]", list(sun_to_observer))
+    out = ffi.new("double[3]")
+    check(
+        lib.dhruv_tara_apply_light_deflection(
+            direction_buf, observer_buf, sun_observer_distance_au, out
+        ),
+        "dhruv_tara_apply_light_deflection",
+    )
+    return (out[0], out[1], out[2])
+
+
+def galactic_anticenter_icrs() -> tuple[float, float, float]:
+    """Return the galactic anticenter ICRS unit direction vector."""
+    out = ffi.new("double[3]")
+    check(lib.dhruv_tara_galactic_anticenter_icrs(out), "dhruv_tara_galactic_anticenter_icrs")
+    return (out[0], out[1], out[2])

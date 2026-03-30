@@ -55,7 +55,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 49;
+pub const DHRUV_API_VERSION: u32 = 50;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -105,6 +105,39 @@ pub const DHRUV_PRECESSION_MODEL_VONDRAK2011: i32 = 3;
 
 pub const DHRUV_GRAHA_LONGITUDE_KIND_SIDEREAL: i32 = 0;
 pub const DHRUV_GRAHA_LONGITUDE_KIND_TROPICAL: i32 = 1;
+
+pub const DHRUV_NAISARGIKA_FRIEND: i32 = 0;
+pub const DHRUV_NAISARGIKA_ENEMY: i32 = 1;
+pub const DHRUV_NAISARGIKA_NEUTRAL: i32 = 2;
+
+pub const DHRUV_TATKALIKA_FRIEND: i32 = 0;
+pub const DHRUV_TATKALIKA_ENEMY: i32 = 1;
+
+pub const DHRUV_PANCHADHA_ADHI_SHATRU: i32 = 0;
+pub const DHRUV_PANCHADHA_SHATRU: i32 = 1;
+pub const DHRUV_PANCHADHA_SAMA: i32 = 2;
+pub const DHRUV_PANCHADHA_MITRA: i32 = 3;
+pub const DHRUV_PANCHADHA_ADHI_MITRA: i32 = 4;
+
+pub const DHRUV_DIGNITY_EXALTED: i32 = 0;
+pub const DHRUV_DIGNITY_MOOLATRIKONE: i32 = 1;
+pub const DHRUV_DIGNITY_OWN_SIGN: i32 = 2;
+pub const DHRUV_DIGNITY_ADHI_MITRA: i32 = 3;
+pub const DHRUV_DIGNITY_MITRA: i32 = 4;
+pub const DHRUV_DIGNITY_SAMA: i32 = 5;
+pub const DHRUV_DIGNITY_SHATRU: i32 = 6;
+pub const DHRUV_DIGNITY_ADHI_SHATRU: i32 = 7;
+pub const DHRUV_DIGNITY_DEBILITATED: i32 = 8;
+
+pub const DHRUV_NODE_DIGNITY_SIGN_LORD_BASED: i32 = 0;
+pub const DHRUV_NODE_DIGNITY_ALWAYS_SAMA: i32 = 1;
+
+pub const DHRUV_BENEFIC_NATURE_BENEFIC: i32 = 0;
+pub const DHRUV_BENEFIC_NATURE_MALEFIC: i32 = 1;
+
+pub const DHRUV_GRAHA_GENDER_MALE: i32 = 0;
+pub const DHRUV_GRAHA_GENDER_FEMALE: i32 = 1;
+pub const DHRUV_GRAHA_GENDER_NEUTER: i32 = 2;
 
 impl From<&EngineError> for DhruvStatus {
     fn from(value: &EngineError) -> Self {
@@ -156,6 +189,91 @@ impl From<&dhruv_vedic_ops::SearchError> for DhruvStatus {
             dhruv_vedic_ops::SearchError::NoConvergence(_) => Self::NoConvergence,
             _ => Self::Internal,
         }
+    }
+}
+
+fn graha_from_index(index: u32) -> Option<dhruv_vedic_base::Graha> {
+    dhruv_vedic_base::ALL_GRAHAS.get(index as usize).copied()
+}
+
+fn naisargika_to_code(value: dhruv_vedic_base::NaisargikaMaitri) -> i32 {
+    match value {
+        dhruv_vedic_base::NaisargikaMaitri::Friend => DHRUV_NAISARGIKA_FRIEND,
+        dhruv_vedic_base::NaisargikaMaitri::Enemy => DHRUV_NAISARGIKA_ENEMY,
+        dhruv_vedic_base::NaisargikaMaitri::Neutral => DHRUV_NAISARGIKA_NEUTRAL,
+    }
+}
+
+fn tatkalika_to_code(value: dhruv_vedic_base::TatkalikaMaitri) -> i32 {
+    match value {
+        dhruv_vedic_base::TatkalikaMaitri::Friend => DHRUV_TATKALIKA_FRIEND,
+        dhruv_vedic_base::TatkalikaMaitri::Enemy => DHRUV_TATKALIKA_ENEMY,
+    }
+}
+
+fn tatkalika_from_code(code: i32) -> Option<dhruv_vedic_base::TatkalikaMaitri> {
+    match code {
+        DHRUV_TATKALIKA_FRIEND => Some(dhruv_vedic_base::TatkalikaMaitri::Friend),
+        DHRUV_TATKALIKA_ENEMY => Some(dhruv_vedic_base::TatkalikaMaitri::Enemy),
+        _ => None,
+    }
+}
+
+fn naisargika_from_code(code: i32) -> Option<dhruv_vedic_base::NaisargikaMaitri> {
+    match code {
+        DHRUV_NAISARGIKA_FRIEND => Some(dhruv_vedic_base::NaisargikaMaitri::Friend),
+        DHRUV_NAISARGIKA_ENEMY => Some(dhruv_vedic_base::NaisargikaMaitri::Enemy),
+        DHRUV_NAISARGIKA_NEUTRAL => Some(dhruv_vedic_base::NaisargikaMaitri::Neutral),
+        _ => None,
+    }
+}
+
+fn panchadha_to_code(value: dhruv_vedic_base::PanchadhaMaitri) -> i32 {
+    match value {
+        dhruv_vedic_base::PanchadhaMaitri::AdhiShatru => DHRUV_PANCHADHA_ADHI_SHATRU,
+        dhruv_vedic_base::PanchadhaMaitri::Shatru => DHRUV_PANCHADHA_SHATRU,
+        dhruv_vedic_base::PanchadhaMaitri::Sama => DHRUV_PANCHADHA_SAMA,
+        dhruv_vedic_base::PanchadhaMaitri::Mitra => DHRUV_PANCHADHA_MITRA,
+        dhruv_vedic_base::PanchadhaMaitri::AdhiMitra => DHRUV_PANCHADHA_ADHI_MITRA,
+    }
+}
+
+fn dignity_to_code(value: dhruv_vedic_base::Dignity) -> i32 {
+    match value {
+        dhruv_vedic_base::Dignity::Exalted => DHRUV_DIGNITY_EXALTED,
+        dhruv_vedic_base::Dignity::Moolatrikone => DHRUV_DIGNITY_MOOLATRIKONE,
+        dhruv_vedic_base::Dignity::OwnSign => DHRUV_DIGNITY_OWN_SIGN,
+        dhruv_vedic_base::Dignity::AdhiMitra => DHRUV_DIGNITY_ADHI_MITRA,
+        dhruv_vedic_base::Dignity::Mitra => DHRUV_DIGNITY_MITRA,
+        dhruv_vedic_base::Dignity::Sama => DHRUV_DIGNITY_SAMA,
+        dhruv_vedic_base::Dignity::Shatru => DHRUV_DIGNITY_SHATRU,
+        dhruv_vedic_base::Dignity::AdhiShatru => DHRUV_DIGNITY_ADHI_SHATRU,
+        dhruv_vedic_base::Dignity::Debilitated => DHRUV_DIGNITY_DEBILITATED,
+    }
+}
+
+fn node_policy_from_code(code: i32) -> Option<dhruv_vedic_base::NodeDignityPolicy> {
+    match code {
+        DHRUV_NODE_DIGNITY_SIGN_LORD_BASED => {
+            Some(dhruv_vedic_base::NodeDignityPolicy::SignLordBased)
+        }
+        DHRUV_NODE_DIGNITY_ALWAYS_SAMA => Some(dhruv_vedic_base::NodeDignityPolicy::AlwaysSama),
+        _ => None,
+    }
+}
+
+fn benefic_to_code(value: dhruv_vedic_base::BeneficNature) -> i32 {
+    match value {
+        dhruv_vedic_base::BeneficNature::Benefic => DHRUV_BENEFIC_NATURE_BENEFIC,
+        dhruv_vedic_base::BeneficNature::Malefic => DHRUV_BENEFIC_NATURE_MALEFIC,
+    }
+}
+
+fn gender_to_code(value: dhruv_vedic_base::GrahaGender) -> i32 {
+    match value {
+        dhruv_vedic_base::GrahaGender::Male => DHRUV_GRAHA_GENDER_MALE,
+        dhruv_vedic_base::GrahaGender::Female => DHRUV_GRAHA_GENDER_FEMALE,
+        dhruv_vedic_base::GrahaGender::Neuter => DHRUV_GRAHA_GENDER_NEUTER,
     }
 }
 
@@ -7324,6 +7442,38 @@ pub extern "C" fn dhruv_rashi_lord(rashi_index: u32) -> i32 {
     }
 }
 
+/// Return the graha index (0-8) of the hora lord for the given weekday and hora slot.
+/// Returns -1 for invalid input.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_hora_lord(vaar_index: u32, hora_index: u32) -> i32 {
+    if vaar_index > 6 || hora_index > 23 {
+        return -1;
+    }
+    let vaar = dhruv_vedic_base::ALL_VAARS[vaar_index as usize];
+    dhruv_vedic_base::hora_lord(vaar, hora_index as u8).index() as i32
+}
+
+/// Return the graha index (0-8) of the masa lord.
+/// Returns -1 for invalid input.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_masa_lord(masa_index: u32) -> i32 {
+    if masa_index >= dhruv_vedic_base::ALL_MASAS.len() as u32 {
+        return -1;
+    }
+    dhruv_vedic_base::masa_lord(dhruv_vedic_base::ALL_MASAS[masa_index as usize]).index() as i32
+}
+
+/// Return the graha index (0-8) of the samvatsara lord.
+/// Returns -1 for invalid input.
+#[unsafe(no_mangle)]
+pub extern "C" fn dhruv_samvatsara_lord(samvatsara_index: u32) -> i32 {
+    if samvatsara_index >= dhruv_vedic_base::ALL_SAMVATSARAS.len() as u32 {
+        return -1;
+    }
+    dhruv_vedic_base::samvatsara_lord(dhruv_vedic_base::ALL_SAMVATSARAS[samvatsara_index as usize])
+        .index() as i32
+}
+
 /// Return the name of a sphuta by index (0-15). Returns null for invalid index.
 #[unsafe(no_mangle)]
 pub extern "C" fn dhruv_sphuta_name(index: u32) -> *const std::ffi::c_char {
@@ -8571,6 +8721,426 @@ pub extern "C" fn dhruv_hora_at(vaar_index: u32, hora_index: u32) -> i32 {
     let vaar = dhruv_vedic_base::ALL_VAARS[vaar_index as usize];
     let hora = dhruv_vedic_base::hora_at(vaar, hora_index as u8);
     hora.index() as i32
+}
+
+/// Return the exaltation degree for a graha when defined.
+///
+/// # Safety
+/// All output pointers must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_exaltation_degree(
+    graha_index: u32,
+    out_has_value: *mut u8,
+    out_value: *mut f64,
+) -> DhruvStatus {
+    if out_has_value.is_null() || out_value.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let Some(graha) = graha_from_index(graha_index) else {
+        return DhruvStatus::InvalidQuery;
+    };
+    match dhruv_vedic_base::exaltation_degree(graha) {
+        Some(value) => unsafe {
+            *out_has_value = 1;
+            *out_value = value;
+        },
+        None => unsafe {
+            *out_has_value = 0;
+            *out_value = 0.0;
+        },
+    }
+    DhruvStatus::Ok
+}
+
+/// Return the debilitation degree for a graha when defined.
+///
+/// # Safety
+/// All output pointers must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_debilitation_degree(
+    graha_index: u32,
+    out_has_value: *mut u8,
+    out_value: *mut f64,
+) -> DhruvStatus {
+    if out_has_value.is_null() || out_value.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let Some(graha) = graha_from_index(graha_index) else {
+        return DhruvStatus::InvalidQuery;
+    };
+    match dhruv_vedic_base::debilitation_degree(graha) {
+        Some(value) => unsafe {
+            *out_has_value = 1;
+            *out_value = value;
+        },
+        None => unsafe {
+            *out_has_value = 0;
+            *out_value = 0.0;
+        },
+    }
+    DhruvStatus::Ok
+}
+
+/// Return the moolatrikone range for a graha when defined.
+///
+/// # Safety
+/// All output pointers must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_moolatrikone_range(
+    graha_index: u32,
+    out_has_value: *mut u8,
+    out_rashi_index: *mut u8,
+    out_start_deg: *mut f64,
+    out_end_deg: *mut f64,
+) -> DhruvStatus {
+    if out_has_value.is_null()
+        || out_rashi_index.is_null()
+        || out_start_deg.is_null()
+        || out_end_deg.is_null()
+    {
+        return DhruvStatus::NullPointer;
+    }
+    let Some(graha) = graha_from_index(graha_index) else {
+        return DhruvStatus::InvalidQuery;
+    };
+    match dhruv_vedic_base::moolatrikone_range(graha) {
+        Some((rashi_index, start_deg, end_deg)) => unsafe {
+            *out_has_value = 1;
+            *out_rashi_index = rashi_index;
+            *out_start_deg = start_deg;
+            *out_end_deg = end_deg;
+        },
+        None => unsafe {
+            *out_has_value = 0;
+            *out_rashi_index = 0;
+            *out_start_deg = 0.0;
+            *out_end_deg = 0.0;
+        },
+    }
+    DhruvStatus::Ok
+}
+
+/// Return the combustion threshold for a graha when defined.
+///
+/// # Safety
+/// All output pointers must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_combustion_threshold(
+    graha_index: u32,
+    is_retrograde: u8,
+    out_has_value: *mut u8,
+    out_threshold_deg: *mut f64,
+) -> DhruvStatus {
+    if out_has_value.is_null() || out_threshold_deg.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let Some(graha) = graha_from_index(graha_index) else {
+        return DhruvStatus::InvalidQuery;
+    };
+    match dhruv_vedic_base::combustion_threshold(graha, is_retrograde != 0) {
+        Some(value) => unsafe {
+            *out_has_value = 1;
+            *out_threshold_deg = value;
+        },
+        None => unsafe {
+            *out_has_value = 0;
+            *out_threshold_deg = 0.0;
+        },
+    }
+    DhruvStatus::Ok
+}
+
+/// Determine whether a graha is combust.
+///
+/// # Safety
+/// `out_is_combust` must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_is_combust(
+    graha_index: u32,
+    graha_sid_lon: f64,
+    sun_sid_lon: f64,
+    is_retrograde: u8,
+    out_is_combust: *mut u8,
+) -> DhruvStatus {
+    if out_is_combust.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let Some(graha) = graha_from_index(graha_index) else {
+        return DhruvStatus::InvalidQuery;
+    };
+    unsafe {
+        *out_is_combust = u8::from(dhruv_vedic_base::is_combust(
+            graha,
+            graha_sid_lon,
+            sun_sid_lon,
+            is_retrograde != 0,
+        ));
+    }
+    DhruvStatus::Ok
+}
+
+/// Determine combustion status for all nine grahas.
+///
+/// # Safety
+/// All pointers must be valid and point to 9 contiguous items.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_all_combustion_status(
+    sidereal_lons_9: *const f64,
+    retrograde_flags_9: *const u8,
+    out_combust_flags_9: *mut u8,
+) -> DhruvStatus {
+    if sidereal_lons_9.is_null() || retrograde_flags_9.is_null() || out_combust_flags_9.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let sidereal_slice = unsafe { std::slice::from_raw_parts(sidereal_lons_9, 9) };
+    let retrograde_slice = unsafe { std::slice::from_raw_parts(retrograde_flags_9, 9) };
+    let mut sidereal = [0.0_f64; 9];
+    sidereal.copy_from_slice(sidereal_slice);
+    let mut retrograde = [false; 9];
+    for (dst, src) in retrograde.iter_mut().zip(retrograde_slice.iter()) {
+        *dst = *src != 0;
+    }
+    let result = dhruv_vedic_base::all_combustion_status(&sidereal, &retrograde);
+    let out = unsafe { std::slice::from_raw_parts_mut(out_combust_flags_9, 9) };
+    for (dst, src) in out.iter_mut().zip(result.iter()) {
+        *dst = u8::from(*src);
+    }
+    DhruvStatus::Ok
+}
+
+/// Return the natural relationship between two grahas.
+///
+/// # Safety
+/// `out_code` must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_naisargika_maitri(
+    graha_index: u32,
+    other_index: u32,
+    out_code: *mut i32,
+) -> DhruvStatus {
+    if out_code.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let Some(graha) = graha_from_index(graha_index) else {
+        return DhruvStatus::InvalidQuery;
+    };
+    let Some(other) = graha_from_index(other_index) else {
+        return DhruvStatus::InvalidQuery;
+    };
+    unsafe {
+        *out_code = naisargika_to_code(dhruv_vedic_base::naisargika_maitri(graha, other));
+    }
+    DhruvStatus::Ok
+}
+
+/// Return the temporal relationship between two rashi positions.
+///
+/// # Safety
+/// `out_code` must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_tatkalika_maitri(
+    graha_rashi_index: u32,
+    other_rashi_index: u32,
+    out_code: *mut i32,
+) -> DhruvStatus {
+    if out_code.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    if graha_rashi_index > 11 || other_rashi_index > 11 {
+        return DhruvStatus::InvalidQuery;
+    }
+    unsafe {
+        *out_code = tatkalika_to_code(dhruv_vedic_base::tatkalika_maitri(
+            graha_rashi_index as u8,
+            other_rashi_index as u8,
+        ));
+    }
+    DhruvStatus::Ok
+}
+
+/// Combine natural and temporal relationships into the five-fold relationship.
+///
+/// # Safety
+/// `out_code` must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_panchadha_maitri(
+    naisargika_code: i32,
+    tatkalika_code: i32,
+    out_code: *mut i32,
+) -> DhruvStatus {
+    if out_code.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let Some(naisargika) = naisargika_from_code(naisargika_code) else {
+        return DhruvStatus::InvalidInput;
+    };
+    let Some(tatkalika) = tatkalika_from_code(tatkalika_code) else {
+        return DhruvStatus::InvalidInput;
+    };
+    unsafe {
+        *out_code = panchadha_to_code(dhruv_vedic_base::panchadha_maitri(naisargika, tatkalika));
+    }
+    DhruvStatus::Ok
+}
+
+/// Determine dignity in a rashi without temporal context.
+///
+/// # Safety
+/// `out_code` must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_dignity_in_rashi(
+    graha_index: u32,
+    sidereal_lon: f64,
+    rashi_index: u32,
+    out_code: *mut i32,
+) -> DhruvStatus {
+    if out_code.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    if rashi_index > 11 {
+        return DhruvStatus::InvalidQuery;
+    }
+    let Some(graha) = graha_from_index(graha_index) else {
+        return DhruvStatus::InvalidQuery;
+    };
+    unsafe {
+        *out_code = dignity_to_code(dhruv_vedic_base::dignity_in_rashi(
+            graha,
+            sidereal_lon,
+            rashi_index as u8,
+        ));
+    }
+    DhruvStatus::Ok
+}
+
+/// Determine dignity in a rashi using sapta-graha positions for compound friendship.
+///
+/// # Safety
+/// `sapta_rashi_indices_7` must point to 7 contiguous values and `out_code` must be valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_dignity_in_rashi_with_positions(
+    graha_index: u32,
+    sidereal_lon: f64,
+    rashi_index: u32,
+    sapta_rashi_indices_7: *const u8,
+    out_code: *mut i32,
+) -> DhruvStatus {
+    if sapta_rashi_indices_7.is_null() || out_code.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    if rashi_index > 11 || graha_index > 8 {
+        return DhruvStatus::InvalidQuery;
+    }
+    let Some(graha) = graha_from_index(graha_index) else {
+        return DhruvStatus::InvalidQuery;
+    };
+    let slice = unsafe { std::slice::from_raw_parts(sapta_rashi_indices_7, 7) };
+    let mut positions = [0_u8; 7];
+    positions.copy_from_slice(slice);
+    unsafe {
+        *out_code = dignity_to_code(dhruv_vedic_base::dignity_in_rashi_with_positions(
+            graha,
+            sidereal_lon,
+            rashi_index as u8,
+            &positions,
+        ));
+    }
+    DhruvStatus::Ok
+}
+
+/// Determine node dignity in a rashi using the selected policy.
+///
+/// # Safety
+/// `graha_rashi_indices_9` must point to 9 contiguous values and `out_code` must be valid.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_node_dignity_in_rashi(
+    graha_index: u32,
+    rashi_index: u32,
+    graha_rashi_indices_9: *const u8,
+    policy_code: i32,
+    out_code: *mut i32,
+) -> DhruvStatus {
+    if graha_rashi_indices_9.is_null() || out_code.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    if rashi_index > 11 {
+        return DhruvStatus::InvalidQuery;
+    }
+    let Some(graha) = graha_from_index(graha_index) else {
+        return DhruvStatus::InvalidQuery;
+    };
+    let Some(policy) = node_policy_from_code(policy_code) else {
+        return DhruvStatus::InvalidInput;
+    };
+    let slice = unsafe { std::slice::from_raw_parts(graha_rashi_indices_9, 9) };
+    let mut positions = [0_u8; 9];
+    positions.copy_from_slice(slice);
+    unsafe {
+        *out_code = dignity_to_code(dhruv_vedic_base::node_dignity_in_rashi(
+            graha,
+            rashi_index as u8,
+            &positions,
+            policy,
+        ));
+    }
+    DhruvStatus::Ok
+}
+
+/// Return the natural benefic/malefic classification for a graha.
+///
+/// # Safety
+/// `out_code` must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_natural_benefic_malefic(
+    graha_index: u32,
+    out_code: *mut i32,
+) -> DhruvStatus {
+    if out_code.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let Some(graha) = graha_from_index(graha_index) else {
+        return DhruvStatus::InvalidQuery;
+    };
+    unsafe {
+        *out_code = benefic_to_code(dhruv_vedic_base::natural_benefic_malefic(graha));
+    }
+    DhruvStatus::Ok
+}
+
+/// Return the Moon's benefic/malefic nature for the given elongation.
+///
+/// # Safety
+/// `out_code` must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_moon_benefic_nature(
+    moon_sun_elongation: f64,
+    out_code: *mut i32,
+) -> DhruvStatus {
+    if out_code.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    unsafe {
+        *out_code = benefic_to_code(dhruv_vedic_base::moon_benefic_nature(moon_sun_elongation));
+    }
+    DhruvStatus::Ok
+}
+
+/// Return the graha gender classification.
+///
+/// # Safety
+/// `out_code` must be valid and non-null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_graha_gender(graha_index: u32, out_code: *mut i32) -> DhruvStatus {
+    if out_code.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let Some(graha) = graha_from_index(graha_index) else {
+        return DhruvStatus::InvalidQuery;
+    };
+    unsafe {
+        *out_code = gender_to_code(dhruv_vedic_base::graha_gender(graha));
+    }
+    DhruvStatus::Ok
 }
 
 /// Compute complete Ashtakavarga for a given date and location.
@@ -12223,6 +12793,119 @@ pub unsafe extern "C" fn dhruv_tara_galactic_center_ecliptic(
     })
 }
 
+/// Propagate a fixed-star position from raw astrometric parameters.
+///
+/// # Safety
+/// `out` must be a valid non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_tara_propagate_position(
+    ra_deg: f64,
+    dec_deg: f64,
+    parallax_mas: f64,
+    pm_ra_mas_yr: f64,
+    pm_dec_mas_yr: f64,
+    rv_km_s: f64,
+    dt_years: f64,
+    out: *mut DhruvEquatorialPosition,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if out.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let position = dhruv_tara::propagate_position(
+            ra_deg,
+            dec_deg,
+            parallax_mas,
+            pm_ra_mas_yr,
+            pm_dec_mas_yr,
+            rv_km_s,
+            dt_years,
+        );
+        unsafe {
+            *out = DhruvEquatorialPosition {
+                ra_deg: position.ra_deg,
+                dec_deg: position.dec_deg,
+                distance_au: position.distance_au,
+            };
+        }
+        DhruvStatus::Ok
+    })
+}
+
+/// Apply annual aberration to a direction vector.
+///
+/// # Safety
+/// All pointers must be valid and point to 3 contiguous `double` values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_tara_apply_aberration(
+    direction_3: *const f64,
+    earth_vel_au_day_3: *const f64,
+    out_direction_3: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if direction_3.is_null() || earth_vel_au_day_3.is_null() || out_direction_3.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let direction = unsafe { std::slice::from_raw_parts(direction_3, 3) };
+        let earth_velocity = unsafe { std::slice::from_raw_parts(earth_vel_au_day_3, 3) };
+        let direction_arr = [direction[0], direction[1], direction[2]];
+        let velocity_arr = [earth_velocity[0], earth_velocity[1], earth_velocity[2]];
+        let corrected = dhruv_tara::apply_aberration(&direction_arr, &velocity_arr);
+        let out = unsafe { std::slice::from_raw_parts_mut(out_direction_3, 3) };
+        out.copy_from_slice(&corrected);
+        DhruvStatus::Ok
+    })
+}
+
+/// Apply solar light deflection to a direction vector.
+///
+/// # Safety
+/// All pointers must be valid and point to 3 contiguous `double` values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_tara_apply_light_deflection(
+    direction_3: *const f64,
+    sun_to_observer_3: *const f64,
+    sun_observer_distance_au: f64,
+    out_direction_3: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if direction_3.is_null() || sun_to_observer_3.is_null() || out_direction_3.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let direction = unsafe { std::slice::from_raw_parts(direction_3, 3) };
+        let sun_to_observer = unsafe { std::slice::from_raw_parts(sun_to_observer_3, 3) };
+        let direction_arr = [direction[0], direction[1], direction[2]];
+        let observer_arr = [sun_to_observer[0], sun_to_observer[1], sun_to_observer[2]];
+        let corrected = dhruv_tara::apply_light_deflection(
+            &direction_arr,
+            &observer_arr,
+            sun_observer_distance_au,
+        );
+        let out = unsafe { std::slice::from_raw_parts_mut(out_direction_3, 3) };
+        out.copy_from_slice(&corrected);
+        DhruvStatus::Ok
+    })
+}
+
+/// Return the galactic anticenter ICRS unit direction vector.
+///
+/// # Safety
+/// `out_direction_3` must be valid and point to 3 contiguous `double` values.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_tara_galactic_anticenter_icrs(
+    out_direction_3: *mut f64,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if out_direction_3.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+        let direction = dhruv_tara::galactic_anticenter_icrs();
+        let out = unsafe { std::slice::from_raw_parts_mut(out_direction_3, 3) };
+        out.copy_from_slice(&direction);
+        DhruvStatus::Ok
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -13130,8 +13813,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_49() {
-        assert_eq!(dhruv_api_version(), 49);
+    fn ffi_api_version_is_50() {
+        assert_eq!(dhruv_api_version(), 50);
     }
 
     #[test]

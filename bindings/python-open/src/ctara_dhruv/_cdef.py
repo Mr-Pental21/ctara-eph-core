@@ -41,7 +41,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       49
+#define DHRUV_API_VERSION       50
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 
@@ -1936,6 +1936,76 @@ DhruvStatus dhruv_ghatika_from_sunrises(
 const char *dhruv_graha_name(uint32_t index);
 const char *dhruv_yogini_name(uint32_t index);
 int32_t dhruv_rashi_lord(uint32_t rashi_index);
+int32_t dhruv_hora_lord(uint32_t vaar_index, uint32_t hora_index);
+int32_t dhruv_masa_lord(uint32_t masa_index);
+int32_t dhruv_samvatsara_lord(uint32_t samvatsara_index);
+DhruvStatus dhruv_exaltation_degree(
+    uint32_t graha_index,
+    uint8_t *out_has_value,
+    double *out_value);
+DhruvStatus dhruv_debilitation_degree(
+    uint32_t graha_index,
+    uint8_t *out_has_value,
+    double *out_value);
+DhruvStatus dhruv_moolatrikone_range(
+    uint32_t graha_index,
+    uint8_t *out_has_value,
+    uint8_t *out_rashi_index,
+    double *out_start_deg,
+    double *out_end_deg);
+DhruvStatus dhruv_combustion_threshold(
+    uint32_t graha_index,
+    uint8_t is_retrograde,
+    uint8_t *out_has_value,
+    double *out_threshold_deg);
+DhruvStatus dhruv_is_combust(
+    uint32_t graha_index,
+    double graha_sid_lon,
+    double sun_sid_lon,
+    uint8_t is_retrograde,
+    uint8_t *out_is_combust);
+DhruvStatus dhruv_all_combustion_status(
+    const double *sidereal_lons_9,
+    const uint8_t *retrograde_flags_9,
+    uint8_t *out_combust_flags_9);
+DhruvStatus dhruv_naisargika_maitri(
+    uint32_t graha_index,
+    uint32_t other_index,
+    int32_t *out_code);
+DhruvStatus dhruv_tatkalika_maitri(
+    uint32_t graha_rashi_index,
+    uint32_t other_rashi_index,
+    int32_t *out_code);
+DhruvStatus dhruv_panchadha_maitri(
+    int32_t naisargika_code,
+    int32_t tatkalika_code,
+    int32_t *out_code);
+DhruvStatus dhruv_dignity_in_rashi(
+    uint32_t graha_index,
+    double sidereal_lon,
+    uint32_t rashi_index,
+    int32_t *out_code);
+DhruvStatus dhruv_dignity_in_rashi_with_positions(
+    uint32_t graha_index,
+    double sidereal_lon,
+    uint32_t rashi_index,
+    const uint8_t *sapta_rashi_indices_7,
+    int32_t *out_code);
+DhruvStatus dhruv_node_dignity_in_rashi(
+    uint32_t graha_index,
+    uint32_t rashi_index,
+    const uint8_t *graha_rashi_indices_9,
+    int32_t policy_code,
+    int32_t *out_code);
+DhruvStatus dhruv_natural_benefic_malefic(
+    uint32_t graha_index,
+    int32_t *out_code);
+DhruvStatus dhruv_moon_benefic_nature(
+    double moon_sun_elongation,
+    int32_t *out_code);
+DhruvStatus dhruv_graha_gender(
+    uint32_t graha_index,
+    int32_t *out_code);
 
 /* --- Sphuta --- */
 const char *dhruv_sphuta_name(uint32_t index);
@@ -2346,6 +2416,25 @@ DhruvStatus dhruv_tara_galactic_center_ecliptic(
     const DhruvTaraCatalogHandle *handle,
     double jd_tdb,
     DhruvSphericalCoords *out);
+DhruvStatus dhruv_tara_propagate_position(
+    double ra_deg,
+    double dec_deg,
+    double parallax_mas,
+    double pm_ra_mas_yr,
+    double pm_dec_mas_yr,
+    double rv_km_s,
+    double dt_years,
+    DhruvEquatorialPosition *out);
+DhruvStatus dhruv_tara_apply_aberration(
+    const double *direction_3,
+    const double *earth_vel_au_day_3,
+    double *out_direction_3);
+DhruvStatus dhruv_tara_apply_light_deflection(
+    const double *direction_3,
+    const double *sun_to_observer_3,
+    double sun_observer_distance_au,
+    double *out_direction_3);
+DhruvStatus dhruv_tara_galactic_anticenter_icrs(double *out_direction_3);
 
 #ifdef __cplusplus
 }
