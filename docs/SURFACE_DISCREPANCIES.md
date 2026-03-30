@@ -185,16 +185,18 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 
 ### 12. Most low-level graha relationship and combustion math is Rust-only, and some naming variants are still split into parallel APIs
 
-- Missing or wrong:
-  This area has two separate issues:
-  - `dhruv_vedic_base` publicly exposes `combustion`, `graha_relationships`, dignity helpers, benefic/malefic classification, lord lookups, and related primitives. Outside Rust, only a very small subset is surfaced (`rashi_lord`, `hora_at`, and a few helper lookups).
-  - Some naming and presentation helpers are still modeled as parallel APIs or methods for the same logical identifier surface, such as separate Sanskrit/English/western name helpers. Those variations should not become permanent parallel public surfaces.
+- Status:
+  Resolved for the intended public helper family.
 - Affected surfaces:
   CLI, C ABI, Python, Node.js, Go, Elixir.
-- Correct behavior:
-  The relationship, combustion, dignity, and classification primitives are intended public library features and should be available across the supported public surfaces. Expose dedicated wrapper/ABI/CLI APIs for them instead of forcing downstream users onto Rust crates. For naming or presentation differences, use one identifier/lookup surface and carry locale/style/output preferences through config attributes or result metadata instead of keeping separate `*_english_name`-style APIs.
+- Current behavior:
+  The relationship, combustion, dignity, classification, and lord-lookup helper
+  family is now available across the supported public surfaces, including the
+  CLI's `graha-helper` utility family. The naming-cleanup rule also holds:
+  lookup surfaces remain on the single canonical `*_name` APIs, and removed
+  English/western-style parallel variants are not being reintroduced.
 - Evidence:
-  `crates/dhruv_vedic_base/src/lib.rs`, `crates/dhruv_vedic_base/src/graha_relationships.rs`, `crates/dhruv_vedic_base/src/graha.rs`, `crates/dhruv_vedic_base/src/rashi.rs`, `crates/dhruv_vedic_base/src/vaar.rs`, `crates/dhruv_ffi_c/include/dhruv.h`, `bindings/python-open/src/ctara_dhruv/vedic.py`, `bindings/go-open/internal/cabi/extras.go`.
+  `crates/dhruv_vedic_base/src/lib.rs`, `crates/dhruv_vedic_base/src/graha_relationships.rs`, `crates/dhruv_ffi_c/include/dhruv.h`, `bindings/python-open/src/ctara_dhruv/vedic.py`, `bindings/node-open/src/extras.js`, `bindings/go-open/dhruv/extras.go`, `bindings/elixir-open/lib/ctara_dhruv/math.ex`, `crates/dhruv_cli/src/main.rs`.
 
 ## CLI-specific discrepancies
 
@@ -211,12 +213,20 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 
 ### 14. The CLI does not expose most low-level time/frame APIs
 
-- Missing or wrong:
-  There are no commands for `TimeDiagnostics`, `CalendarPolicy`, `Epoch`, `month_from_abbrev`, invariable-plane transforms, or raw precession/obliquity helpers.
+- Status:
+  Resolved for the intended CLI utility surface.
 - Affected surfaces:
   CLI.
-- Correct behavior:
-  If the CLI is expected to mirror more of the broader library, carry these capabilities through coherent diagnostic/utility command surfaces with typed flags/config rather than a pile of one-off helper commands. Otherwise explicitly scope the CLI to end-user workflows only.
+- Current behavior:
+  The CLI now exposes coherent low-level utility families instead of a pile of
+  one-off commands:
+  - `time-utility` covers calendar conversion policy, month lookup, ayanamsha
+    metadata, approximate local noon, obliquity, reference-plane selection, and
+    raw precession/invariable transforms,
+  - `graha-helper` covers the public relationship/combustion helper family,
+  - `tara-primitive` covers low-level star propagation and correction helpers.
+  Further CLI expansion, if any, should stay on these utility families rather
+  than creating more standalone command variants.
 - Evidence:
   `crates/dhruv_time/src/lib.rs`, `crates/dhruv_frames/src/lib.rs`, `crates/dhruv_cli/src/main.rs`.
 
@@ -362,52 +372,43 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 
 ### 27. Elixir time helpers are much thinner than the implemented library
 
-- Missing or wrong:
-  Elixir time currently exposes only a very small subset:
-  - basic conversions: `utc_to_jd_tdb`, `jd_tdb_to_utc`,
-  - one frame/time helper: `nutation`.
-  It does not expose:
-  - system/default metadata such as ayanamsha system count or reference-plane defaults,
-  - lunar-node and local-noon helpers,
-  - delta-T and reconstruction helpers,
-  - diagnostics or time-policy result objects.
+- Status:
+  Resolved for the intentionally public Elixir time surface.
 - Affected surfaces:
   Elixir bindings.
-- Correct behavior:
-  Expand `CtaraDhruv.Time` if it is intended to represent the library's time surface.
+- Current behavior:
+  `CtaraDhruv.Time` now exposes UTC conversion with diagnostics plus the public
+  helper set `nutation_utc`, `approximate_local_noon`, `ayanamsha_system_count`,
+  and `reference_plane_default`. Reconstruction parse/install helpers remain
+  internal, matching the repo-wide time-surface policy.
 - Evidence:
   `bindings/elixir-open/lib/ctara_dhruv/time.ex`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_time/src/lib.rs`.
 
 ### 28. Elixir omits the composable panchang/intermediate APIs
 
-- Missing or wrong:
-  The missing Elixir panchang surface includes several composable intermediate layers:
-  - low-level astronomical intermediates such as `elongation_at`, `sidereal_sum_at`, `vedic_day_sunrises`, and `body_ecliptic_lon_lat`,
-  - direct calendar-factor evaluators such as `tithi_at`, `karana_at`, `yoga_at`, and `nakshatra_at`,
-  - sunrise-derived helpers such as `vaar_from_sunrises`, `hora_from_sunrises`, and `ghatika_from_sunrises`,
-  - elapsed-time helpers such as `ghatika_from_elapsed` and `ghatikas_since_sunrise`.
+- Status:
+  Resolved for the current Elixir bindings.
 - Affected surfaces:
   Elixir bindings.
-- Correct behavior:
-  Expose the same composable intermediate APIs that Python, Node, Go, CLI, and the Rust crates already support.
+- Current behavior:
+  `CtaraDhruv.Panchang` now exposes the same composable intermediate and
+  sunrise-derived helper layers already available in the other public
+  surfaces.
 - Evidence:
   `bindings/elixir-open/lib/ctara_dhruv/panchang.ex`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`.
 
 ### 29. Elixir omits most pure-math helper APIs
 
-- Missing or wrong:
-  The missing Elixir pure-math helper surface spans several utility families:
-  - formatting/classification helpers such as DMS conversion and rashi/nakshatra classifiers,
-  - lookup helpers such as name lookups,
-  - formula helpers such as sphuta and special-lagna calculations,
-  - upagraha and Ashtakavarga pure-math helpers,
-  - low-level graha-drishti primitives.
+- Status:
+  Resolved for the current Elixir bindings.
 - Affected surfaces:
   Elixir bindings.
-- Correct behavior:
-  Add a utility module mirroring the low-level helper surface already exposed in the C ABI and other bindings.
+- Current behavior:
+  Elixir now exposes `CtaraDhruv.Math`, covering classifiers, canonical name
+  lookups, sphuta/special-lagna helpers, upagraha and ashtakavarga math, graha
+  drishti, and the public relationship/combustion helper family.
 - Evidence:
-  `bindings/elixir-open/lib/ctara_dhruv/*.ex`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`.
+  `bindings/elixir-open/lib/ctara_dhruv/math.ex`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`.
 
 ### 30. Elixir jyotish longitude behavior should remain config-driven
 
@@ -435,15 +436,17 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 
 ### 32. Tara already uses a request/config pattern; the real remaining gap is the missing low-level primitives
 
-- Missing or wrong:
-  This area mixes one intentional non-gap and one real gap:
-  - intentional non-gap: non-Rust surfaces do not expose `position_equatorial_with_config`, `position_ecliptic_with_config`, or `sidereal_longitude_with_config` as separate symbols because request/config-driven replacements already exist through `dhruv_search::TaraOperation`, `dhruv_rs::ops::TaraRequest`, and the C ABI's `DhruvTaraComputeRequest`,
-  - real gap: lower-level primitives such as `propagate_position`, `apply_aberration`, `apply_light_deflection`, and `galactic_anticenter_icrs` remain Rust-only.
-  The important distinction is between redundant named variants, which should not be added, and genuinely missing low-level building blocks.
+- Status:
+  Resolved for the intended low-level tara helper set.
 - Affected surfaces:
   C ABI, Python, Node.js, Go, Elixir, CLI.
-- Correct behavior:
-  Do not count the absence of one-for-one tara `*_with_config` symbols as a discrepancy when `tara_compute_ex`/`TaraOperation` is already present, because the single request/config-driven entrypoint is the preferred shape. If low-level star propagation or correction composition is intended to be public outside Rust, add dedicated wrappers for the remaining primitives.
+- Current behavior:
+  The main tara surface remains request/config-driven through
+  `tara_compute_ex`/`TaraOperation`. In addition, the intentionally public
+  low-level building blocks `propagate_position`, `apply_aberration`,
+  `apply_light_deflection`, and `galactic_anticenter_icrs` are now wrapped
+  across the ABI, wrappers, and CLI utility surface. Redundant named
+  `*_with_config` variants remain intentionally absent.
 - Evidence:
   `crates/dhruv_tara/src/lib.rs`, `crates/dhruv_search/src/operations.rs`, `crates/dhruv_rs/src/ops.rs`, `crates/dhruv_ffi_c/include/dhruv.h`, `bindings/python-open/src/ctara_dhruv/tara.py`, `bindings/node-open/src/tara.js`, `bindings/go-open/dhruv/tara.go`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`, `crates/dhruv_cli/src/main.rs`.
 
@@ -453,6 +456,7 @@ The main structural choke points are:
 
 - `dhruv_rs` hides much of its own intended high-level API.
 - The C ABI is broad for assembled jyotish/search workflows, but narrow for low-level engine, time, frame, and tara primitives.
+- The helper and low-level tara parity gaps are now closed across the ABI, wrappers, and CLI utility surfaces.
 - Python's package root is much smaller than the implemented binding behind it.
-- Node and Go are close to the C ABI, but inherit its missing time/frame surfaces and range-search truncation risk.
-- Elixir diverges the most: partial time-policy support, thinner panchang/time/jyotish coverage, and wrapper-specific defaults that do not come from core behavior.
+- Node and Go are close to the C ABI; the main remaining scope question is whether additional raw CLI time/frame utilities should be public.
+- Elixir is now aligned on time-policy, panchang intermediates, pure-math helpers, dasha, and tara; the main remaining divergence question is broader CLI scope, not wrapper parity.

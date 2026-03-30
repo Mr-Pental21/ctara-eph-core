@@ -1879,6 +1879,201 @@ struct TaraPositionArgs {
     bsp: Option<PathBuf>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum GrahaHelperOp {
+    HoraLord,
+    MasaLord,
+    SamvatsaraLord,
+    ExaltationDegree,
+    DebilitationDegree,
+    MoolatrikoneRange,
+    CombustionThreshold,
+    IsCombust,
+    AllCombustionStatus,
+    NaisargikaMaitri,
+    TatkalikaMaitri,
+    PanchadhaMaitri,
+    DignityInRashi,
+    DignityInRashiWithPositions,
+    NodeDignityInRashi,
+    NaturalBeneficMalefic,
+    MoonBeneficNature,
+    GrahaGender,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum TimeUtilityOp {
+    AyanamshaSystemCount,
+    ReferencePlaneDefault,
+    ApproximateLocalNoon,
+    MonthFromAbbrev,
+    CalendarToJd,
+    JdToCalendar,
+    MeanObliquityOfDateArcsec,
+    MeanObliquityOfDateRad,
+    IcrfToReferencePlane,
+    EclipticToInvariable,
+    InvariableToEcliptic,
+    EclipticLonToInvariableLon,
+    InvariableLonToEclipticLon,
+    PrecessEclipticJ2000ToDate,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum TaraPrimitiveOp {
+    PropagatePosition,
+    ApplyAberration,
+    ApplyLightDeflection,
+    GalacticAnticenterIcrs,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum CliNaisargikaArg {
+    Friend,
+    Enemy,
+    Neutral,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum CliTatkalikaArg {
+    Friend,
+    Enemy,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum CliNodeArg {
+    Rahu,
+    Ketu,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum CliNodePolicyArg {
+    SignLord,
+    Sama,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum CliCalendarPolicyArg {
+    ProlepticGregorian,
+    GregorianCutover1582,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum CliReferencePlaneArg {
+    Ecliptic,
+    Invariable,
+}
+
+#[derive(clap::Args)]
+struct GrahaHelperArgs {
+    #[arg(long, value_enum)]
+    op: GrahaHelperOp,
+    #[arg(long)]
+    graha: Option<u8>,
+    #[arg(long)]
+    other: Option<u8>,
+    #[arg(long)]
+    vaar: Option<u8>,
+    #[arg(long)]
+    hora_index: Option<u8>,
+    #[arg(long)]
+    masa: Option<u8>,
+    #[arg(long)]
+    samvatsara: Option<u8>,
+    #[arg(long)]
+    rashi: Option<u8>,
+    #[arg(long)]
+    other_rashi: Option<u8>,
+    #[arg(long)]
+    sidereal_lon: Option<f64>,
+    #[arg(long)]
+    sun_lon: Option<f64>,
+    #[arg(long)]
+    retrograde: bool,
+    #[arg(long)]
+    longitudes: Option<String>,
+    #[arg(long)]
+    retrograde_flags: Option<String>,
+    #[arg(long)]
+    all_rashi_indices_7: Option<String>,
+    #[arg(long)]
+    all_rashi_indices_9: Option<String>,
+    #[arg(long, value_enum)]
+    naisargika: Option<CliNaisargikaArg>,
+    #[arg(long, value_enum)]
+    tatkalika: Option<CliTatkalikaArg>,
+    #[arg(long, value_enum)]
+    node: Option<CliNodeArg>,
+    #[arg(long, value_enum, default_value = "sign-lord")]
+    node_policy: CliNodePolicyArg,
+    #[arg(long)]
+    moon_sun_elongation: Option<f64>,
+}
+
+#[derive(clap::Args)]
+struct TimeUtilityArgs {
+    #[arg(long, value_enum)]
+    op: TimeUtilityOp,
+    #[arg(long)]
+    ayanamsha: Option<i32>,
+    #[arg(long)]
+    jd_ut_midnight: Option<f64>,
+    #[arg(long)]
+    longitude_deg: Option<f64>,
+    #[arg(long)]
+    month_abbrev: Option<String>,
+    #[arg(long)]
+    year: Option<i32>,
+    #[arg(long)]
+    month: Option<u32>,
+    #[arg(long)]
+    day: Option<f64>,
+    #[arg(long, value_enum, default_value = "proleptic-gregorian")]
+    calendar_policy: CliCalendarPolicyArg,
+    #[arg(long)]
+    jd: Option<f64>,
+    /// Comma-separated vector x,y,z
+    #[arg(long)]
+    vector: Option<String>,
+    #[arg(long, value_enum)]
+    reference_plane: Option<CliReferencePlaneArg>,
+    #[arg(long)]
+    t_centuries: Option<f64>,
+    #[arg(long)]
+    precession: Option<String>,
+}
+
+#[derive(clap::Args)]
+struct TaraPrimitiveArgs {
+    #[arg(long, value_enum)]
+    op: TaraPrimitiveOp,
+    #[arg(long)]
+    ra_deg: Option<f64>,
+    #[arg(long)]
+    dec_deg: Option<f64>,
+    #[arg(long)]
+    parallax_mas: Option<f64>,
+    #[arg(long)]
+    pm_ra_mas_yr: Option<f64>,
+    #[arg(long)]
+    pm_dec_mas_yr: Option<f64>,
+    #[arg(long)]
+    rv_km_s: Option<f64>,
+    #[arg(long)]
+    dt_years: Option<f64>,
+    /// Comma-separated vector x,y,z
+    #[arg(long)]
+    direction: Option<String>,
+    /// Comma-separated vector x,y,z
+    #[arg(long)]
+    earth_velocity: Option<String>,
+    /// Comma-separated vector x,y,z
+    #[arg(long)]
+    earth_position: Option<String>,
+    #[arg(long)]
+    observer_sun_distance_au: Option<f64>,
+}
+
 #[derive(Subcommand)]
 enum Commands {
     /// Show effective resolved configuration (debug utility)
@@ -2377,6 +2572,12 @@ enum Commands {
         #[arg(long)]
         sun_lon: f64,
     },
+    /// Low-level graha relationship, dignity, and combustion helpers
+    GrahaHelper(GrahaHelperArgs),
+    /// Low-level time and frame utility helpers
+    TimeUtility(TimeUtilityArgs),
+    /// Low-level tara propagation and correction primitives
+    TaraPrimitive(TaraPrimitiveArgs),
 
     // -------------------------------------------------------------------
     // Panchang Intermediates (engine required)
@@ -2914,6 +3115,36 @@ fn require_graha(index: u8) -> Graha {
     })
 }
 
+fn require_vaar(index: u8) -> dhruv_vedic_base::Vaar {
+    dhruv_vedic_base::ALL_VAARS
+        .get(index as usize)
+        .copied()
+        .unwrap_or_else(|| {
+            eprintln!("Invalid vaar index: {index} (0-6: Ravivaar..Shanivaar)");
+            std::process::exit(1);
+        })
+}
+
+fn require_masa(index: u8) -> dhruv_vedic_base::Masa {
+    dhruv_vedic_base::ALL_MASAS
+        .get(index as usize)
+        .copied()
+        .unwrap_or_else(|| {
+            eprintln!("Invalid masa index: {index} (0-11: Chaitra..Phalguna)");
+            std::process::exit(1);
+        })
+}
+
+fn require_samvatsara(index: u8) -> dhruv_vedic_base::Samvatsara {
+    dhruv_vedic_base::ALL_SAMVATSARAS
+        .get(index as usize)
+        .copied()
+        .unwrap_or_else(|| {
+            eprintln!("Invalid samvatsara index: {index} (0-59)");
+            std::process::exit(1);
+        })
+}
+
 fn parse_graha_rashis(s: &str) -> [u8; 7] {
     let vals: Vec<u8> = s
         .split(',')
@@ -2953,6 +3184,171 @@ fn parse_longitudes_9(s: &str) -> [f64; 9] {
     let mut arr = [0.0f64; 9];
     arr.copy_from_slice(&vals);
     arr
+}
+
+fn parse_u8s<const N: usize>(raw: &str, what: &str) -> [u8; N] {
+    let vals: Vec<u8> = raw
+        .split(',')
+        .map(|v| {
+            v.trim().parse::<u8>().unwrap_or_else(|e| {
+                eprintln!("Invalid {what} value '{v}': {e}");
+                std::process::exit(1);
+            })
+        })
+        .collect();
+    if vals.len() != N {
+        eprintln!(
+            "Expected {N} comma-separated {what} values, got {}",
+            vals.len()
+        );
+        std::process::exit(1);
+    }
+    let mut arr = [0u8; N];
+    arr.copy_from_slice(&vals);
+    arr
+}
+
+fn parse_bools_9(s: &str) -> [bool; 9] {
+    let vals: Vec<bool> = s
+        .split(',')
+        .map(|v| match v.trim().to_ascii_lowercase().as_str() {
+            "1" | "true" | "t" | "yes" | "y" => true,
+            "0" | "false" | "f" | "no" | "n" => false,
+            other => {
+                eprintln!("Invalid retrograde flag '{other}' (use true/false or 1/0)");
+                std::process::exit(1);
+            }
+        })
+        .collect();
+    if vals.len() != 9 {
+        eprintln!(
+            "Expected 9 comma-separated retrograde flags, got {}",
+            vals.len()
+        );
+        std::process::exit(1);
+    }
+    let mut arr = [false; 9];
+    arr.copy_from_slice(&vals);
+    arr
+}
+
+fn parse_vec3(s: &str, what: &str) -> [f64; 3] {
+    let vals: Vec<f64> = s
+        .split(',')
+        .map(|v| {
+            v.trim().parse::<f64>().unwrap_or_else(|e| {
+                eprintln!("Invalid {what} component '{v}': {e}");
+                std::process::exit(1);
+            })
+        })
+        .collect();
+    if vals.len() != 3 {
+        eprintln!(
+            "Expected 3 comma-separated values for {what}, got {}",
+            vals.len()
+        );
+        std::process::exit(1);
+    }
+    [vals[0], vals[1], vals[2]]
+}
+
+fn naisargika_label(value: dhruv_vedic_base::NaisargikaMaitri) -> &'static str {
+    match value {
+        dhruv_vedic_base::NaisargikaMaitri::Friend => "friend",
+        dhruv_vedic_base::NaisargikaMaitri::Enemy => "enemy",
+        dhruv_vedic_base::NaisargikaMaitri::Neutral => "neutral",
+    }
+}
+
+fn tatkalika_label(value: dhruv_vedic_base::TatkalikaMaitri) -> &'static str {
+    match value {
+        dhruv_vedic_base::TatkalikaMaitri::Friend => "friend",
+        dhruv_vedic_base::TatkalikaMaitri::Enemy => "enemy",
+    }
+}
+
+fn panchadha_label(value: dhruv_vedic_base::PanchadhaMaitri) -> &'static str {
+    match value {
+        dhruv_vedic_base::PanchadhaMaitri::AdhiShatru => "adhi-shatru",
+        dhruv_vedic_base::PanchadhaMaitri::Shatru => "shatru",
+        dhruv_vedic_base::PanchadhaMaitri::Sama => "sama",
+        dhruv_vedic_base::PanchadhaMaitri::Mitra => "mitra",
+        dhruv_vedic_base::PanchadhaMaitri::AdhiMitra => "adhi-mitra",
+    }
+}
+
+fn dignity_label(value: dhruv_vedic_base::Dignity) -> &'static str {
+    match value {
+        dhruv_vedic_base::Dignity::Exalted => "exalted",
+        dhruv_vedic_base::Dignity::Moolatrikone => "moolatrikone",
+        dhruv_vedic_base::Dignity::OwnSign => "own-sign",
+        dhruv_vedic_base::Dignity::AdhiMitra => "adhi-mitra",
+        dhruv_vedic_base::Dignity::Mitra => "mitra",
+        dhruv_vedic_base::Dignity::Sama => "sama",
+        dhruv_vedic_base::Dignity::Shatru => "shatru",
+        dhruv_vedic_base::Dignity::AdhiShatru => "adhi-shatru",
+        dhruv_vedic_base::Dignity::Debilitated => "debilitated",
+    }
+}
+
+fn benefic_label(value: dhruv_vedic_base::BeneficNature) -> &'static str {
+    match value {
+        dhruv_vedic_base::BeneficNature::Benefic => "benefic",
+        dhruv_vedic_base::BeneficNature::Malefic => "malefic",
+    }
+}
+
+fn gender_label(value: dhruv_vedic_base::GrahaGender) -> &'static str {
+    match value {
+        dhruv_vedic_base::GrahaGender::Male => "male",
+        dhruv_vedic_base::GrahaGender::Female => "female",
+        dhruv_vedic_base::GrahaGender::Neuter => "neuter",
+    }
+}
+
+fn parse_cli_naisargika(value: CliNaisargikaArg) -> dhruv_vedic_base::NaisargikaMaitri {
+    match value {
+        CliNaisargikaArg::Friend => dhruv_vedic_base::NaisargikaMaitri::Friend,
+        CliNaisargikaArg::Enemy => dhruv_vedic_base::NaisargikaMaitri::Enemy,
+        CliNaisargikaArg::Neutral => dhruv_vedic_base::NaisargikaMaitri::Neutral,
+    }
+}
+
+fn parse_cli_tatkalika(value: CliTatkalikaArg) -> dhruv_vedic_base::TatkalikaMaitri {
+    match value {
+        CliTatkalikaArg::Friend => dhruv_vedic_base::TatkalikaMaitri::Friend,
+        CliTatkalikaArg::Enemy => dhruv_vedic_base::TatkalikaMaitri::Enemy,
+    }
+}
+
+fn parse_cli_node(value: CliNodeArg) -> Graha {
+    match value {
+        CliNodeArg::Rahu => Graha::Rahu,
+        CliNodeArg::Ketu => Graha::Ketu,
+    }
+}
+
+fn parse_cli_node_policy(value: CliNodePolicyArg) -> NodeDignityPolicy {
+    match value {
+        CliNodePolicyArg::SignLord => NodeDignityPolicy::SignLordBased,
+        CliNodePolicyArg::Sama => NodeDignityPolicy::AlwaysSama,
+    }
+}
+
+fn parse_cli_calendar_policy(value: CliCalendarPolicyArg) -> dhruv_time::CalendarPolicy {
+    match value {
+        CliCalendarPolicyArg::ProlepticGregorian => dhruv_time::CalendarPolicy::ProlepticGregorian,
+        CliCalendarPolicyArg::GregorianCutover1582 => {
+            dhruv_time::CalendarPolicy::GregorianCutover1582
+        }
+    }
+}
+
+fn parse_cli_reference_plane(value: CliReferencePlaneArg) -> ReferencePlane {
+    match value {
+        CliReferencePlaneArg::Ecliptic => ReferencePlane::Ecliptic,
+        CliReferencePlaneArg::Invariable => ReferencePlane::Invariable,
+    }
 }
 
 fn main() {
@@ -6439,6 +6835,537 @@ fn main() {
             println!("Indra Chapa: {:.6}°", upa.indra_chapa);
             println!("Upaketu:     {:.6}°", upa.upaketu);
         }
+
+        Commands::GrahaHelper(args) => match args.op {
+            GrahaHelperOp::HoraLord => {
+                let vaar = require_vaar(args.vaar.unwrap_or_else(|| {
+                    eprintln!("--vaar is required for --op hora-lord");
+                    std::process::exit(1);
+                }));
+                let hora_index = args.hora_index.unwrap_or_else(|| {
+                    eprintln!("--hora-index is required for --op hora-lord");
+                    std::process::exit(1);
+                });
+                let lord = dhruv_vedic_base::hora_lord(vaar, hora_index);
+                println!("{} ({})", lord.index(), lord.name());
+            }
+            GrahaHelperOp::MasaLord => {
+                let masa = require_masa(args.masa.unwrap_or_else(|| {
+                    eprintln!("--masa is required for --op masa-lord");
+                    std::process::exit(1);
+                }));
+                let lord = dhruv_vedic_base::masa_lord(masa);
+                println!("{} ({})", lord.index(), lord.name());
+            }
+            GrahaHelperOp::SamvatsaraLord => {
+                let samvatsara = require_samvatsara(args.samvatsara.unwrap_or_else(|| {
+                    eprintln!("--samvatsara is required for --op samvatsara-lord");
+                    std::process::exit(1);
+                }));
+                let lord = dhruv_vedic_base::samvatsara_lord(samvatsara);
+                println!("{} ({})", lord.index(), lord.name());
+            }
+            GrahaHelperOp::ExaltationDegree => {
+                let graha = require_graha(args.graha.unwrap_or_else(|| {
+                    eprintln!("--graha is required for --op exaltation-degree");
+                    std::process::exit(1);
+                }));
+                match dhruv_vedic_base::exaltation_degree(graha) {
+                    Some(value) => println!("{value:.6}"),
+                    None => println!("none"),
+                }
+            }
+            GrahaHelperOp::DebilitationDegree => {
+                let graha = require_graha(args.graha.unwrap_or_else(|| {
+                    eprintln!("--graha is required for --op debilitation-degree");
+                    std::process::exit(1);
+                }));
+                match dhruv_vedic_base::debilitation_degree(graha) {
+                    Some(value) => println!("{value:.6}"),
+                    None => println!("none"),
+                }
+            }
+            GrahaHelperOp::MoolatrikoneRange => {
+                let graha = require_graha(args.graha.unwrap_or_else(|| {
+                    eprintln!("--graha is required for --op moolatrikone-range");
+                    std::process::exit(1);
+                }));
+                match dhruv_vedic_base::moolatrikone_range(graha) {
+                    Some((rashi_index, start_deg, end_deg)) => {
+                        println!("{rashi_index},{start_deg:.6},{end_deg:.6}")
+                    }
+                    None => println!("none"),
+                }
+            }
+            GrahaHelperOp::CombustionThreshold => {
+                let graha = require_graha(args.graha.unwrap_or_else(|| {
+                    eprintln!("--graha is required for --op combustion-threshold");
+                    std::process::exit(1);
+                }));
+                match dhruv_vedic_base::combustion_threshold(graha, args.retrograde) {
+                    Some(value) => println!("{value:.6}"),
+                    None => println!("none"),
+                }
+            }
+            GrahaHelperOp::IsCombust => {
+                let graha = require_graha(args.graha.unwrap_or_else(|| {
+                    eprintln!("--graha is required for --op is-combust");
+                    std::process::exit(1);
+                }));
+                let graha_lon = args.sidereal_lon.unwrap_or_else(|| {
+                    eprintln!("--sidereal-lon is required for --op is-combust");
+                    std::process::exit(1);
+                });
+                let sun_lon = args.sun_lon.unwrap_or_else(|| {
+                    eprintln!("--sun-lon is required for --op is-combust");
+                    std::process::exit(1);
+                });
+                println!(
+                    "{}",
+                    dhruv_vedic_base::is_combust(graha, graha_lon, sun_lon, args.retrograde)
+                );
+            }
+            GrahaHelperOp::AllCombustionStatus => {
+                let longitudes =
+                    parse_longitudes_9(args.longitudes.as_deref().unwrap_or_else(|| {
+                        eprintln!("--longitudes is required for --op all-combustion-status");
+                        std::process::exit(1);
+                    }));
+                let retrograde_flags =
+                    parse_bools_9(args.retrograde_flags.as_deref().unwrap_or_else(|| {
+                        eprintln!("--retrograde-flags is required for --op all-combustion-status");
+                        std::process::exit(1);
+                    }));
+                let out = dhruv_vedic_base::all_combustion_status(&longitudes, &retrograde_flags);
+                println!(
+                    "{}",
+                    out.iter()
+                        .map(|value| if *value { "true" } else { "false" })
+                        .collect::<Vec<_>>()
+                        .join(",")
+                );
+            }
+            GrahaHelperOp::NaisargikaMaitri => {
+                let graha = require_graha(args.graha.unwrap_or_else(|| {
+                    eprintln!("--graha is required for --op naisargika-maitri");
+                    std::process::exit(1);
+                }));
+                let other = require_graha(args.other.unwrap_or_else(|| {
+                    eprintln!("--other is required for --op naisargika-maitri");
+                    std::process::exit(1);
+                }));
+                println!(
+                    "{}",
+                    naisargika_label(dhruv_vedic_base::naisargika_maitri(graha, other))
+                );
+            }
+            GrahaHelperOp::TatkalikaMaitri => {
+                let graha_rashi = args.rashi.unwrap_or_else(|| {
+                    eprintln!("--rashi is required for --op tatkalika-maitri");
+                    std::process::exit(1);
+                });
+                let other_rashi = args.other_rashi.unwrap_or_else(|| {
+                    eprintln!("--other-rashi is required for --op tatkalika-maitri");
+                    std::process::exit(1);
+                });
+                println!(
+                    "{}",
+                    tatkalika_label(dhruv_vedic_base::tatkalika_maitri(graha_rashi, other_rashi))
+                );
+            }
+            GrahaHelperOp::PanchadhaMaitri => {
+                let naisargika = parse_cli_naisargika(args.naisargika.unwrap_or_else(|| {
+                    eprintln!("--naisargika is required for --op panchadha-maitri");
+                    std::process::exit(1);
+                }));
+                let tatkalika = parse_cli_tatkalika(args.tatkalika.unwrap_or_else(|| {
+                    eprintln!("--tatkalika is required for --op panchadha-maitri");
+                    std::process::exit(1);
+                }));
+                println!(
+                    "{}",
+                    panchadha_label(dhruv_vedic_base::panchadha_maitri(naisargika, tatkalika))
+                );
+            }
+            GrahaHelperOp::DignityInRashi => {
+                let graha = require_graha(args.graha.unwrap_or_else(|| {
+                    eprintln!("--graha is required for --op dignity-in-rashi");
+                    std::process::exit(1);
+                }));
+                let sidereal_lon = args.sidereal_lon.unwrap_or_else(|| {
+                    eprintln!("--sidereal-lon is required for --op dignity-in-rashi");
+                    std::process::exit(1);
+                });
+                let rashi = args.rashi.unwrap_or_else(|| {
+                    eprintln!("--rashi is required for --op dignity-in-rashi");
+                    std::process::exit(1);
+                });
+                println!(
+                    "{}",
+                    dignity_label(dhruv_vedic_base::dignity_in_rashi(
+                        graha,
+                        sidereal_lon,
+                        rashi
+                    ))
+                );
+            }
+            GrahaHelperOp::DignityInRashiWithPositions => {
+                let graha = require_graha(args.graha.unwrap_or_else(|| {
+                    eprintln!("--graha is required for --op dignity-in-rashi-with-positions");
+                    std::process::exit(1);
+                }));
+                let sidereal_lon = args.sidereal_lon.unwrap_or_else(|| {
+                    eprintln!(
+                        "--sidereal-lon is required for --op dignity-in-rashi-with-positions"
+                    );
+                    std::process::exit(1);
+                });
+                let rashi = args.rashi.unwrap_or_else(|| {
+                    eprintln!("--rashi is required for --op dignity-in-rashi-with-positions");
+                    std::process::exit(1);
+                });
+                let all_rashi_indices = parse_u8s::<7>(
+                    args.all_rashi_indices_7.as_deref().unwrap_or_else(|| {
+                        eprintln!(
+                            "--all-rashi-indices-7 is required for --op dignity-in-rashi-with-positions"
+                        );
+                        std::process::exit(1);
+                    }),
+                    "rashi index",
+                );
+                println!(
+                    "{}",
+                    dignity_label(dhruv_vedic_base::dignity_in_rashi_with_positions(
+                        graha,
+                        sidereal_lon,
+                        rashi,
+                        &all_rashi_indices,
+                    ))
+                );
+            }
+            GrahaHelperOp::NodeDignityInRashi => {
+                let node = parse_cli_node(args.node.unwrap_or_else(|| {
+                    eprintln!("--node is required for --op node-dignity-in-rashi");
+                    std::process::exit(1);
+                }));
+                let rashi = args.rashi.unwrap_or_else(|| {
+                    eprintln!("--rashi is required for --op node-dignity-in-rashi");
+                    std::process::exit(1);
+                });
+                let all_rashi_indices = parse_u8s::<9>(
+                    args.all_rashi_indices_9.as_deref().unwrap_or_else(|| {
+                        eprintln!(
+                            "--all-rashi-indices-9 is required for --op node-dignity-in-rashi"
+                        );
+                        std::process::exit(1);
+                    }),
+                    "rashi index",
+                );
+                println!(
+                    "{}",
+                    dignity_label(dhruv_vedic_base::node_dignity_in_rashi(
+                        node,
+                        rashi,
+                        &all_rashi_indices,
+                        parse_cli_node_policy(args.node_policy),
+                    ))
+                );
+            }
+            GrahaHelperOp::NaturalBeneficMalefic => {
+                let graha = require_graha(args.graha.unwrap_or_else(|| {
+                    eprintln!("--graha is required for --op natural-benefic-malefic");
+                    std::process::exit(1);
+                }));
+                println!(
+                    "{}",
+                    benefic_label(dhruv_vedic_base::natural_benefic_malefic(graha))
+                );
+            }
+            GrahaHelperOp::MoonBeneficNature => {
+                let elongation = args.moon_sun_elongation.unwrap_or_else(|| {
+                    eprintln!("--moon-sun-elongation is required for --op moon-benefic-nature");
+                    std::process::exit(1);
+                });
+                println!(
+                    "{}",
+                    benefic_label(dhruv_vedic_base::moon_benefic_nature(elongation))
+                );
+            }
+            GrahaHelperOp::GrahaGender => {
+                let graha = require_graha(args.graha.unwrap_or_else(|| {
+                    eprintln!("--graha is required for --op graha-gender");
+                    std::process::exit(1);
+                }));
+                println!("{}", gender_label(dhruv_vedic_base::graha_gender(graha)));
+            }
+        },
+
+        Commands::TimeUtility(args) => match args.op {
+            TimeUtilityOp::AyanamshaSystemCount => {
+                println!("{}", AyanamshaSystem::all().len());
+            }
+            TimeUtilityOp::ReferencePlaneDefault => {
+                let system = require_aya_system(args.ayanamsha.unwrap_or_else(|| {
+                    eprintln!("--ayanamsha is required for --op reference-plane-default");
+                    std::process::exit(1);
+                }));
+                let label = match system.default_reference_plane() {
+                    ReferencePlane::Ecliptic => "ecliptic",
+                    ReferencePlane::Invariable => "invariable",
+                };
+                println!("{label}");
+            }
+            TimeUtilityOp::ApproximateLocalNoon => {
+                let jd_ut_midnight = args.jd_ut_midnight.unwrap_or_else(|| {
+                    eprintln!("--jd-ut-midnight is required for --op approximate-local-noon");
+                    std::process::exit(1);
+                });
+                let longitude_deg = args.longitude_deg.unwrap_or_else(|| {
+                    eprintln!("--longitude-deg is required for --op approximate-local-noon");
+                    std::process::exit(1);
+                });
+                println!(
+                    "{:.6}",
+                    dhruv_vedic_base::approximate_local_noon_jd(jd_ut_midnight, longitude_deg)
+                );
+            }
+            TimeUtilityOp::MonthFromAbbrev => {
+                let month_abbrev = args.month_abbrev.as_deref().unwrap_or_else(|| {
+                    eprintln!("--month-abbrev is required for --op month-from-abbrev");
+                    std::process::exit(1);
+                });
+                match dhruv_time::julian::month_from_abbrev(month_abbrev) {
+                    Some(value) => println!("{value}"),
+                    None => println!("none"),
+                }
+            }
+            TimeUtilityOp::CalendarToJd => {
+                let year = args.year.unwrap_or_else(|| {
+                    eprintln!("--year is required for --op calendar-to-jd");
+                    std::process::exit(1);
+                });
+                let month = args.month.unwrap_or_else(|| {
+                    eprintln!("--month is required for --op calendar-to-jd");
+                    std::process::exit(1);
+                });
+                let day = args.day.unwrap_or_else(|| {
+                    eprintln!("--day is required for --op calendar-to-jd");
+                    std::process::exit(1);
+                });
+                println!(
+                    "{:.9}",
+                    dhruv_time::calendar_to_jd_with_policy(
+                        year,
+                        month,
+                        day,
+                        parse_cli_calendar_policy(args.calendar_policy),
+                    )
+                );
+            }
+            TimeUtilityOp::JdToCalendar => {
+                let jd = args.jd.unwrap_or_else(|| {
+                    eprintln!("--jd is required for --op jd-to-calendar");
+                    std::process::exit(1);
+                });
+                let (year, month, day) = dhruv_time::jd_to_calendar_with_policy(
+                    jd,
+                    parse_cli_calendar_policy(args.calendar_policy),
+                );
+                println!("year={year} month={month} day={day:.9}");
+            }
+            TimeUtilityOp::MeanObliquityOfDateArcsec => {
+                let t_centuries = args.t_centuries.unwrap_or_else(|| {
+                    eprintln!("--t-centuries is required for --op mean-obliquity-of-date-arcsec");
+                    std::process::exit(1);
+                });
+                println!(
+                    "{:.9}",
+                    dhruv_frames::mean_obliquity_of_date_arcsec(t_centuries)
+                );
+            }
+            TimeUtilityOp::MeanObliquityOfDateRad => {
+                let t_centuries = args.t_centuries.unwrap_or_else(|| {
+                    eprintln!("--t-centuries is required for --op mean-obliquity-of-date-rad");
+                    std::process::exit(1);
+                });
+                println!(
+                    "{:.15}",
+                    dhruv_frames::mean_obliquity_of_date_rad(t_centuries)
+                );
+            }
+            TimeUtilityOp::IcrfToReferencePlane => {
+                let vector = parse_vec3(
+                    args.vector.as_deref().unwrap_or_else(|| {
+                        eprintln!("--vector is required for --op icrf-to-reference-plane");
+                        std::process::exit(1);
+                    }),
+                    "vector",
+                );
+                let plane = parse_cli_reference_plane(args.reference_plane.unwrap_or_else(|| {
+                    eprintln!("--reference-plane is required for --op icrf-to-reference-plane");
+                    std::process::exit(1);
+                }));
+                let out = dhruv_frames::icrf_to_reference_plane(&vector, plane);
+                println!("{:.12},{:.12},{:.12}", out[0], out[1], out[2]);
+            }
+            TimeUtilityOp::EclipticToInvariable => {
+                let vector = parse_vec3(
+                    args.vector.as_deref().unwrap_or_else(|| {
+                        eprintln!("--vector is required for --op ecliptic-to-invariable");
+                        std::process::exit(1);
+                    }),
+                    "vector",
+                );
+                let out = dhruv_frames::ecliptic_to_invariable(&vector);
+                println!("{:.12},{:.12},{:.12}", out[0], out[1], out[2]);
+            }
+            TimeUtilityOp::InvariableToEcliptic => {
+                let vector = parse_vec3(
+                    args.vector.as_deref().unwrap_or_else(|| {
+                        eprintln!("--vector is required for --op invariable-to-ecliptic");
+                        std::process::exit(1);
+                    }),
+                    "vector",
+                );
+                let out = dhruv_frames::invariable_to_ecliptic(&vector);
+                println!("{:.12},{:.12},{:.12}", out[0], out[1], out[2]);
+            }
+            TimeUtilityOp::EclipticLonToInvariableLon => {
+                let longitude_deg = args.longitude_deg.unwrap_or_else(|| {
+                    eprintln!(
+                        "--longitude-deg is required for --op ecliptic-lon-to-invariable-lon"
+                    );
+                    std::process::exit(1);
+                });
+                println!(
+                    "{:.9}",
+                    dhruv_frames::ecliptic_lon_to_invariable_lon(longitude_deg)
+                );
+            }
+            TimeUtilityOp::InvariableLonToEclipticLon => {
+                let longitude_deg = args.longitude_deg.unwrap_or_else(|| {
+                    eprintln!(
+                        "--longitude-deg is required for --op invariable-lon-to-ecliptic-lon"
+                    );
+                    std::process::exit(1);
+                });
+                println!(
+                    "{:.9}",
+                    dhruv_frames::invariable_lon_to_ecliptic_lon(longitude_deg)
+                );
+            }
+            TimeUtilityOp::PrecessEclipticJ2000ToDate => {
+                let vector = parse_vec3(
+                    args.vector.as_deref().unwrap_or_else(|| {
+                        eprintln!("--vector is required for --op precess-ecliptic-j2000-to-date");
+                        std::process::exit(1);
+                    }),
+                    "vector",
+                );
+                let t_centuries = args.t_centuries.unwrap_or_else(|| {
+                    eprintln!("--t-centuries is required for --op precess-ecliptic-j2000-to-date");
+                    std::process::exit(1);
+                });
+                let out = match args.precession.as_deref() {
+                    Some(model) => dhruv_frames::precess_ecliptic_j2000_to_date_with_model(
+                        &vector,
+                        t_centuries,
+                        parse_precession_model(model),
+                    ),
+                    None => dhruv_frames::precess_ecliptic_j2000_to_date(&vector, t_centuries),
+                };
+                println!("{:.12},{:.12},{:.12}", out[0], out[1], out[2]);
+            }
+        },
+
+        Commands::TaraPrimitive(args) => match args.op {
+            TaraPrimitiveOp::PropagatePosition => {
+                let pos = dhruv_tara::propagate_position(
+                    args.ra_deg.unwrap_or_else(|| {
+                        eprintln!("--ra-deg is required for --op propagate-position");
+                        std::process::exit(1);
+                    }),
+                    args.dec_deg.unwrap_or_else(|| {
+                        eprintln!("--dec-deg is required for --op propagate-position");
+                        std::process::exit(1);
+                    }),
+                    args.parallax_mas.unwrap_or_else(|| {
+                        eprintln!("--parallax-mas is required for --op propagate-position");
+                        std::process::exit(1);
+                    }),
+                    args.pm_ra_mas_yr.unwrap_or_else(|| {
+                        eprintln!("--pm-ra-mas-yr is required for --op propagate-position");
+                        std::process::exit(1);
+                    }),
+                    args.pm_dec_mas_yr.unwrap_or_else(|| {
+                        eprintln!("--pm-dec-mas-yr is required for --op propagate-position");
+                        std::process::exit(1);
+                    }),
+                    args.rv_km_s.unwrap_or_else(|| {
+                        eprintln!("--rv-km-s is required for --op propagate-position");
+                        std::process::exit(1);
+                    }),
+                    args.dt_years.unwrap_or_else(|| {
+                        eprintln!("--dt-years is required for --op propagate-position");
+                        std::process::exit(1);
+                    }),
+                );
+                println!(
+                    "ra_deg={:.12} dec_deg={:.12} distance_au={:.12}",
+                    pos.ra_deg, pos.dec_deg, pos.distance_au
+                );
+            }
+            TaraPrimitiveOp::ApplyAberration => {
+                let direction = parse_vec3(
+                    args.direction.as_deref().unwrap_or_else(|| {
+                        eprintln!("--direction is required for --op apply-aberration");
+                        std::process::exit(1);
+                    }),
+                    "direction",
+                );
+                let earth_velocity = parse_vec3(
+                    args.earth_velocity.as_deref().unwrap_or_else(|| {
+                        eprintln!("--earth-velocity is required for --op apply-aberration");
+                        std::process::exit(1);
+                    }),
+                    "earth velocity",
+                );
+                let out = dhruv_tara::apply_aberration(&direction, &earth_velocity);
+                println!("{:.12},{:.12},{:.12}", out[0], out[1], out[2]);
+            }
+            TaraPrimitiveOp::ApplyLightDeflection => {
+                let direction = parse_vec3(
+                    args.direction.as_deref().unwrap_or_else(|| {
+                        eprintln!("--direction is required for --op apply-light-deflection");
+                        std::process::exit(1);
+                    }),
+                    "direction",
+                );
+                let earth_position = parse_vec3(
+                    args.earth_position.as_deref().unwrap_or_else(|| {
+                        eprintln!("--earth-position is required for --op apply-light-deflection");
+                        std::process::exit(1);
+                    }),
+                    "earth position",
+                );
+                let observer_sun_distance_au = args.observer_sun_distance_au.unwrap_or_else(|| {
+                    eprintln!(
+                        "--observer-sun-distance-au is required for --op apply-light-deflection"
+                    );
+                    std::process::exit(1);
+                });
+                let out = dhruv_tara::apply_light_deflection(
+                    &direction,
+                    &earth_position,
+                    observer_sun_distance_au,
+                );
+                println!("{:.12},{:.12},{:.12}", out[0], out[1], out[2]);
+            }
+            TaraPrimitiveOp::GalacticAnticenterIcrs => {
+                let out = dhruv_tara::galactic_anticenter_icrs();
+                println!("{:.12},{:.12},{:.12}", out[0], out[1], out[2]);
+            }
+        },
 
         // -----------------------------------------------------------
         // Panchang Intermediates (engine required)
