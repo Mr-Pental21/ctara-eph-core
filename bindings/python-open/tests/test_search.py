@@ -124,14 +124,19 @@ class TestSankranti:
         assert evt is not None
         assert 0 <= evt.rashi_index <= 11
 
-    def test_next_specific_mesha_sankranti(self, engine_handles):
-        """Find next Mesha sankranti (solar ingress into Aries)."""
-        from ctara_dhruv.search import next_specific_sankranti
-        evt = next_specific_sankranti(
-            engine_handles._ptr, after_jd=J2000, rashi_index=0,
+    def test_specific_mesha_sankranti(self, engine_handles):
+        """Find Mesha sankranti in both directions through one helper."""
+        from ctara_dhruv.search import specific_sankranti
+        evt = specific_sankranti(
+            engine_handles._ptr, at_jd=J2000, rashi_index=0, direction="next",
         )
         assert evt is not None
         assert evt.rashi_index == 0
+        prev_evt = specific_sankranti(
+            engine_handles._ptr, at_jd=J2000, rashi_index=0, direction="prev",
+        )
+        assert prev_evt is not None
+        assert prev_evt.rashi_index == 0
 
     def test_range_sankrantis(self, engine_handles):
         """Search for sankrantis in a year should find ~12."""

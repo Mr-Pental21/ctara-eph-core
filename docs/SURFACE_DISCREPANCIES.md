@@ -252,12 +252,12 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 
 ### 17. Python lacks a bidirectional specific-sankranti search shape
 
-- Missing or wrong:
-  Python exposes `next_specific_sankranti` but not `prev_specific_sankranti`, even though the underlying search request supports both directions.
+- Status:
+  Resolved for the current Python bindings.
 - Affected surfaces:
   Python bindings.
-- Correct behavior:
-  Expose bidirectional specific-sankranti search through one direction-bearing request/helper shape rather than proliferating separate `next_*` and `prev_*` public helpers.
+- Current behavior:
+  Python now exposes one `specific_sankranti(...)` helper with a direction-bearing argument instead of a one-off `next_specific_sankranti` helper.
 - Evidence:
   `bindings/python-open/src/ctara_dhruv/search.py`, `crates/dhruv_ffi_c/include/dhruv.h`.
 

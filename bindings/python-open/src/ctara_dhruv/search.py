@@ -681,18 +681,28 @@ def prev_sankranti(
     return _sankranti_event(out_event[0])
 
 
-def next_specific_sankranti(
-    engine, after_jd: float, rashi_index: int, config=None
+def specific_sankranti(
+    engine, at_jd: float, rashi_index: int, direction: str = "next", config=None
 ) -> Optional[SankrantiEvent]:
-    """Find the next sankranti into a specific rashi after *after_jd*.
+    """Find a direction-specific sankranti into a specific rashi.
 
     *rashi_index*: 0-based (0=Mesha .. 11=Meena).
+    *direction*: ``"next"`` or ``"prev"``.
     """
+    if direction == "next":
+        query_mode = _SANKRANTI_NEXT
+        op_name = "specific_next"
+    elif direction == "prev":
+        query_mode = _SANKRANTI_PREV
+        op_name = "specific_prev"
+    else:
+        raise ValueError("direction must be 'next' or 'prev'")
+
     req = ffi.new("DhruvSankrantiSearchRequest *")
     req.target_kind = _SANKRANTI_TARGET_SPECIFIC
-    req.query_mode = _SANKRANTI_NEXT
+    req.query_mode = query_mode
     req.rashi_index = rashi_index
-    req.at_jd_tdb = after_jd
+    req.at_jd_tdb = at_jd
     req.config = config if config is not None else lib.dhruv_sankranti_config_default()
 
     out_event = ffi.new("DhruvSankrantiEvent *")
@@ -703,7 +713,7 @@ def next_specific_sankranti(
             out_event, out_found,
             ffi.NULL, 0, ffi.NULL,
         ),
-        "sankranti_search_ex(specific_next)",
+        f"sankranti_search_ex({op_name})",
     )
     if out_found[0] == 0:
         return None

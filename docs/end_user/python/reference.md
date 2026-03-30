@@ -300,7 +300,7 @@ precomputed `inputs` on the same main functions.
 - `sankranti_config_default`
 - `next_sankranti`
 - `prev_sankranti`
-- `next_specific_sankranti`
+- `specific_sankranti`
 - `search_sankrantis`
 
 Python range-search helpers auto-expand their internal buffers until the full
