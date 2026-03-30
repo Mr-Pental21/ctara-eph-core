@@ -223,13 +223,21 @@ This page summarizes the public Node wrapper exported from
 - `DashaHierarchy`
 - `dashaSelectionConfigDefault`
 - `dashaVariationConfigDefault`
-- `dashaHierarchyUtc`
-- `dashaSnapshotUtc`
-- `dashaLevel0Utc`
-- `dashaLevel0EntityUtc`
-- `dashaChildrenUtc`
-- `dashaChildPeriodUtc`
-- `dashaCompleteLevelUtc`
+- `dashaHierarchy`
+- `dashaSnapshot`
+- `dashaLevel0`
+- `dashaLevel0Entity`
+- `dashaChildren`
+- `dashaChildPeriod`
+- `dashaCompleteLevel`
+
+Node dasha calls use one request-driven surface per feature. The same functions
+accept either:
+
+- `birthUtc` plus `location` for engine-derived inputs
+- `birthJd` plus `inputs` for precomputed raw dasha inputs
+
+`dashaSnapshot` similarly accepts either `queryUtc` or `queryJd`.
 
 Returned dasha period objects include `entityName`, the exact canonical
 Sanskrit entity name.

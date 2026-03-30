@@ -27,7 +27,8 @@ use dhruv_search::{
 use dhruv_search::{
     PANCHANG_INCLUDE_ALL, PANCHANG_INCLUDE_AYANA, PANCHANG_INCLUDE_MASA, PANCHANG_INCLUDE_VARSHA,
     SankrantiConfig, StationaryConfig, ayanamsha, conjunction, dasha_hierarchy_for_birth,
-    dasha_snapshot_at, full_kundali_for_date, graha_longitudes, lunar_node, motion, panchang,
+    dasha_hierarchy_with_inputs, dasha_snapshot_at, dasha_snapshot_with_inputs,
+    full_kundali_for_date, graha_longitudes, lunar_node, motion, panchang,
     set_time_conversion_policy, tara as tara_op,
 };
 use dhruv_tara::{TaraAccuracy, TaraCatalog, TaraConfig, TaraId};
@@ -39,7 +40,7 @@ use dhruv_time::{
 use dhruv_vedic_base::bhava_types::ALL_BHAVA_SYSTEMS;
 use dhruv_vedic_base::dasha::{
     ALL_DASHA_SYSTEMS, DashaEntity, DashaHierarchy, DashaLevel, DashaPeriod, DashaSnapshot,
-    DashaSystem, DashaVariationConfig, SubPeriodMethod, YoginiScheme,
+    DashaSystem, DashaVariationConfig, RashiDashaInputs, SubPeriodMethod, YoginiScheme,
 };
 use dhruv_vedic_base::riseset::{approximate_local_noon_jd, compute_all_events, compute_rise_set};
 use dhruv_vedic_base::riseset_types::{
@@ -244,15 +245,18 @@ struct JyotishRequest {
 #[derive(Debug, Clone, Deserialize)]
 struct DashaRequest {
     op: String,
-    birth_utc: UtcInput,
+    birth_utc: Option<UtcInput>,
+    birth_jd: Option<f64>,
     query_utc: Option<UtcInput>,
-    location: GeoLocationInput,
+    query_jd: Option<f64>,
+    location: Option<GeoLocationInput>,
     system: EnumInput,
     max_level: Option<u8>,
     bhava_config: Option<BhavaConfigInput>,
     riseset_config: Option<RiseSetConfigInput>,
     sankranti_config: Option<SankrantiConfigInput>,
     variation: Option<DashaVariationInput>,
+    inputs: Option<DashaInputsInput>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -389,6 +393,16 @@ struct DashaVariationInput {
     level_methods: Option<Vec<EnumInput>>,
     yogini_scheme: Option<EnumInput>,
     use_abhijit: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct DashaInputsInput {
+    moon_sid_lon: Option<f64>,
+    graha_sidereal_lons: Option<Vec<f64>>,
+    lagna_sidereal_lon: Option<f64>,
+    sunrise_sunset: Option<(f64, f64)>,
+    sunrise_jd: Option<f64>,
+    sunset_jd: Option<f64>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1562,6 +1576,80 @@ fn to_dasha_variation(input: Option<&DashaVariationInput>) -> Result<DashaVariat
         }
     }
     Ok(config)
+}
+
+#[derive(Debug, Clone, Default)]
+struct OwnedDashaInputs {
+    moon_sid_lon: Option<f64>,
+    rashi_inputs: Option<RashiDashaInputs>,
+    sunrise_sunset: Option<(f64, f64)>,
+}
+
+impl OwnedDashaInputs {
+    fn borrowed(&self) -> dhruv_search::DashaInputs<'_> {
+        dhruv_search::DashaInputs {
+            moon_sid_lon: self.moon_sid_lon,
+            rashi_inputs: self.rashi_inputs.as_ref(),
+            sunrise_sunset: self.sunrise_sunset,
+        }
+    }
+}
+
+fn utc_to_jd_utc(utc: &UtcTime) -> f64 {
+    let y = utc.year as f64;
+    let m = utc.month as f64;
+    let d =
+        utc.day as f64 + utc.hour as f64 / 24.0 + utc.minute as f64 / 1440.0 + utc.second / 86400.0;
+    let (y2, m2) = if m <= 2.0 {
+        (y - 1.0, m + 12.0)
+    } else {
+        (y, m)
+    };
+    let a = (y2 / 100.0).floor();
+    let b = 2.0 - a + (a / 4.0).floor();
+    (365.25 * (y2 + 4716.0)).floor() + (30.6001 * (m2 + 1.0)).floor() + d + b - 1524.5
+}
+
+fn parse_dasha_inputs(input: Option<&DashaInputsInput>) -> Result<Option<OwnedDashaInputs>, Value> {
+    let Some(input) = input else {
+        return Ok(None);
+    };
+    let rashi_inputs = match (input.graha_sidereal_lons.as_ref(), input.lagna_sidereal_lon) {
+        (Some(lons), Some(lagna)) => {
+            if lons.len() != 9 {
+                return Err(error_payload(
+                    "invalid_request",
+                    "graha_sidereal_lons must contain exactly 9 values",
+                ));
+            }
+            let mut arr = [0.0; 9];
+            arr.copy_from_slice(lons);
+            Some(RashiDashaInputs::new(arr, lagna))
+        }
+        (None, None) => None,
+        _ => {
+            return Err(error_payload(
+                "invalid_request",
+                "rashi inputs require graha_sidereal_lons and lagna_sidereal_lon",
+            ));
+        }
+    };
+    let sunrise_sunset = match (input.sunrise_sunset, input.sunrise_jd, input.sunset_jd) {
+        (Some(pair), None, None) => Some(pair),
+        (None, Some(sunrise), Some(sunset)) => Some((sunrise, sunset)),
+        (None, None, None) => None,
+        _ => {
+            return Err(error_payload(
+                "invalid_request",
+                "sunrise_jd and sunset_jd must be provided together",
+            ));
+        }
+    };
+    Ok(Some(OwnedDashaInputs {
+        moon_sid_lon: input.moon_sid_lon,
+        rashi_inputs,
+        sunrise_sunset,
+    }))
 }
 
 fn to_tara_config(
@@ -3180,46 +3268,114 @@ fn handle_dasha(resource: &ResourceArc<EngineResource>, request: DashaRequest) -
             error_payload("missing_eop", "dasha operations require loaded EOP data")
         })?;
         apply_time_policy(state);
-        let birth_utc = parse_utc(request.birth_utc)?;
-        let location = parse_location(request.location);
         let system = parse_dasha_system(&request.system)?;
-        let bhava_config = to_bhava_config(state, request.bhava_config.as_ref())?;
-        let riseset_config = to_riseset_config(state, request.riseset_config.as_ref())?;
-        let sankranti_config = to_sankranti_config(state, request.sankranti_config.as_ref())?;
         let variation = to_dasha_variation(request.variation.as_ref())?;
+        let raw_inputs = parse_dasha_inputs(request.inputs.as_ref())?;
+        let birth_jd = match (request.birth_jd, request.birth_utc.as_ref()) {
+            (Some(jd), _) => jd,
+            (None, Some(utc)) if raw_inputs.is_some() => utc_to_jd_utc(&parse_utc(utc.clone())?),
+            (None, Some(_)) => 0.0,
+            (None, None) => {
+                return Err(error_payload(
+                    "invalid_request",
+                    "birth_utc or birth_jd is required",
+                ));
+            }
+        };
         match request.op.as_str() {
-            "hierarchy" => dasha_hierarchy_for_birth(
-                engine,
-                eop,
-                &birth_utc,
-                &location,
-                system,
-                request.max_level.unwrap_or(2),
-                &bhava_config,
-                &riseset_config,
-                &sankranti_config,
-                &variation,
-            )
-            .map(dasha_hierarchy_json)
-            .map_err(|err| map_error("search_error", err)),
+            "hierarchy" => {
+                if let Some(inputs) = raw_inputs.as_ref() {
+                    let inputs = inputs.borrowed();
+                    dasha_hierarchy_with_inputs(
+                        birth_jd,
+                        system,
+                        request.max_level.unwrap_or(2),
+                        &variation,
+                        &inputs,
+                    )
+                    .map(dasha_hierarchy_json)
+                    .map_err(|err| map_error("search_error", err))
+                } else {
+                    let birth_utc = parse_utc(request.birth_utc.ok_or_else(|| {
+                        error_payload("invalid_request", "birth_utc is required")
+                    })?)?;
+                    let location =
+                        parse_location(request.location.ok_or_else(|| {
+                            error_payload("invalid_request", "location is required")
+                        })?);
+                    let bhava_config = to_bhava_config(state, request.bhava_config.as_ref())?;
+                    let riseset_config = to_riseset_config(state, request.riseset_config.as_ref())?;
+                    let sankranti_config =
+                        to_sankranti_config(state, request.sankranti_config.as_ref())?;
+                    dasha_hierarchy_for_birth(
+                        engine,
+                        eop,
+                        &birth_utc,
+                        &location,
+                        system,
+                        request.max_level.unwrap_or(2),
+                        &bhava_config,
+                        &riseset_config,
+                        &sankranti_config,
+                        &variation,
+                    )
+                    .map(dasha_hierarchy_json)
+                    .map_err(|err| map_error("search_error", err))
+                }
+            }
             "snapshot" => {
-                dasha_snapshot_at(
-                    engine,
-                    eop,
-                    &birth_utc,
-                    &parse_utc(request.query_utc.ok_or_else(|| {
-                        error_payload("invalid_request", "query_utc is required")
-                    })?)?,
-                    &location,
-                    system,
-                    request.max_level.unwrap_or(2),
-                    &bhava_config,
-                    &riseset_config,
-                    &sankranti_config,
-                    &variation,
-                )
-                .map(dasha_snapshot_json)
-                .map_err(|err| map_error("search_error", err))
+                if let Some(inputs) = raw_inputs.as_ref() {
+                    let query_jd = match (request.query_jd, request.query_utc.as_ref()) {
+                        (Some(jd), _) => jd,
+                        (None, Some(utc)) => utc_to_jd_utc(&parse_utc(utc.clone())?),
+                        (None, None) => {
+                            return Err(error_payload(
+                                "invalid_request",
+                                "query_utc or query_jd is required",
+                            ));
+                        }
+                    };
+                    let inputs = inputs.borrowed();
+                    dasha_snapshot_with_inputs(
+                        birth_jd,
+                        query_jd,
+                        system,
+                        request.max_level.unwrap_or(2),
+                        &variation,
+                        &inputs,
+                    )
+                    .map(dasha_snapshot_json)
+                    .map_err(|err| map_error("search_error", err))
+                } else {
+                    let birth_utc = parse_utc(request.birth_utc.ok_or_else(|| {
+                        error_payload("invalid_request", "birth_utc is required")
+                    })?)?;
+                    let location =
+                        parse_location(request.location.ok_or_else(|| {
+                            error_payload("invalid_request", "location is required")
+                        })?);
+                    let bhava_config = to_bhava_config(state, request.bhava_config.as_ref())?;
+                    let riseset_config = to_riseset_config(state, request.riseset_config.as_ref())?;
+                    let sankranti_config =
+                        to_sankranti_config(state, request.sankranti_config.as_ref())?;
+                    dasha_snapshot_at(
+                        engine,
+                        eop,
+                        &birth_utc,
+                        &parse_utc(request.query_utc.ok_or_else(|| {
+                            error_payload("invalid_request", "query_utc is required")
+                        })?)?,
+                        &location,
+                        system,
+                        request.max_level.unwrap_or(2),
+                        &bhava_config,
+                        &riseset_config,
+                        &sankranti_config,
+                        &variation,
+                    )
+                    .map(dasha_snapshot_json)
+                    .map_err(|err| map_error("search_error", err))
+                }
             }
             _ => Err(error_payload("invalid_request", "unknown dasha operation")),
         }

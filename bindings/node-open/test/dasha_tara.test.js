@@ -21,7 +21,10 @@ test('dasha snapshot smoke', { skip: !(hasKernels() && hasEop()) }, () => {
   const birthUtc = { year: 1990, month: 1, day: 1, hour: 12, minute: 0, second: 0 };
   const queryUtc = { year: 2025, month: 1, day: 1, hour: 12, minute: 0, second: 0 };
 
-  const snapshot = dhruv.dashaSnapshotUtc(engine, eop, birthUtc, queryUtc, loc, {
+  const snapshot = dhruv.dashaSnapshot(engine, eop, {
+    birthUtc,
+    queryUtc,
+    location: loc,
     ayanamshaSystem: 0,
     useNutation: true,
     system: 0,
@@ -48,7 +51,9 @@ test('low-tier dasha wrappers smoke', { skip: !(hasKernels() && hasEop()) }, () 
   const loc = { latitudeDeg: 12.9716, longitudeDeg: 77.5946, altitudeM: 920 };
   const birthUtc = { year: 1990, month: 1, day: 1, hour: 12, minute: 0, second: 0 };
 
-  const level0 = dhruv.dashaLevel0Utc(engine, eop, birthUtc, loc, {
+  const level0 = dhruv.dashaLevel0(engine, eop, {
+    birthUtc,
+    location: loc,
     ayanamshaSystem: 0,
     useNutation: true,
     system: 0,
@@ -56,10 +61,13 @@ test('low-tier dasha wrappers smoke', { skip: !(hasKernels() && hasEop()) }, () 
   assert.ok(level0.length > 0);
 
   const first = level0[0];
-  const same = dhruv.dashaLevel0EntityUtc(engine, eop, birthUtc, loc, {
-    entityType: first.entityType,
-    entityIndex: first.entityIndex,
-  }, {
+  const same = dhruv.dashaLevel0Entity(engine, eop, {
+    birthUtc,
+    location: loc,
+    entity: {
+      entityType: first.entityType,
+      entityIndex: first.entityIndex,
+    },
     ayanamshaSystem: 0,
     useNutation: true,
     system: 0,
@@ -67,7 +75,10 @@ test('low-tier dasha wrappers smoke', { skip: !(hasKernels() && hasEop()) }, () 
   assert.equal(same.entityIndex, first.entityIndex);
 
   const variation = dhruv.dashaVariationConfigDefault();
-  const children = dhruv.dashaChildrenUtc(engine, eop, birthUtc, loc, first, {
+  const children = dhruv.dashaChildren(engine, eop, {
+    birthUtc,
+    location: loc,
+    parent: first,
     ayanamshaSystem: 0,
     useNutation: true,
     system: 0,
@@ -75,10 +86,14 @@ test('low-tier dasha wrappers smoke', { skip: !(hasKernels() && hasEop()) }, () 
   });
   assert.ok(children.length > 0);
 
-  const child = dhruv.dashaChildPeriodUtc(engine, eop, birthUtc, loc, first, {
-    entityType: children[0].entityType,
-    entityIndex: children[0].entityIndex,
-  }, {
+  const child = dhruv.dashaChildPeriod(engine, eop, {
+    birthUtc,
+    location: loc,
+    parent: first,
+    childEntity: {
+      entityType: children[0].entityType,
+      entityIndex: children[0].entityIndex,
+    },
     ayanamshaSystem: 0,
     useNutation: true,
     system: 0,
@@ -86,13 +101,28 @@ test('low-tier dasha wrappers smoke', { skip: !(hasKernels() && hasEop()) }, () 
   });
   assert.equal(child.entityIndex, children[0].entityIndex);
 
-  const complete = dhruv.dashaCompleteLevelUtc(engine, eop, birthUtc, loc, level0, 1, {
+  const complete = dhruv.dashaCompleteLevel(engine, eop, {
+    birthUtc,
+    location: loc,
+    parentPeriods: level0,
+    childLevel: 1,
     ayanamshaSystem: 0,
     useNutation: true,
     system: 0,
     variationConfig: variation,
   });
   assert.ok(complete.length >= children.length);
+
+  const rawSnapshot = dhruv.dashaSnapshot(engine, eop, {
+    birthJd: 2447893.0,
+    queryJd: 2460677.0,
+    system: 0,
+    maxLevel: 2,
+    inputs: {
+      moonSidLon: 123.45,
+    },
+  });
+  assert.ok(rawSnapshot.count >= 0);
 
   eop.close();
   engine.close();

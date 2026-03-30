@@ -121,6 +121,9 @@ typedef int32_t DhruvStatus;
 #define DHRUV_DELTA_T_SEGMENT_YEAR2050_TO2150         16
 #define DHRUV_DELTA_T_SEGMENT_AFTER2150               17
 
+#define DHRUV_DASHA_TIME_JD_UTC 0
+#define DHRUV_DASHA_TIME_UTC    1
+
 #define DHRUV_MAX_TIME_WARNINGS 8
 
 /* Sun limb */
@@ -1273,6 +1276,86 @@ typedef struct {
     uint8_t use_abhijit;
 } DhruvDashaVariationConfig;
 
+typedef struct {
+    double graha_sidereal_lons[9];
+    double lagna_sidereal_lon;
+} DhruvRashiDashaInputs;
+
+typedef struct {
+    uint8_t               has_moon_sid_lon;
+    double                moon_sid_lon;
+    uint8_t               has_rashi_inputs;
+    DhruvRashiDashaInputs rashi_inputs;
+    uint8_t               has_sunrise_sunset;
+    double                sunrise_jd;
+    double                sunset_jd;
+} DhruvDashaInputs;
+
+typedef struct {
+    int32_t              time_kind;
+    double               birth_jd;
+    DhruvUtcTime         birth_utc;
+    uint8_t              has_location;
+    DhruvGeoLocation     location;
+    DhruvBhavaConfig     bhava_config;
+    DhruvRiseSetConfig   riseset_config;
+    DhruvSankrantiConfig sankranti_config;
+    uint8_t              has_inputs;
+    DhruvDashaInputs     inputs;
+} DhruvDashaBirthContext;
+
+typedef struct {
+    DhruvDashaBirthContext   birth;
+    uint8_t                  system;
+    uint8_t                  max_level;
+    DhruvDashaVariationConfig variation;
+} DhruvDashaHierarchyRequest;
+
+typedef struct {
+    DhruvDashaBirthContext   birth;
+    int32_t                  query_time_kind;
+    double                   query_jd;
+    DhruvUtcTime             query_utc;
+    uint8_t                  system;
+    uint8_t                  max_level;
+    DhruvDashaVariationConfig variation;
+} DhruvDashaSnapshotRequest;
+
+typedef struct {
+    DhruvDashaBirthContext birth;
+    uint8_t                system;
+} DhruvDashaLevel0Request;
+
+typedef struct {
+    DhruvDashaBirthContext birth;
+    uint8_t                system;
+    uint8_t                entity_type;
+    uint8_t                entity_index;
+} DhruvDashaLevel0EntityRequest;
+
+typedef struct {
+    DhruvDashaBirthContext   birth;
+    uint8_t                  system;
+    DhruvDashaVariationConfig variation;
+    DhruvDashaPeriod         parent;
+} DhruvDashaChildrenRequest;
+
+typedef struct {
+    DhruvDashaBirthContext   birth;
+    uint8_t                  system;
+    DhruvDashaVariationConfig variation;
+    DhruvDashaPeriod         parent;
+    uint8_t                  child_entity_type;
+    uint8_t                  child_entity_index;
+} DhruvDashaChildPeriodRequest;
+
+typedef struct {
+    DhruvDashaBirthContext   birth;
+    uint8_t                  system;
+    DhruvDashaVariationConfig variation;
+    uint8_t                  child_level;
+} DhruvDashaCompleteLevelRequest;
+
 /* --- Full Kundali --- */
 
 typedef struct {
@@ -2180,99 +2263,44 @@ DhruvStatus dhruv_dasha_period_list_at(
     uint32_t idx,
     DhruvDashaPeriod *out);
 void dhruv_dasha_period_list_free(DhruvDashaPeriodListHandle handle);
-DhruvStatus dhruv_dasha_hierarchy_utc(
+DhruvStatus dhruv_dasha_hierarchy(
     const DhruvEngineHandle *engine,
     const DhruvEopHandle *eop,
-    const DhruvUtcTime *birth_utc,
-    const DhruvGeoLocation *location,
-    const DhruvBhavaConfig *bhava_config,
-    const DhruvRiseSetConfig *riseset_config,
-    uint32_t ayanamsha_system,
-    uint8_t use_nutation,
-    uint8_t system,
-    uint8_t max_level,
+    const DhruvDashaHierarchyRequest *request,
     DhruvDashaHierarchyHandle *out);
-DhruvStatus dhruv_dasha_snapshot_utc(
+DhruvStatus dhruv_dasha_snapshot(
     const DhruvEngineHandle *engine,
     const DhruvEopHandle *eop,
-    const DhruvUtcTime *birth_utc,
-    const DhruvUtcTime *query_utc,
-    const DhruvGeoLocation *location,
-    const DhruvBhavaConfig *bhava_config,
-    const DhruvRiseSetConfig *riseset_config,
-    uint32_t ayanamsha_system,
-    uint8_t use_nutation,
-    uint8_t system,
-    uint8_t max_level,
+    const DhruvDashaSnapshotRequest *request,
     DhruvDashaSnapshot *out);
-DhruvStatus dhruv_dasha_level0_utc(
+DhruvStatus dhruv_dasha_level0(
     const DhruvEngineHandle *engine,
     const DhruvEopHandle *eop,
-    const DhruvUtcTime *birth_utc,
-    const DhruvGeoLocation *location,
-    const DhruvBhavaConfig *bhava_config,
-    const DhruvRiseSetConfig *riseset_config,
-    uint32_t ayanamsha_system,
-    uint8_t use_nutation,
-    uint8_t system,
+    const DhruvDashaLevel0Request *request,
     DhruvDashaPeriodListHandle *out);
-DhruvStatus dhruv_dasha_level0_entity_utc(
+DhruvStatus dhruv_dasha_level0_entity(
     const DhruvEngineHandle *engine,
     const DhruvEopHandle *eop,
-    const DhruvUtcTime *birth_utc,
-    const DhruvGeoLocation *location,
-    const DhruvBhavaConfig *bhava_config,
-    const DhruvRiseSetConfig *riseset_config,
-    uint32_t ayanamsha_system,
-    uint8_t use_nutation,
-    uint8_t system,
-    uint8_t entity_type,
-    uint8_t entity_index,
+    const DhruvDashaLevel0EntityRequest *request,
     uint8_t *out_found,
     DhruvDashaPeriod *out);
-DhruvStatus dhruv_dasha_children_utc(
+DhruvStatus dhruv_dasha_children(
     const DhruvEngineHandle *engine,
     const DhruvEopHandle *eop,
-    const DhruvUtcTime *birth_utc,
-    const DhruvGeoLocation *location,
-    const DhruvBhavaConfig *bhava_config,
-    const DhruvRiseSetConfig *riseset_config,
-    uint32_t ayanamsha_system,
-    uint8_t use_nutation,
-    uint8_t system,
-    const DhruvDashaVariationConfig *variation_config,
-    const DhruvDashaPeriod *parent,
+    const DhruvDashaChildrenRequest *request,
     DhruvDashaPeriodListHandle *out);
-DhruvStatus dhruv_dasha_child_period_utc(
+DhruvStatus dhruv_dasha_child_period(
     const DhruvEngineHandle *engine,
     const DhruvEopHandle *eop,
-    const DhruvUtcTime *birth_utc,
-    const DhruvGeoLocation *location,
-    const DhruvBhavaConfig *bhava_config,
-    const DhruvRiseSetConfig *riseset_config,
-    uint32_t ayanamsha_system,
-    uint8_t use_nutation,
-    uint8_t system,
-    const DhruvDashaVariationConfig *variation_config,
-    const DhruvDashaPeriod *parent,
-    uint8_t child_entity_type,
-    uint8_t child_entity_index,
+    const DhruvDashaChildPeriodRequest *request,
     uint8_t *out_found,
     DhruvDashaPeriod *out);
-DhruvStatus dhruv_dasha_complete_level_utc(
+DhruvStatus dhruv_dasha_complete_level(
     const DhruvEngineHandle *engine,
     const DhruvEopHandle *eop,
-    const DhruvUtcTime *birth_utc,
-    const DhruvGeoLocation *location,
-    const DhruvBhavaConfig *bhava_config,
-    const DhruvRiseSetConfig *riseset_config,
-    uint32_t ayanamsha_system,
-    uint8_t use_nutation,
-    uint8_t system,
-    const DhruvDashaVariationConfig *variation_config,
+    const DhruvDashaCompleteLevelRequest *request,
     const DhruvDashaPeriod *parent_periods,
     uint32_t parent_count,
-    uint8_t child_level,
     DhruvDashaPeriodListHandle *out);
 
 /* --- Full Kundali --- */

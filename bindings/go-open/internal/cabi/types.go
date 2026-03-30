@@ -47,6 +47,11 @@ const (
 )
 
 const (
+	DashaTimeJDUTC int32 = 0
+	DashaTimeUTC   int32 = 1
+)
+
+const (
 	QueryOutputCartesian int32 = 0
 	QueryOutputSpherical int32 = 1
 	QueryOutputBoth      int32 = 2
@@ -65,8 +70,8 @@ const (
 )
 
 const (
-	TimePolicyStrictLSK     int32 = 0
-	TimePolicyHybridDeltaT  int32 = 1
+	TimePolicyStrictLSK    int32 = 0
+	TimePolicyHybridDeltaT int32 = 1
 )
 
 const (
@@ -75,7 +80,7 @@ const (
 )
 
 const (
-	FutureDeltaTTransitionLegacyTtUtcBlend        int32 = 0
+	FutureDeltaTTransitionLegacyTtUtcBlend         int32 = 0
 	FutureDeltaTTransitionBridgeFromModernEndpoint int32 = 1
 )
 
@@ -94,11 +99,11 @@ const (
 )
 
 const (
-	TimeWarningLskFutureFrozen      int32 = 0
-	TimeWarningLskPreRangeFallback  int32 = 1
-	TimeWarningEopFutureFrozen      int32 = 2
-	TimeWarningEopPreRangeFallback  int32 = 3
-	TimeWarningDeltaTModelUsed      int32 = 4
+	TimeWarningLskFutureFrozen     int32 = 0
+	TimeWarningLskPreRangeFallback int32 = 1
+	TimeWarningEopFutureFrozen     int32 = 2
+	TimeWarningEopPreRangeFallback int32 = 3
+	TimeWarningDeltaTModelUsed     int32 = 4
 )
 
 const MaxTimeWarnings = 8
@@ -183,13 +188,13 @@ type UtcTime struct {
 }
 
 type TimeConversionOptions struct {
-	WarnOnFallback          bool
-	DeltaTModel             int32
-	FreezeFutureDut1        bool
-	PreRangeDut1            float64
-	FutureDeltaTTransition  int32
-	FutureTransitionYears   float64
-	SmhFutureFamily         int32
+	WarnOnFallback         bool
+	DeltaTModel            int32
+	FreezeFutureDut1       bool
+	PreRangeDut1           float64
+	FutureDeltaTTransition int32
+	FutureTransitionYears  float64
+	SmhFutureFamily        int32
 }
 
 type TimePolicy struct {
@@ -973,6 +978,86 @@ type DashaVariationConfig struct {
 	LevelMethods [5]uint8
 	YoginiScheme uint8
 	UseAbhijit   bool
+}
+
+type RashiDashaInputs struct {
+	GrahaSiderealLons [9]float64
+	LagnaSiderealLon  float64
+}
+
+type DashaInputs struct {
+	HasMoonSidLon  bool
+	MoonSidLon     float64
+	HasRashiInputs bool
+	RashiInputs    RashiDashaInputs
+	HasSunriseSet  bool
+	SunriseJD      float64
+	SunsetJD       float64
+}
+
+type DashaBirthContext struct {
+	TimeKind        int32
+	BirthJD         float64
+	BirthUTC        UtcTime
+	HasLocation     bool
+	Location        GeoLocation
+	BhavaConfig     BhavaConfig
+	RiseSetConfig   RiseSetConfig
+	SankrantiConfig SankrantiConfig
+	HasInputs       bool
+	Inputs          DashaInputs
+}
+
+type DashaHierarchyRequest struct {
+	Birth     DashaBirthContext
+	System    uint8
+	MaxLevel  uint8
+	Variation DashaVariationConfig
+}
+
+type DashaSnapshotRequest struct {
+	Birth         DashaBirthContext
+	QueryTimeKind int32
+	QueryJD       float64
+	QueryUTC      UtcTime
+	System        uint8
+	MaxLevel      uint8
+	Variation     DashaVariationConfig
+}
+
+type DashaLevel0Request struct {
+	Birth  DashaBirthContext
+	System uint8
+}
+
+type DashaLevel0EntityRequest struct {
+	Birth       DashaBirthContext
+	System      uint8
+	EntityType  uint8
+	EntityIndex uint8
+}
+
+type DashaChildrenRequest struct {
+	Birth     DashaBirthContext
+	System    uint8
+	Variation DashaVariationConfig
+	Parent    DashaPeriod
+}
+
+type DashaChildPeriodRequest struct {
+	Birth            DashaBirthContext
+	System           uint8
+	Variation        DashaVariationConfig
+	Parent           DashaPeriod
+	ChildEntityType  uint8
+	ChildEntityIndex uint8
+}
+
+type DashaCompleteLevelRequest struct {
+	Birth      DashaBirthContext
+	System     uint8
+	Variation  DashaVariationConfig
+	ChildLevel uint8
 }
 
 type AmshaSelectionConfig struct {

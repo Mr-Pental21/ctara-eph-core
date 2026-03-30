@@ -75,13 +75,13 @@ func goUTC(utc C.DhruvUtcTime) UtcTime {
 
 func cTimeConversionOptions(opts TimeConversionOptions) C.DhruvTimeConversionOptions {
 	return C.DhruvTimeConversionOptions{
-		warn_on_fallback:         boolU8(opts.WarnOnFallback),
-		delta_t_model:            C.int32_t(opts.DeltaTModel),
-		freeze_future_dut1:       boolU8(opts.FreezeFutureDut1),
-		pre_range_dut1:           C.double(opts.PreRangeDut1),
+		warn_on_fallback:          boolU8(opts.WarnOnFallback),
+		delta_t_model:             C.int32_t(opts.DeltaTModel),
+		freeze_future_dut1:        boolU8(opts.FreezeFutureDut1),
+		pre_range_dut1:            C.double(opts.PreRangeDut1),
 		future_delta_t_transition: C.int32_t(opts.FutureDeltaTTransition),
-		future_transition_years:  C.double(opts.FutureTransitionYears),
-		smh_future_family:        C.int32_t(opts.SmhFutureFamily),
+		future_transition_years:   C.double(opts.FutureTransitionYears),
+		smh_future_family:         C.int32_t(opts.SmhFutureFamily),
 	}
 }
 
@@ -1276,6 +1276,42 @@ func DashaVariationConfigDefault() DashaVariationConfig {
 	return goDashaVariationConfig(C.dhruv_dasha_variation_config_default())
 }
 
+func cRashiDashaInputs(inputs RashiDashaInputs) C.DhruvRashiDashaInputs {
+	var out C.DhruvRashiDashaInputs
+	for i := 0; i < len(inputs.GrahaSiderealLons); i++ {
+		out.graha_sidereal_lons[i] = C.double(inputs.GrahaSiderealLons[i])
+	}
+	out.lagna_sidereal_lon = C.double(inputs.LagnaSiderealLon)
+	return out
+}
+
+func cDashaInputs(inputs DashaInputs) C.DhruvDashaInputs {
+	var out C.DhruvDashaInputs
+	out.has_moon_sid_lon = boolU8(inputs.HasMoonSidLon)
+	out.moon_sid_lon = C.double(inputs.MoonSidLon)
+	out.has_rashi_inputs = boolU8(inputs.HasRashiInputs)
+	out.rashi_inputs = cRashiDashaInputs(inputs.RashiInputs)
+	out.has_sunrise_sunset = boolU8(inputs.HasSunriseSet)
+	out.sunrise_jd = C.double(inputs.SunriseJD)
+	out.sunset_jd = C.double(inputs.SunsetJD)
+	return out
+}
+
+func cDashaBirthContext(ctx DashaBirthContext) C.DhruvDashaBirthContext {
+	return C.DhruvDashaBirthContext{
+		time_kind:        C.int32_t(ctx.TimeKind),
+		birth_jd:         C.double(ctx.BirthJD),
+		birth_utc:        cUTC(ctx.BirthUTC),
+		has_location:     boolU8(ctx.HasLocation),
+		location:         cGeo(ctx.Location),
+		bhava_config:     cBhavaConfig(ctx.BhavaConfig),
+		riseset_config:   cRiseSetConfig(ctx.RiseSetConfig),
+		sankranti_config: cSankrantiConfig(ctx.SankrantiConfig),
+		has_inputs:       boolU8(ctx.HasInputs),
+		inputs:           cDashaInputs(ctx.Inputs),
+	}
+}
+
 func cAmshaSelectionConfig(cfg AmshaSelectionConfig) C.DhruvAmshaSelectionConfig {
 	var out C.DhruvAmshaSelectionConfig
 	out.count = C.uint8_t(cfg.Count)
@@ -1381,10 +1417,15 @@ func cFullKundaliConfig(cfg FullKundaliConfig) C.DhruvFullKundaliConfig {
 	return out
 }
 
-func DashaHierarchyUTC(engine EngineHandle, eop EopHandle, birthUTC UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, system uint8, maxLevel uint8) (DashaHierarchyHandle, Status) {
-	cbirth, cloc, cbhava, crise := cUTC(birthUTC), cGeo(loc), cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
+func DashaHierarchy(engine EngineHandle, eop EopHandle, request DashaHierarchyRequest) (DashaHierarchyHandle, Status) {
+	crequest := C.DhruvDashaHierarchyRequest{
+		birth:     cDashaBirthContext(request.Birth),
+		system:    C.uint8_t(request.System),
+		max_level: C.uint8_t(request.MaxLevel),
+		variation: cDashaVariationConfig(request.Variation),
+	}
 	var out C.DhruvDashaHierarchyHandle
-	st := Status(C.dhruv_dasha_hierarchy_utc(engine.ptr, eop.ptr, &cbirth, &cloc, &cbhava, &crise, C.uint32_t(ayanamshaSystem), boolU8(useNutation), C.uint8_t(system), C.uint8_t(maxLevel), &out))
+	st := Status(C.dhruv_dasha_hierarchy(engine.ptr, eop.ptr, &crequest, &out))
 	return DashaHierarchyHandle{ptr: out}, st
 }
 
@@ -1414,11 +1455,18 @@ func (h DashaHierarchyHandle) PeriodAt(level uint8, idx uint32) (DashaPeriod, St
 	return goDashaPeriod(out), st
 }
 
-func DashaSnapshotUTC(engine EngineHandle, eop EopHandle, birthUTC, queryUTC UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, system uint8, maxLevel uint8) (DashaSnapshot, Status) {
-	cbirth, cquery, cloc := cUTC(birthUTC), cUTC(queryUTC), cGeo(loc)
-	cbhava, crise := cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
+func RunDashaSnapshot(engine EngineHandle, eop EopHandle, request DashaSnapshotRequest) (DashaSnapshot, Status) {
+	crequest := C.DhruvDashaSnapshotRequest{
+		birth:           cDashaBirthContext(request.Birth),
+		query_time_kind: C.int32_t(request.QueryTimeKind),
+		query_jd:        C.double(request.QueryJD),
+		query_utc:       cUTC(request.QueryUTC),
+		system:          C.uint8_t(request.System),
+		max_level:       C.uint8_t(request.MaxLevel),
+		variation:       cDashaVariationConfig(request.Variation),
+	}
 	var out C.DhruvDashaSnapshot
-	st := Status(C.dhruv_dasha_snapshot_utc(engine.ptr, eop.ptr, &cbirth, &cquery, &cloc, &cbhava, &crise, C.uint32_t(ayanamshaSystem), boolU8(useNutation), C.uint8_t(system), C.uint8_t(maxLevel), &out))
+	st := Status(C.dhruv_dasha_snapshot(engine.ptr, eop.ptr, &crequest, &out))
 	res := DashaSnapshot{System: uint8(out.system), QueryJD: float64(out.query_jd), Count: uint8(out.count)}
 	for i := 0; i < len(res.Periods); i++ {
 		res.Periods[i] = goDashaPeriod(out.periods[i])
@@ -1463,47 +1511,69 @@ func goDashaPeriodList(handle DashaPeriodListHandle) ([]DashaPeriod, Status) {
 	return periods, StatusOK
 }
 
-func DashaLevel0UTC(engine EngineHandle, eop EopHandle, birthUTC UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, system uint8) ([]DashaPeriod, Status) {
-	cbirth, cloc, cbhava, crise := cUTC(birthUTC), cGeo(loc), cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
+func DashaLevel0(engine EngineHandle, eop EopHandle, request DashaLevel0Request) ([]DashaPeriod, Status) {
+	crequest := C.DhruvDashaLevel0Request{
+		birth:  cDashaBirthContext(request.Birth),
+		system: C.uint8_t(request.System),
+	}
 	var handle C.DhruvDashaPeriodListHandle
-	st := Status(C.dhruv_dasha_level0_utc(engine.ptr, eop.ptr, &cbirth, &cloc, &cbhava, &crise, C.uint32_t(ayanamshaSystem), boolU8(useNutation), C.uint8_t(system), &handle))
+	st := Status(C.dhruv_dasha_level0(engine.ptr, eop.ptr, &crequest, &handle))
 	if st != StatusOK {
 		return nil, st
 	}
 	return goDashaPeriodList(DashaPeriodListHandle{ptr: handle})
 }
 
-func DashaLevel0EntityUTC(engine EngineHandle, eop EopHandle, birthUTC UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, system, entityType, entityIndex uint8) (DashaPeriod, bool, Status) {
-	cbirth, cloc, cbhava, crise := cUTC(birthUTC), cGeo(loc), cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
+func DashaLevel0Entity(engine EngineHandle, eop EopHandle, request DashaLevel0EntityRequest) (DashaPeriod, bool, Status) {
+	crequest := C.DhruvDashaLevel0EntityRequest{
+		birth:        cDashaBirthContext(request.Birth),
+		system:       C.uint8_t(request.System),
+		entity_type:  C.uint8_t(request.EntityType),
+		entity_index: C.uint8_t(request.EntityIndex),
+	}
 	var found C.uint8_t
 	var out C.DhruvDashaPeriod
-	st := Status(C.dhruv_dasha_level0_entity_utc(engine.ptr, eop.ptr, &cbirth, &cloc, &cbhava, &crise, C.uint32_t(ayanamshaSystem), boolU8(useNutation), C.uint8_t(system), C.uint8_t(entityType), C.uint8_t(entityIndex), &found, &out))
+	st := Status(C.dhruv_dasha_level0_entity(engine.ptr, eop.ptr, &crequest, &found, &out))
 	return goDashaPeriod(out), found != 0, st
 }
 
-func DashaChildrenUTC(engine EngineHandle, eop EopHandle, birthUTC UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, system uint8, variationCfg DashaVariationConfig, parent DashaPeriod) ([]DashaPeriod, Status) {
-	cbirth, cloc, cbhava, crise := cUTC(birthUTC), cGeo(loc), cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
-	cvariation, cparent := cDashaVariationConfig(variationCfg), cDashaPeriod(parent)
+func DashaChildren(engine EngineHandle, eop EopHandle, request DashaChildrenRequest) ([]DashaPeriod, Status) {
+	crequest := C.DhruvDashaChildrenRequest{
+		birth:     cDashaBirthContext(request.Birth),
+		system:    C.uint8_t(request.System),
+		variation: cDashaVariationConfig(request.Variation),
+		parent:    cDashaPeriod(request.Parent),
+	}
 	var handle C.DhruvDashaPeriodListHandle
-	st := Status(C.dhruv_dasha_children_utc(engine.ptr, eop.ptr, &cbirth, &cloc, &cbhava, &crise, C.uint32_t(ayanamshaSystem), boolU8(useNutation), C.uint8_t(system), &cvariation, &cparent, &handle))
+	st := Status(C.dhruv_dasha_children(engine.ptr, eop.ptr, &crequest, &handle))
 	if st != StatusOK {
 		return nil, st
 	}
 	return goDashaPeriodList(DashaPeriodListHandle{ptr: handle})
 }
 
-func DashaChildPeriodUTC(engine EngineHandle, eop EopHandle, birthUTC UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, system uint8, variationCfg DashaVariationConfig, parent DashaPeriod, childEntityType, childEntityIndex uint8) (DashaPeriod, bool, Status) {
-	cbirth, cloc, cbhava, crise := cUTC(birthUTC), cGeo(loc), cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
-	cvariation, cparent := cDashaVariationConfig(variationCfg), cDashaPeriod(parent)
+func DashaChildPeriod(engine EngineHandle, eop EopHandle, request DashaChildPeriodRequest) (DashaPeriod, bool, Status) {
+	crequest := C.DhruvDashaChildPeriodRequest{
+		birth:              cDashaBirthContext(request.Birth),
+		system:             C.uint8_t(request.System),
+		variation:          cDashaVariationConfig(request.Variation),
+		parent:             cDashaPeriod(request.Parent),
+		child_entity_type:  C.uint8_t(request.ChildEntityType),
+		child_entity_index: C.uint8_t(request.ChildEntityIndex),
+	}
 	var found C.uint8_t
 	var out C.DhruvDashaPeriod
-	st := Status(C.dhruv_dasha_child_period_utc(engine.ptr, eop.ptr, &cbirth, &cloc, &cbhava, &crise, C.uint32_t(ayanamshaSystem), boolU8(useNutation), C.uint8_t(system), &cvariation, &cparent, C.uint8_t(childEntityType), C.uint8_t(childEntityIndex), &found, &out))
+	st := Status(C.dhruv_dasha_child_period(engine.ptr, eop.ptr, &crequest, &found, &out))
 	return goDashaPeriod(out), found != 0, st
 }
 
-func DashaCompleteLevelUTC(engine EngineHandle, eop EopHandle, birthUTC UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, system uint8, variationCfg DashaVariationConfig, parentPeriods []DashaPeriod, childLevel uint8) ([]DashaPeriod, Status) {
-	cbirth, cloc, cbhava, crise := cUTC(birthUTC), cGeo(loc), cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
-	cvariation := cDashaVariationConfig(variationCfg)
+func DashaCompleteLevel(engine EngineHandle, eop EopHandle, request DashaCompleteLevelRequest, parentPeriods []DashaPeriod) ([]DashaPeriod, Status) {
+	crequest := C.DhruvDashaCompleteLevelRequest{
+		birth:       cDashaBirthContext(request.Birth),
+		system:      C.uint8_t(request.System),
+		variation:   cDashaVariationConfig(request.Variation),
+		child_level: C.uint8_t(request.ChildLevel),
+	}
 	cparents := make([]C.DhruvDashaPeriod, len(parentPeriods))
 	for i, period := range parentPeriods {
 		cparents[i] = cDashaPeriod(period)
@@ -1513,7 +1583,7 @@ func DashaCompleteLevelUTC(engine EngineHandle, eop EopHandle, birthUTC UtcTime,
 		parentPtr = &cparents[0]
 	}
 	var handle C.DhruvDashaPeriodListHandle
-	st := Status(C.dhruv_dasha_complete_level_utc(engine.ptr, eop.ptr, &cbirth, &cloc, &cbhava, &crise, C.uint32_t(ayanamshaSystem), boolU8(useNutation), C.uint8_t(system), &cvariation, parentPtr, C.uint32_t(len(cparents)), C.uint8_t(childLevel), &handle))
+	st := Status(C.dhruv_dasha_complete_level(engine.ptr, eop.ptr, &crequest, parentPtr, C.uint32_t(len(cparents)), &handle))
 	if st != StatusOK {
 		return nil, st
 	}

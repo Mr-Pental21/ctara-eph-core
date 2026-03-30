@@ -209,6 +209,13 @@ Dasha and tara:
 - `tara-list`
 - `tara-position`
 
+The `dasha` command now uses one surface for both invocation styles:
+
+- derived birth context via `--birth-date` plus `--lat` / `--lon`
+- raw dasha context via `--birth-jd` plus input attributes such as
+  `--moon-sid-lon`, `--graha-sidereal-lons`, `--lagna-sidereal-lon`,
+  `--sunrise-jd`, and `--sunset-jd`
+
 ## Important Config Behavior
 
 Time-based upagraha options affect:

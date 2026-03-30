@@ -1752,8 +1752,8 @@ Use the unified `*_search_ex` / `*_compute_ex` entries documented above.
 | 72 | `dhruv_ghatikas_since_sunrise` | | | | yes |
 | 73 | `dhruv_hora_at` | | | | yes |
 | 74 | `dhruv_dasha_selection_config_default` | | | | yes |
-| 75 | `dhruv_dasha_hierarchy_utc` | yes | | | |
-| 76 | `dhruv_dasha_snapshot_utc` | yes | | | |
+| 75 | `dhruv_dasha_hierarchy` | yes | | | |
+| 76 | `dhruv_dasha_snapshot` | yes | | | |
 | 77 | `dhruv_dasha_hierarchy_level_count` | | | | yes |
 | 78 | `dhruv_dasha_hierarchy_period_count` | | | | yes |
 | 79 | `dhruv_dasha_hierarchy_period_at` | | | | yes |
@@ -1787,6 +1787,53 @@ struct DhruvDashaSelectionConfig {
     double  snapshot_jd;     // JD UTC, only read when has_snapshot_jd == 1
 };
 ```
+
+### `DhruvDashaInputs`
+
+```c
+struct DhruvDashaInputs {
+    uint8_t               has_moon_sid_lon;
+    double                moon_sid_lon;
+    uint8_t               has_rashi_inputs;
+    DhruvRashiDashaInputs rashi_inputs;
+    uint8_t               has_sunrise_sunset;
+    double                sunrise_jd;
+    double                sunset_jd;
+};
+```
+
+### `DhruvDashaBirthContext`
+
+```c
+struct DhruvDashaBirthContext {
+    int32_t              time_kind;      // DHRUV_DASHA_TIME_JD_UTC or DHRUV_DASHA_TIME_UTC
+    double               birth_jd;       // read when time_kind == JD_UTC
+    DhruvUtcTime         birth_utc;      // read when time_kind == UTC
+    uint8_t              has_location;
+    DhruvGeoLocation     location;
+    DhruvBhavaConfig     bhava_config;
+    DhruvRiseSetConfig   riseset_config;
+    DhruvSankrantiConfig sankranti_config;
+    uint8_t              has_inputs;
+    DhruvDashaInputs     inputs;
+};
+```
+
+### Dasha Request Structs
+
+The standalone dasha entrypoints are request-based and use:
+
+- `DhruvDashaHierarchyRequest`
+- `DhruvDashaSnapshotRequest`
+- `DhruvDashaLevel0Request`
+- `DhruvDashaLevel0EntityRequest`
+- `DhruvDashaChildrenRequest`
+- `DhruvDashaChildPeriodRequest`
+- `DhruvDashaCompleteLevelRequest`
+
+These all carry one `DhruvDashaBirthContext` plus the feature-specific fields
+for `system`, `max_level`, `variation`, `parent`, `child_entity_*`, or
+`child_level`.
 
 ### `DhruvDashaPeriod`
 
@@ -1826,7 +1873,7 @@ All JD values in dasha APIs use **JD UTC** (not TDB):
 
 | Handle/Resource | Allocated by | Freed by | Notes |
 |-----------------|-------------|----------|-------|
-| `DhruvDashaHierarchyHandle` (standalone) | `dhruv_dasha_hierarchy_utc` | `dhruv_dasha_hierarchy_free` | Caller owns. Must free exactly once. |
+| `DhruvDashaHierarchyHandle` (standalone) | `dhruv_dasha_hierarchy` | `dhruv_dasha_hierarchy_free` | Caller owns. Must free exactly once. |
 | `DhruvDashaHierarchyHandle` (in kundali) | `dhruv_full_kundali_for_date` | `dhruv_full_kundali_result_free` | Result owns. Do NOT call `dhruv_dasha_hierarchy_free` on these. |
 | `DhruvFullKundaliResult` | Caller stack/heap | `dhruv_full_kundali_result_free` | **Move-only:** do NOT memcpy the struct and free both copies — copied handles become dangling after the first free. Exactly one `result_free` call per `dhruv_full_kundali_for_date` invocation. |
 
@@ -2019,4 +2066,4 @@ that produce/consume BAV values: `dhruv_calculate_bav`,
 
 **v34**: Added `include_panchang`, `include_calendar` fields to `DhruvFullKundaliConfig`. Added `panchang_valid`, `panchang` (`DhruvPanchangInfo`) fields to `DhruvFullKundaliResult`. When `include_panchang` or `include_calendar` is non-zero, result includes panchang data. `include_calendar` implies `include_panchang`. Existing fields and offsets of prior struct members are unchanged (new fields appended).
 
-**v33**: Added dasha integration to `DhruvFullKundaliConfig` / `DhruvFullKundaliResult`. Added `DhruvDashaSelectionConfig`, `DhruvDashaSnapshot`, `DhruvDashaPeriod` types. Added standalone `dhruv_dasha_hierarchy_utc`, `dhruv_dasha_snapshot_utc`, accessor, and free functions.
+**v33**: Added dasha integration to `DhruvFullKundaliConfig` / `DhruvFullKundaliResult`. Added `DhruvDashaSelectionConfig`, `DhruvDashaSnapshot`, `DhruvDashaPeriod` types. Added standalone request-based dasha entrypoints, accessor functions, and free functions.

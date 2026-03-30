@@ -299,44 +299,75 @@ func TestLowTierDashaWrappers(t *testing.T) {
 	loc := GeoLocation{LatitudeDeg: 12.9716, LongitudeDeg: 77.5946, AltitudeM: 920}
 	bhava := BhavaConfigDefault()
 	riseset := RiseSetConfigDefault()
+	birth := DashaBirthContext{
+		TimeKind:        DashaTimeUTC,
+		BirthUTC:        birthUTC,
+		HasLocation:     true,
+		Location:        loc,
+		BhavaConfig:     bhava,
+		RiseSetConfig:   riseset,
+		SankrantiConfig: SankrantiConfigDefault(),
+	}
 
-	level0, err := eng.DashaLevel0UTC(eop, birthUTC, loc, bhava, riseset, 0, true, 0)
+	level0, err := eng.DashaLevel0(eop, DashaLevel0Request{Birth: birth, System: 0})
 	if err != nil {
-		t.Fatalf("DashaLevel0UTC: %v", err)
+		t.Fatalf("DashaLevel0: %v", err)
 	}
 	if len(level0) == 0 {
 		t.Fatalf("expected level0 periods")
 	}
 
 	first := level0[0]
-	same, found, err := eng.DashaLevel0EntityUTC(eop, birthUTC, loc, bhava, riseset, 0, true, 0, first.EntityType, first.EntityIndex)
+	same, found, err := eng.DashaLevel0Entity(eop, DashaLevel0EntityRequest{
+		Birth:       birth,
+		System:      0,
+		EntityType:  first.EntityType,
+		EntityIndex: first.EntityIndex,
+	})
 	if err != nil {
-		t.Fatalf("DashaLevel0EntityUTC: %v", err)
+		t.Fatalf("DashaLevel0Entity: %v", err)
 	}
 	if !found || same.EntityIndex != first.EntityIndex {
 		t.Fatalf("unexpected level0 entity lookup: found=%v same=%+v first=%+v", found, same, first)
 	}
 
 	variation := DashaVariationConfigDefault()
-	children, err := eng.DashaChildrenUTC(eop, birthUTC, loc, bhava, riseset, 0, true, 0, variation, first)
+	children, err := eng.DashaChildren(eop, DashaChildrenRequest{
+		Birth:     birth,
+		System:    0,
+		Variation: variation,
+		Parent:    first,
+	})
 	if err != nil {
-		t.Fatalf("DashaChildrenUTC: %v", err)
+		t.Fatalf("DashaChildren: %v", err)
 	}
 	if len(children) == 0 {
 		t.Fatalf("expected child periods")
 	}
 
-	child, found, err := eng.DashaChildPeriodUTC(eop, birthUTC, loc, bhava, riseset, 0, true, 0, variation, first, children[0].EntityType, children[0].EntityIndex)
+	child, found, err := eng.DashaChildPeriod(eop, DashaChildPeriodRequest{
+		Birth:            birth,
+		System:           0,
+		Variation:        variation,
+		Parent:           first,
+		ChildEntityType:  children[0].EntityType,
+		ChildEntityIndex: children[0].EntityIndex,
+	})
 	if err != nil {
-		t.Fatalf("DashaChildPeriodUTC: %v", err)
+		t.Fatalf("DashaChildPeriod: %v", err)
 	}
 	if !found || child.EntityIndex != children[0].EntityIndex {
 		t.Fatalf("unexpected child lookup: found=%v child=%+v firstChild=%+v", found, child, children[0])
 	}
 
-	complete, err := eng.DashaCompleteLevelUTC(eop, birthUTC, loc, bhava, riseset, 0, true, 0, variation, level0, 1)
+	complete, err := eng.DashaCompleteLevel(eop, DashaCompleteLevelRequest{
+		Birth:      birth,
+		System:     0,
+		Variation:  variation,
+		ChildLevel: 1,
+	}, level0)
 	if err != nil {
-		t.Fatalf("DashaCompleteLevelUTC: %v", err)
+		t.Fatalf("DashaCompleteLevel: %v", err)
 	}
 	if len(complete) < len(children) {
 		t.Fatalf("expected complete child level, got=%d children=%d", len(complete), len(children))

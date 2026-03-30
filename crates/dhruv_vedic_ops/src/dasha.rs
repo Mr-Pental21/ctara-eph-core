@@ -1255,6 +1255,78 @@ pub fn dasha_snapshot_with_inputs(
     )
 }
 
+/// Context-sharing level-0 computation using pre-computed inputs.
+pub fn dasha_level0_with_inputs(
+    birth_jd: f64,
+    system: DashaSystem,
+    inputs: &DashaInputs<'_>,
+) -> Result<Vec<DashaPeriod>, SearchError> {
+    let moon_sid_lon = inputs.moon_sid_lon.unwrap_or(0.0);
+    dispatch_level0(
+        system,
+        birth_jd,
+        moon_sid_lon,
+        inputs.rashi_inputs,
+        inputs.sunrise_sunset,
+    )
+}
+
+/// Context-sharing level-0 entity lookup using pre-computed inputs.
+pub fn dasha_level0_entity_with_inputs(
+    birth_jd: f64,
+    system: DashaSystem,
+    entity: DashaEntity,
+    inputs: &DashaInputs<'_>,
+) -> Result<Option<DashaPeriod>, SearchError> {
+    let periods = dasha_level0_with_inputs(birth_jd, system, inputs)?;
+    Ok(periods.into_iter().find(|period| period.entity == entity))
+}
+
+/// Context-sharing child-period expansion using pre-computed inputs.
+pub fn dasha_children_with_inputs(
+    system: DashaSystem,
+    parent: &DashaPeriod,
+    variation: &DashaVariationConfig,
+    inputs: &DashaInputs<'_>,
+) -> Result<Vec<DashaPeriod>, SearchError> {
+    dispatch_children(system, parent, inputs.rashi_inputs, variation)
+}
+
+/// Context-sharing single child-period lookup using pre-computed inputs.
+pub fn dasha_child_period_with_inputs(
+    system: DashaSystem,
+    parent: &DashaPeriod,
+    child_entity: DashaEntity,
+    variation: &DashaVariationConfig,
+    inputs: &DashaInputs<'_>,
+) -> Result<Option<DashaPeriod>, SearchError> {
+    let children = dasha_children_with_inputs(system, parent, variation, inputs)?;
+    let child_level = match parent.level.child_level() {
+        Some(level) => level,
+        None => return Ok(None),
+    };
+    Ok(children
+        .into_iter()
+        .find(|period| period.entity == child_entity && period.level == child_level))
+}
+
+/// Context-sharing complete-level expansion using pre-computed inputs.
+pub fn dasha_complete_level_with_inputs(
+    system: DashaSystem,
+    parent_level: &[DashaPeriod],
+    child_level: DashaLevel,
+    variation: &DashaVariationConfig,
+    inputs: &DashaInputs<'_>,
+) -> Result<Vec<DashaPeriod>, SearchError> {
+    dispatch_complete_level(
+        system,
+        parent_level,
+        inputs.rashi_inputs,
+        child_level,
+        variation,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

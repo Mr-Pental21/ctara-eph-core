@@ -267,19 +267,21 @@ Strength, dasha, amsha, and tara:
 - `(*Engine).VimsopakaForDate`
 - `(*Engine).BalasForDate`
 - `(*Engine).AvasthaForDate`
-- `(*Engine).DashaHierarchyUTC`
-- `(*Engine).DashaSnapshotUTC`
-- `(*Engine).DashaLevel0UTC`
-- `(*Engine).DashaLevel0EntityUTC`
-- `(*Engine).DashaChildrenUTC`
-- `(*Engine).DashaChildPeriodUTC`
-- `(*Engine).DashaCompleteLevelUTC`
+- `(*Engine).DashaHierarchy`
+- `(*Engine).DashaSnapshot`
+- `(*Engine).DashaLevel0`
+- `(*Engine).DashaLevel0Entity`
+- `(*Engine).DashaChildren`
+- `(*Engine).DashaChildPeriod`
+- `(*Engine).DashaCompleteLevel`
 - `(*Engine).AmshaChartForDate`
 - `(*TaraCatalog).Compute`
 - `(*TaraCatalog).GalacticCenterEcliptic`
 
 Go dasha period structs expose `EntityName` with the exact canonical Sanskrit
 entity name.
+Go dasha requests now accept either UTC/location birth context or precomputed
+raw dasha inputs through the shared request structs.
 
 Search:
 

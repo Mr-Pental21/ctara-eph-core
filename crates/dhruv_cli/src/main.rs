@@ -1785,19 +1785,40 @@ struct DashaArgs {
     mode: Option<String>,
     /// Birth UTC datetime (YYYY-MM-DDThh:mm:ssZ)
     #[arg(long)]
-    birth_date: String,
+    birth_date: Option<String>,
+    /// Birth JD UTC. Useful when supplying raw dasha inputs directly.
+    #[arg(long)]
+    birth_jd: Option<f64>,
     /// Query UTC datetime for snapshot mode (omit for hierarchy-only)
     #[arg(long)]
     query_date: Option<String>,
+    /// Query JD UTC for snapshot mode.
+    #[arg(long)]
+    query_jd: Option<f64>,
     /// Latitude in degrees (north positive)
     #[arg(long)]
-    lat: f64,
+    lat: Option<f64>,
     /// Longitude in degrees (east positive)
     #[arg(long)]
-    lon: f64,
-    /// Altitude in meters (default 0)
-    #[arg(long, default_value = "0")]
-    alt: f64,
+    lon: Option<f64>,
+    /// Altitude in meters (default 0 when location is provided)
+    #[arg(long)]
+    alt: Option<f64>,
+    /// Precomputed Moon sidereal longitude in degrees.
+    #[arg(long)]
+    moon_sid_lon: Option<f64>,
+    /// Precomputed graha sidereal longitudes as 9 comma-separated degrees.
+    #[arg(long)]
+    graha_sidereal_lons: Option<String>,
+    /// Precomputed sidereal lagna longitude in degrees.
+    #[arg(long)]
+    lagna_sidereal_lon: Option<f64>,
+    /// Precomputed sunrise JD UTC for Kala/Chakra-derived inputs.
+    #[arg(long)]
+    sunrise_jd: Option<f64>,
+    /// Precomputed sunset JD UTC for Kala/Chakra-derived inputs.
+    #[arg(long)]
+    sunset_jd: Option<f64>,
     /// Maximum dasha depth (0-4, default 2)
     #[arg(long, default_value = "2")]
     max_level: u8,
@@ -7214,51 +7235,161 @@ fn main() {
         }
         Commands::Dasha(args) => {
             let aya_system = require_aya_system(args.ayanamsha);
-            let birth_utc = parse_utc(&args.birth_date).unwrap_or_else(|e| {
-                eprintln!("{e}");
-                std::process::exit(1);
-            });
             let engine = load_engine(&args.bsp, &args.lsk);
             let eop_kernel = load_eop(&args.eop);
-            let location = GeoLocation::new(args.lat, args.lon, args.alt);
             let bhava_config = BhavaConfig::default();
             let rs_config = RiseSetConfig::default();
             let aya_config = SankrantiConfig::new(aya_system, args.nutation);
             let dasha_system = parse_dasha_system(&args.system);
             let variation = dhruv_vedic_base::dasha::DashaVariationConfig::default();
             let clamped_level = args.max_level.min(dhruv_vedic_base::dasha::MAX_DASHA_LEVEL);
-            let mode = args
-                .mode
-                .as_deref()
-                .unwrap_or(if args.query_date.is_some() {
+            let mode = args.mode.as_deref().unwrap_or(
+                if args.query_date.is_some() || args.query_jd.is_some() {
                     "snapshot"
                 } else {
                     "hierarchy"
-                });
+                },
+            );
+            let birth_utc = args.birth_date.as_ref().map(|date| {
+                parse_utc(date).unwrap_or_else(|e| {
+                    eprintln!("{e}");
+                    std::process::exit(1);
+                })
+            });
+            let location = match (args.lat, args.lon) {
+                (Some(lat), Some(lon)) => Some(GeoLocation::new(lat, lon, args.alt.unwrap_or(0.0))),
+                (None, None) => None,
+                _ => {
+                    eprintln!("--lat and --lon must be provided together.");
+                    std::process::exit(1);
+                }
+            };
+            let raw_rashi_inputs = match (
+                args.graha_sidereal_lons.as_ref(),
+                args.lagna_sidereal_lon,
+            ) {
+                (Some(lons), Some(lagna_sidereal_lon)) => {
+                    Some(dhruv_vedic_base::dasha::RashiDashaInputs::new(
+                        parse_longitudes_9(lons),
+                        lagna_sidereal_lon,
+                    ))
+                }
+                (None, None) => None,
+                _ => {
+                    eprintln!(
+                        "--graha-sidereal-lons and --lagna-sidereal-lon must be provided together."
+                    );
+                    std::process::exit(1);
+                }
+            };
+            let raw_sunrise_sunset = match (args.sunrise_jd, args.sunset_jd) {
+                (Some(sunrise_jd), Some(sunset_jd)) => Some((sunrise_jd, sunset_jd)),
+                (None, None) => None,
+                _ => {
+                    eprintln!("--sunrise-jd and --sunset-jd must be provided together.");
+                    std::process::exit(1);
+                }
+            };
+            let raw_inputs_requested = args.moon_sid_lon.is_some()
+                || raw_rashi_inputs.is_some()
+                || raw_sunrise_sunset.is_some();
+            let raw_inputs = dhruv_search::DashaInputs {
+                moon_sid_lon: args.moon_sid_lon,
+                rashi_inputs: raw_rashi_inputs.as_ref(),
+                sunrise_sunset: raw_sunrise_sunset,
+            };
+            let birth_jd = if raw_inputs_requested {
+                args.birth_jd
+                    .or_else(|| birth_utc.as_ref().map(utc_to_jd_utc))
+                    .unwrap_or_else(|| {
+                        eprintln!(
+                            "--birth-jd or --birth-date is required when raw dasha inputs are provided."
+                        );
+                        std::process::exit(1);
+                    })
+            } else {
+                0.0
+            };
+            if !raw_inputs_requested && args.birth_jd.is_some() {
+                eprintln!("--birth-jd is only supported together with raw dasha inputs.");
+                std::process::exit(1);
+            }
+            if !raw_inputs_requested && args.query_jd.is_some() {
+                eprintln!("--query-jd is only supported together with raw dasha inputs.");
+                std::process::exit(1);
+            }
+            let birth_label = if raw_inputs_requested {
+                if let Some(date) = args.birth_date.as_deref() {
+                    date.to_string()
+                } else {
+                    format!("JD UTC {:.6}", birth_jd)
+                }
+            } else {
+                args.birth_date.clone().unwrap_or_else(|| {
+                    eprintln!("--birth-date is required when raw dasha inputs are not provided.");
+                    std::process::exit(1);
+                })
+            };
 
             match mode {
                 "snapshot" => {
-                    let q_date = args.query_date.as_ref().unwrap_or_else(|| {
-                        eprintln!("--query-date is required for --mode snapshot");
-                        std::process::exit(1);
-                    });
-                    let query_utc = parse_utc(q_date).unwrap_or_else(|e| {
-                        eprintln!("{e}");
-                        std::process::exit(1);
-                    });
-                    let snapshot = dhruv_search::dasha_snapshot_at(
-                        &engine,
-                        &eop_kernel,
-                        &birth_utc,
-                        &query_utc,
-                        &location,
-                        dasha_system,
-                        clamped_level,
-                        &bhava_config,
-                        &rs_config,
-                        &aya_config,
-                        &variation,
-                    )
+                    let snapshot = if raw_inputs_requested {
+                        let query_jd = args
+                            .query_jd
+                            .or_else(|| {
+                                args.query_date.as_ref().map(|date| {
+                                    let utc = parse_utc(date).unwrap_or_else(|e| {
+                                        eprintln!("{e}");
+                                        std::process::exit(1);
+                                    });
+                                    utc_to_jd_utc(&utc)
+                                })
+                            })
+                            .unwrap_or_else(|| {
+                                eprintln!(
+                                    "--query-jd or --query-date is required for --mode snapshot"
+                                );
+                                std::process::exit(1);
+                            });
+                        dhruv_search::dasha_snapshot_with_inputs(
+                            birth_jd,
+                            query_jd,
+                            dasha_system,
+                            clamped_level,
+                            &variation,
+                            &raw_inputs,
+                        )
+                    } else {
+                        let birth_utc = birth_utc.as_ref().unwrap_or_else(|| {
+                            eprintln!("--birth-date is required for --mode snapshot");
+                            std::process::exit(1);
+                        });
+                        let location = location.as_ref().unwrap_or_else(|| {
+                            eprintln!("--lat and --lon are required for --mode snapshot");
+                            std::process::exit(1);
+                        });
+                        let q_date = args.query_date.as_ref().unwrap_or_else(|| {
+                            eprintln!("--query-date is required for --mode snapshot");
+                            std::process::exit(1);
+                        });
+                        let query_utc = parse_utc(q_date).unwrap_or_else(|e| {
+                            eprintln!("{e}");
+                            std::process::exit(1);
+                        });
+                        dhruv_search::dasha_snapshot_at(
+                            &engine,
+                            &eop_kernel,
+                            birth_utc,
+                            &query_utc,
+                            location,
+                            dasha_system,
+                            clamped_level,
+                            &bhava_config,
+                            &rs_config,
+                            &aya_config,
+                            &variation,
+                        )
+                    }
                     .unwrap_or_else(|e| {
                         eprintln!("Error: {e}");
                         std::process::exit(1);
@@ -7266,24 +7397,44 @@ fn main() {
                     println!(
                         "Dasha Snapshot ({}) at {} for birth {}\n",
                         dasha_system.name(),
-                        q_date,
-                        args.birth_date
+                        args.query_date
+                            .clone()
+                            .unwrap_or_else(|| format!("JD UTC {:.6}", args.query_jd.unwrap())),
+                        birth_label
                     );
                     print_dasha_periods(&snapshot.periods, 0, 50);
                 }
                 "hierarchy" => {
-                    let hierarchy = dhruv_search::dasha_hierarchy_for_birth(
-                        &engine,
-                        &eop_kernel,
-                        &birth_utc,
-                        &location,
-                        dasha_system,
-                        clamped_level,
-                        &bhava_config,
-                        &rs_config,
-                        &aya_config,
-                        &variation,
-                    )
+                    let hierarchy = if raw_inputs_requested {
+                        dhruv_search::dasha_hierarchy_with_inputs(
+                            birth_jd,
+                            dasha_system,
+                            clamped_level,
+                            &variation,
+                            &raw_inputs,
+                        )
+                    } else {
+                        let birth_utc = birth_utc.as_ref().unwrap_or_else(|| {
+                            eprintln!("--birth-date is required for --mode hierarchy");
+                            std::process::exit(1);
+                        });
+                        let location = location.as_ref().unwrap_or_else(|| {
+                            eprintln!("--lat and --lon are required for --mode hierarchy");
+                            std::process::exit(1);
+                        });
+                        dhruv_search::dasha_hierarchy_for_birth(
+                            &engine,
+                            &eop_kernel,
+                            birth_utc,
+                            location,
+                            dasha_system,
+                            clamped_level,
+                            &bhava_config,
+                            &rs_config,
+                            &aya_config,
+                            &variation,
+                        )
+                    }
                     .unwrap_or_else(|e| {
                         eprintln!("Error: {e}");
                         std::process::exit(1);
@@ -7291,22 +7442,34 @@ fn main() {
                     println!(
                         "Dasha Hierarchy ({}) for birth {} ({} levels)\n",
                         dasha_system.name(),
-                        args.birth_date,
+                        birth_label,
                         hierarchy.levels.len()
                     );
                     print_dasha_hierarchy(&hierarchy);
                 }
                 "level0" => {
-                    let periods = dhruv_search::dasha_level0_for_birth(
-                        &engine,
-                        &eop_kernel,
-                        &birth_utc,
-                        &location,
-                        dasha_system,
-                        &bhava_config,
-                        &rs_config,
-                        &aya_config,
-                    )
+                    let periods = if raw_inputs_requested {
+                        dhruv_search::dasha_level0_with_inputs(birth_jd, dasha_system, &raw_inputs)
+                    } else {
+                        let birth_utc = birth_utc.as_ref().unwrap_or_else(|| {
+                            eprintln!("--birth-date is required for --mode level0");
+                            std::process::exit(1);
+                        });
+                        let location = location.as_ref().unwrap_or_else(|| {
+                            eprintln!("--lat and --lon are required for --mode level0");
+                            std::process::exit(1);
+                        });
+                        dhruv_search::dasha_level0_for_birth(
+                            &engine,
+                            &eop_kernel,
+                            birth_utc,
+                            location,
+                            dasha_system,
+                            &bhava_config,
+                            &rs_config,
+                            &aya_config,
+                        )
+                    }
                     .unwrap_or_else(|e| {
                         eprintln!("Error: {e}");
                         std::process::exit(1);
@@ -7314,7 +7477,7 @@ fn main() {
                     println!(
                         "Dasha Level0 ({}) for birth {}\n",
                         dasha_system.name(),
-                        args.birth_date
+                        birth_label
                     );
                     print_dasha_periods(&periods, 1, 100);
                 }
@@ -7324,17 +7487,34 @@ fn main() {
                             eprintln!("--entity is required for --mode level0-entity");
                             std::process::exit(1);
                         }));
-                    let period = dhruv_search::dasha_level0_entity_for_birth(
-                        &engine,
-                        &eop_kernel,
-                        &birth_utc,
-                        &location,
-                        dasha_system,
-                        entity,
-                        &bhava_config,
-                        &rs_config,
-                        &aya_config,
-                    )
+                    let period = if raw_inputs_requested {
+                        dhruv_search::dasha_level0_entity_with_inputs(
+                            birth_jd,
+                            dasha_system,
+                            entity,
+                            &raw_inputs,
+                        )
+                    } else {
+                        let birth_utc = birth_utc.as_ref().unwrap_or_else(|| {
+                            eprintln!("--birth-date is required for --mode level0-entity");
+                            std::process::exit(1);
+                        });
+                        let location = location.as_ref().unwrap_or_else(|| {
+                            eprintln!("--lat and --lon are required for --mode level0-entity");
+                            std::process::exit(1);
+                        });
+                        dhruv_search::dasha_level0_entity_for_birth(
+                            &engine,
+                            &eop_kernel,
+                            birth_utc,
+                            location,
+                            dasha_system,
+                            entity,
+                            &bhava_config,
+                            &rs_config,
+                            &aya_config,
+                        )
+                    }
                     .unwrap_or_else(|e| {
                         eprintln!("Error: {e}");
                         std::process::exit(1);
@@ -7344,7 +7524,7 @@ fn main() {
                             println!(
                                 "Dasha Level0 Entity ({}) for birth {}\n",
                                 dasha_system.name(),
-                                args.birth_date
+                                birth_label
                             );
                             print_dasha_periods(&[period], 1, 1);
                         }
@@ -7356,18 +7536,36 @@ fn main() {
                         eprintln!("--parent-level is required for --mode {mode}");
                         std::process::exit(1);
                     });
-                    let hierarchy = dhruv_search::dasha_hierarchy_for_birth(
-                        &engine,
-                        &eop_kernel,
-                        &birth_utc,
-                        &location,
-                        dasha_system,
-                        parent_level.min(dhruv_vedic_base::dasha::MAX_DASHA_LEVEL),
-                        &bhava_config,
-                        &rs_config,
-                        &aya_config,
-                        &variation,
-                    )
+                    let hierarchy = if raw_inputs_requested {
+                        dhruv_search::dasha_hierarchy_with_inputs(
+                            birth_jd,
+                            dasha_system,
+                            parent_level.min(dhruv_vedic_base::dasha::MAX_DASHA_LEVEL),
+                            &variation,
+                            &raw_inputs,
+                        )
+                    } else {
+                        let birth_utc = birth_utc.as_ref().unwrap_or_else(|| {
+                            eprintln!("--birth-date is required for --mode {mode}");
+                            std::process::exit(1);
+                        });
+                        let location = location.as_ref().unwrap_or_else(|| {
+                            eprintln!("--lat and --lon are required for --mode {mode}");
+                            std::process::exit(1);
+                        });
+                        dhruv_search::dasha_hierarchy_for_birth(
+                            &engine,
+                            &eop_kernel,
+                            birth_utc,
+                            location,
+                            dasha_system,
+                            parent_level.min(dhruv_vedic_base::dasha::MAX_DASHA_LEVEL),
+                            &bhava_config,
+                            &rs_config,
+                            &aya_config,
+                            &variation,
+                        )
+                    }
                     .unwrap_or_else(|e| {
                         eprintln!("Error: {e}");
                         std::process::exit(1);
@@ -7389,19 +7587,37 @@ fn main() {
                             );
                             std::process::exit(1);
                         });
-                        let periods = dhruv_search::dasha_complete_level_for_birth(
-                            &engine,
-                            &eop_kernel,
-                            &birth_utc,
-                            &location,
-                            dasha_system,
-                            parent_periods,
-                            child_level,
-                            &bhava_config,
-                            &rs_config,
-                            &aya_config,
-                            &variation,
-                        )
+                        let periods = if raw_inputs_requested {
+                            dhruv_search::dasha_complete_level_with_inputs(
+                                dasha_system,
+                                parent_periods,
+                                child_level,
+                                &variation,
+                                &raw_inputs,
+                            )
+                        } else {
+                            let birth_utc = birth_utc.as_ref().unwrap_or_else(|| {
+                                eprintln!("--birth-date is required for --mode complete-level");
+                                std::process::exit(1);
+                            });
+                            let location = location.as_ref().unwrap_or_else(|| {
+                                eprintln!("--lat and --lon are required for --mode complete-level");
+                                std::process::exit(1);
+                            });
+                            dhruv_search::dasha_complete_level_for_birth(
+                                &engine,
+                                &eop_kernel,
+                                birth_utc,
+                                location,
+                                dasha_system,
+                                parent_periods,
+                                child_level,
+                                &bhava_config,
+                                &rs_config,
+                                &aya_config,
+                                &variation,
+                            )
+                        }
                         .unwrap_or_else(|e| {
                             eprintln!("Error: {e}");
                             std::process::exit(1);
@@ -7423,18 +7639,35 @@ fn main() {
                         });
 
                         if mode == "children" {
-                            let children = dhruv_search::dasha_children_for_birth(
-                                &engine,
-                                &eop_kernel,
-                                &birth_utc,
-                                &location,
-                                dasha_system,
-                                parent,
-                                &bhava_config,
-                                &rs_config,
-                                &aya_config,
-                                &variation,
-                            )
+                            let children = if raw_inputs_requested {
+                                dhruv_search::dasha_children_with_inputs(
+                                    dasha_system,
+                                    parent,
+                                    &variation,
+                                    &raw_inputs,
+                                )
+                            } else {
+                                let birth_utc = birth_utc.as_ref().unwrap_or_else(|| {
+                                    eprintln!("--birth-date is required for --mode children");
+                                    std::process::exit(1);
+                                });
+                                let location = location.as_ref().unwrap_or_else(|| {
+                                    eprintln!("--lat and --lon are required for --mode children");
+                                    std::process::exit(1);
+                                });
+                                dhruv_search::dasha_children_for_birth(
+                                    &engine,
+                                    &eop_kernel,
+                                    birth_utc,
+                                    location,
+                                    dasha_system,
+                                    parent,
+                                    &bhava_config,
+                                    &rs_config,
+                                    &aya_config,
+                                    &variation,
+                                )
+                            }
                             .unwrap_or_else(|e| {
                                 eprintln!("Error: {e}");
                                 std::process::exit(1);
@@ -7453,19 +7686,39 @@ fn main() {
                                     std::process::exit(1);
                                 }),
                             );
-                            let child = dhruv_search::dasha_child_period_for_birth(
-                                &engine,
-                                &eop_kernel,
-                                &birth_utc,
-                                &location,
-                                dasha_system,
-                                parent,
-                                entity,
-                                &bhava_config,
-                                &rs_config,
-                                &aya_config,
-                                &variation,
-                            )
+                            let child = if raw_inputs_requested {
+                                dhruv_search::dasha_child_period_with_inputs(
+                                    dasha_system,
+                                    parent,
+                                    entity,
+                                    &variation,
+                                    &raw_inputs,
+                                )
+                            } else {
+                                let birth_utc = birth_utc.as_ref().unwrap_or_else(|| {
+                                    eprintln!("--birth-date is required for --mode child-period");
+                                    std::process::exit(1);
+                                });
+                                let location = location.as_ref().unwrap_or_else(|| {
+                                    eprintln!(
+                                        "--lat and --lon are required for --mode child-period"
+                                    );
+                                    std::process::exit(1);
+                                });
+                                dhruv_search::dasha_child_period_for_birth(
+                                    &engine,
+                                    &eop_kernel,
+                                    birth_utc,
+                                    location,
+                                    dasha_system,
+                                    parent,
+                                    entity,
+                                    &bhava_config,
+                                    &rs_config,
+                                    &aya_config,
+                                    &variation,
+                                )
+                            }
                             .unwrap_or_else(|e| {
                                 eprintln!("Error: {e}");
                                 std::process::exit(1);

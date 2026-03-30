@@ -269,6 +269,8 @@ The fuller public surface is module-based.
 
 Dasha period objects expose `entity_name` with the exact canonical Sanskrit
 entity name.
+Python dasha calls can use either UTC/location birth context or `birth_jd` plus
+precomputed `inputs` on the same main functions.
 
 `search`:
 

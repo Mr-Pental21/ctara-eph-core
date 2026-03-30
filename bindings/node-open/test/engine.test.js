@@ -494,7 +494,9 @@ test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
 
   const dashaCfg = dhruv.dashaSelectionConfigDefault();
   assert.equal(typeof dashaCfg.count, 'number');
-  const dashaHierarchy = dhruv.dashaHierarchyUtc(engine, eop, utc, loc, {
+  const dashaHierarchy = dhruv.dashaHierarchy(engine, eop, {
+    birthUtc: utc,
+    location: loc,
     ayanamshaSystem: 0,
     useNutation: true,
     system: 0,

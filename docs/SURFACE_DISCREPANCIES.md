@@ -181,18 +181,13 @@ This audit therefore does not treat a missing `_with_*` symbol as a discrepancy 
 ### 11. Input-based dasha constructors remain Rust-only
 
 - Missing or wrong:
-  The dasha-input gap has several parts:
-  - Rust has explicit raw-input entrypoints such as `dasha_hierarchy_with_inputs` and `dasha_snapshot_with_inputs`,
-  - the base birth/query entrypoints still recompute derived inputs internally,
-  - `DashaVariationConfig` and `DashaSelectionConfig` do not replace the separate `DashaInputs` transport,
-  - non-Rust surfaces expose only UTC/location-driven entrypoints.
-  So callers outside Rust cannot supply precomputed dasha inputs through the main request shape.
+  Resolved for the current public dasha surfaces.
 - Affected surfaces:
-  CLI, C ABI, Python, Node.js, Go, Elixir.
+  Rust public API, CLI, C ABI, Python, Node.js, Go, Elixir.
 - Correct behavior:
-  Add typed request/context shapes for raw dasha inputs where callers already have birth moon/lagna-derived data and do not want the wrappers to recompute them, then route those through the main dasha entry points instead of separate named variants.
+  Keep one request/context-driven dasha surface per feature. Alternate invocation data such as precomputed Moon longitude, rashi inputs, sunrise/sunset, birth JD, and query JD should flow through typed birth/input request attributes rather than parallel `_with_*` or `_utc` public symbols.
 - Evidence:
-  `crates/dhruv_search/src/dasha.rs`, `crates/dhruv_search/src/lib.rs`, `crates/dhruv_vedic_ops/src/lib.rs`, `crates/dhruv_ffi_c/include/dhruv.h`.
+  `crates/dhruv_search/src/dasha.rs`, `crates/dhruv_search/src/lib.rs`, `crates/dhruv_vedic_ops/src/lib.rs`, `crates/dhruv_cli/src/main.rs`, `crates/dhruv_ffi_c/include/dhruv.h`, `bindings/python-open/src/ctara_dhruv/dasha.py`, `bindings/node-open/src/dasha.js`, `bindings/go-open/dhruv/dasha.go`, `bindings/elixir-open/native/dhruv_elixir_nif/src/lib.rs`.
 
 ### 12. Most low-level graha relationship and combustion math is Rust-only, and some naming variants are still split into parallel APIs
 

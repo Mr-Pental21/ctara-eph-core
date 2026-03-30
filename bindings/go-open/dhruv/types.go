@@ -49,6 +49,11 @@ const (
 )
 
 const (
+	DashaTimeJDUTC = cabi.DashaTimeJDUTC
+	DashaTimeUTC   = cabi.DashaTimeUTC
+)
+
+const (
 	QueryOutputCartesian = cabi.QueryOutputCartesian
 	QueryOutputSpherical = cabi.QueryOutputSpherical
 	QueryOutputBoth      = cabi.QueryOutputBoth
@@ -161,19 +166,29 @@ type (
 	PanchangComputeRequest  = cabi.PanchangComputeRequest
 	PanchangOperationResult = cabi.PanchangOperationResult
 
-	GrahaLongitudes       = cabi.GrahaLongitudes
-	GrahaLongitudesConfig = cabi.GrahaLongitudesConfig
-	SpecialLagnas         = cabi.SpecialLagnas
-	ArudhaResult          = cabi.ArudhaResult
-	AllUpagrahas          = cabi.AllUpagrahas
-	TimeUpagrahaConfig    = cabi.TimeUpagrahaConfig
-	DrishtiConfig         = cabi.DrishtiConfig
-	GrahaPositionsConfig  = cabi.GrahaPositionsConfig
-	BindusConfig          = cabi.BindusConfig
-	DashaSelectionConfig  = cabi.DashaSelectionConfig
-	DashaVariationConfig  = cabi.DashaVariationConfig
-	AmshaSelectionConfig  = cabi.AmshaSelectionConfig
-	FullKundaliConfig     = cabi.FullKundaliConfig
+	GrahaLongitudes           = cabi.GrahaLongitudes
+	GrahaLongitudesConfig     = cabi.GrahaLongitudesConfig
+	SpecialLagnas             = cabi.SpecialLagnas
+	ArudhaResult              = cabi.ArudhaResult
+	AllUpagrahas              = cabi.AllUpagrahas
+	TimeUpagrahaConfig        = cabi.TimeUpagrahaConfig
+	DrishtiConfig             = cabi.DrishtiConfig
+	GrahaPositionsConfig      = cabi.GrahaPositionsConfig
+	BindusConfig              = cabi.BindusConfig
+	DashaSelectionConfig      = cabi.DashaSelectionConfig
+	DashaVariationConfig      = cabi.DashaVariationConfig
+	RashiDashaInputs          = cabi.RashiDashaInputs
+	DashaInputs               = cabi.DashaInputs
+	DashaBirthContext         = cabi.DashaBirthContext
+	DashaHierarchyRequest     = cabi.DashaHierarchyRequest
+	DashaSnapshotRequest      = cabi.DashaSnapshotRequest
+	DashaLevel0Request        = cabi.DashaLevel0Request
+	DashaLevel0EntityRequest  = cabi.DashaLevel0EntityRequest
+	DashaChildrenRequest      = cabi.DashaChildrenRequest
+	DashaChildPeriodRequest   = cabi.DashaChildPeriodRequest
+	DashaCompleteLevelRequest = cabi.DashaCompleteLevelRequest
+	AmshaSelectionConfig      = cabi.AmshaSelectionConfig
+	FullKundaliConfig         = cabi.FullKundaliConfig
 
 	TaraConfig         = cabi.TaraConfig
 	EarthState         = cabi.EarthState
