@@ -4944,6 +4944,7 @@ mod tests {
                 include_dasha: None,
                 charakaraka_scheme: None,
                 node_dignity_policy: None,
+                upagraha_config: None,
                 graha_positions_config: None,
                 bindus_config: None,
                 drishti_config: None,
