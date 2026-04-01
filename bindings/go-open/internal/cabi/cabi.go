@@ -1221,14 +1221,19 @@ func goDashaSelectionConfig(v C.DhruvDashaSelectionConfig) DashaSelectionConfig 
 	out.MaxLevel = uint8(v.max_level)
 	out.YoginiScheme = uint8(v.yogini_scheme)
 	out.UseAbhijit = v.use_abhijit != 0
-	out.HasSnapshotJd = v.has_snapshot_jd != 0
-	out.SnapshotJd = float64(v.snapshot_jd)
 	for i := 0; i < MaxDashaSystems; i++ {
 		out.Systems[i] = uint8(v.systems[i])
 		out.MaxLevels[i] = uint8(v.max_levels[i])
 	}
 	for i := 0; i < len(out.LevelMethods); i++ {
 		out.LevelMethods[i] = uint8(v.level_methods[i])
+	}
+	if v.snapshot_time.time_kind != C.int32_t(DashaTimeNone) {
+		out.SnapshotTime = &DashaSnapshotTime{
+			TimeKind: int32(v.snapshot_time.time_kind),
+			JDUtc:    float64(v.snapshot_time.jd_utc),
+			UTC:      goUTC(v.snapshot_time.utc),
+		}
 	}
 	return out
 }
@@ -1239,14 +1244,18 @@ func cDashaSelectionConfig(cfg DashaSelectionConfig) C.DhruvDashaSelectionConfig
 	out.max_level = C.uint8_t(cfg.MaxLevel)
 	out.yogini_scheme = C.uint8_t(cfg.YoginiScheme)
 	out.use_abhijit = boolU8(cfg.UseAbhijit)
-	out.has_snapshot_jd = boolU8(cfg.HasSnapshotJd)
-	out.snapshot_jd = C.double(cfg.SnapshotJd)
 	for i := 0; i < MaxDashaSystems; i++ {
 		out.systems[i] = C.uint8_t(cfg.Systems[i])
 		out.max_levels[i] = C.uint8_t(cfg.MaxLevels[i])
 	}
 	for i := 0; i < len(cfg.LevelMethods); i++ {
 		out.level_methods[i] = C.uint8_t(cfg.LevelMethods[i])
+	}
+	out.snapshot_time.time_kind = C.int32_t(DashaTimeNone)
+	if cfg.SnapshotTime != nil {
+		out.snapshot_time.time_kind = C.int32_t(cfg.SnapshotTime.TimeKind)
+		out.snapshot_time.jd_utc = C.double(cfg.SnapshotTime.JDUtc)
+		out.snapshot_time.utc = cUTC(cfg.SnapshotTime.UTC)
 	}
 	return out
 }

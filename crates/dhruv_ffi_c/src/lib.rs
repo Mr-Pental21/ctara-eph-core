@@ -55,7 +55,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 50;
+pub const DHRUV_API_VERSION: u32 = 51;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -375,6 +375,7 @@ pub struct DhruvQuery {
 
 pub const DHRUV_QUERY_TIME_JD_TDB: i32 = 0;
 pub const DHRUV_QUERY_TIME_UTC: i32 = 1;
+pub const DHRUV_DASHA_TIME_NONE: i32 = -1;
 pub const DHRUV_DASHA_TIME_JD_UTC: i32 = 0;
 pub const DHRUV_DASHA_TIME_UTC: i32 = 1;
 
@@ -986,7 +987,7 @@ fn full_kundali_config_from_ffi(
         include_panchang: cfg.include_panchang != 0 || cfg.include_calendar != 0,
         include_calendar: cfg.include_calendar != 0,
         include_dasha: cfg.include_dasha != 0,
-        dasha_config: dasha_selection_from_ffi(&cfg.dasha_config),
+        dasha_config: dasha_selection_from_ffi(&cfg.dasha_config)?,
     })
 }
 
@@ -11898,6 +11899,17 @@ pub extern "C" fn dhruv_dasha_variation_config_default() -> DhruvDashaVariationC
 /// Mirrors `DashaSelectionConfig` from `dhruv_search`.
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
+pub struct DhruvDashaSnapshotTime {
+    /// `DHRUV_DASHA_TIME_NONE`, `DHRUV_DASHA_TIME_JD_UTC`, or `DHRUV_DASHA_TIME_UTC`.
+    pub time_kind: i32,
+    /// Snapshot JD UTC when `time_kind == DHRUV_DASHA_TIME_JD_UTC`.
+    pub jd_utc: f64,
+    /// Snapshot UTC when `time_kind == DHRUV_DASHA_TIME_UTC`.
+    pub utc: DhruvUtcTime,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
 pub struct DhruvDashaSelectionConfig {
     /// Number of valid entries in `systems` (0..=DHRUV_MAX_DASHA_SYSTEMS).
     pub count: u8,
@@ -11913,14 +11925,29 @@ pub struct DhruvDashaSelectionConfig {
     pub yogini_scheme: u8,
     /// Use Abhijit for Ashtottari (1=yes, 0=no).
     pub use_abhijit: u8,
-    /// 0 = no snapshot, 1 = snapshot_jd is valid.
-    pub has_snapshot_jd: u8,
-    /// Query JD UTC for snapshot. Only read when `has_snapshot_jd == 1`.
-    pub snapshot_jd: f64,
+    /// Optional discriminated snapshot-time selector.
+    pub snapshot_time: DhruvDashaSnapshotTime,
 }
 
-fn dasha_selection_from_ffi(c: &DhruvDashaSelectionConfig) -> dhruv_search::DashaSelectionConfig {
-    dhruv_search::DashaSelectionConfig {
+fn dasha_snapshot_time_from_ffi(
+    snapshot_time: &DhruvDashaSnapshotTime,
+) -> Result<Option<dhruv_search::DashaSnapshotTime>, DhruvStatus> {
+    match snapshot_time.time_kind {
+        DHRUV_DASHA_TIME_NONE => Ok(None),
+        DHRUV_DASHA_TIME_JD_UTC => Ok(Some(dhruv_search::DashaSnapshotTime::JdUtc(
+            snapshot_time.jd_utc,
+        ))),
+        DHRUV_DASHA_TIME_UTC => Ok(Some(dhruv_search::DashaSnapshotTime::Utc(ffi_to_utc_time(
+            &snapshot_time.utc,
+        )))),
+        _ => Err(DhruvStatus::InvalidInput),
+    }
+}
+
+fn dasha_selection_from_ffi(
+    c: &DhruvDashaSelectionConfig,
+) -> Result<dhruv_search::DashaSelectionConfig, DhruvStatus> {
+    Ok(dhruv_search::DashaSelectionConfig {
         count: c.count,
         systems: c.systems,
         max_levels: c.max_levels,
@@ -11928,12 +11955,8 @@ fn dasha_selection_from_ffi(c: &DhruvDashaSelectionConfig) -> dhruv_search::Dash
         level_methods: c.level_methods,
         yogini_scheme: c.yogini_scheme,
         use_abhijit: c.use_abhijit,
-        snapshot_jd: if c.has_snapshot_jd != 0 {
-            Some(c.snapshot_jd)
-        } else {
-            None
-        },
-    }
+        snapshot_time: dasha_snapshot_time_from_ffi(&c.snapshot_time)?,
+    })
 }
 
 /// Return a `DhruvDashaSelectionConfig` with safe defaults.
@@ -11949,8 +11972,11 @@ pub extern "C" fn dhruv_dasha_selection_config_default() -> DhruvDashaSelectionC
         level_methods: [0xFF; 5],
         yogini_scheme: 0,
         use_abhijit: 1,
-        has_snapshot_jd: 0,
-        snapshot_jd: 0.0,
+        snapshot_time: DhruvDashaSnapshotTime {
+            time_kind: DHRUV_DASHA_TIME_NONE,
+            jd_utc: 0.0,
+            utc: zeroed_utc(),
+        },
     }
 }
 

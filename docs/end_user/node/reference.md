@@ -287,6 +287,13 @@ Common config objects:
 - full-kundali config
 - dasha selection and variation configs
 
+`fullKundaliConfig.dashaConfig` supports:
+
+- `systems`
+- `maxLevels`
+- `maxLevel`
+- `snapshotUtc`
+
 Time-based upagraha config object:
 
 - `gulikaPoint`

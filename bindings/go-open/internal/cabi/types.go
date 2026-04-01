@@ -56,15 +56,15 @@ const (
 )
 
 const (
-	DignityExalted     int32 = 0
+	DignityExalted      int32 = 0
 	DignityMoolatrikone int32 = 1
-	DignityOwnSign     int32 = 2
-	DignityAdhiMitra   int32 = 3
-	DignityMitra       int32 = 4
-	DignitySama        int32 = 5
-	DignityShatru      int32 = 6
-	DignityAdhiShatru  int32 = 7
-	DignityDebilitated int32 = 8
+	DignityOwnSign      int32 = 2
+	DignityAdhiMitra    int32 = 3
+	DignityMitra        int32 = 4
+	DignitySama         int32 = 5
+	DignityShatru       int32 = 6
+	DignityAdhiShatru   int32 = 7
+	DignityDebilitated  int32 = 8
 )
 
 const (
@@ -99,6 +99,7 @@ const (
 )
 
 const (
+	DashaTimeNone  int32 = -1
 	DashaTimeJDUTC int32 = 0
 	DashaTimeUTC   int32 = 1
 )
@@ -1020,15 +1021,20 @@ type FullKundaliSummary struct {
 }
 
 type DashaSelectionConfig struct {
-	Count         uint8
-	Systems       [MaxDashaSystems]uint8
-	MaxLevels     [MaxDashaSystems]uint8
-	MaxLevel      uint8
-	LevelMethods  [5]uint8
-	YoginiScheme  uint8
-	UseAbhijit    bool
-	HasSnapshotJd bool
-	SnapshotJd    float64
+	Count        uint8
+	Systems      [MaxDashaSystems]uint8
+	MaxLevels    [MaxDashaSystems]uint8
+	MaxLevel     uint8
+	LevelMethods [5]uint8
+	YoginiScheme uint8
+	UseAbhijit   bool
+	SnapshotTime *DashaSnapshotTime
+}
+
+type DashaSnapshotTime struct {
+	TimeKind int32
+	JDUtc    float64
+	UTC      UtcTime
 }
 
 type DashaVariationConfig struct {

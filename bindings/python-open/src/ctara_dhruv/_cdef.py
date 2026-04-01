@@ -41,7 +41,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       50
+#define DHRUV_API_VERSION       51
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 
@@ -1274,6 +1274,12 @@ typedef struct {
 } DhruvDashaSnapshot;
 
 typedef struct {
+    int32_t      time_kind;
+    double       jd_utc;
+    DhruvUtcTime utc;
+} DhruvDashaSnapshotTime;
+
+typedef struct {
     uint8_t count;
     uint8_t systems[23];
     uint8_t max_levels[23];
@@ -1281,8 +1287,7 @@ typedef struct {
     uint8_t level_methods[5];
     uint8_t yogini_scheme;
     uint8_t use_abhijit;
-    uint8_t has_snapshot_jd;
-    double  snapshot_jd;
+    DhruvDashaSnapshotTime snapshot_time;
 } DhruvDashaSelectionConfig;
 
 typedef struct {
@@ -2482,3 +2487,6 @@ def _clean_for_cffi(raw: str) -> str:
 
 
 CDEF: str = _clean_for_cffi(_RAW_HEADER)
+#define DHRUV_DASHA_TIME_NONE   -1
+#define DHRUV_DASHA_TIME_JD_UTC 0
+#define DHRUV_DASHA_TIME_UTC    1

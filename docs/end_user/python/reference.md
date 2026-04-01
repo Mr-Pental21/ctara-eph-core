@@ -355,6 +355,11 @@ Common dict-style or struct-style config inputs:
 - full-kundali config returned by `full_kundali_config_default`
 - dasha configs returned by `dasha_selection_config_default` and `dasha_variation_config_default`
 
+For embedded full-kundali dasha snapshots, the CFFI dasha selection config now
+uses `snapshot_time` with `time_kind`, `utc`, and `jd_utc`. Prefer
+`time_kind = DHRUV_DASHA_TIME_UTC` plus `snapshot_time.utc` on high-level
+wrapper calls.
+
 Time-based upagraha config fields:
 
 - `gulika_point`

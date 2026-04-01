@@ -445,7 +445,7 @@ struct DashaSelectionConfigInput {
     systems: Option<Vec<EnumInput>>,
     max_level: Option<u8>,
     max_levels: Option<Vec<u8>>,
-    snapshot_jd: Option<f64>,
+    snapshot_utc: Option<UtcInput>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1869,8 +1869,10 @@ fn to_full_kundali_config(
             }
         }
         if let Some(dasha_config) = input.dasha_config.as_ref() {
-            if let Some(snapshot_jd) = dasha_config.snapshot_jd {
-                config.dasha_config.snapshot_jd = Some(snapshot_jd);
+            if let Some(snapshot_utc) = dasha_config.snapshot_utc.clone() {
+                config.dasha_config.snapshot_time = Some(dhruv_search::DashaSnapshotTime::Utc(
+                    parse_utc(snapshot_utc)?,
+                ));
             }
             if let Some(max_level) = dasha_config.max_level {
                 config.dasha_config.max_level = max_level;

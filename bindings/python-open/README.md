@@ -5,7 +5,7 @@ canonical C ABI (`dhruv_ffi_c`) via `cffi`.
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=50`
+- ABI target: `DHRUV_API_VERSION=51`
 - Package root: `bindings/python-open`
 - Runtime dependency: `cffi`
 

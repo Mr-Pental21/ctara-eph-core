@@ -2329,7 +2329,7 @@ fn ffi_dasha_selection_config_default_values() {
     assert_eq!(cfg.level_methods, [0xFF; 5]);
     assert_eq!(cfg.yogini_scheme, 0);
     assert_eq!(cfg.use_abhijit, 1);
-    assert_eq!(cfg.has_snapshot_jd, 0);
+    assert_eq!(cfg.snapshot_time.time_kind, DHRUV_DASHA_TIME_NONE);
 }
 
 #[test]
@@ -2662,9 +2662,15 @@ fn ffi_full_kundali_dasha_partial_success_contract() {
     dasha_cfg.count = 2;
     dasha_cfg.systems[0] = 0; // Vimshottari
     dasha_cfg.systems[1] = 11; // Chara
-    dasha_cfg.has_snapshot_jd = 1;
-    // Snapshot at 2020-01-01 12:00 UTC = JD 2458849.0
-    dasha_cfg.snapshot_jd = 2_458_849.0;
+    dasha_cfg.snapshot_time.time_kind = DHRUV_DASHA_TIME_UTC;
+    dasha_cfg.snapshot_time.utc = DhruvUtcTime {
+        year: 2020,
+        month: 1,
+        day: 1,
+        hour: 12,
+        minute: 0,
+        second: 0.0,
+    };
 
     let fk_config = DhruvFullKundaliConfig {
         include_bhava_cusps: 0,

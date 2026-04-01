@@ -1776,15 +1776,23 @@ exports and config/result shapes, use the dedicated sections above.
 ### `DhruvDashaSelectionConfig`
 
 ```c
+struct DhruvDashaSnapshotTime {
+    int32_t      time_kind; // DHRUV_DASHA_TIME_NONE / JD_UTC / UTC
+    double       jd_utc;    // only when time_kind == DHRUV_DASHA_TIME_JD_UTC
+    DhruvUtcTime utc;       // only when time_kind == DHRUV_DASHA_TIME_UTC
+};
+```
+
+```c
 struct DhruvDashaSelectionConfig {
     uint8_t count;           // number of valid entries in systems (0..8)
     uint8_t systems[8];      // DashaSystem codes (0xFF = unused)
+    uint8_t max_levels[8];   // per-system hierarchy depth (0-4, 0xFF = use max_level)
     uint8_t max_level;       // hierarchy depth (0-4, default 2)
     uint8_t level_methods[5]; // per-level sub-period method (0xFF = default)
     uint8_t yogini_scheme;   // 0 = default
     uint8_t use_abhijit;     // 1 = yes, 0 = no
-    uint8_t has_snapshot_jd; // 0 = no snapshot, 1 = snapshot_jd is valid
-    double  snapshot_jd;     // JD UTC, only read when has_snapshot_jd == 1
+    DhruvDashaSnapshotTime snapshot_time;
 };
 ```
 
@@ -1864,7 +1872,7 @@ struct DhruvDashaSnapshot {
 ## JD Timescale Notes (Dasha)
 
 All JD values in dasha APIs use **JD UTC** (not TDB):
-- `DhruvDashaSelectionConfig.snapshot_jd` — query time (only when `has_snapshot_jd == 1`)
+- `DhruvDashaSelectionConfig.snapshot_time.jd_utc` — query time when `time_kind == DHRUV_DASHA_TIME_JD_UTC`
 - `DhruvDashaPeriod.entity_name` — canonical static entity name
 - `DhruvDashaPeriod.start_jd`, `.end_jd` — period boundaries
 - `DhruvDashaSnapshot.query_jd` — echoed query time

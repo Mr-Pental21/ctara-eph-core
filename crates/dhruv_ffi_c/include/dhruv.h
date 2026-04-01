@@ -23,7 +23,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       49
+#define DHRUV_API_VERSION       51
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 
@@ -121,6 +121,7 @@ typedef int32_t DhruvStatus;
 #define DHRUV_DELTA_T_SEGMENT_YEAR2050_TO2150         16
 #define DHRUV_DELTA_T_SEGMENT_AFTER2150               17
 
+#define DHRUV_DASHA_TIME_NONE   -1
 #define DHRUV_DASHA_TIME_JD_UTC 0
 #define DHRUV_DASHA_TIME_UTC    1
 
@@ -1259,6 +1260,12 @@ typedef struct {
 } DhruvDashaSnapshot;
 
 typedef struct {
+    int32_t      time_kind;
+    double       jd_utc;
+    DhruvUtcTime utc;
+} DhruvDashaSnapshotTime;
+
+typedef struct {
     uint8_t count;
     uint8_t systems[DHRUV_MAX_DASHA_SYSTEMS];
     uint8_t max_levels[DHRUV_MAX_DASHA_SYSTEMS];
@@ -1266,8 +1273,7 @@ typedef struct {
     uint8_t level_methods[5];
     uint8_t yogini_scheme;
     uint8_t use_abhijit;
-    uint8_t has_snapshot_jd;
-    double  snapshot_jd;
+    DhruvDashaSnapshotTime snapshot_time;
 } DhruvDashaSelectionConfig;
 
 typedef struct {

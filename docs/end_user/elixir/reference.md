@@ -215,5 +215,7 @@ Accepted enum-style string values:
 - `bindus_config` and `full_kundali_config` can both carry `upagraha_config`.
 - `full_kundali/3`, `lagna/3`, `mc/3`, and `bhavas/3` are convenience arities that inject `:sankranti_config`.
 - Enum-like strings are normalized through the NIF boundary and usually come back as atoms in results.
+- `full_kundali_config[:dasha_config]` supports `:systems`, `:max_level`,
+  `:max_levels`, and `:snapshot_utc`.
 
 For build/runtime notes, see [`bindings/elixir-open/README.md`](../../../bindings/elixir-open/README.md).

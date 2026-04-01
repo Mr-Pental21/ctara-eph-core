@@ -2,7 +2,7 @@ package dhruv
 
 import "ctara-dhruv-core/bindings/go-open/internal/cabi"
 
-const ExpectedAPIVersion = 50
+const ExpectedAPIVersion = 51
 
 const (
 	PathCapacity          = cabi.PathCapacity
@@ -101,6 +101,7 @@ const (
 )
 
 const (
+	DashaTimeNone  = cabi.DashaTimeNone
 	DashaTimeJDUTC = cabi.DashaTimeJDUTC
 	DashaTimeUTC   = cabi.DashaTimeUTC
 )
@@ -228,6 +229,7 @@ type (
 	DrishtiConfig             = cabi.DrishtiConfig
 	GrahaPositionsConfig      = cabi.GrahaPositionsConfig
 	BindusConfig              = cabi.BindusConfig
+	DashaSnapshotTime         = cabi.DashaSnapshotTime
 	DashaSelectionConfig      = cabi.DashaSelectionConfig
 	DashaVariationConfig      = cabi.DashaVariationConfig
 	RashiDashaInputs          = cabi.RashiDashaInputs

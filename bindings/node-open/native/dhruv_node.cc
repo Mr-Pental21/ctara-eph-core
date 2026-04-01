@@ -469,9 +469,11 @@ bool ReadAmshaSelectionConfig(napi_env env, napi_value obj, DhruvAmshaSelectionC
 }
 
 bool ReadDashaSelectionConfig(napi_env env, napi_value obj, DhruvDashaSelectionConfig* out) {
+    *out = dhruv_dasha_selection_config_default();
     napi_value v;
     uint32_t count = 0;
     bool b = false;
+    bool has = false;
     if (!GetNamedProperty(env, obj, "count", &v) || !GetUint32(env, v, &count)) return false;
     out->count = static_cast<uint8_t>(count);
     if (!GetNamedProperty(env, obj, "systems", &v) || !ReadUint8ArrayFixed(env, v, out->systems, DHRUV_MAX_DASHA_SYSTEMS)) return false;
@@ -483,9 +485,16 @@ bool ReadDashaSelectionConfig(napi_env env, napi_value obj, DhruvDashaSelectionC
     out->yogini_scheme = static_cast<uint8_t>(count);
     if (!GetNamedProperty(env, obj, "useAbhijit", &v) || !GetBool(env, v, &b)) return false;
     out->use_abhijit = b ? 1 : 0;
-    if (!GetNamedProperty(env, obj, "hasSnapshotJd", &v) || !GetBool(env, v, &b)) return false;
-    out->has_snapshot_jd = b ? 1 : 0;
-    if (!GetNamedProperty(env, obj, "snapshotJd", &v) || !GetDouble(env, v, &out->snapshot_jd)) return false;
+    if (!GetOptionalNamedProperty(env, obj, "snapshotUtc", &v, &has)) return false;
+    if (has) {
+        napi_valuetype snapshot_type;
+        if (napi_typeof(env, v, &snapshot_type) != napi_ok) return false;
+        if (snapshot_type == napi_null) {
+            return true;
+        }
+        out->snapshot_time.time_kind = DHRUV_DASHA_TIME_UTC;
+        if (!ReadUtcTime(env, v, &out->snapshot_time.utc)) return false;
+    }
     return true;
 }
 
@@ -5713,8 +5722,13 @@ napi_value FullKundaliConfigDefault(napi_env env, napi_callback_info info) {
     SetNamed(env, dasha_cfg, "levelMethods", methods);
     SetNamed(env, dasha_cfg, "yoginiScheme", MakeUint32(env, cfg.dasha_config.yogini_scheme));
     SetNamed(env, dasha_cfg, "useAbhijit", MakeBool(env, cfg.dasha_config.use_abhijit != 0));
-    SetNamed(env, dasha_cfg, "hasSnapshotJd", MakeBool(env, cfg.dasha_config.has_snapshot_jd != 0));
-    SetNamed(env, dasha_cfg, "snapshotJd", MakeDouble(env, cfg.dasha_config.snapshot_jd));
+    if (cfg.dasha_config.snapshot_time.time_kind == DHRUV_DASHA_TIME_UTC) {
+        SetNamed(env, dasha_cfg, "snapshotUtc", WriteUtcTime(env, cfg.dasha_config.snapshot_time.utc));
+    } else {
+        napi_value nullv;
+        napi_get_null(env, &nullv);
+        SetNamed(env, dasha_cfg, "snapshotUtc", nullv);
+    }
     SetNamed(env, obj, "dashaConfig", dasha_cfg);
     return obj;
 }
@@ -5749,8 +5763,13 @@ napi_value DashaSelectionConfigDefault(napi_env env, napi_callback_info info) {
     SetNamed(env, obj, "levelMethods", methods);
     SetNamed(env, obj, "yoginiScheme", MakeUint32(env, cfg.yogini_scheme));
     SetNamed(env, obj, "useAbhijit", MakeBool(env, cfg.use_abhijit != 0));
-    SetNamed(env, obj, "hasSnapshotJd", MakeBool(env, cfg.has_snapshot_jd != 0));
-    SetNamed(env, obj, "snapshotJd", MakeDouble(env, cfg.snapshot_jd));
+    if (cfg.snapshot_time.time_kind == DHRUV_DASHA_TIME_UTC) {
+        SetNamed(env, obj, "snapshotUtc", WriteUtcTime(env, cfg.snapshot_time.utc));
+    } else {
+        napi_value nullv;
+        napi_get_null(env, &nullv);
+        SetNamed(env, obj, "snapshotUtc", nullv);
+    }
     return obj;
 }
 

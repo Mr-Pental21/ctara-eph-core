@@ -350,6 +350,10 @@ Search:
 - `AmshaSelection`
 - `DashaConfig`
 
+`DashaSelectionConfig` supports per-system hierarchy depth through `MaxLevels`
+and optional full-kundali snapshots through `SnapshotTime`, typically with
+`TimeKind = DashaTimeUTC` plus `UTC`.
+
 Defaults preserved by `TimeUpagrahaConfigDefault()`:
 
 - Gulika = Rahu period start
