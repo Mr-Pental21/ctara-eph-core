@@ -36,6 +36,10 @@ jobs:
         env:
           CIBW_ENVIRONMENT_LINUX: >
             DHRUV_REPO_ROOT=/host${{ github.workspace }}
+          CIBW_ENVIRONMENT_MACOS: >
+            DHRUV_REPO_ROOT=${{ github.workspace }}
+          CIBW_ENVIRONMENT_WINDOWS: >
+            DHRUV_REPO_ROOT=${{ github.workspace }}
           CIBW_BEFORE_BUILD_LINUX: >
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
             export PATH="$HOME/.cargo/bin:$PATH" &&
