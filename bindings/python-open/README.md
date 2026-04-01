@@ -8,15 +8,22 @@ canonical C ABI (`dhruv_ffi_c`) via `cffi`.
 - ABI target: `DHRUV_API_VERSION=51`
 - Package root: `bindings/python-open`
 - Runtime dependency: `cffi`
+- Primary distribution: PyPI wheels plus sdist from unified `vX.Y.Z` tags
 
 ## End-User Docs
 
 Usage-first documentation for this wrapper lives in
 [`../../docs/end_user/python/README.md`](../../docs/end_user/python/README.md).
 
-## Install For Local Development
+## Install
 
-From `bindings/python-open`:
+Published installs:
+
+```bash
+pip install ctara-dhruv
+```
+
+Local development from `bindings/python-open`:
 
 ```bash
 pip install -e .
@@ -27,6 +34,10 @@ The shared `dhruv_ffi_c` library must be built from the repository root:
 ```bash
 cargo build -p dhruv_ffi_c --release
 ```
+
+Supported prebuilt wheel targets are Linux, macOS, and Windows x64 on the main
+release matrix. Windows ARM64 remains best-effort until wheel support is proven
+green in CI.
 
 ## Time-Based Upagraha Config
 

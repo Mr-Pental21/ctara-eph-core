@@ -15,3 +15,4 @@ Start here:
 Wrapper package notes:
 
 - [`bindings/go-open/README.md`](../../../bindings/go-open/README.md)
+- [`docs/release_distribution.md`](../../release_distribution.md)

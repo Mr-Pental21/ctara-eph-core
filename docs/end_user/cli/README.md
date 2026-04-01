@@ -15,6 +15,11 @@ Start here:
 - [CLI Reference](./reference.md)
 - [Upagraha Configuration](./upagraha_configuration.md)
 
+Install path:
+
+- release binaries are attached to GitHub Releases for each `vX.Y.Z` tag
+- local development still uses `cargo build -p dhruv_cli --release`
+
 Deeper internal reference:
 
 - [`docs/cli_reference.md`](../../cli_reference.md)

@@ -7,6 +7,7 @@ Open-source Go bindings for `ctara-dhruv-core`, implemented against the canonica
 - ABI target: `DHRUV_API_VERSION=51`
 - Binding strategy: `cgo` over `crates/dhruv_ffi_c/include/dhruv.h`
 - Package: `ctara-dhruv-core/bindings/go-open/dhruv`
+- Distribution model: tagged Go module plus validated C ABI release artifacts
 
 ## End-User Docs
 
@@ -18,7 +19,16 @@ Usage-first documentation for this wrapper lives in
 - Go (1.24+)
 - Rust toolchain (`cargo`)
 
-## Build C ABI
+## Install
+
+```bash
+go get ctara-dhruv-core/bindings/go-open/dhruv@v0.1.0
+```
+
+The Go wrapper remains a source-consumed module. It expects a matching
+`dhruv_ffi_c` library at build/runtime.
+
+## Build Or Download The C ABI
 
 From repository root:
 
@@ -31,6 +41,11 @@ This produces:
 - Linux: `target/release/libdhruv_ffi_c.so`
 - macOS: `target/release/libdhruv_ffi_c.dylib`
 - Windows: `target/release/dhruv_ffi_c.dll`
+
+Release tags also publish C ABI bundles on GitHub Releases for the main
+platform matrix. Linux and macOS consumers can point `CGO_LDFLAGS` and runtime
+library paths at those bundles. Windows Go support remains source-build first
+in the initial rollout.
 
 ## Run Tests
 

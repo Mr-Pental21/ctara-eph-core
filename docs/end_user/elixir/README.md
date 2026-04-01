@@ -21,3 +21,4 @@ Start here:
 Wrapper package notes:
 
 - [`bindings/elixir-open/README.md`](../../../bindings/elixir-open/README.md)
+- [`docs/release_distribution.md`](../../release_distribution.md)

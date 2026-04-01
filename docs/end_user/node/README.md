@@ -20,3 +20,4 @@ Start here:
 Wrapper package notes:
 
 - [`bindings/node-open/README.md`](../../../bindings/node-open/README.md)
+- [`docs/release_distribution.md`](../../release_distribution.md)

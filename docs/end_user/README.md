@@ -17,3 +17,6 @@ Available guides:
 - [Go](./go/README.md)
 - [Node.js](./node/README.md)
 - [Elixir](./elixir/README.md)
+
+Distribution and release-channel notes live in
+[`../release_distribution.md`](../release_distribution.md).

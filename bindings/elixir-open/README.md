@@ -8,12 +8,23 @@ NIF that calls the in-repo Rust crates directly.
 - OTP app: `:ctara_dhruv`
 - Binding strategy: source-built Rustler NIF (`native/dhruv_elixir_nif`)
 - Package root: `bindings/elixir-open`
-- Build mode: local source build only, no precompiled NIFs
+- Build mode: Hex package with source-built NIFs, no precompiled NIFs yet
 
 ## End-User Docs
 
 Usage-first documentation for this wrapper lives in
 [`../../docs/end_user/elixir/README.md`](../../docs/end_user/elixir/README.md).
+
+## Install
+
+Published installs use Hex:
+
+```elixir
+{:ctara_dhruv, "~> 0.1.0"}
+```
+
+The package is published from unified `vX.Y.Z` tags, but the Rustler NIF is
+still compiled from source during `mix deps.compile`.
 
 ## Prerequisites
 

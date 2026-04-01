@@ -15,3 +15,4 @@ Start here:
 Wrapper package notes:
 
 - [`bindings/python-open/README.md`](../../../bindings/python-open/README.md)
+- [`docs/release_distribution.md`](../../release_distribution.md)

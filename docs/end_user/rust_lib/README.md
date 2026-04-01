@@ -12,7 +12,9 @@ Start here:
 
 - [Rust Reference](./reference.md)
 - [Upagraha Configuration](./upagraha_configuration.md)
+- `cargo add dhruv_rs` from the unified crates.io release stream
 
 Deeper internal reference:
 
 - [`docs/rust_wrapper.md`](../../rust_wrapper.md)
+- [`docs/release_distribution.md`](../../release_distribution.md)

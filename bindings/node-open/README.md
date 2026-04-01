@@ -7,13 +7,25 @@ Open-source Node.js bindings for `ctara-dhruv-core`, implemented against the can
 - ABI target: `DHRUV_API_VERSION=51`
 - Binding strategy: Native Node-API addon (`native/dhruv_node.cc`) over `crates/dhruv_ffi_c/include/dhruv.h`
 - Package: `bindings/node-open`
+- Primary distribution: npm package with bundled platform prebuilds from unified `vX.Y.Z` tags
 
 ## End-User Docs
 
 Usage-first documentation for this wrapper lives in
 [`../../docs/end_user/node/README.md`](../../docs/end_user/node/README.md).
 
-## Prerequisites
+## Install
+
+Published installs:
+
+```bash
+npm install ctara-dhruv-node-open
+```
+
+The published npm tarball bundles native prebuilds for the required release
+targets and loads them automatically at runtime.
+
+## Prerequisites For Local Development
 
 - Node.js 20+
 - C++ compiler (Linux/macOS currently)
@@ -126,7 +138,8 @@ the optional scoped arrays when requested and available:
 ## Library Loading
 
 - Optional addon override: `DHRUV_NODE_ADDON_PATH=/abs/path/to/dhruv_node.node`
-- The build script copies `libdhruv_ffi_c.{so,dylib}` (or `dhruv_ffi_c.dll`) next to the addon.
+- Published packages load bundled prebuilds from `prebuilds/<platform>-<arch>/`.
+- Local development builds still use `build/Release/`.
 
 ## Notes
 

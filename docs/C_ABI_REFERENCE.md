@@ -2,15 +2,14 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 49`
+**ABI version:** `DHRUV_API_VERSION = 51`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
 **Release build artifacts:**
-- Linux: `target/release/libdhruv_ffi_c.so`
-- macOS: `target/release/libdhruv_ffi_c.dylib`
-- Windows: `target/release/dhruv_ffi_c.dll`
-- Build command: `cargo build -p dhruv_ffi_c --release`
+- GitHub Releases ship zipped C ABI bundles per supported target.
+- Each bundle contains `include/dhruv.h`, platform libraries under `lib/`, and `SHA256SUMS.txt`.
+- Local development build command: `cargo build -p dhruv_ffi_c --release`
 
 ---
 
