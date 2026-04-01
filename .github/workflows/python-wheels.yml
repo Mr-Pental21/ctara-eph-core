@@ -34,8 +34,11 @@ jobs:
         with:
           package-dir: bindings/python-open
         env:
+          CIBW_ENVIRONMENT_LINUX: >
+            DHRUV_REPO_ROOT=/host${{ github.workspace }}
           CIBW_BEFORE_BUILD_LINUX: >
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
+            export PATH="$HOME/.cargo/bin:$PATH" &&
             python {project}/scripts/prepare_native_lib.py
           CIBW_BEFORE_BUILD_MACOS: >
             python {project}/scripts/prepare_native_lib.py
