@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -45,6 +46,34 @@ def resolve_repo_root(explicit: str | None) -> Path:
     raise SystemExit(f"unable to locate repo root with Cargo.toml; checked: {checked}")
 
 
+def cargo_target_triple() -> str | None:
+    explicit = os.environ.get("CARGO_BUILD_TARGET")
+    if explicit:
+        return explicit
+    if sys.platform != "darwin":
+        return None
+
+    archflags = os.environ.get("ARCHFLAGS", "")
+    tokens = shlex.split(archflags)
+    archs: list[str] = []
+    for index, token in enumerate(tokens):
+        if token == "-arch" and index + 1 < len(tokens):
+            archs.append(tokens[index + 1].lower())
+
+    if not archs:
+        return None
+
+    unique_archs = list(dict.fromkeys(archs))
+    if unique_archs == ["x86_64"]:
+        return "x86_64-apple-darwin"
+    if unique_archs == ["arm64"]:
+        return "aarch64-apple-darwin"
+
+    raise SystemExit(
+        f"unsupported macOS ARCHFLAGS for native bundle build: {archflags!r}"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build and bundle dhruv_ffi_c for Python packaging.")
     parser.add_argument("--repo-root", help="Explicit repository root containing Cargo.toml")
@@ -57,22 +86,30 @@ def main() -> int:
             "cargo not found in PATH; install Rust toolchain before building Python wheels"
         )
 
+    target_triple = cargo_target_triple()
+    build_cmd = [
+        cargo,
+        "build",
+        "-p",
+        "dhruv_ffi_c",
+        "--release",
+        "--manifest-path",
+        str(root / "Cargo.toml"),
+    ]
+    if target_triple:
+        build_cmd.extend(["--target", target_triple])
+
     subprocess.run(
-        [
-            cargo,
-            "build",
-            "-p",
-            "dhruv_ffi_c",
-            "--release",
-            "--manifest-path",
-            str(root / "Cargo.toml"),
-        ],
+        build_cmd,
         check=True,
         cwd=root,
     )
 
     lib_name = shared_library_name()
-    built_lib = root / "target" / "release" / lib_name
+    built_lib = root / "target"
+    if target_triple:
+        built_lib /= target_triple
+    built_lib = built_lib / "release" / lib_name
     if not built_lib.is_file():
         raise SystemExit(f"expected built library at {built_lib}")
 

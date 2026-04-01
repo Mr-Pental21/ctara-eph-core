@@ -1,6 +1,6 @@
 //! C-facing adapter types for `ctara-dhruv-core`.
 
-use std::ffi::CStr;
+use std::ffi::{CStr, c_char};
 use std::path::PathBuf;
 use std::ptr;
 use std::sync::{LazyLock, RwLock};
@@ -1152,7 +1152,7 @@ fn defaults_mode_from_i32(value: i32) -> Option<DefaultsMode> {
 /// `out_handle` must be non-null. If non-null, `path_utf8` must be a valid\n/// NUL-terminated UTF-8 path string.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_config_load(
-    path_utf8: *const i8,
+    path_utf8: *const c_char,
     defaults_mode: i32,
     out_handle: *mut *mut DhruvConfigHandle,
 ) -> DhruvStatus {
@@ -1405,7 +1405,7 @@ pub struct DhruvSphericalState {
 /// `out_lsk` must be a valid, non-null pointer.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_lsk_load(
-    lsk_path_utf8: *const u8,
+    lsk_path_utf8: *const c_char,
     out_lsk: *mut *mut DhruvLskHandle,
 ) -> DhruvStatus {
     ffi_boundary(|| {
@@ -1414,7 +1414,7 @@ pub unsafe extern "C" fn dhruv_lsk_load(
         }
 
         // SAFETY: Pointer is checked for null; read until NUL byte.
-        let c_str = unsafe { std::ffi::CStr::from_ptr(lsk_path_utf8 as *const i8) };
+        let c_str = unsafe { std::ffi::CStr::from_ptr(lsk_path_utf8) };
         let path_str = match c_str.to_str() {
             Ok(s) => s,
             Err(_) => return DhruvStatus::InvalidConfig,
@@ -1559,7 +1559,7 @@ pub type DhruvEopHandle = dhruv_time::EopKernel;
 /// `out_eop` must be a valid, non-null pointer.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_eop_load(
-    eop_path_utf8: *const u8,
+    eop_path_utf8: *const c_char,
     out_eop: *mut *mut DhruvEopHandle,
 ) -> DhruvStatus {
     ffi_boundary(|| {
@@ -1568,7 +1568,7 @@ pub unsafe extern "C" fn dhruv_eop_load(
         }
 
         // SAFETY: Pointer is checked for null; read until NUL byte.
-        let c_str = unsafe { std::ffi::CStr::from_ptr(eop_path_utf8 as *const i8) };
+        let c_str = unsafe { std::ffi::CStr::from_ptr(eop_path_utf8) };
         let path_str = match c_str.to_str() {
             Ok(s) => s,
             Err(_) => return DhruvStatus::InvalidConfig,

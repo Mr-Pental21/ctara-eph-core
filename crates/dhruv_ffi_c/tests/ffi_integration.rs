@@ -295,7 +295,7 @@ fn ffi_lsk_lifecycle() {
 
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
     // SAFETY: Valid pointers created in this test scope.
-    let status = unsafe { dhruv_lsk_load(path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status = unsafe { dhruv_lsk_load(path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
     assert!(!lsk_ptr.is_null());
 
@@ -313,7 +313,7 @@ fn ffi_utc_to_tdb_jd_roundtrip() {
 
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
     // SAFETY: Valid pointers created in this test scope.
-    let status = unsafe { dhruv_lsk_load(path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status = unsafe { dhruv_lsk_load(path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let jd_tdb = utc_to_tdb_jd_default(
@@ -353,7 +353,8 @@ fn ffi_full_longitude_workflow() {
     // Load LSK independently
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
     // SAFETY: Valid pointers.
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     // Load engine for queries
@@ -590,7 +591,7 @@ fn ffi_eop_lifecycle() {
 
     let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
     // SAFETY: Valid pointers.
-    let status = unsafe { dhruv_eop_load(path.as_ptr() as *const u8, &mut eop_ptr) };
+    let status = unsafe { dhruv_eop_load(path.as_ptr() as *const std::ffi::c_char, &mut eop_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
     assert!(!eop_ptr.is_null());
 
@@ -616,12 +617,14 @@ fn ffi_sunrise_new_delhi() {
 
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
     // SAFETY: Valid pointers.
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
     // SAFETY: Valid pointers.
-    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    let status =
+        unsafe { dhruv_eop_load(eop_path.as_ptr() as *const std::ffi::c_char, &mut eop_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     // New Delhi, 2024-03-20
@@ -701,12 +704,14 @@ fn ffi_polar_never_sets_tromso() {
 
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
     // SAFETY: Valid pointers.
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
     // SAFETY: Valid pointers.
-    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    let status =
+        unsafe { dhruv_eop_load(eop_path.as_ptr() as *const std::ffi::c_char, &mut eop_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     // Tromso, Norway (69.65°N), summer solstice — midnight sun
@@ -778,12 +783,14 @@ fn ffi_all_events_new_delhi() {
 
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
     // SAFETY: Valid pointers.
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
     // SAFETY: Valid pointers.
-    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    let status =
+        unsafe { dhruv_eop_load(eop_path.as_ptr() as *const std::ffi::c_char, &mut eop_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let loc = DhruvGeoLocation {
@@ -852,7 +859,7 @@ fn ffi_jd_tdb_to_utc_j2000() {
 
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
     // SAFETY: Valid pointers.
-    let status = unsafe { dhruv_lsk_load(path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status = unsafe { dhruv_lsk_load(path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let mut utc = DhruvUtcTime {
@@ -952,11 +959,13 @@ fn ffi_sunrise_lower_limb_later_than_upper() {
     let eop_path = eop_path_cstr().unwrap();
 
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
-    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    let status =
+        unsafe { dhruv_eop_load(eop_path.as_ptr() as *const std::ffi::c_char, &mut eop_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let loc = DhruvGeoLocation {
@@ -1048,11 +1057,13 @@ fn ffi_center_mode_between_limbs() {
     let eop_path = eop_path_cstr().unwrap();
 
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
-    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    let status =
+        unsafe { dhruv_eop_load(eop_path.as_ptr() as *const std::ffi::c_char, &mut eop_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let loc = DhruvGeoLocation {
@@ -1136,11 +1147,13 @@ fn ffi_bhava_equal_new_delhi() {
     let eop_path = eop_path_cstr().unwrap();
 
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
-    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    let status =
+        unsafe { dhruv_eop_load(eop_path.as_ptr() as *const std::ffi::c_char, &mut eop_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let loc = DhruvGeoLocation {
@@ -1218,11 +1231,13 @@ fn ffi_lagna_deg_new_delhi() {
     let eop_path = eop_path_cstr().unwrap();
 
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
-    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    let status =
+        unsafe { dhruv_eop_load(eop_path.as_ptr() as *const std::ffi::c_char, &mut eop_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let loc = DhruvGeoLocation {
@@ -1295,11 +1310,13 @@ fn ffi_lagna_variants_agree() {
     let eop_path = eop_path_cstr().unwrap();
 
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
-    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    let status =
+        unsafe { dhruv_eop_load(eop_path.as_ptr() as *const std::ffi::c_char, &mut eop_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let loc = DhruvGeoLocation {
@@ -1348,11 +1365,13 @@ fn ffi_bhava_body_starting_point() {
     let eop_path = eop_path_cstr().unwrap();
 
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
-    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    let status =
+        unsafe { dhruv_eop_load(eop_path.as_ptr() as *const std::ffi::c_char, &mut eop_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let loc = DhruvGeoLocation {
@@ -1461,7 +1480,8 @@ fn ffi_utc_conjunction_roundtrip() {
     };
     let lsk_path = lsk_path_cstr().unwrap();
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     // Find next Sun-Moon conjunction after 2024-03-20 using direct JD input.
@@ -1552,7 +1572,8 @@ fn ffi_utc_chandra_grahan_roundtrip() {
     };
     let lsk_path = lsk_path_cstr().unwrap();
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let jd_start = calendar_to_jd(2024, 3, 1.0);
@@ -1665,7 +1686,8 @@ fn ffi_utc_surya_grahan_roundtrip() {
     };
     let lsk_path = lsk_path_cstr().unwrap();
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let jd_start = calendar_to_jd(2024, 3, 1.0);
@@ -1778,7 +1800,8 @@ fn ffi_utc_stationary_roundtrip() {
     };
     let lsk_path = lsk_path_cstr().unwrap();
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let jd_start = calendar_to_jd(2024, 1, 1.0);
@@ -1928,7 +1951,8 @@ fn ffi_utc_ayanamsha_roundtrip() {
         None => return,
     };
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     // JD version: Lahiri ayanamsha at 2024-01-01 TDB
@@ -1998,11 +2022,13 @@ fn ffi_utc_sunrise_roundtrip() {
     let eop_path = eop_path_cstr().unwrap();
 
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
-    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    let status =
+        unsafe { dhruv_eop_load(eop_path.as_ptr() as *const std::ffi::c_char, &mut eop_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let loc = DhruvGeoLocation {
@@ -2091,11 +2117,13 @@ fn ffi_time_upagraha_jd_utc_matches_manual_night_window_after_noon_utc() {
     let eop_path = eop_path_cstr().unwrap();
 
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
-    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    let status =
+        unsafe { dhruv_eop_load(eop_path.as_ptr() as *const std::ffi::c_char, &mut eop_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let loc = DhruvGeoLocation {
@@ -2205,11 +2233,13 @@ fn ffi_compute_rise_set_utc_matches_manual_same_day_sunset_after_noon_utc() {
     let eop_path = eop_path_cstr().unwrap();
 
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
-    let status = unsafe { dhruv_eop_load(eop_path.as_ptr() as *const u8, &mut eop_ptr) };
+    let status =
+        unsafe { dhruv_eop_load(eop_path.as_ptr() as *const std::ffi::c_char, &mut eop_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     let loc = DhruvGeoLocation {
@@ -2318,7 +2348,8 @@ fn ffi_utc_nutation_roundtrip() {
         None => return,
     };
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
-    let status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
 
     // JD version
@@ -2387,7 +2418,8 @@ fn make_kundali_fixtures() -> Option<(*mut DhruvEngineHandle, *mut DhruvEopHandl
     let engine_ptr = make_engine()?;
     let eop_cstr = eop_path_cstr()?;
     let mut eop_ptr: *mut DhruvEopHandle = ptr::null_mut();
-    let status = unsafe { dhruv_eop_load(eop_cstr.as_ptr() as *const u8, &mut eop_ptr) };
+    let status =
+        unsafe { dhruv_eop_load(eop_cstr.as_ptr() as *const std::ffi::c_char, &mut eop_ptr) };
     assert_eq!(status, DhruvStatus::Ok);
     Some((engine_ptr, eop_ptr))
 }
@@ -3537,7 +3569,8 @@ fn ffi_lunar_node_with_engine_mean_matches_pure_utc() {
     };
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
     // SAFETY: Valid path and output pointer.
-    let load_status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let load_status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(load_status, DhruvStatus::Ok);
 
     let utc = DhruvUtcTime {
@@ -3597,7 +3630,8 @@ fn ffi_lunar_node_fitted_tracks_osculating_utc() {
     };
     let mut lsk_ptr: *mut DhruvLskHandle = ptr::null_mut();
     // SAFETY: Valid path and output pointer.
-    let load_status = unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const u8, &mut lsk_ptr) };
+    let load_status =
+        unsafe { dhruv_lsk_load(lsk_path.as_ptr() as *const std::ffi::c_char, &mut lsk_ptr) };
     assert_eq!(load_status, DhruvStatus::Ok);
 
     // Test at multiple epochs spanning the fit interval (1900–2100).

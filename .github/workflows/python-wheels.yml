@@ -44,6 +44,8 @@ jobs:
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y &&
             ln -sf "$HOME/.cargo/bin/cargo" /usr/local/bin/cargo &&
             ln -sf "$HOME/.cargo/bin/rustc" /usr/local/bin/rustc
+          CIBW_BEFORE_ALL_MACOS: >
+            rustup target add x86_64-apple-darwin aarch64-apple-darwin
           CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
           CIBW_SKIP: "*-musllinux_*"
           CIBW_ARCHS_LINUX: "x86_64 aarch64"
