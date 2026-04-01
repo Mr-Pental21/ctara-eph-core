@@ -5,15 +5,32 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   go-open:
-    name: go-open (${{ matrix.os }})
+    name: go-open (${{ matrix.label }})
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            label: linux-x64
+            experimental: false
+          - os: macos-13
+            label: macos-x64
+            experimental: false
+          - os: macos-14
+            label: macos-arm64
+            experimental: false
+          - os: windows-latest
+            label: windows-x64
+            experimental: false
+          - os: windows-11-arm
+            label: windows-arm64
+            experimental: true
 
     steps:
       - name: Checkout
@@ -27,16 +44,22 @@ jobs:
         with:
           go-version: "1.24"
 
+      - name: Windows ARM64 status
+        if: runner.os == 'Windows' && runner.arch == 'ARM64'
+        shell: pwsh
+        run: |
+          "Go Windows ARM64 remains best-effort because the wrapper still depends on Windows cgo linker/toolchain behavior that is not validated in CI yet." | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
       - name: Build C ABI
         if: runner.os != 'Windows'
         run: cargo build -p dhruv_ffi_c --release
 
       - name: Setup Rust Windows GNU target
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && runner.arch != 'ARM64'
         run: rustup target add x86_64-pc-windows-gnu
 
       - name: Build C ABI (Windows GNU)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && runner.arch != 'ARM64'
         run: cargo build -p dhruv_ffi_c --release --target x86_64-pc-windows-gnu
 
       - name: Test go-open (Linux/macOS)
@@ -53,7 +76,7 @@ jobs:
           go test ./...
 
       - name: Test go-open (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && runner.arch != 'ARM64'
         shell: pwsh
         run: |
           $env:GOCACHE = "$env:TEMP\\go-build"
