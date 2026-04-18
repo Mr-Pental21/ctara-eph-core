@@ -547,3 +547,57 @@ test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
   eop.close();
   engine.close();
 });
+
+test('bala wrappers accept amshaSelection and kundali returns resolved amsha union', { skip: !(hasKernels() && hasEop()) }, () => {
+  const paths = kernelPaths();
+  const engine = dhruv.Engine.create({
+    spkPaths: [paths.spk],
+    lskPath: paths.lsk,
+    cacheCapacity: 64,
+    strictValidation: false,
+  });
+  const eop = dhruv.EOP.load(paths.eop);
+  const utc = {
+    year: 2025,
+    month: 1,
+    day: 15,
+    hour: 12,
+    minute: 0,
+    second: 0,
+  };
+  const loc = { latitudeDeg: 12.9716, longitudeDeg: 77.5946, altitudeM: 920 };
+  const bhavaCfg = dhruv.bhavaConfigDefault();
+  const riseCfg = dhruv.riseSetConfigDefault();
+  const d2Variation = { count: 1, codes: [2], variations: [1] };
+  const d9Default = { count: 1, codes: [9], variations: [0] };
+
+  const shadbala = dhruv.shadbalaForDate(engine, eop, utc, loc, 0, true, bhavaCfg, riseCfg, d2Variation);
+  assert.equal(shadbala.entries.length, 7);
+
+  const vimsopaka = dhruv.vimsopakaForDate(engine, eop, utc, loc, 0, true, 0, d2Variation);
+  assert.equal(vimsopaka.entries.length, 9);
+
+  const balas = dhruv.balasForDate(engine, eop, utc, loc, bhavaCfg, riseCfg, 0, true, 0, d2Variation);
+  assert.equal(balas.shadbala.entries.length, 7);
+  assert.equal(balas.vimsopaka.entries.length, 9);
+
+  const avastha = dhruv.avasthaForDate(engine, eop, utc, loc, bhavaCfg, riseCfg, 0, true, 0, d9Default);
+  assert.equal(avastha.entries.length, 9);
+
+  const fullCfg = dhruv.fullKundaliConfigDefault();
+  fullCfg.includeAmshas = true;
+  fullCfg.includeShadbala = true;
+  fullCfg.includeVimsopaka = true;
+  fullCfg.amshaSelection.count = 1;
+  fullCfg.amshaSelection.codes[0] = 2;
+  fullCfg.amshaSelection.variations[0] = 1;
+
+  const kundali = dhruv.fullKundaliForDate(engine, eop, utc, loc, bhavaCfg, riseCfg, 0, true, fullCfg);
+  assert.equal(kundali.amshas.length, 16);
+  assert.equal(kundali.amshas[0].amshaCode, 2);
+  assert.equal(kundali.amshas[0].variationCode, 1);
+  assert.ok(kundali.amshas.some((chart) => chart.amshaCode === 60));
+
+  eop.close();
+  engine.close();
+});

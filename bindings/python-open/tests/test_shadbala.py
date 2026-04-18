@@ -80,3 +80,44 @@ class TestAvastha:
             assert 0 <= entry.lajjitadi <= 5
             assert 0 <= entry.sayanadi.avastha <= 11
             assert len(entry.sayanadi.sub_states) == 5
+
+    def test_bala_helpers_accept_amsha_selection(self, engine_handles):
+        """Standalone bala helpers should accept amsha_selection overrides."""
+        from ctara_dhruv.shadbala import avastha, balas, shadbala, vimsopaka
+        from ctara_dhruv.engine import engine, lsk, eop
+
+        d2_variation = {"count": 1, "codes": [2], "variations": [1]}
+        d9_default = {"count": 1, "codes": [9], "variations": [0]}
+
+        shadbala_result = shadbala(
+            engine(), lsk(), eop(),
+            jd_utc=(2024, 1, 15, 6, 0, 0.0),
+            location=(28.6139, 77.2090),
+            amsha_selection=d2_variation,
+        )
+        assert len(shadbala_result.entries) == 7
+
+        vimsopaka_result = vimsopaka(
+            engine(), lsk(), eop(),
+            jd_utc=(2024, 1, 15, 6, 0, 0.0),
+            location=(28.6139, 77.2090),
+            amsha_selection=d2_variation,
+        )
+        assert len(vimsopaka_result.entries) == 9
+
+        bundle = balas(
+            engine(), lsk(), eop(),
+            jd_utc=(2024, 1, 15, 6, 0, 0.0),
+            location=(28.6139, 77.2090),
+            amsha_selection=d2_variation,
+        )
+        assert len(bundle.shadbala.entries) == 7
+        assert len(bundle.vimsopaka.entries) == 9
+
+        avastha_result = avastha(
+            engine(), lsk(), eop(),
+            jd_utc=(2024, 1, 15, 6, 0, 0.0),
+            location=(28.6139, 77.2090),
+            amsha_selection=d9_default,
+        )
+        assert len(avastha_result.entries) == 9

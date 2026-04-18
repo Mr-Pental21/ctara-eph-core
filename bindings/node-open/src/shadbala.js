@@ -3,6 +3,38 @@
 const { addon } = require('./native');
 const { checkStatus } = require('./errors');
 
+function normalizeAmshaSelection(amshaSelection) {
+  if (!amshaSelection) {
+    return addon.fullKundaliConfigDefault().amshaSelection;
+  }
+
+  const normalized = addon.fullKundaliConfigDefault().amshaSelection;
+  normalized.count = amshaSelection.count ?? 0;
+
+  if (Array.isArray(amshaSelection.codes)) {
+    for (let i = 0; i < amshaSelection.codes.length && i < normalized.codes.length; i += 1) {
+      normalized.codes[i] = amshaSelection.codes[i];
+    }
+  }
+
+  if (Array.isArray(amshaSelection.variations)) {
+    for (let i = 0; i < amshaSelection.variations.length && i < normalized.variations.length; i += 1) {
+      normalized.variations[i] = amshaSelection.variations[i];
+    }
+  }
+
+  return normalized;
+}
+
+function normalizeFullKundaliConfig(config) {
+  const normalized = {
+    ...addon.fullKundaliConfigDefault(),
+    ...config,
+  };
+  normalized.amshaSelection = normalizeAmshaSelection(normalized.amshaSelection);
+  return normalized;
+}
+
 function shadbalaForDate(
   engine,
   eop,
@@ -23,7 +55,7 @@ function shadbalaForDate(
     !!useNutation,
     bhavaConfig,
     riseSetConfig,
-    amshaSelection,
+    normalizeAmshaSelection(amshaSelection),
   );
   checkStatus('shadbala_for_date', r.status);
   return r.result;
@@ -68,7 +100,7 @@ function vimsopakaForDate(engine, eop, utc, location, ayanamshaSystem = 0, useNu
     ayanamshaSystem,
     !!useNutation,
     nodeDignityPolicy,
-    amshaSelection,
+    normalizeAmshaSelection(amshaSelection),
   );
   checkStatus('vimsopaka_for_date', r.status);
   return r.result;
@@ -96,7 +128,7 @@ function balasForDate(
     ayanamshaSystem,
     !!useNutation,
     nodeDignityPolicy,
-    amshaSelection,
+    normalizeAmshaSelection(amshaSelection),
   );
   checkStatus('balas_for_date', r.status);
   return r.result;
@@ -124,7 +156,7 @@ function avasthaForDate(
     ayanamshaSystem,
     !!useNutation,
     nodeDignityPolicy,
-    amshaSelection,
+    normalizeAmshaSelection(amshaSelection),
   );
   checkStatus('avastha_for_date', r.status);
   return r.result;
@@ -173,7 +205,7 @@ function fullKundaliForDate(
     riseSetConfig,
     ayanamshaSystem,
     !!useNutation,
-    config,
+    normalizeFullKundaliConfig(config),
   );
   checkStatus('full_kundali_for_date', r.status);
   return r.result;

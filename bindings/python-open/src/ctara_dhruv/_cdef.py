@@ -41,7 +41,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       54
+#define DHRUV_API_VERSION       55
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 
@@ -79,14 +79,15 @@ typedef int32_t DhruvStatus;
 #define DHRUV_GRAHA_LONGITUDE_KIND_SIDEREAL 0
 #define DHRUV_GRAHA_LONGITUDE_KIND_TROPICAL 1
 
-/* Query time selectors */
+/* Query time selector */
 #define DHRUV_QUERY_TIME_JD_TDB 0
 #define DHRUV_QUERY_TIME_UTC    1
 
+/* Search time selector */
 #define DHRUV_SEARCH_TIME_JD_TDB 0
 #define DHRUV_SEARCH_TIME_UTC    1
 
-/* Query output selectors */
+/* Query output selector */
 #define DHRUV_QUERY_OUTPUT_CARTESIAN 0
 #define DHRUV_QUERY_OUTPUT_SPHERICAL 1
 #define DHRUV_QUERY_OUTPUT_BOTH      2
@@ -141,6 +142,10 @@ typedef int32_t DhruvStatus;
 #define DHRUV_DELTA_T_SEGMENT_YEAR2005_TO2050         15
 #define DHRUV_DELTA_T_SEGMENT_YEAR2050_TO2150         16
 #define DHRUV_DELTA_T_SEGMENT_AFTER2150               17
+
+#define DHRUV_DASHA_TIME_NONE   -1
+#define DHRUV_DASHA_TIME_JD_UTC 0
+#define DHRUV_DASHA_TIME_UTC    1
 
 #define DHRUV_MAX_TIME_WARNINGS 8
 
@@ -1322,8 +1327,8 @@ typedef struct {
 
 typedef struct {
     uint8_t count;
-    uint8_t systems[23];
-    uint8_t max_levels[23];
+    uint8_t systems[DHRUV_MAX_DASHA_SYSTEMS];
+    uint8_t max_levels[DHRUV_MAX_DASHA_SYSTEMS];
     uint8_t max_level;
     uint8_t level_methods[5];
     uint8_t yogini_scheme;
@@ -1482,10 +1487,10 @@ typedef struct {
     uint8_t                   panchang_valid;
     DhruvPanchangInfo         panchang;
     uint8_t                   dasha_count;
-    DhruvDashaHierarchyHandle dasha_handles[23];
-    uint8_t                   dasha_systems[23];
+    DhruvDashaHierarchyHandle dasha_handles[DHRUV_MAX_DASHA_SYSTEMS];
+    uint8_t                   dasha_systems[DHRUV_MAX_DASHA_SYSTEMS];
     uint8_t                   dasha_snapshot_count;
-    DhruvDashaSnapshot        dasha_snapshots[23];
+    DhruvDashaSnapshot        dasha_snapshots[DHRUV_MAX_DASHA_SYSTEMS];
 } DhruvFullKundaliResult;
 
 /* --- Tara (fixed star) --- */
@@ -1532,7 +1537,8 @@ uint32_t dhruv_api_version(void);
 
 /* --- Config --- */
 DhruvStatus dhruv_config_load(
-    const uint8_t *path_utf8, uint32_t path_len,
+    const char *path_utf8,
+    int32_t defaults_mode,
     DhruvConfigHandle **out_handle);
 DhruvStatus dhruv_config_free(DhruvConfigHandle *handle);
 DhruvStatus dhruv_config_clear_active(void);
@@ -1985,6 +1991,42 @@ int32_t dhruv_rashi_lord(uint32_t rashi_index);
 int32_t dhruv_hora_lord(uint32_t vaar_index, uint32_t hora_index);
 int32_t dhruv_masa_lord(uint32_t masa_index);
 int32_t dhruv_samvatsara_lord(uint32_t samvatsara_index);
+
+/* --- Graha relationship / dignity / combustion helper codes --- */
+#define DHRUV_NAISARGIKA_FRIEND 0
+#define DHRUV_NAISARGIKA_ENEMY 1
+#define DHRUV_NAISARGIKA_NEUTRAL 2
+
+#define DHRUV_TATKALIKA_FRIEND 0
+#define DHRUV_TATKALIKA_ENEMY 1
+
+#define DHRUV_PANCHADHA_ADHI_SHATRU 0
+#define DHRUV_PANCHADHA_SHATRU 1
+#define DHRUV_PANCHADHA_SAMA 2
+#define DHRUV_PANCHADHA_MITRA 3
+#define DHRUV_PANCHADHA_ADHI_MITRA 4
+
+#define DHRUV_DIGNITY_EXALTED 0
+#define DHRUV_DIGNITY_MOOLATRIKONE 1
+#define DHRUV_DIGNITY_OWN_SIGN 2
+#define DHRUV_DIGNITY_ADHI_MITRA 3
+#define DHRUV_DIGNITY_MITRA 4
+#define DHRUV_DIGNITY_SAMA 5
+#define DHRUV_DIGNITY_SHATRU 6
+#define DHRUV_DIGNITY_ADHI_SHATRU 7
+#define DHRUV_DIGNITY_DEBILITATED 8
+
+#define DHRUV_NODE_DIGNITY_SIGN_LORD_BASED 0
+#define DHRUV_NODE_DIGNITY_ALWAYS_SAMA 1
+
+#define DHRUV_BENEFIC_NATURE_BENEFIC 0
+#define DHRUV_BENEFIC_NATURE_MALEFIC 1
+
+#define DHRUV_GRAHA_GENDER_MALE 0
+#define DHRUV_GRAHA_GENDER_FEMALE 1
+#define DHRUV_GRAHA_GENDER_NEUTER 2
+
+/* --- Graha relationship / dignity / combustion helpers --- */
 DhruvStatus dhruv_exaltation_degree(
     uint32_t graha_index,
     uint8_t *out_has_value,
@@ -2510,6 +2552,10 @@ def _clean_for_cffi(raw: str) -> str:
     ``#ifdef``, or any other C preprocessor directives.  This function
     removes them while preserving all typedef/struct/function declarations.
     """
+    numeric_defines = {
+        name: value
+        for name, value in _re.findall(r"#define\s+(DHRUV_[A-Z0-9_]+)\s+([0-9]+)\b", raw)
+    }
     lines = raw.split("\n")
     out: list[str] = []
     in_continuation = False
@@ -2528,7 +2574,9 @@ def _clean_for_cffi(raw: str) -> str:
     while out and out[-1].strip() in ("", "}"):
         out.pop()
     cleaned = "\n".join(out)
-    return cleaned.replace("DHRUV_MAX_TIME_WARNINGS", "8")
+    for name, value in sorted(numeric_defines.items(), key=lambda item: len(item[0]), reverse=True):
+        cleaned = cleaned.replace(name, value)
+    return cleaned
 
 
 CDEF: str = _clean_for_cffi(_RAW_HEADER)

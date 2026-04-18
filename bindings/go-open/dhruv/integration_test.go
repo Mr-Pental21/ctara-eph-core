@@ -322,6 +322,83 @@ func TestSearchAndPanchangSmoke(t *testing.T) {
 	}
 }
 
+func TestAmshaSelectionFlowsThroughBalaWrappers(t *testing.T) {
+	spk, lskPath, eopPath, ok := kernelPaths(t)
+	if !ok {
+		t.Skip("kernel files missing; skipping integration test")
+	}
+
+	eng, err := NewEngine(EngineConfig{
+		SpkPaths:         []string{spk},
+		LskPath:          lskPath,
+		CacheCapacity:    64,
+		StrictValidation: false,
+	})
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+	defer eng.Close()
+
+	eop, err := LoadEOP(eopPath)
+	if err != nil {
+		t.Fatalf("LoadEOP: %v", err)
+	}
+	defer eop.Close()
+
+	utc := UtcTime{Year: 2025, Month: 1, Day: 15, Hour: 12, Minute: 0, Second: 0}
+	loc := GeoLocation{LatitudeDeg: 12.9716, LongitudeDeg: 77.5946, AltitudeM: 920}
+	bhava := BhavaConfigDefault()
+	riseset := RiseSetConfigDefault()
+
+	d2Variation := AmshaSelectionConfig{Count: 1}
+	d2Variation.Codes[0] = 2
+	d2Variation.Variations[0] = 1
+
+	if result, err := eng.ShadbalaForDate(eop, utc, loc, bhava, riseset, 0, true, d2Variation); err != nil {
+		t.Fatalf("ShadbalaForDate with amsha selection: %v", err)
+	} else if len(result.Entries) != 7 {
+		t.Fatalf("expected 7 shadbala entries, got %d", len(result.Entries))
+	}
+
+	if result, err := eng.VimsopakaForDate(eop, utc, loc, 0, true, 0, d2Variation); err != nil {
+		t.Fatalf("VimsopakaForDate with amsha selection: %v", err)
+	} else if len(result.Entries) != 9 {
+		t.Fatalf("expected 9 vimsopaka entries, got %d", len(result.Entries))
+	}
+
+	if result, err := eng.BalasForDate(eop, utc, loc, bhava, riseset, 0, true, 0, d2Variation); err != nil {
+		t.Fatalf("BalasForDate with amsha selection: %v", err)
+	} else if len(result.Shadbala.Entries) != 7 || len(result.Vimsopaka.Entries) != 9 {
+		t.Fatalf("unexpected bala bundle sizes: shadbala=%d vimsopaka=%d", len(result.Shadbala.Entries), len(result.Vimsopaka.Entries))
+	}
+
+	d9Default := AmshaSelectionConfig{Count: 1}
+	d9Default.Codes[0] = 9
+
+	if result, err := eng.AvasthaForDate(eop, utc, loc, bhava, riseset, 0, true, 0, d9Default); err != nil {
+		t.Fatalf("AvasthaForDate with amsha selection: %v", err)
+	} else if len(result.Entries) != 9 {
+		t.Fatalf("expected 9 avastha entries, got %d", len(result.Entries))
+	}
+
+	cfg := FullKundaliConfigDefault()
+	cfg.IncludeAmshas = true
+	cfg.IncludeShadbala = true
+	cfg.IncludeVimsopaka = true
+	cfg.AmshaSelection = d2Variation
+
+	kundali, err := eng.FullKundaliForDate(eop, utc, loc, bhava, riseset, 0, true, cfg)
+	if err != nil {
+		t.Fatalf("FullKundaliForDate with resolved amsha union: %v", err)
+	}
+	if len(kundali.Amshas) != 16 {
+		t.Fatalf("expected resolved amsha union of 16 charts, got %d", len(kundali.Amshas))
+	}
+	if kundali.Amshas[0].AmshaCode != 2 || kundali.Amshas[0].VariationCode != 1 {
+		t.Fatalf("expected D2 variation override first, got code=%d variation=%d", kundali.Amshas[0].AmshaCode, kundali.Amshas[0].VariationCode)
+	}
+}
+
 func TestAshtakavargaContributors(t *testing.T) {
 	bav, err := CalculateBAV(0, [7]uint8{0, 1, 2, 3, 4, 5, 6}, 0)
 	if err != nil {

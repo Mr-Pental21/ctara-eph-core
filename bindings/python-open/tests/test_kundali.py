@@ -179,6 +179,32 @@ class TestFullKundali:
         assert chart.special_lagnas is not None
         assert len(chart.special_lagnas) == 8
 
+    def test_full_kundali_returns_resolved_amsha_union(self, engine_handles):
+        """Embedded amshas should include explicit and internally required charts."""
+        from ctara_dhruv.kundali import full_kundali, full_kundali_config_default
+        from ctara_dhruv.engine import engine, lsk, eop
+
+        cfg = full_kundali_config_default()
+        cfg.include_amshas = 1
+        cfg.include_shadbala = 1
+        cfg.include_vimsopaka = 1
+        cfg.amsha_selection.count = 1
+        cfg.amsha_selection.codes[0] = 2
+        cfg.amsha_selection.variations[0] = 1
+
+        result = full_kundali(
+            engine(), lsk(), eop(),
+            jd_utc=(2024, 1, 15, 6, 0, 0.0),
+            location=(28.6139, 77.2090),
+            config=cfg,
+        )
+
+        assert result.amshas is not None
+        assert len(result.amshas) == 16
+        assert result.amshas[0].amsha_code == 2
+        assert result.amshas[0].variation_code == 1
+        assert any(chart.amsha_code == 60 for chart in result.amshas)
+
     def test_charakaraka_for_date(self, engine_handles):
         """Direct charakaraka call should return non-empty assignments."""
         from ctara_dhruv.kundali import charakaraka_for_date

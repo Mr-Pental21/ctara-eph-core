@@ -74,7 +74,7 @@ def _make_riseset_config(riseset_config):
 
 def _make_amsha_selection(amsha_selection):
     if amsha_selection is None:
-        return ffi.NULL
+        return ffi.new("DhruvAmshaSelectionConfig *")
     if isinstance(amsha_selection, ffi.CData):
         return (
             ffi.addressof(amsha_selection)

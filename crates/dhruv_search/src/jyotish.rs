@@ -97,6 +97,45 @@ struct CachedAmshaGrahaData {
     division_indices: [u16; 9],
 }
 
+#[derive(Debug, Clone, Default)]
+struct AmshaGrahaCache {
+    entries: Vec<CachedAmshaGrahaData>,
+}
+
+impl AmshaGrahaCache {
+    fn get(&self, request: AmshaRequest) -> Option<&CachedAmshaGrahaData> {
+        let variation = request.effective_variation();
+        self.entries
+            .iter()
+            .find(|cached| cached.amsha == request.amsha && cached.variation == variation)
+    }
+
+    fn get_or_compute<F>(
+        &mut self,
+        request: AmshaRequest,
+        compute: F,
+    ) -> Result<&CachedAmshaGrahaData, SearchError>
+    where
+        F: FnOnce() -> Result<CachedAmshaGrahaData, SearchError>,
+    {
+        let variation = request.effective_variation();
+        if let Some(index) = self
+            .entries
+            .iter()
+            .position(|cached| cached.amsha == request.amsha && cached.variation == variation)
+        {
+            return Ok(&self.entries[index]);
+        }
+        self.entries.push(compute()?);
+        Ok(self.entries.last().expect("amsha cache entry just pushed"))
+    }
+
+    #[cfg(test)]
+    fn len(&self) -> usize {
+        self.entries.len()
+    }
+}
+
 #[derive(Debug, Clone)]
 struct ResolvedAmshaPlan {
     requests: Vec<AmshaRequest>,
@@ -210,7 +249,7 @@ struct JyotishContext {
     graha_speeds: Option<[f64; 7]>,
     /// Ecliptic declinations (deg) for sapta grahas (indices 0-6).
     graha_declinations: Option<[f64; 7]>,
-    amsha_graha_data: Vec<CachedAmshaGrahaData>,
+    amsha_graha_cache: AmshaGrahaCache,
 }
 
 impl JyotishContext {
@@ -236,7 +275,7 @@ impl JyotishContext {
             sunset_jd: None,
             graha_speeds: None,
             graha_declinations: None,
-            amsha_graha_data: Vec::new(),
+            amsha_graha_cache: AmshaGrahaCache::default(),
         }
     }
 
@@ -381,50 +420,37 @@ impl JyotishContext {
         aya_config: &SankrantiConfig,
         request: AmshaRequest,
     ) -> Result<&'a CachedAmshaGrahaData, SearchError> {
-        let variation = request.effective_variation();
-        if let Some(index) = self
-            .amsha_graha_data
-            .iter()
-            .position(|cached| cached.amsha == request.amsha && cached.variation == variation)
-        {
-            return Ok(&self.amsha_graha_data[index]);
-        }
-
         let graha_lons = *self.graha_lons(engine, aya_config)?;
         let divisions = request.amsha.divisions() as f64;
         let division_span = 30.0 / divisions;
-        let mut longitudes = [0.0f64; 9];
-        let mut rashi_indices = [0u8; 9];
-        let mut division_indices = [0u16; 9];
-        for i in 0..9 {
-            let sidereal_lon = graha_lons.longitudes[i];
-            let normalized = normalize_360(sidereal_lon);
-            let degrees_in_sign = normalized % 30.0;
-            let division_index = ((degrees_in_sign / division_span).floor() as u16)
-                .min(request.amsha.divisions().saturating_sub(1));
-            let amsha_lon = amsha_longitude(sidereal_lon, request.amsha, Some(variation));
-            longitudes[i] = amsha_lon;
-            rashi_indices[i] = ((normalize_360(amsha_lon) / 30.0).floor() as u8).min(11);
-            division_indices[i] = division_index;
-        }
-        self.amsha_graha_data.push(CachedAmshaGrahaData {
-            amsha: request.amsha,
-            variation,
-            longitudes,
-            rashi_indices,
-            division_indices,
-        });
-        Ok(self
-            .amsha_graha_data
-            .last()
-            .expect("amsha graha data cache just pushed"))
+        let variation = request.effective_variation();
+        self.amsha_graha_cache.get_or_compute(request, || {
+            let mut longitudes = [0.0f64; 9];
+            let mut rashi_indices = [0u8; 9];
+            let mut division_indices = [0u16; 9];
+            for i in 0..9 {
+                let sidereal_lon = graha_lons.longitudes[i];
+                let normalized = normalize_360(sidereal_lon);
+                let degrees_in_sign = normalized % 30.0;
+                let division_index = ((degrees_in_sign / division_span).floor() as u16)
+                    .min(request.amsha.divisions().saturating_sub(1));
+                let amsha_lon = amsha_longitude(sidereal_lon, request.amsha, Some(variation));
+                longitudes[i] = amsha_lon;
+                rashi_indices[i] = ((normalize_360(amsha_lon) / 30.0).floor() as u8).min(11);
+                division_indices[i] = division_index;
+            }
+            Ok(CachedAmshaGrahaData {
+                amsha: request.amsha,
+                variation,
+                longitudes,
+                rashi_indices,
+                division_indices,
+            })
+        })
     }
 
     fn cached_amsha_graha_data(&self, request: AmshaRequest) -> Option<&CachedAmshaGrahaData> {
-        let variation = request.effective_variation();
-        self.amsha_graha_data
-            .iter()
-            .find(|cached| cached.amsha == request.amsha && cached.variation == variation)
+        self.amsha_graha_cache.get(request)
     }
 
     fn prime_amsha_graha_data(
@@ -3413,5 +3439,73 @@ mod tests {
             plan.request_for(Amsha::D2).effective_variation(),
             AmshaVariation::TraditionalParashari
         );
+    }
+
+    #[test]
+    fn amsha_graha_cache_computes_once_per_request() {
+        let request = AmshaRequest::with_variation(
+            Amsha::D2,
+            AmshaVariation::HoraCancerLeoOnly,
+        );
+        let mut cache = AmshaGrahaCache::default();
+        let mut compute_calls = 0usize;
+
+        let first = cache
+            .get_or_compute(request, || {
+                compute_calls += 1;
+                Ok(CachedAmshaGrahaData {
+                    amsha: Amsha::D2,
+                    variation: AmshaVariation::HoraCancerLeoOnly,
+                    longitudes: [0.0; 9],
+                    rashi_indices: [0; 9],
+                    division_indices: [0; 9],
+                })
+            })
+            .expect("first cache fill should succeed");
+        assert_eq!(first.amsha, Amsha::D2);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(compute_calls, 1);
+
+        let second = cache
+            .get_or_compute(request, || {
+                compute_calls += 1;
+                Err(SearchError::InvalidConfig("cache should not recompute"))
+            })
+            .expect("cached lookup should succeed");
+        assert_eq!(second.amsha, Amsha::D2);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(compute_calls, 1);
+    }
+
+    #[test]
+    fn amsha_graha_cache_keys_by_variation() {
+        let mut cache = AmshaGrahaCache::default();
+
+        cache.get_or_compute(AmshaRequest::new(Amsha::D2), || {
+            Ok(CachedAmshaGrahaData {
+                amsha: Amsha::D2,
+                variation: AmshaVariation::TraditionalParashari,
+                longitudes: [0.0; 9],
+                rashi_indices: [0; 9],
+                division_indices: [0; 9],
+            })
+        })
+        .expect("default variation should cache");
+
+        cache.get_or_compute(
+            AmshaRequest::with_variation(Amsha::D2, AmshaVariation::HoraCancerLeoOnly),
+            || {
+                Ok(CachedAmshaGrahaData {
+                    amsha: Amsha::D2,
+                    variation: AmshaVariation::HoraCancerLeoOnly,
+                    longitudes: [0.0; 9],
+                    rashi_indices: [0; 9],
+                    division_indices: [0; 9],
+                })
+            },
+        )
+        .expect("alternate variation should cache independently");
+
+        assert_eq!(cache.len(), 2);
     }
 }

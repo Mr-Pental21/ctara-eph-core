@@ -238,4 +238,77 @@ defmodule CtaraDhruvTest do
         end
     end
   end
+
+  test "elixir jyotish wrappers accept amsha_selection and return resolved amsha union" do
+    case with_engine() do
+      :skip ->
+        assert true
+
+      {:ok, engine} ->
+        if File.exists?(@eop) do
+          assert {:ok, _} = Engine.load_eop(engine, @eop)
+
+          location = %{latitude_deg: 28.6139, longitude_deg: 77.2090, altitude_m: 0.0}
+          utc = %{year: 2015, month: 1, day: 15, hour: 6, minute: 0, second: 0.0}
+          d2_variation = [%{code: 2, variation: 1}]
+          d9_default = [%{code: 9}]
+
+          assert {:ok, shadbala} =
+                   Jyotish.shadbala(engine, %{
+                     utc: utc,
+                     location: location,
+                     amsha_selection: d2_variation
+                   })
+
+          assert length(shadbala.entries) == 7
+
+          assert {:ok, vimsopaka} =
+                   Jyotish.vimsopaka(engine, %{
+                     utc: utc,
+                     location: location,
+                     amsha_selection: d2_variation
+                   })
+
+          assert length(vimsopaka.entries) == 9
+
+          assert {:ok, balas} =
+                   Jyotish.balas(engine, %{
+                     utc: utc,
+                     location: location,
+                     amsha_selection: d2_variation
+                   })
+
+          assert length(balas.shadbala.entries) == 7
+          assert length(balas.vimsopaka.entries) == 9
+
+          assert {:ok, avastha} =
+                   Jyotish.avastha(engine, %{
+                     utc: utc,
+                     location: location,
+                     amsha_selection: d9_default
+                   })
+
+          assert length(avastha.entries) == 9
+
+          assert {:ok, chart} =
+                   Jyotish.full_kundali(engine, %{
+                     utc: utc,
+                     location: location,
+                     full_kundali_config: %{
+                       include_amshas: true,
+                       include_shadbala: true,
+                       include_vimsopaka: true,
+                       amsha_selection: d2_variation
+                     }
+                   })
+
+          assert length(chart.amshas.charts) == 16
+          assert hd(chart.amshas.charts).amsha == "d2"
+          assert hd(chart.amshas.charts).variation == "hora_cancer_leo_only"
+          assert Enum.any?(chart.amshas.charts, &(&1.amsha == "d60"))
+        else
+          assert true
+        end
+    end
+  end
 end
