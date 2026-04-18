@@ -72,6 +72,26 @@ def _make_riseset_config(riseset_config):
     return cfg
 
 
+def _make_amsha_selection(amsha_selection):
+    if amsha_selection is None:
+        return ffi.NULL
+    if isinstance(amsha_selection, ffi.CData):
+        return (
+            ffi.addressof(amsha_selection)
+            if ffi.typeof(amsha_selection) != ffi.typeof("DhruvAmshaSelectionConfig *")
+            else amsha_selection
+        )
+    cfg = ffi.new("DhruvAmshaSelectionConfig *")
+    cfg.count = amsha_selection.get("count", 0)
+    codes = amsha_selection.get("codes", [])
+    variations = amsha_selection.get("variations", [])
+    for i, code in enumerate(codes[:40]):
+        cfg.codes[i] = code
+    for i, variation in enumerate(variations[:40]):
+        cfg.variations[i] = variation
+    return cfg
+
+
 def _extract_bhavabala_entry(e):
     return BhavaBalaEntry(
         bhava_number=e.bhava_number,
@@ -170,6 +190,7 @@ def shadbala(
     use_nutation=1,
     bhava_config=None,
     riseset_config=None,
+    amsha_selection=None,
 ):
     """Compute Shadbala for all 7 sapta grahas (Sun through Saturn).
 
@@ -191,6 +212,7 @@ def shadbala(
     loc = _make_location(location)
     bhava_cfg = _make_bhava_config(bhava_config)
     rs_cfg = _make_riseset_config(riseset_config)
+    amsha_sel = _make_amsha_selection(amsha_selection)
 
     out = ffi.new("DhruvShadbalaResult *")
     check(
@@ -203,6 +225,7 @@ def shadbala(
             rs_cfg,
             ayanamsha_system,
             use_nutation,
+            amsha_sel,
             out,
         ),
         "shadbala_for_date",
@@ -317,6 +340,7 @@ def vimsopaka(
     ayanamsha_system=0,
     use_nutation=1,
     node_dignity_policy=0,
+    amsha_selection=None,
 ):
     """Compute Vimsopaka Bala for all 9 navagrahas.
 
@@ -335,6 +359,7 @@ def vimsopaka(
     """
     utc = _make_utc(jd_utc)
     loc = _make_location(location)
+    amsha_sel = _make_amsha_selection(amsha_selection)
 
     out = ffi.new("DhruvVimsopakaResult *")
     check(
@@ -346,6 +371,7 @@ def vimsopaka(
             ayanamsha_system,
             use_nutation,
             node_dignity_policy,
+            amsha_sel,
             out,
         ),
         "vimsopaka_for_date",
@@ -375,12 +401,14 @@ def balas(
     node_dignity_policy=0,
     bhava_config=None,
     riseset_config=None,
+    amsha_selection=None,
 ):
     """Compute the bundled bala surfaces for one chart."""
     utc = _make_utc(jd_utc)
     loc = _make_location(location)
     bhava_cfg = _make_bhava_config(bhava_config)
     rs_cfg = _make_riseset_config(riseset_config)
+    amsha_sel = _make_amsha_selection(amsha_selection)
 
     out = ffi.new("DhruvBalaBundleResult *")
     check(
@@ -394,6 +422,7 @@ def balas(
             ayanamsha_system,
             use_nutation,
             node_dignity_policy,
+            amsha_sel,
             out,
         ),
         "balas_for_date",
@@ -422,6 +451,7 @@ def avastha(
     node_dignity_policy=0,
     bhava_config=None,
     riseset_config=None,
+    amsha_selection=None,
 ):
     """Compute all 5 avastha categories for all 9 grahas.
 
@@ -444,6 +474,7 @@ def avastha(
     loc = _make_location(location)
     bhava_cfg = _make_bhava_config(bhava_config)
     rs_cfg = _make_riseset_config(riseset_config)
+    amsha_sel = _make_amsha_selection(amsha_selection)
 
     out = ffi.new("DhruvAllGrahaAvasthas *")
     check(
@@ -457,6 +488,7 @@ def avastha(
             ayanamsha_system,
             use_nutation,
             node_dignity_policy,
+            amsha_sel,
             out,
         ),
         "avastha_for_date",

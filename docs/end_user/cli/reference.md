@@ -132,6 +132,12 @@ Jyotish and chart building:
 - `avastha`
 - `kundali`
 
+For `shadbala`, `vimsopaka`, `balas`, `avastha`, and `kundali`, use
+`--amsha D<n>[:variation]` to override per-amsha variation selection. When
+`kundali --include-amshas` is enabled, returned amsha charts include the full
+resolved union of explicit selections and internally required bala/avastha
+amshas.
+
 Amsha:
 
 - `amsha`

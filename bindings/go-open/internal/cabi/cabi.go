@@ -1885,9 +1885,10 @@ func goVimsopaka(out C.DhruvVimsopakaResult) VimsopakaResult {
 	return res
 }
 
-func ShadbalaForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool) (ShadbalaResult, Status) {
+func ShadbalaForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, amshaSelection AmshaSelectionConfig) (ShadbalaResult, Status) {
 	cutc, cloc := cUTC(utc), cGeo(loc)
 	cbhava, crise := cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
+	camsha := cAmshaSelectionConfig(amshaSelection)
 	var out C.DhruvShadbalaResult
 	st := Status(C.dhruv_shadbala_for_date(
 		engine.ptr,
@@ -1898,6 +1899,7 @@ func ShadbalaForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLoc
 		&crise,
 		C.uint32_t(ayanamshaSystem),
 		boolU8(useNutation),
+		&camsha,
 		&out,
 	))
 	return goShadbala(out), st
@@ -1942,8 +1944,9 @@ func BhavaBalaForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLo
 	return goBhavaBala(out), st
 }
 
-func VimsopakaForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocation, ayanamshaSystem uint32, useNutation bool, nodeDignityPolicy uint32) (VimsopakaResult, Status) {
+func VimsopakaForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocation, ayanamshaSystem uint32, useNutation bool, nodeDignityPolicy uint32, amshaSelection AmshaSelectionConfig) (VimsopakaResult, Status) {
 	cutc, cloc := cUTC(utc), cGeo(loc)
+	camsha := cAmshaSelectionConfig(amshaSelection)
 	var out C.DhruvVimsopakaResult
 	st := Status(C.dhruv_vimsopaka_for_date(
 		engine.ptr,
@@ -1953,14 +1956,16 @@ func VimsopakaForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLo
 		C.uint32_t(ayanamshaSystem),
 		boolU8(useNutation),
 		C.uint32_t(nodeDignityPolicy),
+		&camsha,
 		&out,
 	))
 	return goVimsopaka(out), st
 }
 
-func BalasForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, nodeDignityPolicy uint32) (BalaBundleResult, Status) {
+func BalasForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, nodeDignityPolicy uint32, amshaSelection AmshaSelectionConfig) (BalaBundleResult, Status) {
 	cutc, cloc := cUTC(utc), cGeo(loc)
 	cbhava, crise := cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
+	camsha := cAmshaSelectionConfig(amshaSelection)
 	var out C.DhruvBalaBundleResult
 	st := Status(C.dhruv_balas_for_date(
 		engine.ptr,
@@ -1972,6 +1977,7 @@ func BalasForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocati
 		C.uint32_t(ayanamshaSystem),
 		boolU8(useNutation),
 		C.uint32_t(nodeDignityPolicy),
+		&camsha,
 		&out,
 	))
 	return BalaBundleResult{
@@ -1982,9 +1988,10 @@ func BalasForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocati
 	}, st
 }
 
-func AvasthaForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, nodeDignityPolicy uint32) (AllGrahaAvasthas, Status) {
+func AvasthaForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, nodeDignityPolicy uint32, amshaSelection AmshaSelectionConfig) (AllGrahaAvasthas, Status) {
 	cutc, cloc := cUTC(utc), cGeo(loc)
 	cbhava, crise := cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg)
+	camsha := cAmshaSelectionConfig(amshaSelection)
 	var out C.DhruvAllGrahaAvasthas
 	st := Status(C.dhruv_avastha_for_date(
 		engine.ptr,
@@ -1996,6 +2003,7 @@ func AvasthaForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLoca
 		C.uint32_t(ayanamshaSystem),
 		boolU8(useNutation),
 		C.uint32_t(nodeDignityPolicy),
+		&camsha,
 		&out,
 	))
 	var res AllGrahaAvasthas

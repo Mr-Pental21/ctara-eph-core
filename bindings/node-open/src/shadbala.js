@@ -12,6 +12,7 @@ function shadbalaForDate(
   useNutation = true,
   bhavaConfig = addon.bhavaConfigDefault(),
   riseSetConfig = addon.riseSetConfigDefault(),
+  amshaSelection = addon.fullKundaliConfigDefault().amshaSelection,
 ) {
   const r = addon.shadbalaForDate(
     engine._handle,
@@ -22,6 +23,7 @@ function shadbalaForDate(
     !!useNutation,
     bhavaConfig,
     riseSetConfig,
+    amshaSelection,
   );
   checkStatus('shadbala_for_date', r.status);
   return r.result;
@@ -57,7 +59,7 @@ function bhavaBalaForDate(
   return r.result;
 }
 
-function vimsopakaForDate(engine, eop, utc, location, ayanamshaSystem = 0, useNutation = true, nodeDignityPolicy = 0) {
+function vimsopakaForDate(engine, eop, utc, location, ayanamshaSystem = 0, useNutation = true, nodeDignityPolicy = 0, amshaSelection = addon.fullKundaliConfigDefault().amshaSelection) {
   const r = addon.vimsopakaForDate(
     engine._handle,
     eop._handle,
@@ -66,6 +68,7 @@ function vimsopakaForDate(engine, eop, utc, location, ayanamshaSystem = 0, useNu
     ayanamshaSystem,
     !!useNutation,
     nodeDignityPolicy,
+    amshaSelection,
   );
   checkStatus('vimsopaka_for_date', r.status);
   return r.result;
@@ -81,6 +84,7 @@ function balasForDate(
   ayanamshaSystem = 0,
   useNutation = true,
   nodeDignityPolicy = 0,
+  amshaSelection = addon.fullKundaliConfigDefault().amshaSelection,
 ) {
   const r = addon.balasForDate(
     engine._handle,
@@ -92,6 +96,7 @@ function balasForDate(
     ayanamshaSystem,
     !!useNutation,
     nodeDignityPolicy,
+    amshaSelection,
   );
   checkStatus('balas_for_date', r.status);
   return r.result;
@@ -107,6 +112,7 @@ function avasthaForDate(
   ayanamshaSystem = 0,
   useNutation = true,
   nodeDignityPolicy = 0,
+  amshaSelection = addon.fullKundaliConfigDefault().amshaSelection,
 ) {
   const r = addon.avasthaForDate(
     engine._handle,
@@ -118,6 +124,7 @@ function avasthaForDate(
     ayanamshaSystem,
     !!useNutation,
     nodeDignityPolicy,
+    amshaSelection,
   );
   checkStatus('avastha_for_date', r.status);
   return r.result;

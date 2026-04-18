@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 54`
+**ABI version:** `DHRUV_API_VERSION = 55`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -2090,6 +2090,13 @@ no proper motion). Equivalent to requesting ecliptic output for
 ---
 
 ## Changelog
+
+**v55**: Standalone `dhruv_shadbala_for_date`, `dhruv_vimsopaka_for_date`,
+`dhruv_balas_for_date`, and `dhruv_avastha_for_date` now accept
+`const DhruvAmshaSelectionConfig *amsha_selection`. Embedded
+`DhruvFullKundaliResult.amshas` now returns the resolved union of explicit
+`amsha_selection` and any internally required bala/avastha amshas, using
+caller-selected variation codes when present and default variations otherwise.
 
 **v54**: Extended the unified high-level search request structs with `time_kind`
 plus structured UTC fields (`at_utc`, `start_utc`, `end_utc`) so conjunction,

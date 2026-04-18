@@ -6,7 +6,10 @@ use std::path::Path;
 
 use dhruv_core::{Engine, EngineConfig};
 use dhruv_search::sankranti_types::SankrantiConfig;
-use dhruv_search::{FullKundaliConfig, GrahaPositionsConfig, avastha_for_date, avastha_for_graha};
+use dhruv_search::{
+    AmshaSelectionConfig, FullKundaliConfig, GrahaPositionsConfig, avastha_for_date,
+    avastha_for_graha,
+};
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
 use dhruv_vedic_base::{BhavaConfig, Graha, NodeDignityPolicy};
 
@@ -45,6 +48,10 @@ fn utc_2024_jan_15() -> UtcTime {
     UtcTime::new(2024, 1, 15, 6, 30, 0.0)
 }
 
+fn default_amsha_selection() -> AmshaSelectionConfig {
+    AmshaSelectionConfig::default()
+}
+
 #[test]
 fn avastha_all_nine_valid() {
     let Some(engine) = load_engine() else { return };
@@ -64,6 +71,7 @@ fn avastha_all_nine_valid() {
         &rs_config,
         &aya_config,
         NodeDignityPolicy::SignLordBased,
+        &default_amsha_selection(),
     )
     .expect("avastha_for_date should succeed");
 
@@ -124,6 +132,7 @@ fn avastha_single_graha_matches_all() {
         &rs_config,
         &aya_config,
         policy,
+        &default_amsha_selection(),
     )
     .expect("avastha_for_date should succeed");
 
@@ -138,6 +147,7 @@ fn avastha_single_graha_matches_all() {
             &rs_config,
             &aya_config,
             policy,
+            &default_amsha_selection(),
             graha,
         )
         .expect("avastha_for_graha should succeed");
@@ -188,6 +198,7 @@ fn avastha_both_node_policies() {
         &rs_config,
         &aya_config,
         NodeDignityPolicy::SignLordBased,
+        &default_amsha_selection(),
     )
     .expect("SignLordBased should succeed");
 
@@ -200,6 +211,7 @@ fn avastha_both_node_policies() {
         &rs_config,
         &aya_config,
         NodeDignityPolicy::AlwaysSama,
+        &default_amsha_selection(),
     )
     .expect("AlwaysSama should succeed");
 
@@ -216,6 +228,56 @@ fn avastha_both_node_policies() {
             always_sama.entries[i].baladi.index(),
             "sapta graha {i} baladi should match across policies"
         );
+    }
+}
+
+#[test]
+fn avastha_accepts_explicit_default_amsha_selection() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = utc_2024_jan_15();
+    let location = new_delhi();
+    let bhava_config = BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+    let default_selection = default_amsha_selection();
+    let mut explicit_selection = AmshaSelectionConfig {
+        count: 1,
+        ..AmshaSelectionConfig::default()
+    };
+    explicit_selection.codes[0] = 9;
+
+    let baseline = avastha_for_date(
+        &engine,
+        &eop,
+        &location,
+        &utc,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        NodeDignityPolicy::SignLordBased,
+        &default_selection,
+    )
+    .expect("baseline avastha");
+    let explicit = avastha_for_date(
+        &engine,
+        &eop,
+        &location,
+        &utc,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        NodeDignityPolicy::SignLordBased,
+        &explicit_selection,
+    )
+    .expect("explicit avastha");
+
+    for (lhs, rhs) in baseline.entries.iter().zip(explicit.entries.iter()) {
+        assert_eq!(lhs.baladi.index(), rhs.baladi.index());
+        assert_eq!(lhs.jagradadi.index(), rhs.jagradadi.index());
+        assert_eq!(lhs.deeptadi.index(), rhs.deeptadi.index());
+        assert_eq!(lhs.lajjitadi.index(), rhs.lajjitadi.index());
+        assert_eq!(lhs.sayanadi.avastha.index(), rhs.sayanadi.avastha.index());
     }
 }
 

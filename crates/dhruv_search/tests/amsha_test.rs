@@ -414,6 +414,62 @@ fn full_kundali_amsha_scope_includes_optional_sections() {
 }
 
 #[test]
+fn full_kundali_returns_resolved_amsha_union_for_intermediate_sections() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = utc_2024_jan_15();
+    let location = new_delhi();
+    let bhava_config = BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+
+    let mut sel = AmshaSelectionConfig {
+        count: 1,
+        ..AmshaSelectionConfig::default()
+    };
+    sel.codes[0] = 2;
+    sel.variations[0] = 1;
+
+    let config = FullKundaliConfig {
+        include_graha_positions: true,
+        include_amshas: true,
+        include_shadbala: true,
+        include_vimsopaka: true,
+        graha_positions_config: GrahaPositionsConfig {
+            include_lagna: true,
+            ..Default::default()
+        },
+        amsha_selection: sel,
+        ..Default::default()
+    };
+
+    let result = full_kundali_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &config,
+    )
+    .expect("full_kundali should succeed");
+
+    let amshas = result.amshas.expect("amshas should be present");
+    assert_eq!(amshas.charts.len(), 16, "shadbala+vimsopaka union should be returned");
+    assert_eq!(amshas.charts[0].amsha, Amsha::D2);
+    assert_eq!(amshas.charts[0].variation, AmshaVariation::HoraCancerLeoOnly);
+    assert!(
+        amshas.charts.iter().any(|chart| chart.amsha == Amsha::D60),
+        "resolved union should include vimsopaka-only amshas",
+    );
+    assert!(
+        amshas.charts.iter().any(|chart| chart.amsha == Amsha::D1),
+        "resolved union should include required default amshas",
+    );
+}
+
+#[test]
 fn amsha_from_kundali_preserves_sphutas_when_present() {
     let Some(engine) = load_engine() else { return };
     let Some(eop) = load_eop() else { return };

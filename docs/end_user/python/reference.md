@@ -265,6 +265,10 @@ The fuller public surface is intentionally module-based.
 - `balas`
 - `avastha`
 
+The standalone bala helpers accept an `amsha_selection` argument. Embedded
+`full_kundali(...).amshas` returns the full resolved amsha union used by the
+call.
+
 `amsha`:
 
 - `amsha_longitude`

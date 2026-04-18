@@ -205,6 +205,10 @@ Chart-related config maps:
 - search request maps with `:op`-specific fields for conjunction, grahan, lunar phase, sankranti, and motion
 - dasha request maps for hierarchy, snapshot, `level0`, `level0_entity`, `children`, `child_period`, and `complete_level` queries
 
+Standalone `:shadbala`, `:vimsopaka`, `:balas`, and `:avastha` jyotish request
+maps accept `:amsha_selection`. Embedded `:full_kundali` `:amshas` results now
+return the resolved amsha union used by the call.
+
 Time-based upagraha config map:
 
 - `gulika_point`

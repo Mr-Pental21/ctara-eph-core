@@ -1597,6 +1597,9 @@ struct ShadbalaArgs {
     /// Optional graha filter (Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn)
     #[arg(long)]
     graha: Option<String>,
+    /// Amsha selection list (e.g. D9,D10,D2:cancer-leo-only)
+    #[arg(long)]
+    amsha: Option<String>,
     /// Path to SPK kernel
     #[arg(long)]
     bsp: Option<PathBuf>,
@@ -1665,6 +1668,9 @@ struct VimsopakaArgs {
     /// Optional graha filter (Sun..Ketu)
     #[arg(long)]
     graha: Option<String>,
+    /// Amsha selection list (e.g. D9,D10,D2:cancer-leo-only)
+    #[arg(long)]
+    amsha: Option<String>,
     /// Node dignity policy: sign-lord (default) or sama
     #[arg(long, default_value = "sign-lord")]
     node_policy: String,
@@ -1702,6 +1708,9 @@ struct BalasArgs {
     /// Node dignity policy: sign-lord (default) or sama
     #[arg(long, default_value = "sign-lord")]
     node_policy: String,
+    /// Amsha selection list (e.g. D9,D10,D2:cancer-leo-only)
+    #[arg(long)]
+    amsha: Option<String>,
     /// Path to SPK kernel
     #[arg(long)]
     bsp: Option<PathBuf>,
@@ -1736,6 +1745,9 @@ struct AvasthaArgs {
     /// Optional graha filter (Sun..Ketu)
     #[arg(long)]
     graha: Option<String>,
+    /// Amsha selection list (e.g. D9,D10,D2:cancer-leo-only)
+    #[arg(long)]
+    amsha: Option<String>,
     /// Node dignity policy: sign-lord (default) or sama
     #[arg(long, default_value = "sign-lord")]
     node_policy: String,
@@ -7649,6 +7661,12 @@ fn main() {
             let bhava_config = BhavaConfig::default();
             let rs_config = RiseSetConfig::default();
             let aya_config = SankrantiConfig::new(system, args.nutation);
+            let amsha_selection = args
+                .amsha
+                .as_deref()
+                .map(parse_amsha_specs)
+                .map(|requests| amsha_selection_from_requests(&requests))
+                .unwrap_or_default();
 
             let graha_names = [
                 "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn",
@@ -7664,6 +7682,7 @@ fn main() {
                     &bhava_config,
                     &rs_config,
                     &aya_config,
+                    &amsha_selection,
                     g,
                 )
                 .unwrap_or_else(|e| {
@@ -7681,6 +7700,7 @@ fn main() {
                     &bhava_config,
                     &rs_config,
                     &aya_config,
+                    &amsha_selection,
                 )
                 .unwrap_or_else(|e| {
                     eprintln!("Error: {e}");
@@ -7855,6 +7875,12 @@ fn main() {
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
             let aya_config = SankrantiConfig::new(system, args.nutation);
             let policy = parse_node_policy(&args.node_policy);
+            let amsha_selection = args
+                .amsha
+                .as_deref()
+                .map(parse_amsha_specs)
+                .map(|requests| amsha_selection_from_requests(&requests))
+                .unwrap_or_default();
 
             let graha_names = [
                 "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu",
@@ -7869,6 +7895,7 @@ fn main() {
                     &location,
                     &aya_config,
                     policy,
+                    &amsha_selection,
                     g,
                 )
                 .unwrap_or_else(|e| {
@@ -7888,6 +7915,7 @@ fn main() {
                     &location,
                     &aya_config,
                     policy,
+                    &amsha_selection,
                 )
                 .unwrap_or_else(|e| {
                     eprintln!("Error: {e}");
@@ -7928,6 +7956,12 @@ fn main() {
             let rs_config = RiseSetConfig::default();
             let aya_config = SankrantiConfig::new(system, args.nutation);
             let policy = parse_node_policy(&args.node_policy);
+            let amsha_selection = args
+                .amsha
+                .as_deref()
+                .map(parse_amsha_specs)
+                .map(|requests| amsha_selection_from_requests(&requests))
+                .unwrap_or_default();
 
             let result = dhruv_search::balas_for_date(
                 &engine,
@@ -7938,6 +7972,7 @@ fn main() {
                 &rs_config,
                 &aya_config,
                 policy,
+                &amsha_selection,
             )
             .unwrap_or_else(|e| {
                 eprintln!("Error: {e}");
@@ -8109,6 +8144,12 @@ fn main() {
             let rs_config = RiseSetConfig::default();
             let aya_config = SankrantiConfig::new(system, args.nutation);
             let policy = parse_node_policy(&args.node_policy);
+            let amsha_selection = args
+                .amsha
+                .as_deref()
+                .map(parse_amsha_specs)
+                .map(|requests| amsha_selection_from_requests(&requests))
+                .unwrap_or_default();
 
             let graha_names = [
                 "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu",
@@ -8125,6 +8166,7 @@ fn main() {
                     &rs_config,
                     &aya_config,
                     policy,
+                    &amsha_selection,
                     g,
                 )
                 .unwrap_or_else(|e| {
@@ -8143,6 +8185,7 @@ fn main() {
                     &rs_config,
                     &aya_config,
                     policy,
+                    &amsha_selection,
                 )
                 .unwrap_or_else(|e| {
                     eprintln!("Error: {e}");

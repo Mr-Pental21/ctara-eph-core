@@ -55,7 +55,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 54;
+pub const DHRUV_API_VERSION: u32 = 55;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -941,11 +941,7 @@ fn resolve_drishti_config_ptr(
 fn full_kundali_config_from_ffi(
     cfg: &DhruvFullKundaliConfig,
 ) -> Result<dhruv_search::FullKundaliConfig, DhruvStatus> {
-    let amsha_sel = dhruv_search::AmshaSelectionConfig {
-        count: cfg.amsha_selection.count,
-        codes: cfg.amsha_selection.codes,
-        variations: cfg.amsha_selection.variations,
-    };
+    let amsha_sel = amsha_selection_from_ffi(&cfg.amsha_selection);
     let node_dignity_policy = match cfg.node_dignity_policy {
         0 => dhruv_vedic_base::NodeDignityPolicy::SignLordBased,
         1 => dhruv_vedic_base::NodeDignityPolicy::AlwaysSama,
@@ -989,6 +985,24 @@ fn full_kundali_config_from_ffi(
         include_dasha: cfg.include_dasha != 0,
         dasha_config: dasha_selection_from_ffi(&cfg.dasha_config)?,
     })
+}
+
+fn amsha_selection_from_ffi(
+    cfg: &DhruvAmshaSelectionConfig,
+) -> dhruv_search::AmshaSelectionConfig {
+    dhruv_search::AmshaSelectionConfig {
+        count: cfg.count,
+        codes: cfg.codes,
+        variations: cfg.variations,
+    }
+}
+
+fn resolve_amsha_selection_ptr(
+    selection: *const DhruvAmshaSelectionConfig,
+) -> dhruv_search::AmshaSelectionConfig {
+    unsafe { selection.as_ref() }
+        .map(amsha_selection_from_ffi)
+        .unwrap_or_default()
 }
 
 fn resolve_full_kundali_config_ptr(
@@ -11415,6 +11429,7 @@ pub unsafe extern "C" fn dhruv_shadbala_for_date(
     riseset_config: *const DhruvRiseSetConfig,
     ayanamsha_system: u32,
     use_nutation: u8,
+    amsha_selection: *const DhruvAmshaSelectionConfig,
     out: *mut DhruvShadbalaResult,
 ) -> DhruvStatus {
     if engine.is_null() || eop.is_null() || utc.is_null() || location.is_null() || out.is_null() {
@@ -11449,6 +11464,7 @@ pub unsafe extern "C" fn dhruv_shadbala_for_date(
         Err(status) => return status,
     };
     let aya_config = SankrantiConfig::new(system, use_nutation != 0);
+    let amsha_selection = resolve_amsha_selection_ptr(amsha_selection);
 
     match shadbala_for_date(
         engine,
@@ -11458,6 +11474,7 @@ pub unsafe extern "C" fn dhruv_shadbala_for_date(
         &rust_bhava_config,
         &rs_config,
         &aya_config,
+        &amsha_selection,
     ) {
         Ok(result) => {
             let out = unsafe { &mut *out };
@@ -11583,6 +11600,7 @@ pub unsafe extern "C" fn dhruv_vimsopaka_for_date(
     ayanamsha_system: u32,
     use_nutation: u8,
     node_dignity_policy: u32,
+    amsha_selection: *const DhruvAmshaSelectionConfig,
     out: *mut DhruvVimsopakaResult,
 ) -> DhruvStatus {
     if engine.is_null() || eop.is_null() || utc.is_null() || location.is_null() || out.is_null() {
@@ -11614,8 +11632,17 @@ pub unsafe extern "C" fn dhruv_vimsopaka_for_date(
         _ => return DhruvStatus::InvalidSearchConfig,
     };
     let aya_config = SankrantiConfig::new(system, use_nutation != 0);
+    let amsha_selection = resolve_amsha_selection_ptr(amsha_selection);
 
-    match vimsopaka_for_date(engine, eop, &utc_time, &location, &aya_config, policy) {
+    match vimsopaka_for_date(
+        engine,
+        eop,
+        &utc_time,
+        &location,
+        &aya_config,
+        policy,
+        &amsha_selection,
+    ) {
         Ok(result) => {
             let out = unsafe { &mut *out };
             *out = vimsopaka_result_to_ffi(&result);
@@ -11642,6 +11669,7 @@ pub unsafe extern "C" fn dhruv_balas_for_date(
     ayanamsha_system: u32,
     use_nutation: u8,
     node_dignity_policy: u32,
+    amsha_selection: *const DhruvAmshaSelectionConfig,
     out: *mut DhruvBalaBundleResult,
 ) -> DhruvStatus {
     if engine.is_null() || eop.is_null() || utc.is_null() || location.is_null() || out.is_null() {
@@ -11681,6 +11709,7 @@ pub unsafe extern "C" fn dhruv_balas_for_date(
         _ => return DhruvStatus::InvalidSearchConfig,
     };
     let aya_config = SankrantiConfig::new(system, use_nutation != 0);
+    let amsha_selection = resolve_amsha_selection_ptr(amsha_selection);
 
     match balas_for_date(
         engine,
@@ -11691,6 +11720,7 @@ pub unsafe extern "C" fn dhruv_balas_for_date(
         &rs_config,
         &aya_config,
         policy,
+        &amsha_selection,
     ) {
         Ok(result) => {
             let out = unsafe { &mut *out };
@@ -11725,6 +11755,7 @@ pub unsafe extern "C" fn dhruv_avastha_for_date(
     ayanamsha_system: u32,
     use_nutation: u8,
     node_dignity_policy: u32,
+    amsha_selection: *const DhruvAmshaSelectionConfig,
     out: *mut DhruvAllGrahaAvasthas,
 ) -> DhruvStatus {
     if engine.is_null() || eop.is_null() || utc.is_null() || location.is_null() || out.is_null() {
@@ -11764,6 +11795,7 @@ pub unsafe extern "C" fn dhruv_avastha_for_date(
         _ => return DhruvStatus::InvalidSearchConfig,
     };
     let aya_config = SankrantiConfig::new(system, use_nutation != 0);
+    let amsha_selection = resolve_amsha_selection_ptr(amsha_selection);
 
     match avastha_for_date(
         engine,
@@ -11774,6 +11806,7 @@ pub unsafe extern "C" fn dhruv_avastha_for_date(
         &rs_config,
         &aya_config,
         policy,
+        &amsha_selection,
     ) {
         Ok(result) => {
             let out = unsafe { &mut *out };

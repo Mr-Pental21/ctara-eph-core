@@ -126,6 +126,13 @@ The Node wrapper exposes the amsha family through:
 - `amshaScope`
 - `amshaSelection`
 
+The standalone bala helpers accept the same `amshaSelection` object:
+
+- `shadbalaForDate(..., amshaSelection)`
+- `vimsopakaForDate(..., amshaSelection)`
+- `balasForDate(..., amshaSelection)`
+- `avasthaForDate(..., amshaSelection)`
+
 Direct amsha charts and embedded `fullKundaliForDate(...).amshas` now include
 the optional scoped arrays when requested and available:
 
@@ -134,6 +141,9 @@ the optional scoped arrays when requested and available:
 - `upagrahas`
 - `sphutas`
 - `specialLagnas`
+
+Embedded `fullKundaliForDate(...).amshas` now returns the full resolved amsha
+union used by the call, not only the explicitly requested subset.
 
 ## Library Loading
 

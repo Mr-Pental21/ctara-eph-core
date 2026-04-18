@@ -2,7 +2,9 @@ use std::path::{Path, PathBuf};
 
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use dhruv_core::{Engine, EngineConfig};
-use dhruv_search::{AmshaChartScope, SankrantiConfig, next_purnima, next_sankranti};
+use dhruv_search::{
+    AmshaChartScope, AmshaSelectionConfig, SankrantiConfig, next_purnima, next_sankranti,
+};
 use dhruv_time::{EopKernel, UtcTime};
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
 use dhruv_vedic_base::{
@@ -126,6 +128,7 @@ fn shadbala_for_date_bench(c: &mut Criterion) {
     let bhava_config = BhavaConfig::default();
     let rs_config = RiseSetConfig::default();
     let aya_config = SankrantiConfig::default_lahiri();
+    let amsha_selection = AmshaSelectionConfig::default();
 
     let mut group = c.benchmark_group("search_shadbala");
     group.sample_size(10);
@@ -139,6 +142,7 @@ fn shadbala_for_date_bench(c: &mut Criterion) {
                 black_box(&bhava_config),
                 black_box(&rs_config),
                 black_box(&aya_config),
+                black_box(&amsha_selection),
             )
             .expect("should succeed")
         })
@@ -160,6 +164,7 @@ fn vimsopaka_for_date_bench(c: &mut Criterion) {
     let utc = UtcTime::new(2024, 1, 15, 12, 0, 0.0);
     let location = GeoLocation::new(28.6139, 77.2090, 0.0);
     let aya_config = SankrantiConfig::default_lahiri();
+    let amsha_selection = AmshaSelectionConfig::default();
 
     let mut group = c.benchmark_group("search_vimsopaka");
     group.sample_size(10);
@@ -172,6 +177,7 @@ fn vimsopaka_for_date_bench(c: &mut Criterion) {
                 black_box(&location),
                 black_box(&aya_config),
                 black_box(NodeDignityPolicy::SignLordBased),
+                black_box(&amsha_selection),
             )
             .expect("should succeed")
         })
@@ -195,6 +201,7 @@ fn avastha_for_date_bench(c: &mut Criterion) {
     let bhava_config = BhavaConfig::default();
     let rs_config = RiseSetConfig::default();
     let aya_config = SankrantiConfig::default_lahiri();
+    let amsha_selection = AmshaSelectionConfig::default();
 
     let mut group = c.benchmark_group("search_avastha");
     group.sample_size(10);
@@ -209,6 +216,7 @@ fn avastha_for_date_bench(c: &mut Criterion) {
                 black_box(&rs_config),
                 black_box(&aya_config),
                 black_box(NodeDignityPolicy::SignLordBased),
+                black_box(&amsha_selection),
             )
             .expect("should succeed")
         })

@@ -10,7 +10,7 @@ use dhruv_search::{
     LunarPhaseQuery, LunarPhaseResult, MotionKind, MotionOperation, MotionQuery, MotionResult,
     SankrantiConfig, SankrantiOperation, SankrantiQuery, SankrantiResult, SankrantiTarget,
     StationaryConfig, all_upagrahas_for_date_with_config, avastha_for_date, avastha_for_graha,
-    full_kundali_for_date,
+    full_kundali_for_date, AmshaSelectionConfig,
 };
 use dhruv_search::{FullKundaliConfig, FullKundaliResult};
 use dhruv_tara::{EarthState, TaraCatalog, TaraConfig, TaraId};
@@ -634,6 +634,7 @@ pub struct AvasthaRequest {
     pub riseset_config: Option<RiseSetConfig>,
     pub sankranti_config: Option<SankrantiConfig>,
     pub node_policy: Option<NodeDignityPolicy>,
+    pub amsha_selection: Option<AmshaSelectionConfig>,
     pub target: AvasthaTarget,
 }
 
@@ -655,6 +656,7 @@ pub fn avastha_op(
     let riseset_config = resolve_riseset_config(ctx, request.riseset_config)?;
     let sankranti_config = resolve_sankranti_config(ctx, request.sankranti_config)?;
     let node_policy = resolve_node_dignity_policy(ctx, request.node_policy)?;
+    let amsha_selection = request.amsha_selection.unwrap_or_default();
 
     match request.target {
         AvasthaTarget::All => Ok(AvasthaResult::All(avastha_for_date(
@@ -666,6 +668,7 @@ pub fn avastha_op(
             &riseset_config,
             &sankranti_config,
             node_policy,
+            &amsha_selection,
         )?)),
         AvasthaTarget::Graha(graha) => Ok(AvasthaResult::Graha(avastha_for_graha(
             ctx.engine(),
@@ -676,6 +679,7 @@ pub fn avastha_op(
             &riseset_config,
             &sankranti_config,
             node_policy,
+            &amsha_selection,
             graha,
         )?)),
     }

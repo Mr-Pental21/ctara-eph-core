@@ -16,6 +16,11 @@ use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig, RiseSetEvent, 
 use dhruv_vedic_base::special_lagna::all_special_lagnas;
 use dhruv_vedic_base::upagraha::TIME_BASED_UPAGRAHAS;
 use dhruv_vedic_base::vaar::vaar_from_jd;
+use dhruv_vedic_base::vimsopaka::{
+    DASHAVARGA as VIMSOPAKA_DASHAVARGA, SHADVARGA as VIMSOPAKA_SHADVARGA,
+    SHODASAVARGA as VIMSOPAKA_SHODASAVARGA, SAPTAVARGA as VIMSOPAKA_SAPTAVARGA,
+    VargaWeight, vimsopaka_dignity_points,
+};
 use dhruv_vedic_base::{
     ALL_GRAHAS, AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AmshaRequest,
     AmshaVariation, ArudhaResult, AshtakavargaResult, AvasthaInputs, BhavaBalaBirthPeriod,
@@ -23,14 +28,13 @@ use dhruv_vedic_base::{
     CharakarakaScheme, Dignity, DrishtiEntry, Graha, GrahaAvasthas, KalaBalaInputs,
     LajjitadiInputs, LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS, SayanadiInputs,
     ShadbalaInputs, TimeUpagrahaConfig, Upagraha, all_avasthas, all_combustion_status,
-    all_dashavarga_vimsopaka, all_saptavarga_vimsopaka, all_shadbalas_from_inputs,
-    all_shadvarga_vimsopaka, all_shodasavarga_vimsopaka, all_sphutas, amsha_longitude,
+    all_shadbalas_from_inputs, all_sphutas, amsha_longitude,
     bhrigu_bindu, calculate_ashtakavarga, calculate_bhava_bala, charakarakas_from_longitudes,
     compute_bhavas, dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise,
     graha_drishti, graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord,
     jd_tdb_to_centuries, lagna_longitude_rad, lost_planetary_war,
     lunar_node_deg_for_epoch_on_plane, masa_lord as graha_masa_lord, nakshatra_from_longitude,
-    navamsa_number, node_dignity_in_rashi, normalize_360, nth_rashi_from, pranapada_lagna,
+    node_dignity_in_rashi, normalize_360, nth_rashi_from, pranapada_lagna,
     rashi_from_longitude, rashi_lord_by_index, samvatsara_lord as graha_samvatsara_lord,
     sree_lagna, sun_based_upagrahas, time_upagraha_jd_with_config, vaar_lord as graha_vaar_lord,
 };
@@ -55,6 +59,66 @@ use crate::panchang::{
 use crate::sankranti_types::SankrantiConfig;
 
 const BHAVABALA_TWILIGHT_HALF_DAYS: f64 = 5.0 / 60.0;
+const SHADBALA_REQUIRED_AMSHAS: [Amsha; 7] = [
+    Amsha::D1,
+    Amsha::D2,
+    Amsha::D3,
+    Amsha::D7,
+    Amsha::D9,
+    Amsha::D12,
+    Amsha::D30,
+];
+const VIMSOPAKA_REQUIRED_AMSHAS: [Amsha; 16] = [
+    Amsha::D1,
+    Amsha::D2,
+    Amsha::D3,
+    Amsha::D4,
+    Amsha::D7,
+    Amsha::D9,
+    Amsha::D10,
+    Amsha::D12,
+    Amsha::D16,
+    Amsha::D20,
+    Amsha::D24,
+    Amsha::D27,
+    Amsha::D30,
+    Amsha::D40,
+    Amsha::D45,
+    Amsha::D60,
+];
+const AVASTHA_REQUIRED_AMSHAS: [Amsha; 1] = [Amsha::D9];
+
+#[derive(Debug, Clone, Copy)]
+struct CachedAmshaGrahaData {
+    amsha: Amsha,
+    variation: AmshaVariation,
+    longitudes: [f64; 9],
+    rashi_indices: [u8; 9],
+    division_indices: [u16; 9],
+}
+
+#[derive(Debug, Clone)]
+struct ResolvedAmshaPlan {
+    requests: Vec<AmshaRequest>,
+}
+
+impl ResolvedAmshaPlan {
+    fn is_empty(&self) -> bool {
+        self.requests.is_empty()
+    }
+
+    fn requests(&self) -> &[AmshaRequest] {
+        &self.requests
+    }
+
+    fn request_for(&self, amsha: Amsha) -> AmshaRequest {
+        self.requests
+            .iter()
+            .copied()
+            .find(|request| request.amsha == amsha)
+            .unwrap_or_else(|| AmshaRequest::new(amsha))
+    }
+}
 
 /// Map a Graha to its dhruv_core::Body for engine queries.
 fn graha_to_body(graha: Graha) -> Option<Body> {
@@ -146,6 +210,7 @@ struct JyotishContext {
     graha_speeds: Option<[f64; 7]>,
     /// Ecliptic declinations (deg) for sapta grahas (indices 0-6).
     graha_declinations: Option<[f64; 7]>,
+    amsha_graha_data: Vec<CachedAmshaGrahaData>,
 }
 
 impl JyotishContext {
@@ -171,6 +236,7 @@ impl JyotishContext {
             sunset_jd: None,
             graha_speeds: None,
             graha_declinations: None,
+            amsha_graha_data: Vec::new(),
         }
     }
 
@@ -307,6 +373,70 @@ impl JyotishContext {
         let decls = query_sapta_graha_declinations(engine, self.jd_tdb)?;
         self.graha_declinations = Some(decls);
         Ok(decls)
+    }
+
+    fn amsha_graha_data<'a>(
+        &'a mut self,
+        engine: &Engine,
+        aya_config: &SankrantiConfig,
+        request: AmshaRequest,
+    ) -> Result<&'a CachedAmshaGrahaData, SearchError> {
+        let variation = request.effective_variation();
+        if let Some(index) = self
+            .amsha_graha_data
+            .iter()
+            .position(|cached| cached.amsha == request.amsha && cached.variation == variation)
+        {
+            return Ok(&self.amsha_graha_data[index]);
+        }
+
+        let graha_lons = *self.graha_lons(engine, aya_config)?;
+        let divisions = request.amsha.divisions() as f64;
+        let division_span = 30.0 / divisions;
+        let mut longitudes = [0.0f64; 9];
+        let mut rashi_indices = [0u8; 9];
+        let mut division_indices = [0u16; 9];
+        for i in 0..9 {
+            let sidereal_lon = graha_lons.longitudes[i];
+            let normalized = normalize_360(sidereal_lon);
+            let degrees_in_sign = normalized % 30.0;
+            let division_index = ((degrees_in_sign / division_span).floor() as u16)
+                .min(request.amsha.divisions().saturating_sub(1));
+            let amsha_lon = amsha_longitude(sidereal_lon, request.amsha, Some(variation));
+            longitudes[i] = amsha_lon;
+            rashi_indices[i] = ((normalize_360(amsha_lon) / 30.0).floor() as u8).min(11);
+            division_indices[i] = division_index;
+        }
+        self.amsha_graha_data.push(CachedAmshaGrahaData {
+            amsha: request.amsha,
+            variation,
+            longitudes,
+            rashi_indices,
+            division_indices,
+        });
+        Ok(self
+            .amsha_graha_data
+            .last()
+            .expect("amsha graha data cache just pushed"))
+    }
+
+    fn cached_amsha_graha_data(&self, request: AmshaRequest) -> Option<&CachedAmshaGrahaData> {
+        let variation = request.effective_variation();
+        self.amsha_graha_data
+            .iter()
+            .find(|cached| cached.amsha == request.amsha && cached.variation == variation)
+    }
+
+    fn prime_amsha_graha_data(
+        &mut self,
+        engine: &Engine,
+        aya_config: &SankrantiConfig,
+        requests: &[AmshaRequest],
+    ) -> Result<(), SearchError> {
+        for request in requests {
+            let _ = self.amsha_graha_data(engine, aya_config, *request)?;
+        }
+        Ok(())
     }
 }
 
@@ -1237,6 +1367,15 @@ pub fn full_kundali_for_date(
     config: &FullKundaliConfig,
 ) -> Result<FullKundaliResult, SearchError> {
     let mut ctx = JyotishContext::new(engine, Some(eop), utc, aya_config);
+    let amsha_plan = resolve_amsha_plan(
+        &config.amsha_selection,
+        config.include_shadbala,
+        config.include_vimsopaka,
+        config.include_avastha,
+    )?;
+    if !amsha_plan.is_empty() {
+        ctx.prime_amsha_graha_data(engine, aya_config, amsha_plan.requests())?;
+    }
 
     // Ayanamsha — always computed, used for bhava cusp display.
     let ayanamsha = ctx.ayanamsha;
@@ -1374,7 +1513,8 @@ pub fn full_kundali_for_date(
     // Amsha charts: computed if requested, after all D1 positions are resolved.
     let amshas = if config.include_amshas {
         Some(amsha_charts_from_kundali_with_ctx(
-            config,
+            amsha_plan.requests(),
+            &config.amsha_scope,
             &graha_positions,
             &bindus,
             &upagrahas,
@@ -1395,6 +1535,7 @@ pub fn full_kundali_for_date(
             bhava_config,
             riseset_config,
             aya_config,
+            &amsha_plan,
             &mut ctx,
         )?)
     } else {
@@ -1424,6 +1565,7 @@ pub fn full_kundali_for_date(
             location,
             aya_config,
             config.node_dignity_policy,
+            &amsha_plan,
             &mut ctx,
         )?)
     } else {
@@ -1440,6 +1582,7 @@ pub fn full_kundali_for_date(
             riseset_config,
             aya_config,
             config.node_dignity_policy,
+            &amsha_plan,
             &mut ctx,
         )?)
     } else {
@@ -1547,6 +1690,9 @@ fn bhavabala_for_date_with_ctx(
     let shadbala = if let Some(result) = precomputed_shadbala {
         result
     } else {
+        let default_amsha_plan =
+            resolve_amsha_plan(&AmshaSelectionConfig::default(), true, false, false)?;
+        ctx.prime_amsha_graha_data(engine, aya_config, default_amsha_plan.requests())?;
         owned_shadbala = shadbala_for_date_with_ctx(
             engine,
             eop,
@@ -1555,6 +1701,7 @@ fn bhavabala_for_date_with_ctx(
             bhava_config,
             riseset_config,
             aya_config,
+            &default_amsha_plan,
             ctx,
         )?;
         &owned_shadbala
@@ -1614,8 +1761,11 @@ pub fn balas_for_date(
     riseset_config: &RiseSetConfig,
     aya_config: &SankrantiConfig,
     node_policy: NodeDignityPolicy,
+    amsha_selection: &AmshaSelectionConfig,
 ) -> Result<BalaBundleResult, SearchError> {
     let mut ctx = JyotishContext::new(engine, Some(eop), utc, aya_config);
+    let amsha_plan = resolve_amsha_plan(amsha_selection, true, true, false)?;
+    ctx.prime_amsha_graha_data(engine, aya_config, amsha_plan.requests())?;
     let shadbala = shadbala_for_date_with_ctx(
         engine,
         eop,
@@ -1624,10 +1774,18 @@ pub fn balas_for_date(
         bhava_config,
         riseset_config,
         aya_config,
+        &amsha_plan,
         &mut ctx,
     )?;
-    let vimsopaka =
-        vimsopaka_for_date_with_ctx(engine, eop, location, aya_config, node_policy, &mut ctx)?;
+    let vimsopaka = vimsopaka_for_date_with_ctx(
+        engine,
+        eop,
+        location,
+        aya_config,
+        node_policy,
+        &amsha_plan,
+        &mut ctx,
+    )?;
     let ashtakavarga = ashtakavarga_with_ctx(engine, eop, location, aya_config, &mut ctx)?;
     let bhavabala = bhavabala_for_date_with_ctx(
         engine,
@@ -1903,8 +2061,11 @@ pub fn shadbala_for_date(
     bhava_config: &BhavaConfig,
     riseset_config: &RiseSetConfig,
     aya_config: &SankrantiConfig,
+    amsha_selection: &AmshaSelectionConfig,
 ) -> Result<ShadbalaResult, SearchError> {
     let mut ctx = JyotishContext::new(engine, Some(eop), utc, aya_config);
+    let amsha_plan = resolve_amsha_plan(amsha_selection, true, false, false)?;
+    ctx.prime_amsha_graha_data(engine, aya_config, amsha_plan.requests())?;
     shadbala_for_date_with_ctx(
         engine,
         eop,
@@ -1913,6 +2074,7 @@ pub fn shadbala_for_date(
         bhava_config,
         riseset_config,
         aya_config,
+        &amsha_plan,
         &mut ctx,
     )
 }
@@ -1926,6 +2088,7 @@ fn shadbala_for_date_with_ctx(
     bhava_config: &BhavaConfig,
     riseset_config: &RiseSetConfig,
     aya_config: &SankrantiConfig,
+    amsha_plan: &ResolvedAmshaPlan,
     ctx: &mut JyotishContext,
 ) -> Result<ShadbalaResult, SearchError> {
     let inputs = assemble_shadbala_inputs(
@@ -1936,6 +2099,7 @@ fn shadbala_for_date_with_ctx(
         bhava_config,
         riseset_config,
         aya_config,
+        amsha_plan,
         ctx,
     )?;
     let breakdowns = all_shadbalas_from_inputs(&inputs);
@@ -1956,6 +2120,7 @@ pub fn shadbala_for_graha(
     bhava_config: &BhavaConfig,
     riseset_config: &RiseSetConfig,
     aya_config: &SankrantiConfig,
+    amsha_selection: &AmshaSelectionConfig,
     graha: Graha,
 ) -> Result<ShadbalaEntry, SearchError> {
     if graha.index() >= 7 {
@@ -1971,6 +2136,7 @@ pub fn shadbala_for_graha(
         bhava_config,
         riseset_config,
         aya_config,
+        amsha_selection,
     )?;
     Ok(result.entries[graha.index() as usize])
 }
@@ -1983,9 +2149,20 @@ pub fn vimsopaka_for_date(
     location: &GeoLocation,
     aya_config: &SankrantiConfig,
     node_policy: NodeDignityPolicy,
+    amsha_selection: &AmshaSelectionConfig,
 ) -> Result<VimsopakaResult, SearchError> {
     let mut ctx = JyotishContext::new(engine, Some(eop), utc, aya_config);
-    vimsopaka_for_date_with_ctx(engine, eop, location, aya_config, node_policy, &mut ctx)
+    let amsha_plan = resolve_amsha_plan(amsha_selection, false, true, false)?;
+    ctx.prime_amsha_graha_data(engine, aya_config, amsha_plan.requests())?;
+    vimsopaka_for_date_with_ctx(
+        engine,
+        eop,
+        location,
+        aya_config,
+        node_policy,
+        &amsha_plan,
+        &mut ctx,
+    )
 }
 
 fn vimsopaka_for_date_with_ctx(
@@ -1994,15 +2171,48 @@ fn vimsopaka_for_date_with_ctx(
     location: &GeoLocation,
     aya_config: &SankrantiConfig,
     node_policy: NodeDignityPolicy,
+    amsha_plan: &ResolvedAmshaPlan,
     ctx: &mut JyotishContext,
 ) -> Result<VimsopakaResult, SearchError> {
     let graha_lons = *ctx.graha_lons(engine, aya_config)?;
     let lons9 = graha_lons.longitudes;
 
-    let shad = all_shadvarga_vimsopaka(&lons9, node_policy);
-    let sapt = all_saptavarga_vimsopaka(&lons9, node_policy);
-    let dash = all_dashavarga_vimsopaka(&lons9, node_policy);
-    let shod = all_shodasavarga_vimsopaka(&lons9, node_policy);
+    let shad = all_vimsopaka_balas_from_cache(
+        engine,
+        aya_config,
+        amsha_plan,
+        ctx,
+        &lons9,
+        &VIMSOPAKA_SHADVARGA,
+        node_policy,
+    )?;
+    let sapt = all_vimsopaka_balas_from_cache(
+        engine,
+        aya_config,
+        amsha_plan,
+        ctx,
+        &lons9,
+        &VIMSOPAKA_SAPTAVARGA,
+        node_policy,
+    )?;
+    let dash = all_vimsopaka_balas_from_cache(
+        engine,
+        aya_config,
+        amsha_plan,
+        ctx,
+        &lons9,
+        &VIMSOPAKA_DASHAVARGA,
+        node_policy,
+    )?;
+    let shod = all_vimsopaka_balas_from_cache(
+        engine,
+        aya_config,
+        amsha_plan,
+        ctx,
+        &lons9,
+        &VIMSOPAKA_SHODASAVARGA,
+        node_policy,
+    )?;
 
     let mut entries = [VimsopakaEntry {
         graha: Graha::Surya,
@@ -2026,6 +2236,62 @@ fn vimsopaka_for_date_with_ctx(
     Ok(VimsopakaResult { entries })
 }
 
+fn all_vimsopaka_balas_from_cache(
+    engine: &Engine,
+    aya_config: &SankrantiConfig,
+    amsha_plan: &ResolvedAmshaPlan,
+    ctx: &mut JyotishContext,
+    sidereal_lons: &[f64; 9],
+    vargas: &[VargaWeight],
+    node_policy: NodeDignityPolicy,
+) -> Result<[dhruv_vedic_base::vimsopaka::VimsopakaBala; 9], SearchError> {
+    let mut results = std::array::from_fn(|_| dhruv_vedic_base::vimsopaka::VimsopakaBala {
+        score: 0.0,
+        entries: Vec::new(),
+    });
+    for graha in ALL_GRAHAS {
+        let gi = graha.index() as usize;
+        let is_node = matches!(graha, Graha::Rahu | Graha::Ketu);
+        let mut entries = Vec::with_capacity(vargas.len());
+        let mut weighted_sum = 0.0;
+        let mut total_weight = 0.0;
+        for varga in vargas {
+            let cached = ctx.amsha_graha_data(engine, aya_config, amsha_plan.request_for(varga.amsha))?;
+            let rashi_idx = cached.rashi_indices[gi];
+            let dignity = if is_node {
+                node_dignity_in_rashi(graha, rashi_idx, &cached.rashi_indices, node_policy)
+            } else {
+                let mut sapta_rashi = [0u8; 7];
+                sapta_rashi.copy_from_slice(&cached.rashi_indices[..7]);
+                let varga_lon = if varga.amsha == Amsha::D1 {
+                    normalize_360(sidereal_lons[gi])
+                } else {
+                    cached.longitudes[gi]
+                };
+                dignity_in_rashi_with_positions(graha, varga_lon, rashi_idx, &sapta_rashi)
+            };
+            let points = vimsopaka_dignity_points(dignity);
+            entries.push(dhruv_vedic_base::vimsopaka::VargaDignityEntry {
+                amsha: varga.amsha,
+                dignity,
+                points,
+                weight: varga.weight,
+            });
+            weighted_sum += points * varga.weight;
+            total_weight += varga.weight;
+        }
+        results[gi] = dhruv_vedic_base::vimsopaka::VimsopakaBala {
+            score: if total_weight > 0.0 {
+                weighted_sum / total_weight
+            } else {
+                0.0
+            },
+            entries,
+        };
+    }
+    Ok(results)
+}
+
 /// Compute Vimsopaka Bala for a single graha. Accepts all 9 navagrahas.
 pub fn vimsopaka_for_graha(
     engine: &Engine,
@@ -2034,9 +2300,18 @@ pub fn vimsopaka_for_graha(
     location: &GeoLocation,
     aya_config: &SankrantiConfig,
     node_policy: NodeDignityPolicy,
+    amsha_selection: &AmshaSelectionConfig,
     graha: Graha,
 ) -> Result<VimsopakaEntry, SearchError> {
-    let result = vimsopaka_for_date(engine, eop, utc, location, aya_config, node_policy)?;
+    let result = vimsopaka_for_date(
+        engine,
+        eop,
+        utc,
+        location,
+        aya_config,
+        node_policy,
+        amsha_selection,
+    )?;
     Ok(result.entries[graha.index() as usize])
 }
 
@@ -2050,6 +2325,7 @@ fn assemble_shadbala_inputs(
     bhava_config: &BhavaConfig,
     riseset_config: &RiseSetConfig,
     aya_config: &SankrantiConfig,
+    amsha_plan: &ResolvedAmshaPlan,
     ctx: &mut JyotishContext,
 ) -> Result<ShadbalaInputs, SearchError> {
     // 1. Sidereal longitudes (all 9, needed for drik bala)
@@ -2073,7 +2349,7 @@ fn assemble_shadbala_inputs(
     let speeds = ctx.graha_speeds(engine)?;
 
     // 4. Varga rashi indices: 7 vargas × 7 grahas for saptavargaja bala
-    let varga_rashi_indices = assemble_varga_rashi_indices(&sidereal_lons);
+    let varga_rashi_indices = assemble_varga_rashi_indices(engine, aya_config, ctx, amsha_plan)?;
 
     // 5. Kala Bala inputs
     let (jd_sunrise, jd_next_sunrise) =
@@ -2252,24 +2528,18 @@ fn classify_bhavabala_birth_period(
 ///
 /// The 7 vargas are: D1, D2, D3, D7, D9, D12, D30.
 /// For each varga, compute amsha_longitude for each sapta graha and derive rashi index.
-fn assemble_varga_rashi_indices(sidereal_lons: &[f64; 9]) -> [[u8; 7]; 7] {
-    const SAPTAVARGAJA_AMSHAS: [Amsha; 7] = [
-        Amsha::D1,
-        Amsha::D2,
-        Amsha::D3,
-        Amsha::D7,
-        Amsha::D9,
-        Amsha::D12,
-        Amsha::D30,
-    ];
+fn assemble_varga_rashi_indices(
+    engine: &Engine,
+    aya_config: &SankrantiConfig,
+    ctx: &mut JyotishContext,
+    plan: &ResolvedAmshaPlan,
+) -> Result<[[u8; 7]; 7], SearchError> {
     let mut result = [[0u8; 7]; 7];
-    for (vi, amsha) in SAPTAVARGAJA_AMSHAS.iter().enumerate() {
-        for (gi, &sid_lon) in sidereal_lons.iter().enumerate().take(7) {
-            let varga_lon = amsha_longitude(sid_lon, *amsha, None);
-            result[vi][gi] = ((varga_lon / 30.0).floor() as u8).min(11);
-        }
+    for (vi, amsha) in SHADBALA_REQUIRED_AMSHAS.iter().enumerate() {
+        let cached = ctx.amsha_graha_data(engine, aya_config, plan.request_for(*amsha))?;
+        result[vi].copy_from_slice(&cached.rashi_indices[..7]);
     }
-    result
+    Ok(result)
 }
 
 /// Resolve the four Kala Bala lords: year, month, weekday, hora.
@@ -2318,8 +2588,11 @@ pub fn avastha_for_date(
     riseset_config: &RiseSetConfig,
     aya_config: &SankrantiConfig,
     node_policy: NodeDignityPolicy,
+    amsha_selection: &AmshaSelectionConfig,
 ) -> Result<AllGrahaAvasthas, SearchError> {
     let mut ctx = JyotishContext::new(engine, Some(eop), utc, aya_config);
+    let amsha_plan = resolve_amsha_plan(amsha_selection, false, false, true)?;
+    ctx.prime_amsha_graha_data(engine, aya_config, amsha_plan.requests())?;
     avastha_for_date_with_ctx(
         engine,
         eop,
@@ -2329,6 +2602,7 @@ pub fn avastha_for_date(
         riseset_config,
         aya_config,
         node_policy,
+        &amsha_plan,
         &mut ctx,
     )
 }
@@ -2343,6 +2617,7 @@ fn avastha_for_date_with_ctx(
     riseset_config: &RiseSetConfig,
     aya_config: &SankrantiConfig,
     node_policy: NodeDignityPolicy,
+    amsha_plan: &ResolvedAmshaPlan,
     ctx: &mut JyotishContext,
 ) -> Result<AllGrahaAvasthas, SearchError> {
     let inputs = assemble_avastha_inputs(
@@ -2354,6 +2629,7 @@ fn avastha_for_date_with_ctx(
         riseset_config,
         aya_config,
         node_policy,
+        amsha_plan,
         ctx,
     )?;
     Ok(all_avasthas(&inputs))
@@ -2370,6 +2646,7 @@ pub fn avastha_for_graha(
     riseset_config: &RiseSetConfig,
     aya_config: &SankrantiConfig,
     node_policy: NodeDignityPolicy,
+    amsha_selection: &AmshaSelectionConfig,
     graha: Graha,
 ) -> Result<GrahaAvasthas, SearchError> {
     let result = avastha_for_date(
@@ -2381,6 +2658,7 @@ pub fn avastha_for_graha(
         riseset_config,
         aya_config,
         node_policy,
+        amsha_selection,
     )?;
     Ok(result.entries[graha.index() as usize])
 }
@@ -2396,6 +2674,7 @@ fn assemble_avastha_inputs(
     riseset_config: &RiseSetConfig,
     aya_config: &SankrantiConfig,
     node_policy: NodeDignityPolicy,
+    amsha_plan: &ResolvedAmshaPlan,
     ctx: &mut JyotishContext,
 ) -> Result<AvasthaInputs, SearchError> {
     let aya = ctx.ayanamsha;
@@ -2468,9 +2747,10 @@ fn assemble_avastha_inputs(
     }
 
     // 10. Navamsa numbers
+    let navamsa_data = ctx.amsha_graha_data(engine, aya_config, amsha_plan.request_for(Amsha::D9))?;
     let mut navamsa_numbers = [0u8; 9];
-    for i in 0..9 {
-        navamsa_numbers[i] = navamsa_number(sidereal_lons[i]);
+    for (i, navamsa_number) in navamsa_numbers.iter_mut().enumerate() {
+        *navamsa_number = navamsa_data.division_indices[i].min(8) as u8 + 1;
     }
 
     // 11. Janma nakshatra = Moon's nakshatra index
@@ -2552,12 +2832,11 @@ fn validate_amsha_requests(requests: &[AmshaRequest]) -> Result<(), SearchError>
     Ok(())
 }
 
-/// Convert AmshaSelectionConfig to a Vec of AmshaRequest.
-fn selection_to_requests(sel: &AmshaSelectionConfig) -> Result<Vec<AmshaRequest>, SearchError> {
+fn decode_amsha_selection(sel: &AmshaSelectionConfig) -> Result<Vec<AmshaRequest>, SearchError> {
     if sel.count as usize > MAX_AMSHA_REQUESTS {
         return Err(SearchError::InvalidConfig("amsha count exceeds maximum"));
     }
-    let mut requests = Vec::with_capacity(sel.count as usize);
+    let mut requests: Vec<AmshaRequest> = Vec::with_capacity(sel.count as usize);
     for i in 0..sel.count as usize {
         let amsha = Amsha::from_code(sel.codes[i])
             .ok_or(SearchError::InvalidConfig("unknown amsha code"))?;
@@ -2573,9 +2852,51 @@ fn selection_to_requests(sel: &AmshaSelectionConfig) -> Result<Vec<AmshaRequest>
             }
             Some(v)
         };
+        if let Some(existing) = requests.iter().find(|request| request.amsha == amsha) {
+            if existing.effective_variation()
+                != variation.unwrap_or(AmshaVariation::TraditionalParashari)
+            {
+                return Err(SearchError::InvalidConfig(
+                    "conflicting amsha variation for amsha code",
+                ));
+            }
+            continue;
+        }
         requests.push(AmshaRequest { amsha, variation });
     }
     Ok(requests)
+}
+
+fn append_required_amshas(requests: &mut Vec<AmshaRequest>, required: &[Amsha]) {
+    let mut missing = required
+        .iter()
+        .copied()
+        .filter(|amsha| !requests.iter().any(|request| request.amsha == *amsha))
+        .collect::<Vec<_>>();
+    missing.sort_by_key(|amsha| amsha.code());
+    for amsha in missing {
+        requests.push(AmshaRequest::new(amsha));
+    }
+}
+
+fn resolve_amsha_plan(
+    selection: &AmshaSelectionConfig,
+    include_shadbala: bool,
+    include_vimsopaka: bool,
+    include_avastha: bool,
+) -> Result<ResolvedAmshaPlan, SearchError> {
+    let mut requests = decode_amsha_selection(selection)?;
+    if include_shadbala {
+        append_required_amshas(&mut requests, &SHADBALA_REQUIRED_AMSHAS);
+    }
+    if include_vimsopaka {
+        append_required_amshas(&mut requests, &VIMSOPAKA_REQUIRED_AMSHAS);
+    }
+    if include_avastha {
+        append_required_amshas(&mut requests, &AVASTHA_REQUIRED_AMSHAS);
+    }
+    validate_amsha_requests(&requests)?;
+    Ok(ResolvedAmshaPlan { requests })
 }
 
 /// Build an AmshaChart for one amsha request given pre-computed D1 longitudes.
@@ -2583,6 +2904,7 @@ fn selection_to_requests(sel: &AmshaSelectionConfig) -> Result<Vec<AmshaRequest>
 fn build_amsha_chart(
     req: &AmshaRequest,
     graha_lons: &[f64; 9],
+    graha_cached: Option<&CachedAmshaGrahaData>,
     lagna_sid: f64,
     scope: &AmshaChartScope,
     bhava_cusps_sid: Option<&[f64; 12]>,
@@ -2596,8 +2918,14 @@ fn build_amsha_chart(
     let effective_variation = req.effective_variation();
 
     let mut grahas = [make_amsha_entry(0.0); 9];
-    for i in 0..9 {
-        grahas[i] = transform_to_amsha_entry(graha_lons[i], amsha, variation);
+    if let Some(cached) = graha_cached {
+        for i in 0..9 {
+            grahas[i] = make_amsha_entry(cached.longitudes[i]);
+        }
+    } else {
+        for i in 0..9 {
+            grahas[i] = transform_to_amsha_entry(graha_lons[i], amsha, variation);
+        }
     }
 
     let lagna = transform_to_amsha_entry(lagna_sid, amsha, variation);
@@ -2787,6 +3115,7 @@ pub fn amsha_charts_for_date(
             build_amsha_chart(
                 req,
                 &graha_lons.longitudes,
+                None,
                 lagna_sid,
                 scope,
                 bhava_cusps_sid.as_ref(),
@@ -2867,6 +3196,7 @@ pub fn amsha_charts_from_kundali(
             build_amsha_chart(
                 req,
                 &gp.grahas.map(|g| g.sidereal_longitude),
+                None,
                 lagna_sid,
                 scope,
                 bhava_cusps_sid,
@@ -2883,7 +3213,8 @@ pub fn amsha_charts_from_kundali(
 
 /// Internal: compute amsha charts from within full_kundali_for_date.
 fn amsha_charts_from_kundali_with_ctx(
-    config: &FullKundaliConfig,
+    requests: &[AmshaRequest],
+    scope: &AmshaChartScope,
     graha_positions: &Option<GrahaPositions>,
     bindus: &Option<BindusResult>,
     upagrahas: &Option<AllUpagrahas>,
@@ -2891,7 +3222,6 @@ fn amsha_charts_from_kundali_with_ctx(
     special_lagnas: &Option<AllSpecialLagnas>,
     ctx: &mut JyotishContext,
 ) -> Result<AmshaResult, SearchError> {
-    let requests = selection_to_requests(&config.amsha_selection)?;
     validate_amsha_requests(&requests)?;
 
     let gp = graha_positions.as_ref().ok_or(SearchError::InvalidConfig(
@@ -2899,7 +3229,6 @@ fn amsha_charts_from_kundali_with_ctx(
     ))?;
 
     let lagna_sid = gp.lagna.sidereal_longitude;
-    let scope = &config.amsha_scope;
 
     // Bhava cusps (sidereal) from context
     let bhava_cusps_sid = if scope.include_bhava_cusps {
@@ -2951,9 +3280,11 @@ fn amsha_charts_from_kundali_with_ctx(
     let charts = requests
         .iter()
         .map(|req| {
+            let graha_cached = ctx.cached_amsha_graha_data(*req);
             build_amsha_chart(
                 req,
                 &gp.grahas.map(|g| g.sidereal_longitude),
+                graha_cached,
                 lagna_sid,
                 scope,
                 bhava_cusps_sid.as_ref(),
@@ -3014,5 +3345,73 @@ mod tests {
         assert_eq!(graha_to_body(Graha::Shani), Some(Body::Saturn));
         assert_eq!(graha_to_body(Graha::Rahu), None);
         assert_eq!(graha_to_body(Graha::Ketu), None);
+    }
+
+    #[test]
+    fn decode_amsha_selection_dedupes_exact_duplicates() {
+        let mut selection = AmshaSelectionConfig {
+            count: 2,
+            ..AmshaSelectionConfig::default()
+        };
+        selection.codes[0] = Amsha::D9.code();
+        selection.codes[1] = Amsha::D9.code();
+
+        let decoded = decode_amsha_selection(&selection).expect("selection should decode");
+        assert_eq!(decoded.len(), 1);
+        assert_eq!(decoded[0].amsha, Amsha::D9);
+        assert_eq!(
+            decoded[0].effective_variation(),
+            AmshaVariation::TraditionalParashari
+        );
+    }
+
+    #[test]
+    fn decode_amsha_selection_rejects_conflicting_duplicates() {
+        let mut selection = AmshaSelectionConfig {
+            count: 2,
+            ..AmshaSelectionConfig::default()
+        };
+        selection.codes[0] = Amsha::D2.code();
+        selection.variations[0] = 0;
+        selection.codes[1] = Amsha::D2.code();
+        selection.variations[1] = 1;
+
+        let error = decode_amsha_selection(&selection).expect_err("conflicting selection");
+        assert!(
+            matches!(error, SearchError::InvalidConfig(message) if message.contains("conflicting"))
+        );
+    }
+
+    #[test]
+    fn resolve_amsha_plan_uses_explicit_variations_and_appends_required_union() {
+        let mut selection = AmshaSelectionConfig {
+            count: 2,
+            ..AmshaSelectionConfig::default()
+        };
+        selection.codes[0] = Amsha::D2.code();
+        selection.variations[0] = 1;
+        selection.codes[1] = Amsha::D9.code();
+
+        let plan = resolve_amsha_plan(&selection, true, true, true).expect("plan should resolve");
+        assert_eq!(plan.requests()[0].amsha, Amsha::D2);
+        assert_eq!(
+            plan.requests()[0].effective_variation(),
+            AmshaVariation::HoraCancerLeoOnly
+        );
+        assert_eq!(plan.requests()[1].amsha, Amsha::D9);
+        assert_eq!(plan.requests().len(), 16);
+        assert!(plan.requests().iter().any(|request| request.amsha == Amsha::D60));
+    }
+
+    #[test]
+    fn resolve_amsha_plan_defaults_required_variations_when_not_selected() {
+        let selection = AmshaSelectionConfig::default();
+        let plan = resolve_amsha_plan(&selection, true, false, false).expect("plan should resolve");
+
+        assert_eq!(plan.requests().len(), SHADBALA_REQUIRED_AMSHAS.len());
+        assert_eq!(
+            plan.request_for(Amsha::D2).effective_variation(),
+            AmshaVariation::TraditionalParashari
+        );
     }
 }

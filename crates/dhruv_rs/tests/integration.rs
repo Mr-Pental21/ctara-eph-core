@@ -192,6 +192,7 @@ fn avastha_op_runs_for_single_graha() {
         riseset_config: Some(RiseSetConfig::default()),
         sankranti_config: Some(SankrantiConfig::default_lahiri()),
         node_policy: Some(NodeDignityPolicy::default()),
+        amsha_selection: None,
         target: AvasthaTarget::Graha(Graha::Surya),
     };
 

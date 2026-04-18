@@ -121,6 +121,10 @@ types for Rust callers, including:
   `calculate_bhava_bala`, `calculate_bav`, `calculate_sav`, and
   `calculate_all_bav`
 
+The standalone shadbala, vimsopaka, balas, and avastha surfaces now share
+`AmshaSelectionConfig`, and embedded `full_kundali(...).amshas` returns the
+resolved amsha union used by the call.
+
 For low-level engine, time, frame, and extension-trait surfaces that are not
 explicitly re-exported here, depend on the source crates directly:
 

@@ -131,6 +131,13 @@ The Go wrapper exposes the amsha surface through:
 - `FullKundaliConfig.AmshaSelection`
 - `FullKundaliConfig.AmshaScope`
 
+Standalone bala helpers take the same selection shape:
+
+- `(*Engine).ShadbalaForDate(..., amshaSelection)`
+- `(*Engine).VimsopakaForDate(..., amshaSelection)`
+- `(*Engine).BalasForDate(..., amshaSelection)`
+- `(*Engine).AvasthaForDate(..., amshaSelection)`
+
 `AmshaChart` now carries optional scoped sections directly:
 
 - `BhavaCusps`
@@ -141,4 +148,6 @@ The Go wrapper exposes the amsha surface through:
 
 For embedded amsha charts in `FullKundaliForDate`, the relevant root sections
 must also be enabled in the full-kundali config, or the wrapper caller must use
-a higher-level helper that promotes those dependencies.
+a higher-level helper that promotes those dependencies. Returned
+`FullKundaliResult.Amshas` now contains the resolved union of explicit
+`AmshaSelection` and any internally required bala/avastha amshas.

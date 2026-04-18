@@ -286,6 +286,7 @@ struct JyotishRequest {
     riseset_config: Option<RiseSetConfigInput>,
     sankranti_config: Option<SankrantiConfigInput>,
     full_kundali_config: Option<FullKundaliConfigInput>,
+    amsha_selection: Option<Vec<AmshaRequestInput>>,
     amsha_requests: Option<Vec<AmshaRequestInput>>,
     amsha_scope: Option<AmshaChartScopeInput>,
 }
@@ -3740,6 +3741,7 @@ fn handle_jyotish(resource: &ResourceArc<EngineResource>, request: JyotishReques
                 &bhava_config,
                 &to_riseset_config(state, request.riseset_config.as_ref())?,
                 &sankranti_config,
+                &to_amsha_selection(request.amsha_selection.as_deref())?,
             )
             .map(shadbala_json)
             .map_err(|err| map_error("search_error", err)),
@@ -3763,6 +3765,7 @@ fn handle_jyotish(resource: &ResourceArc<EngineResource>, request: JyotishReques
                     .ok_or_else(|| error_payload("invalid_request", "location is required"))?,
                 &sankranti_config,
                 parse_node_dignity_policy(request.node_dignity_policy.as_ref())?,
+                &to_amsha_selection(request.amsha_selection.as_deref())?,
             )
             .map(vimsopaka_json)
             .map_err(|err| map_error("search_error", err)),
@@ -3776,6 +3779,7 @@ fn handle_jyotish(resource: &ResourceArc<EngineResource>, request: JyotishReques
                 &to_riseset_config(state, request.riseset_config.as_ref())?,
                 &sankranti_config,
                 parse_node_dignity_policy(request.node_dignity_policy.as_ref())?,
+                &to_amsha_selection(request.amsha_selection.as_deref())?,
             )
             .map(|result| {
                 json!({
@@ -3796,6 +3800,7 @@ fn handle_jyotish(resource: &ResourceArc<EngineResource>, request: JyotishReques
                 &to_riseset_config(state, request.riseset_config.as_ref())?,
                 &sankranti_config,
                 parse_node_dignity_policy(request.node_dignity_policy.as_ref())?,
+                &to_amsha_selection(request.amsha_selection.as_deref())?,
             )
             .map(avastha_json)
             .map_err(|err| map_error("search_error", err)),

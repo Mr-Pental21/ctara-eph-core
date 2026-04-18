@@ -47,6 +47,7 @@ pub use dhruv_search::stationary_types::{
 pub use dhruv_search::{
     BalaBundleResult, DashaSelectionConfig, DashaSnapshotTime, FullKundaliConfig,
     FullKundaliResult, ShadbalaEntry, ShadbalaResult, VimsopakaEntry, VimsopakaResult,
+    avastha_for_date, avastha_for_graha,
     balas_for_date, bhavabala_for_bhava, bhavabala_for_date, full_kundali_for_date,
     shadbala_for_date, shadbala_for_graha, vimsopaka_for_date, vimsopaka_for_graha,
 };

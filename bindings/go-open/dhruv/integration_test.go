@@ -237,9 +237,18 @@ func TestSearchAndPanchangSmoke(t *testing.T) {
 
 	bhava := BhavaConfigDefault()
 	riseset := RiseSetConfigDefault()
-	if _, err := eng.ShadbalaForDate(eop, utc, loc, bhava, riseset, 0, true); err != nil {
-		t.Fatalf("ShadbalaForDate: %v", err)
-	}
+    if _, err := eng.ShadbalaForDate(
+        eop,
+        utc,
+        loc,
+        bhava,
+        riseset,
+        0,
+        true,
+        AmshaSelectionConfig{},
+    ); err != nil {
+        t.Fatalf("ShadbalaForDate: %v", err)
+    }
 	if _, err := eng.CharakarakaForDate(eop, utc, 0, true, CharakarakaSchemeMixedParashara); err != nil {
 		t.Fatalf("CharakarakaForDate: %v", err)
 	}

@@ -2320,6 +2320,7 @@ DhruvStatus dhruv_shadbala_for_date(
     const DhruvRiseSetConfig *riseset_config,
     uint32_t ayanamsha_system,
     uint8_t use_nutation,
+    const DhruvAmshaSelectionConfig *amsha_selection,
     DhruvShadbalaResult *out);
 
 /* --- Bhava Bala --- */
@@ -2346,6 +2347,7 @@ DhruvStatus dhruv_vimsopaka_for_date(
     uint32_t ayanamsha_system,
     uint8_t use_nutation,
     uint32_t node_dignity_policy,
+    const DhruvAmshaSelectionConfig *amsha_selection,
     DhruvVimsopakaResult *out);
 
 /* --- Bala Bundle --- */
@@ -2359,6 +2361,7 @@ DhruvStatus dhruv_balas_for_date(
     uint32_t ayanamsha_system,
     uint8_t use_nutation,
     uint32_t node_dignity_policy,
+    const DhruvAmshaSelectionConfig *amsha_selection,
     DhruvBalaBundleResult *out);
 
 /* --- Avastha --- */
@@ -2372,6 +2375,7 @@ DhruvStatus dhruv_avastha_for_date(
     uint32_t ayanamsha_system,
     uint8_t use_nutation,
     uint32_t node_dignity_policy,
+    const DhruvAmshaSelectionConfig *amsha_selection,
     DhruvAllGrahaAvasthas *out);
 
 /* --- Dasha --- */

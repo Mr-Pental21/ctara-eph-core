@@ -177,6 +177,11 @@ available:
 - `:sphutas`
 - `:special_lagnas`
 
+Standalone bala request maps also accept `:amsha_selection` with the same
+`[%{code: ..., variation: ...}]` shape used by `full_kundali`. Embedded
+`full_kundali` `:amshas` results now include the full resolved amsha union used
+internally by the call.
+
 ## Coverage
 
 Public modules included in this wrapper:

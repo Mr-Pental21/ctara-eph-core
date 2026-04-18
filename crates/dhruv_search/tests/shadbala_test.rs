@@ -7,9 +7,9 @@ use std::path::Path;
 use dhruv_core::{Engine, EngineConfig};
 use dhruv_search::sankranti_types::SankrantiConfig;
 use dhruv_search::{
-    FullKundaliConfig, GrahaPositionsConfig, balas_for_date, bhavabala_for_bhava,
-    bhavabala_for_date, shadbala_for_date, shadbala_for_graha, vimsopaka_for_date,
-    vimsopaka_for_graha,
+    AmshaSelectionConfig, FullKundaliConfig, GrahaPositionsConfig, balas_for_date,
+    bhavabala_for_bhava, bhavabala_for_date, shadbala_for_date, shadbala_for_graha,
+    vimsopaka_for_date, vimsopaka_for_graha,
 };
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
 use dhruv_vedic_base::{BhavaConfig, Graha, NodeDignityPolicy};
@@ -49,6 +49,10 @@ fn utc_2024_jan_15() -> UtcTime {
     UtcTime::new(2024, 1, 15, 12, 0, 0.0)
 }
 
+fn default_amsha_selection() -> AmshaSelectionConfig {
+    AmshaSelectionConfig::default()
+}
+
 #[test]
 fn shadbala_all_seven_valid() {
     let Some(engine) = load_engine() else { return };
@@ -67,6 +71,7 @@ fn shadbala_all_seven_valid() {
         &bhava_config,
         &rs_config,
         &aya_config,
+        &default_amsha_selection(),
     )
     .expect("shadbala_for_date should succeed");
 
@@ -111,6 +116,7 @@ fn shadbala_naisargika_matches_constants() {
         &bhava_config,
         &rs_config,
         &aya_config,
+        &default_amsha_selection(),
     )
     .expect("shadbala_for_date should succeed");
 
@@ -143,6 +149,7 @@ fn shadbala_single_graha_matches_all() {
         &bhava_config,
         &rs_config,
         &aya_config,
+        &default_amsha_selection(),
     )
     .expect("shadbala_for_date should succeed");
 
@@ -156,6 +163,7 @@ fn shadbala_single_graha_matches_all() {
             &bhava_config,
             &rs_config,
             &aya_config,
+            &default_amsha_selection(),
             graha,
         )
         .expect("shadbala_for_graha should succeed");
@@ -184,6 +192,7 @@ fn shadbala_rejects_rahu() {
         &bhava_config,
         &rs_config,
         &aya_config,
+        &default_amsha_selection(),
         Graha::Rahu,
     );
     assert!(result.is_err(), "shadbala should reject Rahu");
@@ -207,6 +216,7 @@ fn shadbala_rejects_ketu() {
         &bhava_config,
         &rs_config,
         &aya_config,
+        &default_amsha_selection(),
         Graha::Ketu,
     );
     assert!(result.is_err(), "shadbala should reject Ketu");
@@ -221,8 +231,16 @@ fn vimsopaka_all_nine_valid() {
     let aya_config = default_aya_config();
     let policy = NodeDignityPolicy::default();
 
-    let result = vimsopaka_for_date(&engine, &eop, &utc, &location, &aya_config, policy)
-        .expect("vimsopaka_for_date should succeed");
+    let result = vimsopaka_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &aya_config,
+        policy,
+        &default_amsha_selection(),
+    )
+    .expect("vimsopaka_for_date should succeed");
 
     for (i, entry) in result.entries.iter().enumerate() {
         assert_eq!(entry.graha.index() as usize, i, "graha ordering");
@@ -261,6 +279,7 @@ fn vimsopaka_rahu_valid() {
         &location,
         &aya_config,
         NodeDignityPolicy::SignLordBased,
+        &default_amsha_selection(),
         Graha::Rahu,
     )
     .expect("vimsopaka should accept Rahu");
@@ -276,14 +295,31 @@ fn vimsopaka_single_graha_matches_all() {
     let aya_config = default_aya_config();
     let policy = NodeDignityPolicy::default();
 
-    let all = vimsopaka_for_date(&engine, &eop, &utc, &location, &aya_config, policy)
-        .expect("vimsopaka_for_date should succeed");
+    let all = vimsopaka_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &aya_config,
+        policy,
+        &default_amsha_selection(),
+    )
+    .expect("vimsopaka_for_date should succeed");
 
     for i in 0..9 {
         let graha = dhruv_vedic_base::ALL_GRAHAS[i];
         let single =
-            vimsopaka_for_graha(&engine, &eop, &utc, &location, &aya_config, policy, graha)
-                .expect("vimsopaka_for_graha should succeed");
+            vimsopaka_for_graha(
+                &engine,
+                &eop,
+                &utc,
+                &location,
+                &aya_config,
+                policy,
+                &default_amsha_selection(),
+                graha,
+            )
+            .expect("vimsopaka_for_graha should succeed");
         assert!(
             (single.shodasavarga - all.entries[i].shodasavarga).abs() < 0.01,
             "single vs all mismatch for graha {i}"
@@ -306,6 +342,7 @@ fn vimsopaka_always_sama_policy() {
         &location,
         &aya_config,
         NodeDignityPolicy::AlwaysSama,
+        &default_amsha_selection(),
     )
     .expect("vimsopaka_for_date should succeed");
 
@@ -455,6 +492,7 @@ fn bala_bundle_includes_all_requested_surfaces() {
         &rs_config,
         &aya_config,
         NodeDignityPolicy::default(),
+        &default_amsha_selection(),
     )
     .expect("balas_for_date should succeed");
 
@@ -462,6 +500,118 @@ fn bala_bundle_includes_all_requested_surfaces() {
     assert_eq!(result.vimsopaka.entries.len(), 9);
     assert_eq!(result.bhavabala.entries.len(), 12);
     assert!(result.ashtakavarga.sav.total_points.iter().any(|&v| v > 0));
+}
+
+#[test]
+fn standalone_bala_surfaces_honor_d2_variation_selection() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = utc_2024_jan_15();
+    let location = new_delhi();
+    let bhava_config = BhavaConfig::default();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+    let default_selection = default_amsha_selection();
+    let mut varied_selection = AmshaSelectionConfig {
+        count: 1,
+        ..AmshaSelectionConfig::default()
+    };
+    varied_selection.codes[0] = 2;
+    varied_selection.variations[0] = 1;
+
+    let shadbala_default = shadbala_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &default_selection,
+    )
+    .expect("default shadbala");
+    let shadbala_varied = shadbala_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        &varied_selection,
+    )
+    .expect("varied shadbala");
+    assert!(
+        shadbala_default
+            .entries
+            .iter()
+            .zip(shadbala_varied.entries.iter())
+            .any(|(lhs, rhs)| (lhs.total_shashtiamsas - rhs.total_shashtiamsas).abs() > 0.0001),
+        "D2 variation should affect shadbala totals",
+    );
+
+    let vimsopaka_default = vimsopaka_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &aya_config,
+        NodeDignityPolicy::default(),
+        &default_selection,
+    )
+    .expect("default vimsopaka");
+    let vimsopaka_varied = vimsopaka_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &aya_config,
+        NodeDignityPolicy::default(),
+        &varied_selection,
+    )
+    .expect("varied vimsopaka");
+    assert!(
+        vimsopaka_default
+            .entries
+            .iter()
+            .zip(vimsopaka_varied.entries.iter())
+            .any(|(lhs, rhs)| (lhs.shadvarga - rhs.shadvarga).abs() > 0.0001),
+        "D2 variation should affect vimsopaka scores",
+    );
+
+    let bundle_default = balas_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        NodeDignityPolicy::default(),
+        &default_selection,
+    )
+    .expect("default bala bundle");
+    let bundle_varied = balas_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &rs_config,
+        &aya_config,
+        NodeDignityPolicy::default(),
+        &varied_selection,
+    )
+    .expect("varied bala bundle");
+    assert!(
+        bundle_default
+            .shadbala
+            .entries
+            .iter()
+            .zip(bundle_varied.shadbala.entries.iter())
+            .any(|(lhs, rhs)| (lhs.total_shashtiamsas - rhs.total_shashtiamsas).abs() > 0.0001),
+        "D2 variation should flow through bundled bala output",
+    );
 }
 
 #[test]

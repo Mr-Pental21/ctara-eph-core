@@ -361,6 +361,10 @@ Search:
 - `AmshaSelection`
 - `DashaConfig`
 
+`ShadbalaForDate`, `VimsopakaForDate`, `BalasForDate`, and `AvasthaForDate`
+accept `AmshaSelection`. Embedded `FullKundaliResult.Amshas` returns the
+resolved amsha union used by the call.
+
 `DashaSelectionConfig` supports per-system hierarchy depth through `MaxLevels`
 and optional full-kundali snapshots through `SnapshotTime`, typically with
 `TimeKind = DashaTimeUTC` plus `UTC`.

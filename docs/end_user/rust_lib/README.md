@@ -8,6 +8,11 @@ It includes:
   `avastha_op`, and `full_kundali`
 - re-exported config/result types used by end users
 
+Amsha variation control is shared across the high-level jyotish surfaces:
+standalone shadbala, vimsopaka, balas, and avastha calls accept
+`AmshaSelectionConfig`, and `full_kundali(...).amshas` returns the resolved
+union of explicit and internally required amshas.
+
 Start here:
 
 - [Rust Reference](./reference.md)

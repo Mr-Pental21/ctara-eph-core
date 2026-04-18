@@ -5419,8 +5419,8 @@ napi_value AmshaChartForDate(napi_env env, napi_callback_info info) {
 }
 
 napi_value ShadbalaForDate(napi_env env, napi_callback_info info) {
-    size_t argc = 8;
-    napi_value args[8];
+    size_t argc = 9;
+    napi_value args[9];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     if (argc < 6) {
         return MakeStatusResult(env, STATUS_INVALID_INPUT);
@@ -5446,8 +5446,10 @@ napi_value ShadbalaForDate(napi_env env, napi_callback_info info) {
 
     DhruvBhavaConfig bhava_cfg = dhruv_bhava_config_default();
     DhruvRiseSetConfig rise_cfg = dhruv_riseset_config_default();
+    DhruvAmshaSelectionConfig amsha_selection{};
     if (argc >= 7 && !ReadBhavaConfig(env, args[6], &bhava_cfg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
     if (argc >= 8 && !ReadRiseSetConfig(env, args[7], &rise_cfg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (argc >= 9 && !ReadAmshaSelectionConfig(env, args[8], &amsha_selection)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
     DhruvShadbalaResult out_result{};
 
     int32_t status = dhruv_shadbala_for_date(
@@ -5459,6 +5461,7 @@ napi_value ShadbalaForDate(napi_env env, napi_callback_info info) {
         &rise_cfg,
         ayanamsha,
         use_nutation ? 1 : 0,
+        &amsha_selection,
         &out_result);
 
     napi_value out = MakeStatusResult(env, status);
@@ -5529,8 +5532,8 @@ napi_value BhavaBalaForDate(napi_env env, napi_callback_info info) {
 }
 
 napi_value VimsopakaForDate(napi_env env, napi_callback_info info) {
-    size_t argc = 7;
-    napi_value args[7];
+    size_t argc = 8;
+    napi_value args[8];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     if (argc < 7) return MakeStatusResult(env, STATUS_INVALID_INPUT);
 
@@ -5549,6 +5552,8 @@ napi_value VimsopakaForDate(napi_env env, napi_callback_info info) {
         return MakeStatusResult(env, STATUS_INVALID_INPUT);
     }
 
+    DhruvAmshaSelectionConfig amsha_selection{};
+    if (argc >= 8 && !ReadAmshaSelectionConfig(env, args[7], &amsha_selection)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
     DhruvVimsopakaResult out_result{};
     int32_t status = dhruv_vimsopaka_for_date(
         static_cast<const DhruvEngineHandle*>(e_ptr),
@@ -5558,6 +5563,7 @@ napi_value VimsopakaForDate(napi_env env, napi_callback_info info) {
         ayanamsha,
         use_nutation ? 1 : 0,
         node_policy,
+        &amsha_selection,
         &out_result);
 
     napi_value out = MakeStatusResult(env, status);
@@ -5566,8 +5572,8 @@ napi_value VimsopakaForDate(napi_env env, napi_callback_info info) {
 }
 
 napi_value BalasForDate(napi_env env, napi_callback_info info) {
-    size_t argc = 9;
-    napi_value args[9];
+    size_t argc = 10;
+    napi_value args[10];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     if (argc < 9) return MakeStatusResult(env, STATUS_INVALID_INPUT);
 
@@ -5590,6 +5596,8 @@ napi_value BalasForDate(napi_env env, napi_callback_info info) {
         return MakeStatusResult(env, STATUS_INVALID_INPUT);
     }
 
+    DhruvAmshaSelectionConfig amsha_selection{};
+    if (argc >= 10 && !ReadAmshaSelectionConfig(env, args[9], &amsha_selection)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
     DhruvBalaBundleResult out_result{};
     int32_t status = dhruv_balas_for_date(
         static_cast<const DhruvEngineHandle*>(e_ptr),
@@ -5601,6 +5609,7 @@ napi_value BalasForDate(napi_env env, napi_callback_info info) {
         ayanamsha,
         use_nutation ? 1 : 0,
         node_policy,
+        &amsha_selection,
         &out_result);
 
     napi_value out = MakeStatusResult(env, status);
@@ -5617,8 +5626,8 @@ napi_value BalasForDate(napi_env env, napi_callback_info info) {
 }
 
 napi_value AvasthaForDate(napi_env env, napi_callback_info info) {
-    size_t argc = 9;
-    napi_value args[9];
+    size_t argc = 10;
+    napi_value args[10];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
     if (argc < 9) return MakeStatusResult(env, STATUS_INVALID_INPUT);
 
@@ -5641,6 +5650,8 @@ napi_value AvasthaForDate(napi_env env, napi_callback_info info) {
         return MakeStatusResult(env, STATUS_INVALID_INPUT);
     }
 
+    DhruvAmshaSelectionConfig amsha_selection{};
+    if (argc >= 10 && !ReadAmshaSelectionConfig(env, args[9], &amsha_selection)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
     DhruvAllGrahaAvasthas out_result{};
     int32_t status = dhruv_avastha_for_date(
         static_cast<const DhruvEngineHandle*>(e_ptr),
@@ -5652,6 +5663,7 @@ napi_value AvasthaForDate(napi_env env, napi_callback_info info) {
         ayanamsha,
         use_nutation ? 1 : 0,
         node_policy,
+        &amsha_selection,
         &out_result);
 
     napi_value out = MakeStatusResult(env, status);

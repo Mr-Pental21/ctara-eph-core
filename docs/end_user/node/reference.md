@@ -249,6 +249,11 @@ functions instead of introducing `*UtcSearch` variants.
 - `fullKundaliForDate`
 - `fullKundaliSummaryForDate`
 
+`shadbalaForDate`, `vimsopakaForDate`, `balasForDate`, and `avasthaForDate`
+accept an `amshaSelection` object aligned with `fullKundaliConfigDefault()`.
+Embedded `fullKundaliForDate(...).amshas` returns the resolved amsha union used
+internally by the call.
+
 `dasha.js` exports:
 
 - `DashaHierarchy`

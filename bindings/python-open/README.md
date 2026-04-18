@@ -83,6 +83,13 @@ Relevant full-kundali config fields:
 - `config.amsha_selection`
 - `config.amsha_scope`
 
+Standalone bala helpers also accept `amsha_selection`:
+
+- `ctara_dhruv.shadbala.shadbala`
+- `ctara_dhruv.shadbala.vimsopaka`
+- `ctara_dhruv.shadbala.balas`
+- `ctara_dhruv.shadbala.avastha`
+
 Optional amsha chart sections extracted by the wrapper:
 
 - `bhava_cusps`
@@ -135,7 +142,9 @@ kundali = full_kundali(
 
 For embedded amsha sections in `full_kundali`, remember that scoped amsha
 sub-sections depend on the corresponding root full-kundali sections also being
-enabled.
+enabled. Returned `kundali.amshas` charts now reflect the full resolved amsha
+set used by the call: explicit `config.amsha_selection` first, then any
+internally required amshas for shadbala, vimsopaka, or avastha.
 
 ## Low-Level Helper Coverage
 
