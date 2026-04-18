@@ -580,12 +580,24 @@ fn amsha_target_rashi(
         }
 
         // FEAW amshas: element-based fixed starting rashi
-        Amsha::D9 | Amsha::D60 => {
+        Amsha::D9 | Amsha::D27 | Amsha::D60 => {
             let start = match rashi_element(natal_rashi_idx) {
-                RashiElement::Fire => 0,  // Mesha
-                RashiElement::Earth => 9, // Makara
-                RashiElement::Air => 6,   // Tula
-                RashiElement::Water => 3, // Karka
+                RashiElement::Fire => 0, // Mesha
+                RashiElement::Earth => {
+                    if amsha == Amsha::D27 {
+                        3 // Karka
+                    } else {
+                        9 // Makara
+                    }
+                }
+                RashiElement::Air => 6, // Tula
+                RashiElement::Water => {
+                    if amsha == Amsha::D27 {
+                        9 // Makara
+                    } else {
+                        3 // Karka
+                    }
+                }
             };
             ((start + div_idx) % 12) as u8
         }
@@ -625,7 +637,6 @@ fn amsha_target_rashi(
         | Amsha::D21
         | Amsha::D22
         | Amsha::D25
-        | Amsha::D27
         | Amsha::D28
         | Amsha::D36
         | Amsha::D45
@@ -1138,6 +1149,42 @@ mod tests {
 
         assert_eq!(result.rashi_index, 3); // Karka
         assert!((result.degrees_in_rashi - 18.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn d27_uses_fire_start_for_mesha() {
+        let natal_lon = 0.6;
+        let result = amsha_rashi_info(natal_lon, Amsha::D27, None);
+
+        assert_eq!(result.rashi_index, 0); // Mesha
+        assert!((result.degrees_in_rashi - 16.2).abs() < 1e-10);
+    }
+
+    #[test]
+    fn d27_uses_earth_start_for_vrishabha() {
+        let natal_lon = 30.6;
+        let result = amsha_rashi_info(natal_lon, Amsha::D27, None);
+
+        assert_eq!(result.rashi_index, 3); // Karka
+        assert!((result.degrees_in_rashi - 16.2).abs() < 1e-10);
+    }
+
+    #[test]
+    fn d27_uses_air_start_for_mithuna() {
+        let natal_lon = 60.6;
+        let result = amsha_rashi_info(natal_lon, Amsha::D27, None);
+
+        assert_eq!(result.rashi_index, 6); // Tula
+        assert!((result.degrees_in_rashi - 16.2).abs() < 1e-10);
+    }
+
+    #[test]
+    fn d27_uses_water_start_for_karka() {
+        let natal_lon = 90.6;
+        let result = amsha_rashi_info(natal_lon, Amsha::D27, None);
+
+        assert_eq!(result.rashi_index, 9); // Makara
+        assert!((result.degrees_in_rashi - 16.2).abs() < 1e-10);
     }
 
     #[test]
