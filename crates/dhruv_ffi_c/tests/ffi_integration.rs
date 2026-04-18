@@ -2448,6 +2448,253 @@ fn kundali_test_params() -> (
     (utc, loc, bhava, rs)
 }
 
+fn d2_cancer_leo_amsha_selection() -> DhruvAmshaSelectionConfig {
+    let mut selection = DhruvAmshaSelectionConfig {
+        count: 1,
+        codes: [0; 40],
+        variations: [0; 40],
+    };
+    selection.codes[0] = 2;
+    selection.variations[0] = 1;
+    selection
+}
+
+fn d9_default_amsha_selection() -> DhruvAmshaSelectionConfig {
+    let mut selection = DhruvAmshaSelectionConfig {
+        count: 1,
+        codes: [0; 40],
+        variations: [0; 40],
+    };
+    selection.codes[0] = 9;
+    selection
+}
+
+#[test]
+fn ffi_bala_entrypoints_accept_amsha_selection() {
+    let (engine_ptr, eop_ptr) = match make_kundali_fixtures() {
+        Some(f) => f,
+        None => return,
+    };
+    let (utc, loc, bhava, rs) = kundali_test_params();
+    let d2_selection = d2_cancer_leo_amsha_selection();
+    let d9_selection = d9_default_amsha_selection();
+
+    let mut shadbala_default = std::mem::MaybeUninit::<DhruvShadbalaResult>::uninit();
+    let status = unsafe {
+        dhruv_shadbala_for_date(
+            engine_ptr as *const _,
+            eop_ptr as *const _,
+            &utc,
+            &loc,
+            &bhava,
+            &rs,
+            0,
+            1,
+            ptr::null(),
+            shadbala_default.as_mut_ptr(),
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    let shadbala_default = unsafe { shadbala_default.assume_init() };
+
+    let mut shadbala_override = std::mem::MaybeUninit::<DhruvShadbalaResult>::uninit();
+    let status = unsafe {
+        dhruv_shadbala_for_date(
+            engine_ptr as *const _,
+            eop_ptr as *const _,
+            &utc,
+            &loc,
+            &bhava,
+            &rs,
+            0,
+            1,
+            &d2_selection,
+            shadbala_override.as_mut_ptr(),
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    let shadbala_override = unsafe { shadbala_override.assume_init() };
+    assert!(
+        shadbala_default
+            .entries
+            .iter()
+            .zip(shadbala_override.entries.iter())
+            .any(|(lhs, rhs)| (lhs.total_shashtiamsas - rhs.total_shashtiamsas).abs() > 1e-6),
+        "D2 variation should change shadbala output"
+    );
+
+    let mut vimsopaka_default = std::mem::MaybeUninit::<DhruvVimsopakaResult>::uninit();
+    let status = unsafe {
+        dhruv_vimsopaka_for_date(
+            engine_ptr as *const _,
+            eop_ptr as *const _,
+            &utc,
+            &loc,
+            0,
+            1,
+            0,
+            ptr::null(),
+            vimsopaka_default.as_mut_ptr(),
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    let vimsopaka_default = unsafe { vimsopaka_default.assume_init() };
+
+    let mut vimsopaka_override = std::mem::MaybeUninit::<DhruvVimsopakaResult>::uninit();
+    let status = unsafe {
+        dhruv_vimsopaka_for_date(
+            engine_ptr as *const _,
+            eop_ptr as *const _,
+            &utc,
+            &loc,
+            0,
+            1,
+            0,
+            &d2_selection,
+            vimsopaka_override.as_mut_ptr(),
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    let vimsopaka_override = unsafe { vimsopaka_override.assume_init() };
+    assert!(
+        vimsopaka_default
+            .entries
+            .iter()
+            .zip(vimsopaka_override.entries.iter())
+            .any(|(lhs, rhs)| {
+                (lhs.shadvarga - rhs.shadvarga).abs() > 1e-6
+                    || (lhs.saptavarga - rhs.saptavarga).abs() > 1e-6
+                    || (lhs.dashavarga - rhs.dashavarga).abs() > 1e-6
+                    || (lhs.shodasavarga - rhs.shodasavarga).abs() > 1e-6
+            }),
+        "D2 variation should change vimsopaka output"
+    );
+
+    let mut balas_default = std::mem::MaybeUninit::<DhruvBalaBundleResult>::uninit();
+    let status = unsafe {
+        dhruv_balas_for_date(
+            engine_ptr as *const _,
+            eop_ptr as *const _,
+            &utc,
+            &loc,
+            &bhava,
+            &rs,
+            0,
+            1,
+            0,
+            ptr::null(),
+            balas_default.as_mut_ptr(),
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    let balas_default = unsafe { balas_default.assume_init() };
+
+    let mut balas_override = std::mem::MaybeUninit::<DhruvBalaBundleResult>::uninit();
+    let status = unsafe {
+        dhruv_balas_for_date(
+            engine_ptr as *const _,
+            eop_ptr as *const _,
+            &utc,
+            &loc,
+            &bhava,
+            &rs,
+            0,
+            1,
+            0,
+            &d2_selection,
+            balas_override.as_mut_ptr(),
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    let balas_override = unsafe { balas_override.assume_init() };
+    assert!(
+        balas_default
+            .shadbala
+            .entries
+            .iter()
+            .zip(balas_override.shadbala.entries.iter())
+            .any(|(lhs, rhs)| (lhs.total_shashtiamsas - rhs.total_shashtiamsas).abs() > 1e-6),
+        "D2 variation should change bundled shadbala output"
+    );
+
+    let mut avastha = std::mem::MaybeUninit::<DhruvAllGrahaAvasthas>::uninit();
+    let status = unsafe {
+        dhruv_avastha_for_date(
+            engine_ptr as *const _,
+            eop_ptr as *const _,
+            &utc,
+            &loc,
+            &bhava,
+            &rs,
+            0,
+            1,
+            0,
+            &d9_selection,
+            avastha.as_mut_ptr(),
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+    let avastha = unsafe { avastha.assume_init() };
+    for entry in &avastha.entries {
+        assert!(entry.baladi <= 4);
+        assert!(entry.jagradadi <= 2);
+        assert!(entry.deeptadi <= 8);
+        assert!(entry.lajjitadi <= 5);
+        assert!(entry.sayanadi.avastha <= 11);
+    }
+
+    unsafe { dhruv_engine_free(engine_ptr) };
+    unsafe { dhruv_eop_free(eop_ptr) };
+}
+
+#[test]
+fn ffi_full_kundali_amsha_selection_returns_resolved_union() {
+    let (engine_ptr, eop_ptr) = match make_kundali_fixtures() {
+        Some(f) => f,
+        None => return,
+    };
+    let (utc, loc, bhava, rs) = kundali_test_params();
+
+    let mut fk_config = dhruv_full_kundali_config_default();
+    fk_config.include_amshas = 1;
+    fk_config.include_shadbala = 1;
+    fk_config.include_vimsopaka = 1;
+    fk_config.amsha_selection = d2_cancer_leo_amsha_selection();
+
+    let mut result = std::mem::MaybeUninit::<DhruvFullKundaliResult>::uninit();
+    let status = unsafe {
+        dhruv_full_kundali_for_date(
+            engine_ptr as *const _,
+            eop_ptr as *const _,
+            &utc,
+            &loc,
+            &bhava,
+            &rs,
+            0,
+            1,
+            &fk_config,
+            result.as_mut_ptr(),
+        )
+    };
+    assert_eq!(status, DhruvStatus::Ok);
+
+    let result = unsafe { result.assume_init() };
+    assert_eq!(result.amshas_valid, 1);
+    assert_eq!(result.amshas_count, 16);
+    assert_eq!(result.amshas[0].amsha_code, 2);
+    assert_eq!(result.amshas[0].variation_code, 1);
+    assert!(
+        result.amshas[..result.amshas_count as usize]
+            .iter()
+            .any(|chart| chart.amsha_code == 60)
+    );
+
+    let mut result = result;
+    unsafe { dhruv_full_kundali_result_free(&mut result) };
+    unsafe { dhruv_engine_free(engine_ptr) };
+    unsafe { dhruv_eop_free(eop_ptr) };
+}
+
 #[test]
 fn ffi_full_kundali_result_free_double_free_same_pointer() {
     let (engine_ptr, eop_ptr) = match make_kundali_fixtures() {
