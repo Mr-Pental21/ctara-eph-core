@@ -629,6 +629,14 @@ fn amsha_target_rashi(
             };
             ((start + div_idx) % 12) as u8
         }
+        Amsha::D45 => {
+            let start: u16 = match rashi_modality(natal_rashi_idx) {
+                RashiModality::Chara => 0,       // Mesha
+                RashiModality::Sthira => 4,      // Simha
+                RashiModality::Dviswabhava => 8, // Dhanu
+            };
+            ((start + div_idx) % 12) as u8
+        }
 
         Amsha::D30 => unreachable!("D30 uses dedicated unequal-segment handling"),
 
@@ -645,7 +653,6 @@ fn amsha_target_rashi(
         | Amsha::D25
         | Amsha::D28
         | Amsha::D36
-        | Amsha::D45
         | Amsha::D48
         | Amsha::D50
         | Amsha::D54
@@ -1014,6 +1021,33 @@ mod tests {
         assert!(
             (result - 195.0).abs() < 0.01,
             "D40 even start: got {result}"
+        );
+    }
+
+    #[test]
+    fn d45_uses_movable_start_for_mesha() {
+        let result = amsha_longitude(1.0 / 3.0, Amsha::D45, None);
+        assert!(
+            (result - 15.0).abs() < 0.01,
+            "D45 movable start: got {result}"
+        );
+    }
+
+    #[test]
+    fn d45_uses_fixed_start_for_vrishabha() {
+        let result = amsha_longitude(30.0 + (1.0 / 3.0), Amsha::D45, None);
+        assert!(
+            (result - 135.0).abs() < 0.01,
+            "D45 fixed start: got {result}"
+        );
+    }
+
+    #[test]
+    fn d45_uses_dual_start_for_mithuna() {
+        let result = amsha_longitude(60.0 + (1.0 / 3.0), Amsha::D45, None);
+        assert!(
+            (result - 255.0).abs() < 0.01,
+            "D45 dual start: got {result}"
         );
     }
 
