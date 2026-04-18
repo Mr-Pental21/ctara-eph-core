@@ -207,7 +207,10 @@ Chart-related config maps:
 
 Standalone `:shadbala`, `:vimsopaka`, `:balas`, and `:avastha` jyotish request
 maps accept `:amsha_selection`. Embedded `:full_kundali` `:amshas` results now
-return the resolved amsha union used by the call.
+return the resolved amsha union used by the call. Use
+`CtaraDhruv.Math.amsha_variations/1` and
+`CtaraDhruv.Math.amsha_variations_many/1` to discover valid variation codes,
+names, labels, and defaults for each amsha.
 
 Time-based upagraha config map:
 

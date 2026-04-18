@@ -878,6 +878,16 @@ struct AmshaArgs {
     format: AmshaOutputFormat,
 }
 
+#[derive(clap::Args)]
+struct AmshaVariationsArgs {
+    /// Comma-separated amsha codes, e.g. D2,D9,D10
+    #[arg(long)]
+    amsha: String,
+    /// Output format for batch or scripting use
+    #[arg(long, value_enum, default_value_t = AmshaOutputFormat::Text)]
+    format: AmshaOutputFormat,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 enum AmshaOutputMode {
     Longitude,
@@ -2660,6 +2670,8 @@ enum Commands {
     Charakaraka(CharakarakaArgs),
     /// Transform a sidereal longitude through amsha (divisional chart) mappings
     Amsha(AmshaArgs),
+    /// List supported variation codes and names for one or more amshas
+    AmshaVariations(AmshaVariationsArgs),
     /// Compute amsha charts for a date and location
     AmshaChart(AmshaChartArgs),
     /// Compute Graha Avasthas (planetary states) for a date and location
@@ -8081,6 +8093,14 @@ fn main() {
                     std::process::exit(1);
                 });
         }
+        Commands::AmshaVariations(args) => {
+            let amshas = parse_amsha_list(&args.amsha);
+            let mut stdout = std::io::stdout();
+            write_amsha_variation_catalogs(&mut stdout, &amshas, args.format).unwrap_or_else(|e| {
+                eprintln!("Failed to write amsha variation output: {e}");
+                std::process::exit(1);
+            });
+        }
         Commands::AmshaChart(args) => {
             let utc = parse_utc(&args.date).unwrap_or_else(|e| {
                 eprintln!("{e}");
@@ -9117,7 +9137,7 @@ fn print_dasha_hierarchy(hierarchy: &dhruv_vedic_base::dasha::DashaHierarchy) {
 #[derive(Clone, Copy, Debug)]
 struct AmshaTransformRow {
     amsha: dhruv_vedic_base::Amsha,
-    variation: dhruv_vedic_base::AmshaVariation,
+    variation_code: u8,
     longitude: f64,
     info: dhruv_vedic_base::RashiInfo,
 }
@@ -9129,12 +9149,12 @@ fn compute_amsha_transform_rows(
     requests
         .iter()
         .map(|req| {
-            let variation = req.effective_variation();
-            let info = dhruv_vedic_base::amsha_rashi_info(lon, req.amsha, Some(variation));
+            let variation_code = req.effective_variation();
+            let info = dhruv_vedic_base::amsha_rashi_info(lon, req.amsha, Some(variation_code));
             let longitude = info.rashi_index as f64 * 30.0 + info.degrees_in_rashi;
             AmshaTransformRow {
                 amsha: req.amsha,
-                variation,
+                variation_code,
                 longitude,
                 info,
             }
@@ -9142,17 +9162,17 @@ fn compute_amsha_transform_rows(
         .collect()
 }
 
-fn format_amsha_variation_label(variation: dhruv_vedic_base::AmshaVariation) -> &'static str {
-    match variation {
-        dhruv_vedic_base::AmshaVariation::TraditionalParashari => "",
-        dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly => " (cancer-leo-only)",
-    }
+fn amsha_variation_name(amsha: dhruv_vedic_base::Amsha, variation_code: u8) -> &'static str {
+    dhruv_vedic_base::amsha_variation_info(amsha, variation_code)
+        .map(|info| info.name)
+        .unwrap_or("unknown")
 }
 
-fn amsha_variation_code(variation: dhruv_vedic_base::AmshaVariation) -> u8 {
-    match variation {
-        dhruv_vedic_base::AmshaVariation::TraditionalParashari => 0,
-        dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly => 1,
+fn format_amsha_variation_label(amsha: dhruv_vedic_base::Amsha, variation_code: u8) -> String {
+    if variation_code == dhruv_vedic_base::default_amsha_variation(amsha) {
+        String::new()
+    } else {
+        format!(" ({})", amsha_variation_name(amsha, variation_code))
     }
 }
 
@@ -9170,7 +9190,7 @@ fn write_amsha_transform_rows(
                         w,
                         "{}{}: {:.6}°",
                         row.amsha.name(),
-                        format_amsha_variation_label(row.variation),
+                        format_amsha_variation_label(row.amsha, row.variation_code),
                         row.longitude
                     )?;
                 }
@@ -9181,7 +9201,7 @@ fn write_amsha_transform_rows(
                         w,
                         "{}{}: {:?} {:02}°{:02}'{:05.2}\"  ({:.6}°)",
                         row.amsha.name(),
-                        format_amsha_variation_label(row.variation),
+                        format_amsha_variation_label(row.amsha, row.variation_code),
                         row.info.rashi,
                         row.info.dms.degrees,
                         row.info.dms.minutes,
@@ -9199,7 +9219,7 @@ fn write_amsha_transform_rows(
                         w,
                         "D{}\t{}\t{:.6}",
                         row.amsha.code(),
-                        amsha_variation_code(row.variation),
+                        row.variation_code,
                         row.longitude
                     )?;
                 }
@@ -9214,7 +9234,7 @@ fn write_amsha_transform_rows(
                         w,
                         "D{}\t{}\t{:.6}\t{}\t{}\t{:.6}\t{}\t{}\t{:.2}",
                         row.amsha.code(),
-                        amsha_variation_code(row.variation),
+                        row.variation_code,
                         row.longitude,
                         row.info.rashi_index,
                         row.info.rashi.name(),
@@ -9261,18 +9281,14 @@ fn parse_amsha_specs(s: &str) -> Vec<dhruv_vedic_base::AmshaRequest> {
             };
             let variation = match var_part {
                 None | Some("default") => None,
-                Some("cancer-leo-only") => {
-                    let v = dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly;
-                    if !v.is_applicable_to(amsha) {
-                        eprintln!("Variation 'cancer-leo-only' not applicable to D{code}");
+                Some(other) => match dhruv_vedic_base::amsha_variation_by_name(amsha, other) {
+                    Some(info) if info.is_default => None,
+                    Some(info) => Some(info.variation_code),
+                    None => {
+                        eprintln!("Unknown variation '{other}' for D{code}");
                         std::process::exit(1);
                     }
-                    Some(v)
-                }
-                Some(other) => {
-                    eprintln!("Unknown variation: {other}  (valid: default, cancer-leo-only)");
-                    std::process::exit(1);
-                }
+                },
             };
             match variation {
                 Some(v) => dhruv_vedic_base::AmshaRequest::with_variation(amsha, v),
@@ -9280,6 +9296,77 @@ fn parse_amsha_specs(s: &str) -> Vec<dhruv_vedic_base::AmshaRequest> {
             }
         })
         .collect()
+}
+
+fn parse_amsha_list(s: &str) -> Vec<dhruv_vedic_base::Amsha> {
+    s.split(',')
+        .map(|spec| {
+            let spec = spec.trim();
+            if spec.contains(':') {
+                eprintln!("amsha-variations expects D-codes only (for example D2,D9)");
+                std::process::exit(1);
+            }
+            let code: u16 = spec
+                .strip_prefix('D')
+                .or_else(|| spec.strip_prefix('d'))
+                .unwrap_or_else(|| {
+                    eprintln!("Amsha must start with D (e.g. D9): {spec}");
+                    std::process::exit(1);
+                })
+                .parse()
+                .unwrap_or_else(|_| {
+                    eprintln!("Invalid amsha number: {spec}");
+                    std::process::exit(1);
+                });
+            dhruv_vedic_base::Amsha::from_code(code).unwrap_or_else(|| {
+                eprintln!("Unknown amsha code: D{code}");
+                std::process::exit(1);
+            })
+        })
+        .collect()
+}
+
+fn write_amsha_variation_catalogs(
+    w: &mut impl std::io::Write,
+    amshas: &[dhruv_vedic_base::Amsha],
+    format: AmshaOutputFormat,
+) -> std::io::Result<()> {
+    match format {
+        AmshaOutputFormat::Text => {
+            for (index, amsha) in amshas.iter().enumerate() {
+                if index > 0 {
+                    writeln!(w)?;
+                }
+                writeln!(w, "{} (D{}):", amsha.name(), amsha.code())?;
+                for info in dhruv_vedic_base::amsha_variations(*amsha) {
+                    let default_suffix = if info.is_default { " [default]" } else { "" };
+                    writeln!(
+                        w,
+                        "  {:<3} {:<20} {}{}",
+                        info.variation_code, info.name, info.label, default_suffix
+                    )?;
+                }
+            }
+        }
+        AmshaOutputFormat::Tsv => {
+            writeln!(w, "amsha\tvariation\tname\tlabel\tis_default\tdescription")?;
+            for amsha in amshas {
+                for info in dhruv_vedic_base::amsha_variations(*amsha) {
+                    writeln!(
+                        w,
+                        "D{}\t{}\t{}\t{}\t{}\t{}",
+                        amsha.code(),
+                        info.variation_code,
+                        info.name,
+                        info.label,
+                        info.is_default as u8,
+                        info.description
+                    )?;
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 fn amsha_selection_from_requests(
@@ -9299,10 +9386,7 @@ fn amsha_selection_from_requests(
     };
     for (index, request) in requests.iter().enumerate() {
         selection.codes[index] = request.amsha.code();
-        selection.variations[index] = match request.effective_variation() {
-            dhruv_vedic_base::AmshaVariation::TraditionalParashari => 0,
-            dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly => 1,
-        };
+        selection.variations[index] = request.effective_variation();
     }
     selection
 }
@@ -9766,9 +9850,12 @@ fn write_amsha_chart(
     let graha_names = [
         "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu",
     ];
-    let variation_suffix = match chart.variation {
-        dhruv_vedic_base::AmshaVariation::TraditionalParashari => "",
-        dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly => " [cancer-leo-only]",
+    let variation_suffix = if chart.variation_code
+        == dhruv_vedic_base::default_amsha_variation(chart.amsha)
+    {
+        String::new()
+    } else {
+        format!(" [{}]", amsha_variation_name(chart.amsha, chart.variation_code))
     };
 
     writeln!(
@@ -10647,7 +10734,7 @@ mod tests {
             dhruv_vedic_base::AmshaRequest::new(dhruv_vedic_base::Amsha::D9),
             dhruv_vedic_base::AmshaRequest::with_variation(
                 dhruv_vedic_base::Amsha::D2,
-                dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly,
+                dhruv_vedic_base::D2_CANCER_LEO_ONLY_VARIATION_CODE,
             ),
         ];
         let selection = amsha_selection_from_requests(&requests);
@@ -10702,7 +10789,7 @@ mod tests {
             dhruv_vedic_base::AmshaRequest::new(dhruv_vedic_base::Amsha::D9),
             dhruv_vedic_base::AmshaRequest::with_variation(
                 dhruv_vedic_base::Amsha::D2,
-                dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly,
+                dhruv_vedic_base::D2_CANCER_LEO_ONLY_VARIATION_CODE,
             ),
         ];
         let rows = compute_amsha_transform_rows(45.0, &requests);

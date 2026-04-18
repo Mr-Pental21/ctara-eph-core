@@ -386,8 +386,15 @@ dhruv amsha --lon 45 --amsha D9,D10 --output rashi --format tsv
 
 Variation names:
 
-- `default`
+- `default` (all currently supported amshas)
 - `cancer-leo-only` (`D2` only)
+
+Variation names are resolved per amsha. Use `amsha-variations` to discover the
+valid names and numeric codes for a given amsha:
+
+```
+dhruv amsha-variations --amsha D2,D9
+```
 
 ### `amsha-chart` — Date-backed amsha charts
 

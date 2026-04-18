@@ -252,7 +252,8 @@ functions instead of introducing `*UtcSearch` variants.
 `shadbalaForDate`, `vimsopakaForDate`, `balasForDate`, and `avasthaForDate`
 accept an `amshaSelection` object aligned with `fullKundaliConfigDefault()`.
 Embedded `fullKundaliForDate(...).amshas` returns the resolved amsha union used
-internally by the call.
+internally by the call. Use `amshaVariations` and `amshaVariationsMany` to
+discover valid per-amsha variation codes and names.
 
 `dasha.js` exports:
 

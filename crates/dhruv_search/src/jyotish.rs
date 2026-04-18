@@ -23,16 +23,17 @@ use dhruv_vedic_base::vimsopaka::{
 };
 use dhruv_vedic_base::{
     ALL_GRAHAS, AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AmshaRequest,
-    AmshaVariation, ArudhaResult, AshtakavargaResult, AvasthaInputs, BhavaBalaBirthPeriod,
-    BhavaBalaInputs, BhavaBalaResult, BhavaConfig, BhavaResult, CharakarakaResult,
-    CharakarakaScheme, Dignity, DrishtiEntry, Graha, GrahaAvasthas, GrahaDrishtiMatrix,
-    KalaBalaInputs, LajjitadiInputs, LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS,
-    SayanadiInputs, SayanadiResult, ShadbalaInputs, TimeUpagrahaConfig, all_avasthas,
-    all_combustion_status, all_shadbalas_from_inputs, all_sphutas, amsha_longitude, baladi_avastha,
-    bhava_bala_entry, bhrigu_bindu, calculate_ashtakavarga, calculate_bhava_bala,
-    charakarakas_from_longitudes, compute_bhavas, deeptadi_avastha,
-    dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise, graha_drishti,
-    graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord, jagradadi_avastha,
+    ArudhaResult, AshtakavargaResult, AvasthaInputs, BhavaBalaBirthPeriod, BhavaBalaInputs,
+    BhavaBalaResult, BhavaConfig, BhavaResult, CharakarakaResult, CharakarakaScheme, Dignity,
+    DrishtiEntry, Graha, GrahaAvasthas,
+    GrahaDrishtiMatrix, KalaBalaInputs, LajjitadiInputs, LunarNode, NodeDignityPolicy, NodeMode,
+    SAPTA_GRAHAS, SayanadiInputs, SayanadiResult, ShadbalaInputs, TimeUpagrahaConfig,
+    all_avasthas, all_combustion_status, all_shadbalas_from_inputs, all_sphutas,
+    amsha_longitude, baladi_avastha, bhava_bala_entry, bhrigu_bindu,
+    calculate_ashtakavarga, calculate_bhava_bala, charakarakas_from_longitudes, compute_bhavas,
+    deeptadi_avastha, default_amsha_variation, dignity_in_rashi_with_positions, ghati_lagna,
+    ghatikas_since_sunrise, graha_drishti, graha_drishti_matrix, hora_lagna,
+    hora_lord as graha_hora_lord, is_valid_amsha_variation, jagradadi_avastha,
     jd_tdb_to_centuries, lagna_longitude_rad, lajjitadi_avastha, lost_planetary_war,
     lunar_node_deg_for_epoch_on_plane, masa_lord as graha_masa_lord, nakshatra_from_longitude,
     node_dignity_in_rashi, normalize_360, nth_rashi_from, pranapada_lagna, rashi_from_longitude,
@@ -95,7 +96,7 @@ const AVASTHA_REQUIRED_AMSHAS: [Amsha; 1] = [Amsha::D9];
 #[derive(Debug, Clone, Copy)]
 struct CachedAmshaGrahaData {
     amsha: Amsha,
-    variation: AmshaVariation,
+    variation_code: u8,
     longitudes: [f64; 9],
     rashi_indices: [u8; 9],
     division_indices: [u16; 9],
@@ -108,10 +109,10 @@ struct AmshaGrahaCache {
 
 impl AmshaGrahaCache {
     fn get(&self, request: AmshaRequest) -> Option<&CachedAmshaGrahaData> {
-        let variation = request.effective_variation();
+        let variation_code = request.effective_variation();
         self.entries
             .iter()
-            .find(|cached| cached.amsha == request.amsha && cached.variation == variation)
+            .find(|cached| cached.amsha == request.amsha && cached.variation_code == variation_code)
     }
 
     fn get_or_compute<F>(
@@ -122,11 +123,13 @@ impl AmshaGrahaCache {
     where
         F: FnOnce() -> Result<CachedAmshaGrahaData, SearchError>,
     {
-        let variation = request.effective_variation();
+        let variation_code = request.effective_variation();
         if let Some(index) = self
             .entries
             .iter()
-            .position(|cached| cached.amsha == request.amsha && cached.variation == variation)
+            .position(|cached| {
+                cached.amsha == request.amsha && cached.variation_code == variation_code
+            })
         {
             return Ok(&self.entries[index]);
         }
@@ -573,7 +576,7 @@ impl JyotishContext {
         let graha_lons = *self.graha_lons(engine, aya_config)?;
         let divisions = request.amsha.divisions() as f64;
         let division_span = 30.0 / divisions;
-        let variation = request.effective_variation();
+        let variation_code = request.effective_variation();
         self.amsha_graha_cache.get_or_compute(request, || {
             let mut longitudes = [0.0f64; 9];
             let mut rashi_indices = [0u8; 9];
@@ -584,14 +587,15 @@ impl JyotishContext {
                 let degrees_in_sign = normalized % 30.0;
                 let division_index = ((degrees_in_sign / division_span).floor() as u16)
                     .min(request.amsha.divisions().saturating_sub(1));
-                let amsha_lon = amsha_longitude(sidereal_lon, request.amsha, Some(variation));
+                let amsha_lon =
+                    amsha_longitude(sidereal_lon, request.amsha, Some(variation_code));
                 longitudes[i] = amsha_lon;
                 rashi_indices[i] = ((normalize_360(amsha_lon) / 30.0).floor() as u8).min(11);
                 division_indices[i] = division_index;
             }
             Ok(CachedAmshaGrahaData {
                 amsha: request.amsha,
-                variation,
+                variation_code,
                 longitudes,
                 rashi_indices,
                 division_indices,
@@ -3118,7 +3122,7 @@ fn make_amsha_entry(sidereal_lon: f64) -> AmshaEntry {
 fn transform_to_amsha_entry(
     sidereal_lon: f64,
     amsha: Amsha,
-    variation: Option<AmshaVariation>,
+    variation: Option<u8>,
 ) -> AmshaEntry {
     let amsha_lon = amsha_longitude(sidereal_lon, amsha, variation);
     make_amsha_entry(amsha_lon)
@@ -3130,8 +3134,7 @@ fn validate_amsha_requests(requests: &[AmshaRequest]) -> Result<(), SearchError>
         return Err(SearchError::InvalidConfig("amsha count exceeds maximum"));
     }
     for req in requests {
-        let v = req.effective_variation();
-        if !v.is_applicable_to(req.amsha) {
+        if !is_valid_amsha_variation(req.amsha, req.effective_variation()) {
             return Err(SearchError::InvalidConfig(
                 "variation not applicable to amsha",
             ));
@@ -3148,22 +3151,20 @@ fn decode_amsha_selection(sel: &AmshaSelectionConfig) -> Result<Vec<AmshaRequest
     for i in 0..sel.count as usize {
         let amsha = Amsha::from_code(sel.codes[i])
             .ok_or(SearchError::InvalidConfig("unknown amsha code"))?;
-        let variation = if sel.variations[i] == 0 {
+        let default_variation = default_amsha_variation(amsha);
+        let variation = if sel.variations[i] == default_variation {
             None
         } else {
-            let v = AmshaVariation::from_code(sel.variations[i])
-                .ok_or(SearchError::InvalidConfig("unknown variation code"))?;
-            if !v.is_applicable_to(amsha) {
+            let v = sel.variations[i];
+            if !is_valid_amsha_variation(amsha, v) {
                 return Err(SearchError::InvalidConfig(
-                    "variation not applicable to amsha",
+                    "unknown variation code for amsha",
                 ));
             }
             Some(v)
         };
         if let Some(existing) = requests.iter().find(|request| request.amsha == amsha) {
-            if existing.effective_variation()
-                != variation.unwrap_or(AmshaVariation::TraditionalParashari)
-            {
+            if existing.effective_variation() != variation.unwrap_or(default_variation) {
                 return Err(SearchError::InvalidConfig(
                     "conflicting amsha variation for amsha code",
                 ));
@@ -3317,7 +3318,7 @@ fn build_amsha_chart(
 
     AmshaChart {
         amsha,
-        variation: effective_variation,
+        variation_code: effective_variation,
         grahas,
         lagna,
         bhava_cusps,
@@ -3664,6 +3665,7 @@ fn all_special_lagna_lons(s: &AllSpecialLagnas) -> [f64; 8] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dhruv_vedic_base::DEFAULT_AMSHA_VARIATION_CODE;
 
     #[test]
     fn graha_to_body_mapping() {
@@ -3690,10 +3692,7 @@ mod tests {
         let decoded = decode_amsha_selection(&selection).expect("selection should decode");
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].amsha, Amsha::D9);
-        assert_eq!(
-            decoded[0].effective_variation(),
-            AmshaVariation::TraditionalParashari
-        );
+        assert_eq!(decoded[0].effective_variation(), DEFAULT_AMSHA_VARIATION_CODE);
     }
 
     #[test]
@@ -3725,10 +3724,7 @@ mod tests {
 
         let plan = resolve_amsha_plan(&selection, true, true, true).expect("plan should resolve");
         assert_eq!(plan.requests()[0].amsha, Amsha::D2);
-        assert_eq!(
-            plan.requests()[0].effective_variation(),
-            AmshaVariation::HoraCancerLeoOnly
-        );
+        assert_eq!(plan.requests()[0].effective_variation(), 1);
         assert_eq!(plan.requests()[1].amsha, Amsha::D9);
         assert_eq!(plan.requests().len(), 16);
         assert!(
@@ -3746,13 +3742,13 @@ mod tests {
         assert_eq!(plan.requests().len(), SHADBALA_REQUIRED_AMSHAS.len());
         assert_eq!(
             plan.request_for(Amsha::D2).effective_variation(),
-            AmshaVariation::TraditionalParashari
+            DEFAULT_AMSHA_VARIATION_CODE
         );
     }
 
     #[test]
     fn amsha_graha_cache_computes_once_per_request() {
-        let request = AmshaRequest::with_variation(Amsha::D2, AmshaVariation::HoraCancerLeoOnly);
+        let request = AmshaRequest::with_variation(Amsha::D2, 1);
         let mut cache = AmshaGrahaCache::default();
         let mut compute_calls = 0usize;
 
@@ -3761,7 +3757,7 @@ mod tests {
                 compute_calls += 1;
                 Ok(CachedAmshaGrahaData {
                     amsha: Amsha::D2,
-                    variation: AmshaVariation::HoraCancerLeoOnly,
+                    variation_code: 1,
                     longitudes: [0.0; 9],
                     rashi_indices: [0; 9],
                     division_indices: [0; 9],
@@ -3791,7 +3787,7 @@ mod tests {
             .get_or_compute(AmshaRequest::new(Amsha::D2), || {
                 Ok(CachedAmshaGrahaData {
                     amsha: Amsha::D2,
-                    variation: AmshaVariation::TraditionalParashari,
+                    variation_code: DEFAULT_AMSHA_VARIATION_CODE,
                     longitudes: [0.0; 9],
                     rashi_indices: [0; 9],
                     division_indices: [0; 9],
@@ -3801,11 +3797,11 @@ mod tests {
 
         cache
             .get_or_compute(
-                AmshaRequest::with_variation(Amsha::D2, AmshaVariation::HoraCancerLeoOnly),
+                AmshaRequest::with_variation(Amsha::D2, 1),
                 || {
                     Ok(CachedAmshaGrahaData {
                         amsha: Amsha::D2,
-                        variation: AmshaVariation::HoraCancerLeoOnly,
+                        variation_code: 1,
                         longitudes: [0.0; 9],
                         rashi_indices: [0; 9],
                         division_indices: [0; 9],
@@ -3823,8 +3819,8 @@ mod tests {
             AmshaRequest::new(Amsha::D9),
             AmshaRequest::new(Amsha::D9),
             AmshaRequest::new(Amsha::D2),
-            AmshaRequest::with_variation(Amsha::D2, AmshaVariation::HoraCancerLeoOnly),
-            AmshaRequest::with_variation(Amsha::D2, AmshaVariation::HoraCancerLeoOnly),
+            AmshaRequest::with_variation(Amsha::D2, 1),
+            AmshaRequest::with_variation(Amsha::D2, 1),
         ];
 
         let (unique, positions) = unique_amsha_requests_for_compute(&requests);
@@ -3832,14 +3828,8 @@ mod tests {
         assert_eq!(unique.len(), 3);
         assert_eq!(positions, vec![0, 0, 1, 2, 2]);
         assert_eq!(unique[0].amsha, Amsha::D9);
-        assert_eq!(
-            unique[1].effective_variation(),
-            AmshaVariation::TraditionalParashari
-        );
-        assert_eq!(
-            unique[2].effective_variation(),
-            AmshaVariation::HoraCancerLeoOnly
-        );
+        assert_eq!(unique[1].effective_variation(), DEFAULT_AMSHA_VARIATION_CODE);
+        assert_eq!(unique[2].effective_variation(), 1);
     }
 
     #[test]
@@ -3894,7 +3884,7 @@ mod tests {
             points: [0.0; 9],
         });
         cache.entries.push(CachedVimsopakaVargaData {
-            request: AmshaRequest::with_variation(Amsha::D2, AmshaVariation::HoraCancerLeoOnly),
+            request: AmshaRequest::with_variation(Amsha::D2, 1),
             node_policy: NodeDignityPolicy::SignLordBased,
             dignities: [Dignity::Sama; 9],
             points: [1.0; 9],

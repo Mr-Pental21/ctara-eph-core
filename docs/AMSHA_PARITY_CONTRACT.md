@@ -44,22 +44,19 @@ The standard shodashavarga subset is:
 
 ### Variations
 
-Canonical variation codes:
+Variation codes are amsha-scoped. The current catalog entries are:
 
-- `0`: `TraditionalParashari`
-- `1`: `HoraCancerLeoOnly`
+- `D2`: `0=default`, `1=cancer-leo-only`
+- every other supported amsha currently exposes `0=default`
 
-Applicability rules:
-
-- `TraditionalParashari` is valid for every supported amsha.
-- `HoraCancerLeoOnly` is valid only for `D2`.
+Use the amsha variation discovery helpers as the authoritative source for the
+valid codes, names, labels, and defaults for any given amsha.
 
 ### Request model
 
 Canonical request/config concepts:
 
 - `Amsha`
-- `AmshaVariation`
 - `AmshaRequest`
 - `AmshaChartScope`
 - `AmshaSelectionConfig`
@@ -124,11 +121,11 @@ All wrappers must preserve these semantics.
 
 ### Variation validation
 
-- `HoraCancerLeoOnly` with any amsha other than `D2`: reject.
+- Unknown variation code for the selected amsha: reject.
 
 ### Defaulting
 
-- Missing variation means `TraditionalParashari`.
+- Missing variation means that amsha's default variation.
 - Missing `AmshaChartScope` means all optional-section flags are false.
 
 ### Output guarantees
@@ -245,8 +242,7 @@ Use this checklist as the acceptance gate for any wrapper claiming amsha parity.
 - supports variation code `0`
 - supports variation code `1`
 - rejects unknown amsha codes
-- rejects unknown variation codes
-- rejects `HoraCancerLeoOnly` for non-`D2`
+- rejects unknown variation codes for the selected amsha
 - preserves the default variation behavior
 - preserves the optional-section scope behavior
 

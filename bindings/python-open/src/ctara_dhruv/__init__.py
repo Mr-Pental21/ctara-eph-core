@@ -104,6 +104,8 @@ from ctara_dhruv.types import (
     SankrantiEvent,
     GrahaEntry,
     GrahaPositions,
+    AmshaVariationCatalog,
+    AmshaVariationInfo,
     CharakarakaEntry,
     CharakarakaResult,
     DashaPeriod,
@@ -128,6 +130,16 @@ from ctara_dhruv.ayanamsha import ayanamsha, system_count, reference_plane_defau
 
 # Tara
 from ctara_dhruv.tara import TaraCatalog
+
+# Amsha
+from ctara_dhruv.amsha import (
+    amsha_longitude,
+    amsha_longitudes,
+    amsha_rashi_info,
+    amsha_chart_for_date,
+    amsha_variations,
+    amsha_variations_many,
+)
 
 # Dasha
 from ctara_dhruv.dasha import (
@@ -179,7 +191,7 @@ __all__ = [
     "StationaryEvent", "MaxSpeedEvent",
     "LunarPhaseEvent", "SankrantiEvent",
     "GrahaEntry", "GrahaPositions", "CharakarakaEntry", "CharakarakaResult", "DashaPeriod",
-    "DashaSnapshot",
+    "DashaSnapshot", "AmshaVariationCatalog", "AmshaVariationInfo",
     # Errors
     "DhruvError",
     # Functions
@@ -187,6 +199,8 @@ __all__ = [
     "cartesian_to_spherical",
     "utc_to_jd_tdb", "jd_tdb_to_utc", "nutation",
     "ayanamsha", "system_count", "reference_plane_default",
+    "amsha_longitude", "amsha_longitudes", "amsha_rashi_info", "amsha_chart_for_date",
+    "amsha_variations", "amsha_variations_many",
     "TaraCatalog",
     "DashaLevel", "DashaHierarchy",
     "dasha_selection_config_default", "dasha_variation_config_default",

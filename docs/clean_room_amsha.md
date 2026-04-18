@@ -110,10 +110,12 @@ FEAW starting rashi by amsha:
 
 ## Variations
 
-| Code | Name | Applicable To | Description |
-|------|------|---------------|-------------|
-| 0 | TraditionalParashari | All | Standard BPHS divisional mapping |
-| 1 | HoraCancerLeoOnly | D2 only | Hora with only Cancer/Leo as target rashis |
+Variation codes are resolved per amsha. Current catalog entries are:
+
+| Amsha | Code | Name | Description |
+|------|------|------|-------------|
+| All supported amshas | 0 | default | Standard BPHS divisional mapping for that amsha |
+| D2 | 1 | cancer-leo-only | Hora with only Cancer/Leo as target rashis |
 
 ## Validation
 

@@ -58,6 +58,12 @@ defmodule CtaraDhruv.Math do
   def upagraha_name(request),
     do: Native.call_util(&Native.util_run/1, Map.put(request, :op, :upagraha_name))
 
+  def amsha_variations(request),
+    do: Native.call_util(&Native.util_run/1, Map.put(request, :op, :amsha_variations))
+
+  def amsha_variations_many(request),
+    do: Native.call_util(&Native.util_run/1, Map.put(request, :op, :amsha_variations_many))
+
   def hora_lord(request),
     do: Native.call_util(&Native.util_run/1, Map.put(request, :op, :hora_lord))
 

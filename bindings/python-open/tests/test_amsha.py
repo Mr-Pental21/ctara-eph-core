@@ -54,6 +54,21 @@ class TestAmshaLongitudesBatch:
         for lon in results:
             assert 0 <= lon < 360
 
+    def test_amsha_variation_catalogs(self):
+        """Variation discovery should be scoped by amsha."""
+        from ctara_dhruv.amsha import amsha_variations, amsha_variations_many
+
+        d2 = amsha_variations(2)
+        assert d2.amsha_code == 2
+        assert d2.default_variation_code == 0
+        assert [entry.name for entry in d2.variations] == ["default", "cancer-leo-only"]
+
+        many = amsha_variations_many([2, 9])
+        assert len(many) == 2
+        assert many[1].amsha_code == 9
+        assert len(many[1].variations) == 1
+        assert many[1].variations[0].variation_code == 0
+
 
 @skip_no_kernels
 @skip_no_eop

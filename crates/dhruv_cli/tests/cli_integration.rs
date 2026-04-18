@@ -153,3 +153,15 @@ fn cli_kundali_amsha_output_includes_resolved_union() {
     assert!(stdout.contains("Hora (D2) [cancer-leo-only]:"));
     assert!(stdout.contains("Shashtiamsha (D60):"));
 }
+
+#[test]
+fn cli_amsha_variations_lists_catalogs() {
+    let output = run_cli(&["--no-config", "amsha-variations", "--amsha", "D2,D9"]);
+    assert_success(&output, "amsha-variations");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Hora (D2):"));
+    assert!(stdout.contains("0   default"));
+    assert!(stdout.contains("1   cancer-leo-only"));
+    assert!(stdout.contains("Navamsha (D9):"));
+}

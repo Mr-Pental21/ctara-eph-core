@@ -4,7 +4,7 @@ Open-source Go bindings for `ctara-dhruv-core`, implemented against the canonica
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=55`
+- ABI target: `DHRUV_API_VERSION=56`
 - Binding strategy: `cgo` over `crates/dhruv_ffi_c/include/dhruv.h`
 - Package: `ctara-dhruv-core/bindings/go-open/dhruv`
 - Distribution model: tagged Go module plus validated C ABI release artifacts
@@ -81,7 +81,7 @@ If runtime loading fails:
 ## Coverage
 
 Low-level coverage in `internal/cabi` maps all currently exported `dhruv_ffi_c`
-symbols from `dhruv.h` (ABI v51).
+symbols from `dhruv.h` (ABI v56).
 
 Dasha periods returned through the Go wrapper now carry `EntityName`, the exact
 canonical Sanskrit entity name alongside the numeric kind/index fields.
@@ -127,6 +127,8 @@ The Go wrapper exposes the amsha surface through:
 - `AmshaLongitude`
 - `AmshaRashiInfo`
 - `AmshaLongitudes`
+- `AmshaVariations`
+- `AmshaVariationsMany`
 - `(*Engine).AmshaChartForDate`
 - `FullKundaliConfig.AmshaSelection`
 - `FullKundaliConfig.AmshaScope`
@@ -150,4 +152,6 @@ For embedded amsha charts in `FullKundaliForDate`, the relevant root sections
 must also be enabled in the full-kundali config, or the wrapper caller must use
 a higher-level helper that promotes those dependencies. Returned
 `FullKundaliResult.Amshas` now contains the resolved union of explicit
-`AmshaSelection` and any internally required bala/avastha amshas.
+`AmshaSelection` and any internally required bala/avastha amshas. Numeric
+variation codes are amsha-scoped; use `AmshaVariations` or
+`AmshaVariationsMany` to discover valid codes and names for each amsha.

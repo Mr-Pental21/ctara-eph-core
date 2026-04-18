@@ -4,7 +4,7 @@ Open-source Node.js bindings for `ctara-dhruv-core`, implemented against the can
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=55`
+- ABI target: `DHRUV_API_VERSION=56`
 - Binding strategy: Native Node-API addon (`native/dhruv_node.cc`) over `crates/dhruv_ffi_c/include/dhruv.h`
 - Package: `bindings/node-open`
 - Primary distribution: npm package with bundled platform prebuilds from unified `vX.Y.Z` tags
@@ -118,6 +118,8 @@ The Node wrapper exposes the amsha family through:
 - `amshaRashiInfo`
 - `amshaLongitudes`
 - `amshaChartForDate`
+- `amshaVariations`
+- `amshaVariationsMany`
 - `fullKundaliConfigDefault`
 - `fullKundaliForDate`
 
@@ -143,7 +145,9 @@ the optional scoped arrays when requested and available:
 - `specialLagnas`
 
 Embedded `fullKundaliForDate(...).amshas` now returns the full resolved amsha
-union used by the call, not only the explicitly requested subset.
+union used by the call, not only the explicitly requested subset. Numeric
+`variationCode` values are interpreted per amsha; use `amshaVariations*` to
+discover the valid codes and names for a given amsha.
 
 ## Library Loading
 

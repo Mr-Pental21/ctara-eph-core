@@ -352,33 +352,103 @@ impl Amsha {
 // Variation
 // ---------------------------------------------------------------------------
 
-/// Variation selection for amsha computation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub enum AmshaVariation {
-    /// Traditional Parashari method (default for all amshas).
-    #[default]
-    TraditionalParashari,
-    /// D2 only: odd rashi -> Cancer/Leo, even rashi -> Leo/Cancer.
-    HoraCancerLeoOnly,
+pub type AmshaVariationCode = u8;
+
+/// Variation metadata for a specific amsha.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AmshaVariationInfo {
+    pub variation_code: AmshaVariationCode,
+    pub name: &'static str,
+    pub label: &'static str,
+    pub is_default: bool,
+    pub description: &'static str,
 }
 
-impl AmshaVariation {
-    /// Reverse lookup from variation code.
-    pub fn from_code(code: u8) -> Option<AmshaVariation> {
-        match code {
-            0 => Some(Self::TraditionalParashari),
-            1 => Some(Self::HoraCancerLeoOnly),
-            _ => None,
-        }
-    }
+/// Per-amsha variation catalog.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AmshaVariationCatalog {
+    pub amsha: Amsha,
+    pub default_variation_code: AmshaVariationCode,
+    pub variations: &'static [AmshaVariationInfo],
+}
 
-    /// Check if this variation is applicable to the given amsha.
-    pub fn is_applicable_to(self, amsha: Amsha) -> bool {
-        match self {
-            Self::TraditionalParashari => true,
-            Self::HoraCancerLeoOnly => amsha == Amsha::D2,
-        }
+pub const DEFAULT_AMSHA_VARIATION_CODE: AmshaVariationCode = 0;
+pub const D2_CANCER_LEO_ONLY_VARIATION_CODE: AmshaVariationCode = 1;
+
+const DEFAULT_VARIATION_INFOS: [AmshaVariationInfo; 1] = [AmshaVariationInfo {
+    variation_code: DEFAULT_AMSHA_VARIATION_CODE,
+    name: "default",
+    label: "Traditional Parashari",
+    is_default: true,
+    description: "Traditional Parashari method.",
+}];
+
+const D2_VARIATION_INFOS: [AmshaVariationInfo; 2] = [
+    AmshaVariationInfo {
+        variation_code: DEFAULT_AMSHA_VARIATION_CODE,
+        name: "default",
+        label: "Traditional Parashari",
+        is_default: true,
+        description: "Traditional Parashari hora method.",
+    },
+    AmshaVariationInfo {
+        variation_code: D2_CANCER_LEO_ONLY_VARIATION_CODE,
+        name: "cancer-leo-only",
+        label: "Cancer/Leo Only",
+        is_default: false,
+        description: "Odd rashi map to Cancer/Leo and even rashi map to Leo/Cancer.",
+    },
+];
+
+/// Return all supported variations for an amsha.
+pub fn amsha_variations(amsha: Amsha) -> &'static [AmshaVariationInfo] {
+    match amsha {
+        Amsha::D2 => &D2_VARIATION_INFOS,
+        _ => &DEFAULT_VARIATION_INFOS,
     }
+}
+
+/// Return the variation catalog for an amsha.
+pub fn amsha_variation_catalog(amsha: Amsha) -> AmshaVariationCatalog {
+    AmshaVariationCatalog {
+        amsha,
+        default_variation_code: DEFAULT_AMSHA_VARIATION_CODE,
+        variations: amsha_variations(amsha),
+    }
+}
+
+/// Resolve amsha-specific variation metadata from a variation code.
+pub fn amsha_variation_info(
+    amsha: Amsha,
+    variation_code: AmshaVariationCode,
+) -> Option<&'static AmshaVariationInfo> {
+    amsha_variations(amsha)
+        .iter()
+        .find(|info| info.variation_code == variation_code)
+}
+
+/// Resolve amsha-specific variation metadata from its stable name.
+pub fn amsha_variation_by_name(
+    amsha: Amsha,
+    name: &str,
+) -> Option<&'static AmshaVariationInfo> {
+    amsha_variations(amsha)
+        .iter()
+        .find(|info| info.name.eq_ignore_ascii_case(name))
+}
+
+/// Return the default variation code for an amsha.
+pub fn default_amsha_variation(amsha: Amsha) -> AmshaVariationCode {
+    amsha_variations(amsha)
+        .iter()
+        .find(|info| info.is_default)
+        .map(|info| info.variation_code)
+        .unwrap_or(DEFAULT_AMSHA_VARIATION_CODE)
+}
+
+/// Check whether a variation code is valid for the given amsha.
+pub fn is_valid_amsha_variation(amsha: Amsha, variation_code: AmshaVariationCode) -> bool {
+    amsha_variation_info(amsha, variation_code).is_some()
 }
 
 // ---------------------------------------------------------------------------
@@ -389,7 +459,7 @@ impl AmshaVariation {
 #[derive(Debug, Clone, Copy)]
 pub struct AmshaRequest {
     pub amsha: Amsha,
-    pub variation: Option<AmshaVariation>,
+    pub variation: Option<AmshaVariationCode>,
 }
 
 impl AmshaRequest {
@@ -402,7 +472,7 @@ impl AmshaRequest {
     }
 
     /// Create a request with a specific variation.
-    pub fn with_variation(amsha: Amsha, variation: AmshaVariation) -> Self {
+    pub fn with_variation(amsha: Amsha, variation: AmshaVariationCode) -> Self {
         Self {
             amsha,
             variation: Some(variation),
@@ -410,9 +480,8 @@ impl AmshaRequest {
     }
 
     /// Resolve None to the default variation.
-    pub fn effective_variation(&self) -> AmshaVariation {
-        self.variation
-            .unwrap_or(AmshaVariation::TraditionalParashari)
+    pub fn effective_variation(&self) -> AmshaVariationCode {
+        self.variation.unwrap_or(default_amsha_variation(self.amsha))
     }
 }
 
@@ -429,7 +498,7 @@ impl AmshaRequest {
 /// * `div_idx` - 0-based division index within the rashi
 fn amsha_target_rashi(
     amsha: Amsha,
-    variation: AmshaVariation,
+    variation_code: AmshaVariationCode,
     natal_rashi_idx: u8,
     div_idx: u16,
 ) -> u8 {
@@ -438,8 +507,8 @@ fn amsha_target_rashi(
         Amsha::D1 => natal_rashi_idx,
 
         // D2: two variations
-        Amsha::D2 => match variation {
-            AmshaVariation::HoraCancerLeoOnly => {
+        Amsha::D2 => match variation_code {
+            D2_CANCER_LEO_ONLY_VARIATION_CODE => {
                 // Odd rashi (1-based 1,3,5,7,9,11 = 0-based 0,2,4,6,8,10)
                 let is_odd_rashi = natal_rashi_idx.is_multiple_of(2);
                 if is_odd_rashi {
@@ -450,8 +519,12 @@ fn amsha_target_rashi(
                     3 // Cancer
                 }
             }
-            AmshaVariation::TraditionalParashari => {
+            DEFAULT_AMSHA_VARIATION_CODE => {
                 // Zodiac cycling: start = (rashi * 2) % 12
+                let start = (natal_rashi_idx as u16 * 2) % 12;
+                ((start + div_idx) % 12) as u8
+            }
+            _ => {
                 let start = (natal_rashi_idx as u16 * 2) % 12;
                 ((start + div_idx) % 12) as u8
             }
@@ -553,8 +626,14 @@ fn increment_start(natal_rashi_idx: u8, div_idx: u16, even_offset: u16) -> u8 {
 /// Transform a sidereal longitude through an amsha division.
 ///
 /// Returns amsha-transformed sidereal longitude in [0, 360).
-pub fn amsha_longitude(sidereal_lon: f64, amsha: Amsha, variation: Option<AmshaVariation>) -> f64 {
-    let variation = variation.unwrap_or(AmshaVariation::TraditionalParashari);
+pub fn amsha_longitude(
+    sidereal_lon: f64,
+    amsha: Amsha,
+    variation: Option<AmshaVariationCode>,
+) -> f64 {
+    let variation = variation
+        .filter(|variation_code| is_valid_amsha_variation(amsha, *variation_code))
+        .unwrap_or_else(|| default_amsha_variation(amsha));
 
     // D1: identity
     if amsha == Amsha::D1 {
@@ -602,7 +681,7 @@ pub fn amsha_from_rashi_position(
     rashi_index: u8,
     degrees_in_rashi: f64,
     amsha: Amsha,
-    variation: Option<AmshaVariation>,
+    variation: Option<AmshaVariationCode>,
 ) -> RashiInfo {
     let lon = rashi_position_to_longitude(rashi_index, degrees_in_rashi);
     amsha_rashi_info(lon, amsha, variation)
@@ -612,7 +691,7 @@ pub fn amsha_from_rashi_position(
 pub fn amsha_rashi_info(
     sidereal_lon: f64,
     amsha: Amsha,
-    variation: Option<AmshaVariation>,
+    variation: Option<AmshaVariationCode>,
 ) -> RashiInfo {
     let amsha_lon = amsha_longitude(sidereal_lon, amsha, variation);
     rashi_from_longitude(amsha_lon)
@@ -721,7 +800,7 @@ mod tests {
         // target = 3 (Karka)
         // scaled = 10/15 * 30 = 20.0
         // result = 90 + 20 = 110.0
-        let result = amsha_longitude(10.0, Amsha::D2, Some(AmshaVariation::HoraCancerLeoOnly));
+        let result = amsha_longitude(10.0, Amsha::D2, Some(D2_CANCER_LEO_ONLY_VARIATION_CODE));
         assert!(
             (result - 110.0).abs() < 0.01,
             "D2 cancer-leo odd: got {result}"
@@ -732,7 +811,7 @@ mod tests {
         // div_idx = 0, target = 4 (Simha)
         // scaled = 10/15 * 30 = 20.0
         // result = 120 + 20 = 140.0
-        let result2 = amsha_longitude(40.0, Amsha::D2, Some(AmshaVariation::HoraCancerLeoOnly));
+        let result2 = amsha_longitude(40.0, Amsha::D2, Some(D2_CANCER_LEO_ONLY_VARIATION_CODE));
         assert!(
             (result2 - 140.0).abs() < 0.01,
             "D2 cancer-leo even: got {result2}"
@@ -863,10 +942,7 @@ mod tests {
     #[test]
     fn amsha_request_default_variation() {
         let req = AmshaRequest::new(Amsha::D9);
-        assert_eq!(
-            req.effective_variation(),
-            AmshaVariation::TraditionalParashari
-        );
+        assert_eq!(req.effective_variation(), DEFAULT_AMSHA_VARIATION_CODE);
     }
 
     #[test]
@@ -884,27 +960,42 @@ mod tests {
     }
 
     #[test]
-    fn variation_from_code_valid() {
+    fn variation_catalog_lookup() {
         assert_eq!(
-            AmshaVariation::from_code(0),
-            Some(AmshaVariation::TraditionalParashari)
+            amsha_variation_info(Amsha::D9, DEFAULT_AMSHA_VARIATION_CODE)
+                .map(|info| info.name),
+            Some("default")
         );
         assert_eq!(
-            AmshaVariation::from_code(1),
-            Some(AmshaVariation::HoraCancerLeoOnly)
+            amsha_variation_info(Amsha::D2, D2_CANCER_LEO_ONLY_VARIATION_CODE)
+                .map(|info| info.name),
+            Some("cancer-leo-only")
         );
     }
 
     #[test]
-    fn variation_from_code_invalid() {
-        assert_eq!(AmshaVariation::from_code(99), None);
+    fn variation_lookup_invalid_for_amsha() {
+        assert_eq!(amsha_variation_info(Amsha::D9, 99), None);
+        assert_eq!(
+            amsha_variation_info(Amsha::D9, D2_CANCER_LEO_ONLY_VARIATION_CODE),
+            None
+        );
     }
 
     #[test]
     fn variation_applicability() {
-        assert!(AmshaVariation::TraditionalParashari.is_applicable_to(Amsha::D9));
-        assert!(AmshaVariation::HoraCancerLeoOnly.is_applicable_to(Amsha::D2));
-        assert!(!AmshaVariation::HoraCancerLeoOnly.is_applicable_to(Amsha::D9));
+        assert!(is_valid_amsha_variation(
+            Amsha::D9,
+            DEFAULT_AMSHA_VARIATION_CODE
+        ));
+        assert!(is_valid_amsha_variation(
+            Amsha::D2,
+            D2_CANCER_LEO_ONLY_VARIATION_CODE
+        ));
+        assert!(!is_valid_amsha_variation(
+            Amsha::D9,
+            D2_CANCER_LEO_ONLY_VARIATION_CODE
+        ));
     }
 
     #[test]

@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 55`
+**ABI version:** `DHRUV_API_VERSION = 56`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -1628,7 +1628,7 @@ Direct amsha entry points:
 DhruvStatus dhruv_amsha_longitude(
     double    sidereal_lon,     // sidereal longitude in degrees
     uint16_t  amsha_code,       // D-number (1, 2, 3, ... 144)
-    uint8_t   variation_code,   // 0=TraditionalParashari, 1=HoraCancerLeoOnly
+    uint8_t   variation_code,   // interpreted in the namespace of amsha_code
     double*   out
 );
 ```
@@ -1693,8 +1693,40 @@ struct DhruvAmshaChartScope {
 struct DhruvAmshaSelectionConfig {
     uint8_t  count;                          // 0..=40
     uint16_t codes[DHRUV_MAX_AMSHA_REQUESTS];
-    uint8_t  variations[DHRUV_MAX_AMSHA_REQUESTS];
+    uint8_t  variations[DHRUV_MAX_AMSHA_REQUESTS]; // each value resolved against codes[i]
 };
+
+struct DhruvAmshaVariationInfo {
+    uint16_t amsha_code;
+    uint8_t  variation_code;
+    char     name[DHRUV_AMSHA_VARIATION_NAME_CAPACITY];
+    char     label[DHRUV_AMSHA_VARIATION_LABEL_CAPACITY];
+    uint8_t  is_default;
+    char     description[DHRUV_AMSHA_VARIATION_DESCRIPTION_CAPACITY];
+};
+
+struct DhruvAmshaVariationList {
+    uint16_t                 amsha_code;
+    uint8_t                  default_variation_code;
+    uint8_t                  count;
+    DhruvAmshaVariationInfo  variations[DHRUV_MAX_AMSHA_VARIATIONS];
+};
+
+struct DhruvAmshaVariationCatalogs {
+    uint32_t                count;
+    DhruvAmshaVariationList lists[DHRUV_MAX_AMSHA_REQUESTS];
+};
+
+DhruvStatus dhruv_amsha_variations(
+    uint16_t amsha_code,
+    DhruvAmshaVariationList *out
+);
+
+DhruvStatus dhruv_amsha_variations_many(
+    const uint16_t *amsha_codes,
+    uint32_t count,
+    DhruvAmshaVariationCatalogs *out
+);
 ```
 
 Full-kundali embeds amsha configuration here:
@@ -1712,10 +1744,9 @@ and returns amsha charts here:
 Validation notes:
 
 - unknown `amsha_code` returns `DHRUV_STATUS_INVALID_SEARCH_CONFIG`
-- unknown `variation_code` returns `DHRUV_STATUS_INVALID_SEARCH_CONFIG`
-- `HoraCancerLeoOnly` is valid only for `D2`
+- unknown `variation_code` for that amsha returns `DHRUV_STATUS_INVALID_SEARCH_CONFIG`
 - `variation_codes == NULL` in `dhruv_amsha_longitudes` means all requests use
-  `TraditionalParashari`
+  the default variation for each requested amsha
 
 Dependency notes for full-kundali amsha scope:
 

@@ -922,6 +922,21 @@ type AmshaChart struct {
 	SpecialLagnasValid bool
 }
 
+type AmshaVariationInfo struct {
+	AmshaCode     uint16
+	VariationCode uint8
+	Name          string
+	Label         string
+	IsDefault     bool
+	Description   string
+}
+
+type AmshaVariationCatalog struct {
+	AmshaCode             uint16
+	DefaultVariationCode  uint8
+	Variations            []AmshaVariationInfo
+}
+
 type SthanaBalaBreakdown struct {
 	Uchcha       float64
 	Saptavargaja float64

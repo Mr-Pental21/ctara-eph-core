@@ -2470,6 +2470,53 @@ fn d9_default_amsha_selection() -> DhruvAmshaSelectionConfig {
 }
 
 #[test]
+fn ffi_amsha_variation_catalogs_are_amsha_scoped() {
+    let mut d2 = DhruvAmshaVariationList {
+        amsha_code: 0,
+        default_variation_code: 0,
+        count: 0,
+        variations: [DhruvAmshaVariationInfo {
+            amsha_code: 0,
+            variation_code: 0,
+            name: [0; DHRUV_AMSHA_VARIATION_NAME_CAPACITY as usize],
+            label: [0; DHRUV_AMSHA_VARIATION_LABEL_CAPACITY as usize],
+            is_default: 0,
+            description: [0; DHRUV_AMSHA_VARIATION_DESCRIPTION_CAPACITY as usize],
+        }; DHRUV_MAX_AMSHA_VARIATIONS as usize],
+    };
+    let status = unsafe { dhruv_amsha_variations(2, &mut d2) };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(d2.amsha_code, 2);
+    assert_eq!(d2.default_variation_code, 0);
+    assert_eq!(d2.count, 2);
+    assert_eq!(d2.variations[1].variation_code, 1);
+
+    let mut many = DhruvAmshaVariationCatalogs {
+        count: 0,
+        lists: [DhruvAmshaVariationList {
+            amsha_code: 0,
+            default_variation_code: 0,
+            count: 0,
+            variations: [DhruvAmshaVariationInfo {
+                amsha_code: 0,
+                variation_code: 0,
+                name: [0; DHRUV_AMSHA_VARIATION_NAME_CAPACITY as usize],
+                label: [0; DHRUV_AMSHA_VARIATION_LABEL_CAPACITY as usize],
+                is_default: 0,
+                description: [0; DHRUV_AMSHA_VARIATION_DESCRIPTION_CAPACITY as usize],
+            }; DHRUV_MAX_AMSHA_VARIATIONS as usize],
+        }; DHRUV_MAX_AMSHA_REQUESTS as usize],
+    };
+    let amsha_codes = [2u16, 9u16];
+    let status = unsafe { dhruv_amsha_variations_many(amsha_codes.as_ptr(), 2, &mut many) };
+    assert_eq!(status, DhruvStatus::Ok);
+    assert_eq!(many.count, 2);
+    assert_eq!(many.lists[1].amsha_code, 9);
+    assert_eq!(many.lists[1].count, 1);
+    assert_eq!(many.lists[1].variations[0].variation_code, 0);
+}
+
+#[test]
 fn ffi_bala_entrypoints_accept_amsha_selection() {
     let (engine_ptr, eop_ptr) = match make_kundali_fixtures() {
         Some(f) => f,

@@ -153,6 +153,13 @@ Dedicated amsha requests:
   })
 ```
 
+Variation discovery helpers live on `CtaraDhruv.Math`:
+
+```elixir
+{:ok, d2_catalog} = CtaraDhruv.Math.amsha_variations(%{amsha_code: 2})
+{:ok, catalogs} = CtaraDhruv.Math.amsha_variations_many(%{amsha_codes: [2, 9]})
+```
+
 Embedded amsha configuration in `full_kundali`:
 
 ```elixir
@@ -180,7 +187,8 @@ available:
 Standalone bala request maps also accept `:amsha_selection` with the same
 `[%{code: ..., variation: ...}]` shape used by `full_kundali`. Embedded
 `full_kundali` `:amshas` results now include the full resolved amsha union used
-internally by the call.
+internally by the call. Variation codes remain numeric on input, but each code
+is now interpreted in the namespace of that request's amsha code.
 
 ## Coverage
 

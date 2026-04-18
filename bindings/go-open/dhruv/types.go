@@ -2,7 +2,7 @@ package dhruv
 
 import "ctara-dhruv-core/bindings/go-open/internal/cabi"
 
-const ExpectedAPIVersion = 55
+const ExpectedAPIVersion = 56
 
 const (
 	PathCapacity          = cabi.PathCapacity
@@ -305,7 +305,9 @@ type (
 	SarvaAshtakavarga  = cabi.SarvaAshtakavarga
 	AshtakavargaResult = cabi.AshtakavargaResult
 
-	AmshaEntry      = cabi.AmshaEntry
-	AmshaChartScope = cabi.AmshaChartScope
-	AmshaChart      = cabi.AmshaChart
+	AmshaEntry            = cabi.AmshaEntry
+	AmshaChartScope       = cabi.AmshaChartScope
+	AmshaChart            = cabi.AmshaChart
+	AmshaVariationInfo    = cabi.AmshaVariationInfo
+	AmshaVariationCatalog = cabi.AmshaVariationCatalog
 )

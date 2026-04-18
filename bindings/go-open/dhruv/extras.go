@@ -412,6 +412,16 @@ func AmshaLongitudes(siderealLon float64, amshaCodes []uint16, variationCodes []
 	return out, wrapStatus("amsha_longitudes", st, prior)
 }
 
+func AmshaVariations(amshaCode uint16) (AmshaVariationCatalog, error) {
+	out, st := cabi.AmshaVariations(amshaCode)
+	return out, statusErr("amsha_variations", st)
+}
+
+func AmshaVariationsMany(amshaCodes []uint16) ([]AmshaVariationCatalog, error) {
+	out, st, prior := cabi.AmshaVariationsMany(amshaCodes)
+	return out, wrapStatus("amsha_variations_many", st, prior)
+}
+
 func (e *Engine) AmshaChartForDate(ep *EOP, utc UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, amshaCode uint16, variationCode uint8, scope AmshaChartScope) (AmshaChart, error) {
 	out, st := cabi.AmshaChartForDate(e.h, ep.h, utc, loc, bhavaCfg, riseCfg, ayanamshaSystem, useNutation, amshaCode, variationCode, scope)
 	return out, statusErr("amsha_chart_for_date", st)

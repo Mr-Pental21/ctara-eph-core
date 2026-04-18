@@ -938,7 +938,7 @@ class AmshaChart:
     """Single amsha (divisional) chart result.
 
     ``amsha_code``: D-number of this chart.
-    ``variation_code``: 0=default, 1=HoraCancerLeoOnly.
+    ``variation_code``: amsha-specific variation code; 0=default for that amsha.
     """
 
     amsha_code: int
@@ -950,6 +950,27 @@ class AmshaChart:
     upagrahas: Optional[list[AmshaEntry]] = None
     sphutas: Optional[list[AmshaEntry]] = None
     special_lagnas: Optional[list[AmshaEntry]] = None
+
+
+@dataclass(frozen=True)
+class AmshaVariationInfo:
+    """Variation metadata for one amsha-specific variation code."""
+
+    amsha_code: int
+    variation_code: int
+    name: str
+    label: str
+    is_default: bool
+    description: str
+
+
+@dataclass(frozen=True)
+class AmshaVariationCatalog:
+    """Variation catalog for a single amsha."""
+
+    amsha_code: int
+    default_variation_code: int
+    variations: list[AmshaVariationInfo]
 
 
 # ---------------------------------------------------------------------------

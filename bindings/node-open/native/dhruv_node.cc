@@ -1580,6 +1580,32 @@ napi_value WriteAmshaChart(napi_env env, const DhruvAmshaChart& a) {
     return obj;
 }
 
+napi_value WriteAmshaVariationInfo(napi_env env, const DhruvAmshaVariationInfo& info) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "amshaCode", MakeUint32(env, info.amsha_code));
+    SetNamed(env, obj, "variationCode", MakeUint32(env, info.variation_code));
+    SetNamed(env, obj, "name", MakeString(env, info.name));
+    SetNamed(env, obj, "label", MakeString(env, info.label));
+    SetNamed(env, obj, "default", MakeBool(env, info.is_default != 0));
+    SetNamed(env, obj, "description", MakeString(env, info.description));
+    return obj;
+}
+
+napi_value WriteAmshaVariationCatalog(napi_env env, const DhruvAmshaVariationList& catalog) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "amshaCode", MakeUint32(env, catalog.amsha_code));
+    SetNamed(env, obj, "defaultVariationCode", MakeUint32(env, catalog.default_variation_code));
+    napi_value variations;
+    napi_create_array_with_length(env, catalog.count, &variations);
+    for (uint32_t i = 0; i < catalog.count; ++i) {
+        napi_set_element(env, variations, i, WriteAmshaVariationInfo(env, catalog.variations[i]));
+    }
+    SetNamed(env, obj, "variations", variations);
+    return obj;
+}
+
 napi_value WriteGrahaDrishtiMatrix(napi_env env, const DhruvGrahaDrishtiMatrix& m) {
     napi_value matrix;
     napi_create_array_with_length(env, DHRUV_GRAHA_COUNT, &matrix);
@@ -5418,6 +5444,59 @@ napi_value AmshaChartForDate(napi_env env, napi_callback_info info) {
     return out;
 }
 
+napi_value AmshaVariations(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    uint32_t amsha_code = 0;
+    if (!GetUint32(env, args[0], &amsha_code)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvAmshaVariationList result{};
+    int32_t status = dhruv_amsha_variations(static_cast<uint16_t>(amsha_code), &result);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) SetNamed(env, out, "catalog", WriteAmshaVariationCatalog(env, result));
+    return out;
+}
+
+napi_value AmshaVariationsMany(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    bool is_codes_array = false;
+    if (napi_is_array(env, args[0], &is_codes_array) != napi_ok || !is_codes_array) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+    uint32_t codes_len = 0;
+    if (napi_get_array_length(env, args[0], &codes_len) != napi_ok) {
+        return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    }
+    std::vector<uint16_t> codes(codes_len);
+    for (uint32_t i = 0; i < codes_len; ++i) {
+        napi_value cv;
+        uint32_t c = 0;
+        if (napi_get_element(env, args[0], i, &cv) != napi_ok || !GetUint32(env, cv, &c)) {
+            return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        }
+        codes[i] = static_cast<uint16_t>(c);
+    }
+    DhruvAmshaVariationCatalogs result{};
+    int32_t status = dhruv_amsha_variations_many(
+        codes_len == 0 ? nullptr : codes.data(),
+        codes_len,
+        &result);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        napi_value catalogs;
+        napi_create_array_with_length(env, result.count, &catalogs);
+        for (uint32_t i = 0; i < result.count; ++i) {
+            napi_set_element(env, catalogs, i, WriteAmshaVariationCatalog(env, result.lists[i]));
+        }
+        SetNamed(env, out, "catalogs", catalogs);
+    }
+    return out;
+}
+
 napi_value ShadbalaForDate(napi_env env, napi_callback_info info) {
     size_t argc = 9;
     napi_value args[9];
@@ -7040,6 +7119,8 @@ napi_value Init(napi_env env, napi_value exports) {
         {"amshaRashiInfo", nullptr, AmshaRashiInfo, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"amshaLongitudes", nullptr, AmshaLongitudes, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"amshaChartForDate", nullptr, AmshaChartForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"amshaVariations", nullptr, AmshaVariations, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"amshaVariationsMany", nullptr, AmshaVariationsMany, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"specialLagnasForDate", nullptr, SpecialLagnasForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"arudhaPadasForDate", nullptr, ArudhaPadasForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"allUpagrahasForDate", nullptr, AllUpagrahasForDate, nullptr, nullptr, nullptr, napi_default, nullptr},

@@ -4,7 +4,7 @@ use crate::panchang_types::PanchangInfo;
 use dhruv_frames::{DEFAULT_PRECESSION_MODEL, PrecessionModel, ReferencePlane};
 use dhruv_time::UtcTime;
 use dhruv_vedic_base::{
-    AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AmshaVariation, AshtakavargaResult,
+    AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AshtakavargaResult,
     AyanamshaSystem, BhavaResult, CharakarakaResult, CharakarakaScheme, Dms, DrishtiEntry, Graha,
     GrahaDrishtiMatrix, KalaBalaBreakdown, Nakshatra, NodeDignityPolicy, Rashi, ShadbalaBreakdown,
     SthanaBalaBreakdown, TimeUpagrahaConfig,
@@ -267,7 +267,7 @@ pub struct AmshaChartScope {
 #[derive(Debug, Clone)]
 pub struct AmshaChart {
     pub amsha: Amsha,
-    pub variation: AmshaVariation,
+    pub variation_code: u8,
     pub grahas: [AmshaEntry; 9],
     pub lagna: AmshaEntry,
     pub bhava_cusps: Option<[AmshaEntry; 12]>,
@@ -290,7 +290,7 @@ pub struct AmshaSelectionConfig {
     pub count: u8,
     /// D-numbers (1..144), 0=unused.
     pub codes: [u16; MAX_AMSHA_REQUESTS],
-    /// Variation codes: 0=default, 1=HoraCancerLeoOnly.
+    /// Variation codes resolved in the namespace of `codes[i]`; 0=default.
     pub variations: [u8; MAX_AMSHA_REQUESTS],
 }
 

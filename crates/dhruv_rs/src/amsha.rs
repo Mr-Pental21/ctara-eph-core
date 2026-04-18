@@ -1,15 +1,26 @@
 use dhruv_search::{SankrantiConfig, amsha_charts_for_date};
 use dhruv_time::{EopKernel, UtcTime};
 pub use dhruv_vedic_base::{
-    ALL_AMSHAS, Amsha, AmshaRequest, AmshaVariation, RashiElement, RashiInfo, SHODASHAVARGA,
-    amsha_from_rashi_position, amsha_longitude, amsha_longitudes, amsha_rashi_info,
-    amsha_rashi_infos, rashi_element, rashi_position_to_longitude,
+    ALL_AMSHAS, Amsha, AmshaRequest, AmshaVariationCatalog, AmshaVariationCode,
+    AmshaVariationInfo, D2_CANCER_LEO_ONLY_VARIATION_CODE, DEFAULT_AMSHA_VARIATION_CODE,
+    RashiElement, RashiInfo, SHODASHAVARGA, amsha_from_rashi_position, amsha_longitude,
+    amsha_longitudes, amsha_rashi_info, amsha_rashi_infos, amsha_variation_by_name,
+    amsha_variation_catalog, amsha_variation_info, amsha_variations, default_amsha_variation,
+    rashi_element, rashi_position_to_longitude,
 };
 
 use crate::date::UtcDate;
 use crate::{AyanamshaSystem, BhavaConfig, DhruvContext, DhruvError, GeoLocation, RiseSetConfig};
 
 pub use dhruv_search::{AmshaChart, AmshaChartScope, AmshaResult, AmshaSelectionConfig};
+
+pub fn amsha_variations_many(amshas: &[Amsha]) -> Vec<AmshaVariationCatalog> {
+    amshas
+        .iter()
+        .copied()
+        .map(amsha_variation_catalog)
+        .collect()
+}
 
 /// Compute amsha charts for a given date and location using explicit configs.
 pub fn charts_for_date(
@@ -75,10 +86,10 @@ pub fn chart_for_date(
     system: AyanamshaSystem,
     use_nutation: bool,
     amsha: Amsha,
-    variation: AmshaVariation,
+    variation_code: AmshaVariationCode,
     scope: &AmshaChartScope,
 ) -> Result<AmshaChart, DhruvError> {
-    let requests = [AmshaRequest::with_variation(amsha, variation)];
+    let requests = [AmshaRequest::with_variation(amsha, variation_code)];
     let mut result = charts_for_date(
         ctx,
         eop,
@@ -105,7 +116,7 @@ pub fn chart(
     system: AyanamshaSystem,
     use_nutation: bool,
     amsha: Amsha,
-    variation: AmshaVariation,
+    variation_code: AmshaVariationCode,
     scope: &AmshaChartScope,
 ) -> Result<AmshaChart, DhruvError> {
     chart_for_date(
@@ -118,7 +129,7 @@ pub fn chart(
         system,
         use_nutation,
         amsha,
-        variation,
+        variation_code,
         scope,
     )
 }

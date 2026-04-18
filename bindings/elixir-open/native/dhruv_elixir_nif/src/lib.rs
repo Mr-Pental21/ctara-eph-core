@@ -73,13 +73,15 @@ use dhruv_vedic_base::special_lagna::ghatikas_since_sunrise;
 use dhruv_vedic_base::sphuta::{ALL_SPHUTAS, SphutalInputs, all_sphutas};
 use dhruv_vedic_base::{
     ALL_GRAHAS, ALL_MASAS, ALL_NAKSHATRAS_27, ALL_NAKSHATRAS_28, ALL_RASHIS, ALL_SAMVATSARAS,
-    ALL_UPAGRAHAS, ALL_VAARS, AyanamshaSystem, BhavaConfig, BhavaReferenceMode, BhavaResult,
-    BhavaStartingPoint, BhavaSystem, CharakarakaResult, CharakarakaScheme, Graha,
-    GulikaMaandiPlanet, LunarNode, Nakshatra28Info, NodeDignityPolicy, NodeMode, RashiInfo,
-    SunBasedUpagrahas, TimeUpagrahaConfig, TimeUpagrahaPoint, Upagraha, compute_bhavas,
-    lagna_longitude_rad, mc_longitude_rad, nakshatra_from_longitude, nakshatra_from_tropical,
-    nakshatra28_from_longitude, nakshatra28_from_tropical, ramc_rad, rashi_from_longitude,
-    rashi_from_tropical, sun_based_upagrahas, time_upagraha_jd,
+    ALL_UPAGRAHAS, ALL_VAARS, Amsha, AmshaRequest, AyanamshaSystem, BhavaConfig,
+    BhavaReferenceMode, BhavaResult, BhavaStartingPoint, BhavaSystem, CharakarakaResult,
+    CharakarakaScheme, Graha, GulikaMaandiPlanet, LunarNode, Nakshatra28Info,
+    NodeDignityPolicy, NodeMode, RashiInfo, SunBasedUpagrahas, TimeUpagrahaConfig,
+    TimeUpagrahaPoint, Upagraha, amsha_variation_catalog, amsha_variation_info, compute_bhavas,
+    default_amsha_variation, is_valid_amsha_variation, lagna_longitude_rad, mc_longitude_rad,
+    nakshatra_from_longitude, nakshatra_from_tropical, nakshatra28_from_longitude,
+    nakshatra28_from_tropical, ramc_rad, rashi_from_longitude, rashi_from_tropical,
+    sun_based_upagrahas, time_upagraha_jd,
 };
 use dhruv_vedic_base::{
     calculate_all_bav, calculate_ashtakavarga, calculate_bav, calculate_sav, ekadhipatya_sodhana,
@@ -1730,27 +1732,20 @@ fn to_amsha_selection(
     }
     selection.count = input.len() as u8;
     for (index, request) in input.iter().enumerate() {
-        let amsha = dhruv_vedic_base::Amsha::from_code(request.code)
+        let amsha = Amsha::from_code(request.code)
             .ok_or_else(|| error_payload("invalid_request", "unknown amsha code"))?;
-        let variation = match request.variation {
-            Some(code) => {
-                let variation = dhruv_vedic_base::AmshaVariation::from_code(code)
-                    .ok_or_else(|| error_payload("invalid_request", "unknown amsha variation"))?;
-                if !variation.is_applicable_to(amsha) {
-                    return Err(error_payload(
-                        "invalid_request",
-                        "amsha variation not applicable to amsha code",
-                    ));
-                }
-                variation
+        let variation_code = match request.variation {
+            Some(code) if is_valid_amsha_variation(amsha, code) => code,
+            Some(_) => {
+                return Err(error_payload(
+                    "invalid_request",
+                    "unknown amsha variation for amsha code",
+                ));
             }
-            None => dhruv_vedic_base::AmshaVariation::TraditionalParashari,
+            None => default_amsha_variation(amsha),
         };
         selection.codes[index] = amsha.code();
-        selection.variations[index] = match variation {
-            dhruv_vedic_base::AmshaVariation::TraditionalParashari => 0,
-            dhruv_vedic_base::AmshaVariation::HoraCancerLeoOnly => 1,
-        };
+        selection.variations[index] = variation_code;
     }
     Ok(selection)
 }
@@ -2728,7 +2723,9 @@ fn amsha_result_json(result: dhruv_search::AmshaResult) -> Value {
     json!({
         "charts": result.charts.into_iter().map(|chart| json!({
             "amsha": debug_name(chart.amsha),
-            "variation": debug_name(chart.variation),
+            "variation": amsha_variation_info(chart.amsha, chart.variation_code)
+                .map(|info| info.name)
+                .unwrap_or("default"),
             "grahas": chart.grahas.into_iter().map(amsha_entry_json).collect::<Vec<_>>(),
             "lagna": amsha_entry_json(chart.lagna),
             "bhava_cusps": chart
@@ -2746,6 +2743,22 @@ fn amsha_result_json(result: dhruv_search::AmshaResult) -> Value {
             "special_lagnas": chart
                 .special_lagnas
                 .map(|entries| entries.into_iter().map(amsha_entry_json).collect::<Vec<_>>())
+        })).collect::<Vec<_>>()
+    })
+}
+
+fn amsha_variation_catalog_json(amsha: Amsha) -> Value {
+    let catalog = amsha_variation_catalog(amsha);
+    json!({
+        "amsha_code": catalog.amsha.code(),
+        "default_variation_code": catalog.default_variation_code,
+        "variations": catalog.variations.iter().map(|info| json!({
+            "amsha_code": catalog.amsha.code(),
+            "variation_code": info.variation_code,
+            "name": info.name,
+            "label": info.label,
+            "is_default": info.is_default,
+            "description": info.description
         })).collect::<Vec<_>>()
     })
 }
@@ -3824,19 +3837,19 @@ fn handle_jyotish(resource: &ResourceArc<EngineResource>, request: JyotishReques
                     .unwrap_or_default()
                     .into_iter()
                     .map(|request| {
-                        let amsha =
-                            dhruv_vedic_base::Amsha::from_code(request.code).ok_or_else(|| {
-                                error_payload("invalid_request", "unknown amsha code")
-                            })?;
+                        let amsha = Amsha::from_code(request.code)
+                            .ok_or_else(|| error_payload("invalid_request", "unknown amsha code"))?;
                         let variation = match request.variation {
-                            Some(code) => Some(
-                                dhruv_vedic_base::AmshaVariation::from_code(code).ok_or_else(
-                                    || error_payload("invalid_request", "unknown amsha variation"),
-                                )?,
-                            ),
+                            Some(code) if is_valid_amsha_variation(amsha, code) => Some(code),
+                            Some(_) => {
+                                return Err(error_payload(
+                                    "invalid_request",
+                                    "unknown amsha variation for amsha code",
+                                ));
+                            }
                             None => None,
                         };
-                        Ok(dhruv_vedic_base::AmshaRequest { amsha, variation })
+                        Ok(AmshaRequest { amsha, variation })
                     })
                     .collect::<Result<Vec<_>, Value>>()?;
                 amsha_charts_for_date(
@@ -4566,6 +4579,34 @@ fn util_run<'a>(env: Env<'a>, request: Term<'a>) -> Result<Term<'a>, rustler::Er
                 .ok_or(rustler::Error::BadArg)?;
             Ok(json!({ "name": upagraha.name() }))
         }
+        "amsha_variations" => {
+            let amsha = Amsha::from_code(
+                raw.get("amsha_code")
+                    .and_then(Value::as_u64)
+                    .and_then(|entry| u16::try_from(entry).ok())
+                    .ok_or(rustler::Error::BadArg)?,
+            )
+            .ok_or(rustler::Error::BadArg)?;
+            Ok(amsha_variation_catalog_json(amsha))
+        }
+        "amsha_variations_many" => {
+            let amsha_codes = raw
+                .get("amsha_codes")
+                .and_then(Value::as_array)
+                .ok_or(rustler::Error::BadArg)?;
+            let catalogs = amsha_codes
+                .iter()
+                .map(|value| {
+                    let code = value
+                        .as_u64()
+                        .and_then(|entry| u16::try_from(entry).ok())
+                        .ok_or(rustler::Error::BadArg)?;
+                    let amsha = Amsha::from_code(code).ok_or(rustler::Error::BadArg)?;
+                    Ok(amsha_variation_catalog_json(amsha))
+                })
+                .collect::<Result<Vec<_>, rustler::Error>>()?;
+            Ok(json!({ "catalogs": catalogs }))
+        }
         "hora_lord" => {
             let vaar = parse_vaar(&raw_required_enum(&raw, "vaar")?)
                 .map_err(|_| rustler::Error::BadArg)?;
@@ -5002,6 +5043,18 @@ mod tests {
         assert_eq!(selection.variations[0], 0);
         assert_eq!(selection.codes[1], 2);
         assert_eq!(selection.variations[1], 1);
+    }
+
+    #[test]
+    fn amsha_variation_catalog_json_uses_per_amsha_catalog() {
+        let d2 = amsha_variation_catalog_json(Amsha::D2);
+        let d9 = amsha_variation_catalog_json(Amsha::D9);
+
+        assert_eq!(d2["default_variation_code"], 0);
+        assert_eq!(d2["variations"].as_array().unwrap().len(), 2);
+        assert_eq!(d2["variations"][1]["name"], "cancer-leo-only");
+        assert_eq!(d9["variations"].as_array().unwrap().len(), 1);
+        assert_eq!(d9["variations"][0]["variation_code"], 0);
     }
 
     #[test]

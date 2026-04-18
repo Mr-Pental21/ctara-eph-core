@@ -119,6 +119,19 @@ fn amsha_low_level_helpers_run() {
 }
 
 #[test]
+fn amsha_variation_helpers_are_amsha_scoped() {
+    let d2 = amsha_variations(Amsha::D2);
+    assert_eq!(d2.len(), 2);
+    assert_eq!(d2[1].name, "cancer-leo-only");
+
+    let many = amsha_variations_many(&[Amsha::D2, Amsha::D9]);
+    assert_eq!(many.len(), 2);
+    assert_eq!(many[1].amsha, Amsha::D9);
+    assert_eq!(many[1].variations.len(), 1);
+    assert_eq!(many[1].default_variation_code, DEFAULT_AMSHA_VARIATION_CODE);
+}
+
+#[test]
 fn amsha_chart_for_date_runs() {
     let Some(ctx) = make_context() else {
         return;
@@ -138,13 +151,13 @@ fn amsha_chart_for_date_runs() {
         AyanamshaSystem::Lahiri,
         false,
         Amsha::D9,
-        AmshaVariation::TraditionalParashari,
+        DEFAULT_AMSHA_VARIATION_CODE,
         &AmshaChartScope::default(),
     )
     .expect("amsha chart should run");
 
     assert_eq!(chart.amsha, Amsha::D9);
-    assert_eq!(chart.variation, AmshaVariation::TraditionalParashari);
+    assert_eq!(chart.variation_code, DEFAULT_AMSHA_VARIATION_CODE);
     assert!(
         chart
             .grahas

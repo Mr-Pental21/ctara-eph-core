@@ -11,7 +11,10 @@ use dhruv_search::{
     amsha_charts_for_date, amsha_charts_from_kundali, full_kundali_for_date,
 };
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
-use dhruv_vedic_base::{Amsha, AmshaRequest, AmshaVariation, BhavaConfig};
+use dhruv_vedic_base::{
+    Amsha, AmshaRequest, BhavaConfig, D2_CANCER_LEO_ONLY_VARIATION_CODE,
+    DEFAULT_AMSHA_VARIATION_CODE,
+};
 
 use dhruv_time::{EopKernel, UtcTime};
 
@@ -77,7 +80,7 @@ fn amsha_charts_basic_d9() {
     assert_eq!(result.charts.len(), 1);
     let chart = &result.charts[0];
     assert_eq!(chart.amsha, Amsha::D9);
-    assert_eq!(chart.variation, AmshaVariation::TraditionalParashari);
+    assert_eq!(chart.variation_code, DEFAULT_AMSHA_VARIATION_CODE);
 
     // All 9 grahas should have valid longitudes
     for entry in &chart.grahas {
@@ -458,7 +461,10 @@ fn full_kundali_returns_resolved_amsha_union_for_intermediate_sections() {
     let amshas = result.amshas.expect("amshas should be present");
     assert_eq!(amshas.charts.len(), 16, "shadbala+vimsopaka union should be returned");
     assert_eq!(amshas.charts[0].amsha, Amsha::D2);
-    assert_eq!(amshas.charts[0].variation, AmshaVariation::HoraCancerLeoOnly);
+    assert_eq!(
+        amshas.charts[0].variation_code,
+        D2_CANCER_LEO_ONLY_VARIATION_CODE
+    );
     assert!(
         amshas.charts.iter().any(|chart| chart.amsha == Amsha::D60),
         "resolved union should include vimsopaka-only amshas",
@@ -555,7 +561,7 @@ fn validation_inapplicable_variation() {
     // HoraCancerLeoOnly on D9 should fail
     let requests = [AmshaRequest::with_variation(
         Amsha::D9,
-        AmshaVariation::HoraCancerLeoOnly,
+        D2_CANCER_LEO_ONLY_VARIATION_CODE,
     )];
     let scope = AmshaChartScope::default();
 

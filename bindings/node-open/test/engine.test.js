@@ -14,6 +14,23 @@ test('api version matches expected ABI', () => {
   assert.doesNotThrow(() => dhruv.verifyAbi());
 });
 
+test('amsha variation helpers expose per-amsha catalogs', () => {
+  const d2 = dhruv.amshaVariations(2);
+  assert.equal(d2.amshaCode, 2);
+  assert.equal(d2.defaultVariationCode, 0);
+  assert.equal(d2.variations.length, 2);
+  assert.deepEqual(
+    d2.variations.map((entry) => entry.name),
+    ['default', 'cancer-leo-only'],
+  );
+
+  const many = dhruv.amshaVariationsMany([2, 9]);
+  assert.equal(many.length, 2);
+  assert.equal(many[1].amshaCode, 9);
+  assert.equal(many[1].variations.length, 1);
+  assert.equal(many[1].variations[0].variationCode, 0);
+});
+
 test('config loading supports discovery defaults', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dhruv-config-'));
   const configPath = path.join(dir, 'config.toml');

@@ -5,7 +5,7 @@ canonical C ABI (`dhruv_ffi_c`) via `cffi`.
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=55`
+- ABI target: `DHRUV_API_VERSION=56`
 - Package root: `bindings/python-open`
 - Runtime dependency: `cffi`
 - Primary distribution: PyPI wheels plus sdist from unified `vX.Y.Z` tags
@@ -71,6 +71,8 @@ Direct amsha helpers:
 - `ctara_dhruv.amsha.amsha_rashi_info`
 - `ctara_dhruv.amsha.amsha_longitudes`
 - `ctara_dhruv.amsha.amsha_chart_for_date`
+- `ctara_dhruv.amsha.amsha_variations`
+- `ctara_dhruv.amsha.amsha_variations_many`
 
 Embedded amsha support:
 
@@ -145,6 +147,8 @@ sub-sections depend on the corresponding root full-kundali sections also being
 enabled. Returned `kundali.amshas` charts now reflect the full resolved amsha
 set used by the call: explicit `config.amsha_selection` first, then any
 internally required amshas for shadbala, vimsopaka, or avastha.
+Variation codes are amsha-scoped; use `amsha_variations*` to discover the
+valid codes, names, labels, and defaults for a given amsha.
 
 ## Low-Level Helper Coverage
 

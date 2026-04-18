@@ -1,7 +1,7 @@
 defmodule CtaraDhruvTest do
   use ExUnit.Case
 
-  alias CtaraDhruv.{Dasha, Engine, Ephemeris, Jyotish, Panchang, Search, Tara, Time, Vedic}
+  alias CtaraDhruv.{Dasha, Engine, Ephemeris, Jyotish, Math, Panchang, Search, Tara, Time, Vedic}
 
   @repo_root Path.expand("../../..", __DIR__)
   @kernel_dir Path.join(@repo_root, "kernels/data")
@@ -304,11 +304,23 @@ defmodule CtaraDhruvTest do
 
           assert length(chart.amshas.charts) == 16
           assert hd(chart.amshas.charts).amsha == "d2"
-          assert hd(chart.amshas.charts).variation == "hora_cancer_leo_only"
+          assert hd(chart.amshas.charts).variation == "cancer-leo-only"
           assert Enum.any?(chart.amshas.charts, &(&1.amsha == "d60"))
         else
           assert true
         end
     end
+  end
+
+  test "elixir math exposes amsha variation catalogs" do
+    assert {:ok, d2} = Math.amsha_variations(%{amsha_code: 2})
+    assert d2.amsha_code == 2
+    assert d2.default_variation_code == 0
+    assert Enum.any?(d2.variations, &(&1.name == "cancer-leo-only" and &1.variation_code == 1))
+
+    assert {:ok, many} = Math.amsha_variations_many(%{amsha_codes: [2, 9]})
+    assert length(many.catalogs) == 2
+    assert Enum.at(many.catalogs, 1).amsha_code == 9
+    assert Enum.at(Enum.at(many.catalogs, 1).variations, 0).is_default == true
   end
 end

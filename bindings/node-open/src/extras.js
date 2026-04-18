@@ -416,6 +416,18 @@ function amshaChartForDate(
   return r.result;
 }
 
+function amshaVariations(amshaCode) {
+  const r = addon.amshaVariations(amshaCode);
+  checkStatus('amsha_variations', r.status);
+  return r.catalog;
+}
+
+function amshaVariationsMany(amshaCodes) {
+  const r = addon.amshaVariationsMany(amshaCodes);
+  checkStatus('amsha_variations_many', r.status);
+  return r.catalogs;
+}
+
 module.exports = {
   elongationAt,
   siderealSumAt,
@@ -493,4 +505,6 @@ module.exports = {
   amshaRashiInfo,
   amshaLongitudes,
   amshaChartForDate,
+  amshaVariations,
+  amshaVariationsMany,
 };

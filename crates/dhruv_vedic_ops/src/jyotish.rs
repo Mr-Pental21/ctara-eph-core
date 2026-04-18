@@ -18,18 +18,19 @@ use dhruv_vedic_base::upagraha::TIME_BASED_UPAGRAHAS;
 use dhruv_vedic_base::vaar::vaar_from_jd;
 use dhruv_vedic_base::{
     ALL_GRAHAS, AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AmshaRequest,
-    AmshaVariation, ArudhaResult, AshtakavargaResult, AvasthaInputs, BhavaConfig, BhavaResult,
+    ArudhaResult, AshtakavargaResult, AvasthaInputs, BhavaConfig, BhavaResult,
     CharakarakaResult, CharakarakaScheme, Dignity, DrishtiEntry, Graha, GrahaAvasthas,
     KalaBalaInputs, LajjitadiInputs, LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS,
     SayanadiInputs, ShadbalaInputs, TimeUpagrahaConfig, Upagraha, all_avasthas,
     all_combustion_status, all_dashavarga_vimsopaka, all_saptavarga_vimsopaka,
     all_shadbalas_from_inputs, all_shadvarga_vimsopaka, all_shodasavarga_vimsopaka, all_sphutas,
     amsha_longitude, bhrigu_bindu, calculate_ashtakavarga, charakarakas_from_longitudes,
-    compute_bhavas, dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise,
-    graha_drishti, graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord,
-    jd_tdb_to_centuries, lagna_longitude_rad, lost_planetary_war,
-    lunar_node_deg_for_epoch_on_plane, masa_lord as graha_masa_lord, nakshatra_from_longitude,
-    navamsa_number, node_dignity_in_rashi, normalize_360, nth_rashi_from, pranapada_lagna,
+    compute_bhavas, default_amsha_variation, dignity_in_rashi_with_positions, ghati_lagna,
+    ghatikas_since_sunrise, graha_drishti, graha_drishti_matrix, hora_lagna,
+    hora_lord as graha_hora_lord, is_valid_amsha_variation, jd_tdb_to_centuries,
+    lagna_longitude_rad, lost_planetary_war, lunar_node_deg_for_epoch_on_plane,
+    masa_lord as graha_masa_lord, nakshatra_from_longitude, navamsa_number,
+    node_dignity_in_rashi, normalize_360, nth_rashi_from, pranapada_lagna,
     rashi_from_longitude, rashi_lord_by_index, samvatsara_lord as graha_samvatsara_lord,
     sree_lagna, sun_based_upagrahas, time_upagraha_jd_with_config, vaar_lord as graha_vaar_lord,
 };
@@ -2195,7 +2196,7 @@ fn make_amsha_entry(sidereal_lon: f64) -> AmshaEntry {
 fn transform_to_amsha_entry(
     sidereal_lon: f64,
     amsha: Amsha,
-    variation: Option<AmshaVariation>,
+    variation: Option<u8>,
 ) -> AmshaEntry {
     let amsha_lon = amsha_longitude(sidereal_lon, amsha, variation);
     make_amsha_entry(amsha_lon)
@@ -2207,8 +2208,7 @@ fn validate_amsha_requests(requests: &[AmshaRequest]) -> Result<(), SearchError>
         return Err(SearchError::InvalidConfig("amsha count exceeds maximum"));
     }
     for req in requests {
-        let v = req.effective_variation();
-        if !v.is_applicable_to(req.amsha) {
+        if !is_valid_amsha_variation(req.amsha, req.effective_variation()) {
             return Err(SearchError::InvalidConfig(
                 "variation not applicable to amsha",
             ));
@@ -2226,14 +2226,14 @@ fn selection_to_requests(sel: &AmshaSelectionConfig) -> Result<Vec<AmshaRequest>
     for i in 0..sel.count as usize {
         let amsha = Amsha::from_code(sel.codes[i])
             .ok_or(SearchError::InvalidConfig("unknown amsha code"))?;
-        let variation = if sel.variations[i] == 0 {
+        let default_variation = default_amsha_variation(amsha);
+        let variation = if sel.variations[i] == default_variation {
             None
         } else {
-            let v = AmshaVariation::from_code(sel.variations[i])
-                .ok_or(SearchError::InvalidConfig("unknown variation code"))?;
-            if !v.is_applicable_to(amsha) {
+            let v = sel.variations[i];
+            if !is_valid_amsha_variation(amsha, v) {
                 return Err(SearchError::InvalidConfig(
-                    "variation not applicable to amsha",
+                    "unknown variation code for amsha",
                 ));
             }
             Some(v)
@@ -2329,7 +2329,7 @@ fn build_amsha_chart(
 
     AmshaChart {
         amsha,
-        variation: effective_variation,
+        variation_code: effective_variation,
         grahas,
         lagna,
         bhava_cusps,

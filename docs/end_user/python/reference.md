@@ -267,7 +267,8 @@ The fuller public surface is intentionally module-based.
 
 The standalone bala helpers accept an `amsha_selection` argument. Embedded
 `full_kundali(...).amshas` returns the full resolved amsha union used by the
-call.
+call. Use `amsha_variations` and `amsha_variations_many` to discover valid
+variation codes, names, labels, and defaults for each amsha.
 
 `amsha`:
 
@@ -275,6 +276,8 @@ call.
 - `amsha_longitudes`
 - `amsha_rashi_info`
 - `amsha_chart_for_date`
+- `amsha_variations`
+- `amsha_variations_many`
 
 `dasha`:
 

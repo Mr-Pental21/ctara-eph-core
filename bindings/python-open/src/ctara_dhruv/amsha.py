@@ -7,7 +7,14 @@ from __future__ import annotations
 
 from ._ffi import ffi, lib
 from ._check import check
-from .types import AmshaChart, AmshaEntry, RashiInfo, Dms
+from .types import (
+    AmshaChart,
+    AmshaEntry,
+    AmshaVariationCatalog,
+    AmshaVariationInfo,
+    Dms,
+    RashiInfo,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -66,6 +73,31 @@ def _extract_amsha_entry(e):
     )
 
 
+def _decode_c_string(buf):
+    return ffi.string(buf).decode("utf-8")
+
+
+def _extract_amsha_variation_catalog(catalog):
+    variations = []
+    for i in range(catalog.count):
+        info = catalog.variations[i]
+        variations.append(
+            AmshaVariationInfo(
+                amsha_code=info.amsha_code,
+                variation_code=info.variation_code,
+                name=_decode_c_string(info.name),
+                label=_decode_c_string(info.label),
+                is_default=bool(info.is_default),
+                description=_decode_c_string(info.description),
+            )
+        )
+    return AmshaVariationCatalog(
+        amsha_code=catalog.amsha_code,
+        default_variation_code=catalog.default_variation_code,
+        variations=variations,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Pure math: single longitude
 # ---------------------------------------------------------------------------
@@ -77,7 +109,7 @@ def amsha_longitude(sidereal_lon_deg, amsha_number, variation=0):
     Args:
         sidereal_lon_deg: Sidereal longitude in degrees [0, 360).
         amsha_number: D-number (e.g. 9 for Navamsha, 12 for Dwadashamsha).
-        variation: 0=TraditionalParashari, 1=HoraCancerLeoOnly.
+        variation: amsha-specific variation code; 0=default for that amsha.
 
     Returns:
         Amsha longitude in degrees [0, 360).
@@ -108,8 +140,8 @@ def amsha_longitudes(sidereal_lons, amsha_codes, variation_codes=None):
     Args:
         sidereal_lons: Single sidereal longitude in degrees (scalar float).
         amsha_codes: List of D-numbers (u16).
-        variation_codes: Optional list of variation codes (u8), same length
-                        as amsha_codes. None = all default.
+        variation_codes: Optional list of amsha-specific variation codes (u8),
+                        same length as amsha_codes. None = all default.
 
     Returns:
         List of amsha longitudes (one per amsha_code).
@@ -144,7 +176,7 @@ def amsha_rashi_info(sidereal_lon_deg, amsha_number, variation=0):
     Args:
         sidereal_lon_deg: Sidereal longitude in degrees.
         amsha_number: D-number.
-        variation: Variation code.
+        variation: Amsha-specific variation code.
 
     Returns:
         RashiInfo dataclass.
@@ -193,7 +225,7 @@ def amsha_chart_for_date(
         jd_utc: UTC time tuple (year, month, day[, hour, min, sec]).
         location: (lat, lon[, alt]) tuple.
         amsha_code: D-number (e.g. 9 for Navamsha).
-        variation: Variation code (0=default).
+        variation: Amsha-specific variation code (0=default for that amsha).
         ayanamsha_system: Ayanamsha system code.
         use_nutation: 1=yes, 0=no.
         scope: Optional dict with include_bhava_cusps, include_arudha_padas,
@@ -271,3 +303,24 @@ def amsha_chart_for_date(
         sphutas=sphutas,
         special_lagnas=special_lagnas,
     )
+
+
+def amsha_variations(amsha_code):
+    """List supported variations for a single amsha."""
+    out = ffi.new("DhruvAmshaVariationList *")
+    check(lib.dhruv_amsha_variations(amsha_code, out), "amsha_variations")
+    return _extract_amsha_variation_catalog(out[0])
+
+
+def amsha_variations_many(amsha_codes):
+    """List supported variations for multiple amshas."""
+    count = len(amsha_codes)
+    c_codes = ffi.new("uint16_t[]", count)
+    for i, code in enumerate(amsha_codes):
+        c_codes[i] = code
+    out = ffi.new("DhruvAmshaVariationCatalogs *")
+    check(
+        lib.dhruv_amsha_variations_many(c_codes, count, out),
+        "amsha_variations_many",
+    )
+    return [_extract_amsha_variation_catalog(out.lists[i]) for i in range(out.count)]

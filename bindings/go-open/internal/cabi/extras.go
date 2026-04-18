@@ -854,6 +854,29 @@ func goAmshaEntries(src []C.DhruvAmshaEntry) []AmshaEntry {
 	return out
 }
 
+func goAmshaVariationInfo(v C.DhruvAmshaVariationInfo) AmshaVariationInfo {
+	return AmshaVariationInfo{
+		AmshaCode:     uint16(v.amsha_code),
+		VariationCode: uint8(v.variation_code),
+		Name:          cString((*C.char)(unsafe.Pointer(&v.name[0]))),
+		Label:         cString((*C.char)(unsafe.Pointer(&v.label[0]))),
+		IsDefault:     v.is_default != 0,
+		Description:   cString((*C.char)(unsafe.Pointer(&v.description[0]))),
+	}
+}
+
+func goAmshaVariationCatalog(v C.DhruvAmshaVariationList) AmshaVariationCatalog {
+	out := AmshaVariationCatalog{
+		AmshaCode:            uint16(v.amsha_code),
+		DefaultVariationCode: uint8(v.default_variation_code),
+		Variations:           make([]AmshaVariationInfo, int(v.count)),
+	}
+	for i := 0; i < int(v.count); i++ {
+		out.Variations[i] = goAmshaVariationInfo(v.variations[i])
+	}
+	return out
+}
+
 func AmshaChartForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocation, bhavaCfg BhavaConfig, riseCfg RiseSetConfig, ayanamshaSystem uint32, useNutation bool, amshaCode uint16, variationCode uint8, scope AmshaChartScope) (AmshaChart, Status) {
 	cutc, cloc := cUTC(utc), cGeo(loc)
 	cbhava, crise, cscope := cBhavaConfig(bhavaCfg), cRiseSetConfig(riseCfg), cAmshaScope(scope)
@@ -888,4 +911,28 @@ func AmshaChartForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoL
 		res.SpecialLagnas = goAmshaEntries(out.special_lagnas[:])
 	}
 	return res, st
+}
+
+func AmshaVariations(amshaCode uint16) (AmshaVariationCatalog, Status) {
+	var out C.DhruvAmshaVariationList
+	st := Status(C.dhruv_amsha_variations(C.uint16_t(amshaCode), &out))
+	return goAmshaVariationCatalog(out), st
+}
+
+func AmshaVariationsMany(amshaCodes []uint16) ([]AmshaVariationCatalog, Status, error) {
+	var out C.DhruvAmshaVariationCatalogs
+	if len(amshaCodes) == 0 {
+		st := Status(C.dhruv_amsha_variations_many(nil, 0, &out))
+		return []AmshaVariationCatalog{}, st, nil
+	}
+	codes := make([]C.uint16_t, len(amshaCodes))
+	for i, code := range amshaCodes {
+		codes[i] = C.uint16_t(code)
+	}
+	st := Status(C.dhruv_amsha_variations_many(&codes[0], C.uint32_t(len(codes)), &out))
+	res := make([]AmshaVariationCatalog, int(out.count))
+	for i := 0; i < int(out.count); i++ {
+		res[i] = goAmshaVariationCatalog(out.lists[i])
+	}
+	return res, st, nil
 }

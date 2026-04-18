@@ -17,7 +17,8 @@ use dhruv_search::{
 use dhruv_time::{EopKernel, UtcTime};
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
 use dhruv_vedic_base::{
-    Amsha, AmshaRequest, AmshaVariation, BhavaConfig, Graha, NodeDignityPolicy,
+    Amsha, AmshaRequest, BhavaConfig, D2_CANCER_LEO_ONLY_VARIATION_CODE,
+    Graha, NodeDignityPolicy,
 };
 
 const SPK_PATH: &str = "../../kernels/data/de442s.bsp";
@@ -88,7 +89,7 @@ fn amsha_charts_duplicate_requests_preserve_order_and_distinguish_variation() {
         AmshaRequest::new(Amsha::D9),
         AmshaRequest::new(Amsha::D9),
         AmshaRequest::new(Amsha::D2),
-        AmshaRequest::with_variation(Amsha::D2, AmshaVariation::HoraCancerLeoOnly),
+        AmshaRequest::with_variation(Amsha::D2, D2_CANCER_LEO_ONLY_VARIATION_CODE),
     ];
 
     let result = amsha_charts_for_date(
@@ -105,7 +106,7 @@ fn amsha_charts_duplicate_requests_preserve_order_and_distinguish_variation() {
     .expect("amsha_charts_for_date should succeed");
 
     assert_eq!(result.charts.len(), 4);
-    assert_eq!(result.charts[0].variation, result.charts[1].variation);
+    assert_eq!(result.charts[0].variation_code, result.charts[1].variation_code);
     for i in 0..9 {
         assert!(approx_eq(
             result.charts[0].grahas[i].sidereal_longitude,
@@ -119,7 +120,7 @@ fn amsha_charts_duplicate_requests_preserve_order_and_distinguish_variation() {
 
     assert_eq!(result.charts[2].amsha, Amsha::D2);
     assert_eq!(result.charts[3].amsha, Amsha::D2);
-    assert_ne!(result.charts[2].variation, result.charts[3].variation);
+    assert_ne!(result.charts[2].variation_code, result.charts[3].variation_code);
     assert!(
         result.charts[2]
             .grahas
@@ -377,6 +378,6 @@ fn full_kundali_mixed_sections_match_standalone_results() {
             .charts
             .iter()
             .any(|chart| chart.amsha == Amsha::D2
-                && chart.variation == AmshaVariation::HoraCancerLeoOnly)
+                && chart.variation_code == D2_CANCER_LEO_ONLY_VARIATION_CODE)
     );
 }

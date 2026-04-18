@@ -36,16 +36,18 @@ use dhruv_time::{
 };
 use dhruv_vedic_base::dasha::RashiDashaInputs;
 use dhruv_vedic_base::{
-    Amsha, AmshaRequest, AmshaVariation, AyanamshaSystem, BhavaConfig, BhavaReferenceMode,
-    BhavaStartingPoint, BhavaSystem, CharakarakaScheme, GeoLocation, LunarNode, NodeMode,
-    RiseSetConfig, RiseSetEvent, RiseSetResult, SunLimb, VedicError, amsha_longitude,
-    amsha_rashi_info, approximate_local_noon_jd, ayana_from_sidereal_longitude,
+    Amsha, AmshaRequest, AmshaVariationCatalog, AmshaVariationInfo, AyanamshaSystem, BhavaConfig,
+    BhavaReferenceMode, BhavaStartingPoint, BhavaSystem, CharakarakaScheme,
+    DEFAULT_AMSHA_VARIATION_CODE, GeoLocation, LunarNode, NodeMode, RiseSetConfig, RiseSetEvent,
+    RiseSetResult, SunLimb, VedicError, amsha_longitude, amsha_rashi_info,
+    amsha_variation_catalog, approximate_local_noon_jd, ayana_from_sidereal_longitude,
     ayanamsha_deg_with_catalog, ayanamsha_mean_deg_with_catalog, ayanamsha_true_deg,
-    compute_all_events, compute_bhavas, compute_rise_set, deg_to_dms, jd_tdb_to_centuries,
-    karana_from_elongation, lunar_node_deg, lunar_node_deg_for_epoch, masa_from_rashi_index,
-    nakshatra_from_longitude, nakshatra_from_tropical, nakshatra28_from_longitude,
-    nakshatra28_from_tropical, nth_rashi_from, rashi_from_longitude, rashi_from_tropical,
-    samvatsara_from_year, tithi_from_elongation, utc_day_start_jd, vaar_from_jd, yoga_from_sum,
+    compute_all_events, compute_bhavas, compute_rise_set, default_amsha_variation, deg_to_dms,
+    is_valid_amsha_variation, jd_tdb_to_centuries, karana_from_elongation, lunar_node_deg,
+    lunar_node_deg_for_epoch, masa_from_rashi_index, nakshatra_from_longitude,
+    nakshatra_from_tropical, nakshatra28_from_longitude, nakshatra28_from_tropical,
+    nth_rashi_from, rashi_from_longitude, rashi_from_tropical, samvatsara_from_year,
+    tithi_from_elongation, utc_day_start_jd, vaar_from_jd, yoga_from_sum,
 };
 use dhruv_vedic_ops::{
     PANCHANG_INCLUDE_AYANA, PANCHANG_INCLUDE_GHATIKA, PANCHANG_INCLUDE_HORA,
@@ -55,13 +57,21 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 55;
+pub const DHRUV_API_VERSION: u32 = 56;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
 
 /// Maximum number of SPK kernel paths in a C-compatible config.
 pub const DHRUV_MAX_SPK_PATHS: usize = 8;
+/// Maximum number of variations exposed for one amsha catalog.
+pub const DHRUV_MAX_AMSHA_VARIATIONS: usize = 16;
+/// Fixed UTF-8 buffer size for amsha variation machine names.
+pub const DHRUV_AMSHA_VARIATION_NAME_CAPACITY: usize = 48;
+/// Fixed UTF-8 buffer size for amsha variation labels.
+pub const DHRUV_AMSHA_VARIATION_LABEL_CAPACITY: usize = 64;
+/// Fixed UTF-8 buffer size for amsha variation descriptions.
+pub const DHRUV_AMSHA_VARIATION_DESCRIPTION_CAPACITY: usize = 160;
 
 /// C-facing status codes.
 #[repr(i32)]
@@ -10274,8 +10284,71 @@ pub struct DhruvAmshaSelectionConfig {
     pub count: u8,
     /// D-numbers (1..144), 0=unused.
     pub codes: [u16; 40],
-    /// Variation codes: 0=default, 1=HoraCancerLeoOnly.
+    /// Variation codes resolved in the namespace of `codes[i]`; 0=default.
     pub variations: [u8; 40],
+}
+
+/// C-compatible amsha variation metadata.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvAmshaVariationInfo {
+    pub amsha_code: u16,
+    pub variation_code: u8,
+    pub name: [c_char; DHRUV_AMSHA_VARIATION_NAME_CAPACITY],
+    pub label: [c_char; DHRUV_AMSHA_VARIATION_LABEL_CAPACITY],
+    pub is_default: u8,
+    pub description: [c_char; DHRUV_AMSHA_VARIATION_DESCRIPTION_CAPACITY],
+}
+
+impl DhruvAmshaVariationInfo {
+    fn zeroed() -> Self {
+        Self {
+            amsha_code: 0,
+            variation_code: 0,
+            name: [0; DHRUV_AMSHA_VARIATION_NAME_CAPACITY],
+            label: [0; DHRUV_AMSHA_VARIATION_LABEL_CAPACITY],
+            is_default: 0,
+            description: [0; DHRUV_AMSHA_VARIATION_DESCRIPTION_CAPACITY],
+        }
+    }
+}
+
+/// C-compatible amsha variation list for one amsha.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvAmshaVariationList {
+    pub amsha_code: u16,
+    pub default_variation_code: u8,
+    pub count: u8,
+    pub variations: [DhruvAmshaVariationInfo; DHRUV_MAX_AMSHA_VARIATIONS],
+}
+
+impl DhruvAmshaVariationList {
+    fn zeroed() -> Self {
+        Self {
+            amsha_code: 0,
+            default_variation_code: DEFAULT_AMSHA_VARIATION_CODE,
+            count: 0,
+            variations: [DhruvAmshaVariationInfo::zeroed(); DHRUV_MAX_AMSHA_VARIATIONS],
+        }
+    }
+}
+
+/// C-compatible amsha variation catalogs for multiple amshas.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvAmshaVariationCatalogs {
+    pub count: u8,
+    pub lists: [DhruvAmshaVariationList; DHRUV_MAX_AMSHA_REQUESTS],
+}
+
+impl DhruvAmshaVariationCatalogs {
+    fn zeroed() -> Self {
+        Self {
+            count: 0,
+            lists: [DhruvAmshaVariationList::zeroed(); DHRUV_MAX_AMSHA_REQUESTS],
+        }
+    }
 }
 
 /// C-compatible single amsha chart result.
@@ -10284,7 +10357,7 @@ pub struct DhruvAmshaSelectionConfig {
 pub struct DhruvAmshaChart {
     /// D-number of this chart.
     pub amsha_code: u16,
-    /// Variation code (0=default, 1=HoraCancerLeoOnly).
+    /// Amsha-specific variation code (0=default for that amsha).
     pub variation_code: u8,
     /// 9 Vedic grahas.
     pub grahas: [DhruvAmshaEntry; 9],
@@ -10328,6 +10401,43 @@ impl DhruvAmshaChart {
     }
 }
 
+fn write_fixed_c_string<const N: usize>(dst: &mut [c_char; N], src: &str) {
+    let bytes = src.as_bytes();
+    let len = bytes.len().min(N.saturating_sub(1));
+    for slot in dst.iter_mut() {
+        *slot = 0;
+    }
+    for (i, byte) in bytes.iter().copied().take(len).enumerate() {
+        dst[i] = byte as c_char;
+    }
+}
+
+fn amsha_variation_info_to_ffi(
+    amsha: Amsha,
+    info: &AmshaVariationInfo,
+) -> DhruvAmshaVariationInfo {
+    let mut out = DhruvAmshaVariationInfo::zeroed();
+    out.amsha_code = amsha.code();
+    out.variation_code = info.variation_code;
+    out.is_default = info.is_default as u8;
+    write_fixed_c_string(&mut out.name, info.name);
+    write_fixed_c_string(&mut out.label, info.label);
+    write_fixed_c_string(&mut out.description, info.description);
+    out
+}
+
+fn amsha_variation_list_to_ffi(catalog: AmshaVariationCatalog) -> DhruvAmshaVariationList {
+    let mut out = DhruvAmshaVariationList::zeroed();
+    out.amsha_code = catalog.amsha.code();
+    out.default_variation_code = catalog.default_variation_code;
+    let count = catalog.variations.len().min(DHRUV_MAX_AMSHA_VARIATIONS);
+    out.count = count as u8;
+    for (index, info) in catalog.variations.iter().take(count).enumerate() {
+        out.variations[index] = amsha_variation_info_to_ffi(catalog.amsha, info);
+    }
+    out
+}
+
 fn amsha_entry_to_ffi(entry: &dhruv_search::AmshaEntry) -> DhruvAmshaEntry {
     DhruvAmshaEntry {
         sidereal_longitude: entry.sidereal_longitude,
@@ -10342,10 +10452,7 @@ fn amsha_entry_to_ffi(entry: &dhruv_search::AmshaEntry) -> DhruvAmshaEntry {
 fn amsha_chart_to_ffi(chart: &dhruv_search::AmshaChart) -> DhruvAmshaChart {
     let mut out = DhruvAmshaChart::zeroed();
     out.amsha_code = chart.amsha.code();
-    out.variation_code = match chart.variation {
-        AmshaVariation::TraditionalParashari => 0,
-        AmshaVariation::HoraCancerLeoOnly => 1,
-    };
+    out.variation_code = chart.variation_code;
     for (i, graha) in chart.grahas.iter().enumerate() {
         out.grahas[i] = amsha_entry_to_ffi(graha);
     }
@@ -11126,6 +11233,14 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
 // Amsha (Divisional Chart) FFI functions
 // ---------------------------------------------------------------------------
 
+fn resolve_amsha_variation_code(amsha: Amsha, variation_code: u8) -> Result<u8, DhruvStatus> {
+    if is_valid_amsha_variation(amsha, variation_code) {
+        Ok(variation_code)
+    } else {
+        Err(DhruvStatus::InvalidSearchConfig)
+    }
+}
+
 /// Transform a sidereal longitude through an amsha division.
 ///
 /// # Safety
@@ -11144,13 +11259,10 @@ pub unsafe extern "C" fn dhruv_amsha_longitude(
         Some(a) => a,
         None => return DhruvStatus::InvalidSearchConfig,
     };
-    let variation = match AmshaVariation::from_code(variation_code) {
-        Some(v) => v,
-        None => return DhruvStatus::InvalidSearchConfig,
+    let variation = match resolve_amsha_variation_code(amsha, variation_code) {
+        Ok(v) => v,
+        Err(status) => return status,
     };
-    if !variation.is_applicable_to(amsha) {
-        return DhruvStatus::InvalidSearchConfig;
-    }
     let result = amsha_longitude(sidereal_lon, amsha, Some(variation));
     unsafe { *out = result };
     DhruvStatus::Ok
@@ -11174,13 +11286,10 @@ pub unsafe extern "C" fn dhruv_amsha_rashi_info(
         Some(a) => a,
         None => return DhruvStatus::InvalidSearchConfig,
     };
-    let variation = match AmshaVariation::from_code(variation_code) {
-        Some(v) => v,
-        None => return DhruvStatus::InvalidSearchConfig,
+    let variation = match resolve_amsha_variation_code(amsha, variation_code) {
+        Ok(v) => v,
+        Err(status) => return status,
     };
-    if !variation.is_applicable_to(amsha) {
-        return DhruvStatus::InvalidSearchConfig;
-    }
     let info = amsha_rashi_info(sidereal_lon, amsha, Some(variation));
     unsafe {
         *out = DhruvRashiInfo {
@@ -11226,17 +11335,14 @@ pub unsafe extern "C" fn dhruv_amsha_longitudes(
             None => return DhruvStatus::InvalidSearchConfig,
         };
         let variation = if variation_codes.is_null() {
-            AmshaVariation::TraditionalParashari
+            default_amsha_variation(amsha)
         } else {
             let vc = unsafe { *variation_codes.add(i) };
-            match AmshaVariation::from_code(vc) {
-                Some(v) => v,
-                None => return DhruvStatus::InvalidSearchConfig,
+            match resolve_amsha_variation_code(amsha, vc) {
+                Ok(v) => v,
+                Err(status) => return status,
             }
         };
-        if !variation.is_applicable_to(amsha) {
-            return DhruvStatus::InvalidSearchConfig;
-        }
         out_slice[i] = amsha_longitude(sidereal_lon, amsha, Some(variation));
     }
     DhruvStatus::Ok
@@ -11275,13 +11381,10 @@ pub unsafe extern "C" fn dhruv_amsha_chart_for_date(
         Some(a) => a,
         None => return DhruvStatus::InvalidSearchConfig,
     };
-    let variation = match AmshaVariation::from_code(variation_code) {
-        Some(v) => v,
-        None => return DhruvStatus::InvalidSearchConfig,
+    let variation = match resolve_amsha_variation_code(amsha, variation_code) {
+        Ok(v) => v,
+        Err(status) => return status,
     };
-    if !variation.is_applicable_to(amsha) {
-        return DhruvStatus::InvalidSearchConfig;
-    }
 
     let engine = unsafe { &*engine };
     let eop = unsafe { &*eop };
@@ -11340,6 +11443,67 @@ pub unsafe extern "C" fn dhruv_amsha_chart_for_date(
         }
         Err(e) => DhruvStatus::from(&e),
     }
+}
+
+/// List supported variations for a single amsha.
+///
+/// # Safety
+/// `out` must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_amsha_variations(
+    amsha_code: u16,
+    out: *mut DhruvAmshaVariationList,
+) -> DhruvStatus {
+    if out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    let amsha = match Amsha::from_code(amsha_code) {
+        Some(amsha) => amsha,
+        None => return DhruvStatus::InvalidSearchConfig,
+    };
+    unsafe {
+        *out = amsha_variation_list_to_ffi(amsha_variation_catalog(amsha));
+    }
+    DhruvStatus::Ok
+}
+
+/// List supported variations for multiple amshas.
+///
+/// # Safety
+/// `amsha_codes` must point to `count` u16 values when `count > 0`. `out`
+/// must be a valid, non-null pointer.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_amsha_variations_many(
+    amsha_codes: *const u16,
+    count: u32,
+    out: *mut DhruvAmshaVariationCatalogs,
+) -> DhruvStatus {
+    if out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    unsafe {
+        *out = DhruvAmshaVariationCatalogs::zeroed();
+    }
+    if count == 0 {
+        return DhruvStatus::Ok;
+    }
+    if amsha_codes.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    if count as usize > DHRUV_MAX_AMSHA_REQUESTS {
+        return DhruvStatus::InvalidSearchConfig;
+    }
+    let codes = unsafe { std::slice::from_raw_parts(amsha_codes, count as usize) };
+    let out_ref = unsafe { &mut *out };
+    out_ref.count = count as u8;
+    for (index, code) in codes.iter().copied().enumerate() {
+        let amsha = match Amsha::from_code(code) {
+            Some(amsha) => amsha,
+            None => return DhruvStatus::InvalidSearchConfig,
+        };
+        out_ref.lists[index] = amsha_variation_list_to_ffi(amsha_variation_catalog(amsha));
+    }
+    DhruvStatus::Ok
 }
 
 // ---------------------------------------------------------------------------

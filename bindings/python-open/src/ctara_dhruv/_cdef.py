@@ -41,9 +41,13 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       55
+#define DHRUV_API_VERSION       56
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
+#define DHRUV_MAX_AMSHA_VARIATIONS 16
+#define DHRUV_AMSHA_VARIATION_NAME_CAPACITY 48
+#define DHRUV_AMSHA_VARIATION_LABEL_CAPACITY 64
+#define DHRUV_AMSHA_VARIATION_DESCRIPTION_CAPACITY 160
 
 /* DhruvStatus (repr(i32)) */
 typedef int32_t DhruvStatus;
@@ -1152,6 +1156,27 @@ typedef struct {
     uint16_t codes[40];
     uint8_t  variations[40];
 } DhruvAmshaSelectionConfig;
+
+typedef struct {
+    uint16_t amsha_code;
+    uint8_t  variation_code;
+    char     name[DHRUV_AMSHA_VARIATION_NAME_CAPACITY];
+    char     label[DHRUV_AMSHA_VARIATION_LABEL_CAPACITY];
+    uint8_t  is_default;
+    char     description[DHRUV_AMSHA_VARIATION_DESCRIPTION_CAPACITY];
+} DhruvAmshaVariationInfo;
+
+typedef struct {
+    uint16_t                amsha_code;
+    uint8_t                 default_variation_code;
+    uint8_t                 count;
+    DhruvAmshaVariationInfo variations[DHRUV_MAX_AMSHA_VARIATIONS];
+} DhruvAmshaVariationList;
+
+typedef struct {
+    uint8_t                 count;
+    DhruvAmshaVariationList lists[40];
+} DhruvAmshaVariationCatalogs;
 
 typedef struct {
     uint16_t        amsha_code;
@@ -2341,6 +2366,13 @@ DhruvStatus dhruv_amsha_chart_for_date(
     uint8_t variation_code,
     const DhruvAmshaChartScope *scope,
     DhruvAmshaChart *out);
+DhruvStatus dhruv_amsha_variations(
+    uint16_t amsha_code,
+    DhruvAmshaVariationList *out);
+DhruvStatus dhruv_amsha_variations_many(
+    const uint16_t *amsha_codes,
+    uint32_t count,
+    DhruvAmshaVariationCatalogs *out);
 
 /* --- Charakaraka --- */
 DhruvStatus dhruv_charakaraka_for_date(
