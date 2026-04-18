@@ -592,11 +592,10 @@ fn amsha_target_rashi(
             ((start + div_idx) % 12) as u8
         }
         Amsha::D20 => {
-            let start: u16 = match rashi_element(natal_rashi_idx) {
-                RashiElement::Fire => 0,  // Mesha
-                RashiElement::Earth => 8, // Dhanu
-                RashiElement::Air => 4,   // Simha
-                RashiElement::Water => 0, // Mesha
+            let start: u16 = match rashi_modality(natal_rashi_idx) {
+                RashiModality::Chara => 0,       // Mesha
+                RashiModality::Sthira => 8,      // Dhanu
+                RashiModality::Dviswabhava => 4, // Simha
             };
             ((start + div_idx) % 12) as u8
         }
@@ -1088,6 +1087,33 @@ mod tests {
             "expected Kanya 7°06'56\", got {}",
             result.degrees_in_rashi
         );
+    }
+
+    #[test]
+    fn d20_uses_chara_start_for_mesha() {
+        let natal_lon = 0.75;
+        let result = amsha_rashi_info(natal_lon, Amsha::D20, None);
+
+        assert_eq!(result.rashi_index, 0); // Mesha
+        assert!((result.degrees_in_rashi - 15.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn d20_uses_sthira_start_for_vrishabha() {
+        let natal_lon = 30.0 + 0.75;
+        let result = amsha_rashi_info(natal_lon, Amsha::D20, None);
+
+        assert_eq!(result.rashi_index, 8); // Dhanu
+        assert!((result.degrees_in_rashi - 15.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn d20_uses_dual_start_for_mithuna() {
+        let natal_lon = 60.0 + 0.75;
+        let result = amsha_rashi_info(natal_lon, Amsha::D20, None);
+
+        assert_eq!(result.rashi_index, 4); // Simha
+        assert!((result.degrees_in_rashi - 15.0).abs() < 1e-10);
     }
 
     #[test]
