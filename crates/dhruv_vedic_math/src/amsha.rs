@@ -576,12 +576,18 @@ fn amsha_target_rashi(
         // INCREMENT amshas: odd rashi = natal start, even rashi = natal + offset
         Amsha::D7 => increment_start(natal_rashi_idx, div_idx, 6),
         Amsha::D10 => increment_start(natal_rashi_idx, div_idx, 8),
-        Amsha::D40 => increment_start(natal_rashi_idx, div_idx, 6),
 
         // D24: odd signs start from Simha(4), even signs from Karka(3)
         Amsha::D24 => {
             let is_odd_rashi = natal_rashi_idx.is_multiple_of(2);
             let start: u16 = if is_odd_rashi { 4 } else { 3 };
+            ((start + div_idx) % 12) as u8
+        }
+
+        // D40: odd signs start from Mesha(0), even signs from Tula(6)
+        Amsha::D40 => {
+            let is_odd_rashi = natal_rashi_idx.is_multiple_of(2);
+            let start: u16 = if is_odd_rashi { 0 } else { 6 };
             ((start + div_idx) % 12) as u8
         }
 
@@ -993,6 +999,21 @@ mod tests {
         assert!(
             (result_third - 345.0).abs() < 0.01,
             "D30 even third segment: got {result_third}"
+        );
+    }
+
+    #[test]
+    fn d40_uses_mesha_start_for_odd_signs() {
+        let result = amsha_longitude(0.375, Amsha::D40, None);
+        assert!((result - 15.0).abs() < 0.01, "D40 odd start: got {result}");
+    }
+
+    #[test]
+    fn d40_uses_tula_start_for_even_signs() {
+        let result = amsha_longitude(30.375, Amsha::D40, None);
+        assert!(
+            (result - 195.0).abs() < 0.01,
+            "D40 even start: got {result}"
         );
     }
 
