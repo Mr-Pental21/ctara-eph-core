@@ -91,7 +91,44 @@ jobs:
         with:
           name: wheels-${{ matrix.os }}
           path: ./wheelhouse
-      - run: pip install ./wheelhouse/*.whl pytest
+      - run: python -m pip install pytest packaging
+      - name: Install matching wheel
+        run: |
+          python - <<'PY'
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          from packaging.tags import sys_tags
+          from packaging.utils import parse_wheel_filename
+
+          wheelhouse = Path("wheelhouse")
+          wheels = sorted(wheelhouse.glob("*.whl"))
+          if not wheels:
+              raise SystemExit("No wheels found in wheelhouse/")
+
+          supported = set(sys_tags())
+          compatible = []
+          for wheel in wheels:
+              _, _, _, tags = parse_wheel_filename(wheel.name)
+              if tags & supported:
+                  compatible.append(wheel)
+
+          if not compatible:
+              names = "\n".join(wheel.name for wheel in wheels)
+              raise SystemExit(
+                  "No compatible wheels found for this runner. Available wheels:\n" + names
+              )
+
+          print("Installing compatible wheel(s):")
+          for wheel in compatible:
+              print(f"  - {wheel.name}")
+
+          subprocess.run(
+              [sys.executable, "-m", "pip", "install", *map(str, compatible)],
+              check=True,
+          )
+          PY
       - run: python -c "from ctara_dhruv._ffi import lib; print('ABI version:', lib.dhruv_api_version())"
       - run: pytest bindings/python-open/tests/ -v --tb=short
 
