@@ -592,7 +592,7 @@ fn amsha_target_rashi(
         }
 
         // FEAW amshas: element-based fixed starting rashi
-        Amsha::D9 | Amsha::D27 | Amsha::D60 => {
+        Amsha::D9 | Amsha::D27 => {
             let start = match rashi_element(natal_rashi_idx) {
                 RashiElement::Fire => 0, // Mesha
                 RashiElement::Earth => {
@@ -611,6 +611,10 @@ fn amsha_target_rashi(
                     }
                 }
             };
+            ((start + div_idx) % 12) as u8
+        }
+        Amsha::D60 => {
+            let start = natal_rashi_idx as u16;
             ((start + div_idx) % 12) as u8
         }
         Amsha::D16 => {
@@ -1048,6 +1052,24 @@ mod tests {
         assert!(
             (result - 255.0).abs() < 0.01,
             "D45 dual start: got {result}"
+        );
+    }
+
+    #[test]
+    fn d60_uses_natal_start_for_mesha() {
+        let result = amsha_longitude(0.25, Amsha::D60, None);
+        assert!(
+            (result - 15.0).abs() < 0.01,
+            "D60 Mesha start: got {result}"
+        );
+    }
+
+    #[test]
+    fn d60_uses_natal_start_for_vrishabha() {
+        let result = amsha_longitude(30.25, Amsha::D60, None);
+        assert!(
+            (result - 45.0).abs() < 0.01,
+            "D60 Vrishabha start: got {result}"
         );
     }
 
