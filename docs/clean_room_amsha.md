@@ -88,7 +88,7 @@ D1, D2, D3, D4, D7, D9, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60
 | MODALITY_FIXED | Chara → Mesha(0), Sthira → Simha(4), Dviswabhava → Dhanu(8) | D16 |
 | MODALITY_SHIFTED | Chara → Mesha(0), Sthira → Dhanu(8), Dviswabhava → Simha(4) | D20 |
 | ODD_EVEN_FIXED_START | Odd → Simha(4), Even → Karka(3) | D24 |
-| ODD_EVEN_FIXED | Odd → Mesha(0), Even → Meena(11) | D30 |
+| D30_SEGMENTS | Odd/even signs use unequal Trimshamsha segment tables | D30 |
 
 ### Progression
 
@@ -132,6 +132,26 @@ D20 starting rashi:
 | Chara | Mesha(0) |
 | Sthira | Dhanu(8) |
 | Dviswabhava | Simha(4) |
+
+### D30 Trimshamsha Values
+
+Odd-sign D30 segments:
+| Range In Sign | Target |
+|---------------|--------|
+| 0°-5° | Mesha(0) |
+| 5°-10° | Kumbha(10) |
+| 10°-18° | Dhanu(8) |
+| 18°-25° | Mithuna(2) |
+| 25°-30° | Tula(6) |
+
+Even-sign D30 segments:
+| Range In Sign | Target |
+|---------------|--------|
+| 0°-5° | Vrishabha(1) |
+| 5°-12° | Kanya(5) |
+| 12°-20° | Meena(11) |
+| 20°-25° | Makara(9) |
+| 25°-30° | Vrischika(7) |
 
 ## Variations
 

@@ -618,12 +618,7 @@ fn amsha_target_rashi(
             ((start + div_idx) % 12) as u8
         }
 
-        // D30: odd rashi starts from Mesha(0), even rashi from Meena(11)
-        Amsha::D30 => {
-            let is_odd = natal_rashi_idx.is_multiple_of(2); // 0-indexed: 0,2,4.. are odd (1-based)
-            let start: u16 = if is_odd { 0 } else { 11 };
-            ((start + div_idx) % 12) as u8
-        }
+        Amsha::D30 => unreachable!("D30 uses dedicated unequal-segment handling"),
 
         // FIXED(0): start from natal rashi, step +1
         Amsha::D4
@@ -665,6 +660,39 @@ fn increment_start(natal_rashi_idx: u8, div_idx: u16, even_offset: u16) -> u8 {
     ((start + div_idx) % 12) as u8
 }
 
+fn d30_target_and_scaled_pos(pos_in_rashi: f64, is_odd_rashi: bool) -> (u8, f64) {
+    let segments: &[(f64, u8)] = if is_odd_rashi {
+        &[
+            (5.0, 0),   // Mesha
+            (10.0, 10), // Kumbha
+            (18.0, 8),  // Dhanu
+            (25.0, 2),  // Mithuna
+            (30.0, 6),  // Tula
+        ]
+    } else {
+        &[
+            (5.0, 1),   // Vrishabha
+            (12.0, 5),  // Kanya
+            (20.0, 11), // Meena
+            (25.0, 9),  // Makara
+            (30.0, 7),  // Vrischika
+        ]
+    };
+
+    let mut segment_start = 0.0;
+    for &(segment_end, target_rashi_idx) in segments {
+        if pos_in_rashi < segment_end || (segment_end - 30.0).abs() < f64::EPSILON {
+            let segment_width = segment_end - segment_start;
+            let pos_in_segment = pos_in_rashi - segment_start;
+            let scaled_pos = pos_in_segment / segment_width * 30.0;
+            return (target_rashi_idx, scaled_pos);
+        }
+        segment_start = segment_end;
+    }
+
+    unreachable!("D30 segment resolution should always match within 0..30");
+}
+
 // ---------------------------------------------------------------------------
 // Core transformation
 // ---------------------------------------------------------------------------
@@ -689,6 +717,13 @@ pub fn amsha_longitude(
     let lon = normalize_360(sidereal_lon);
     let rashi_idx = (lon / 30.0).floor().min(11.0) as u8;
     let pos_in_rashi = lon - rashi_idx as f64 * 30.0;
+
+    if amsha == Amsha::D30 {
+        let is_odd_rashi = rashi_idx.is_multiple_of(2);
+        let (target_rashi_idx, scaled_pos) = d30_target_and_scaled_pos(pos_in_rashi, is_odd_rashi);
+        return (target_rashi_idx as f64 * 30.0 + scaled_pos) % 360.0;
+    }
+
     let total_divisions = amsha.divisions();
     let deg_per_div = 30.0 / total_divisions as f64;
 
@@ -891,22 +926,45 @@ mod tests {
     }
 
     #[test]
-    fn d30_odd_even() {
-        // Mesha (0, odd) at 1.5: pos_in_rashi=1.5
-        // start=0 (Mesha), deg_per_div=1.0, div_idx=1
-        // target = (0+1)%12 = 1 (Vrishabha)
-        // scaled = (1.5-1)/1 * 30 = 15.0
-        // result = 30 + 15 = 45.0
-        let result = amsha_longitude(1.5, Amsha::D30, None);
-        assert!((result - 45.0).abs() < 0.01, "D30 odd: got {result}");
+    fn d30_uses_odd_segment_table() {
+        let result_first = amsha_longitude(2.5, Amsha::D30, None);
+        assert!(
+            (result_first - 15.0).abs() < 0.01,
+            "D30 odd first segment: got {result_first}"
+        );
 
-        // Vrishabha (1, even) at 31.5: pos_in_rashi=1.5
-        // start=11 (Meena), deg_per_div=1.0, div_idx=1
-        // target = (11+1)%12 = 0 (Mesha)
-        // scaled = 15.0
-        // result = 0 + 15 = 15.0
-        let result2 = amsha_longitude(31.5, Amsha::D30, None);
-        assert!((result2 - 15.0).abs() < 0.01, "D30 even: got {result2}");
+        let result_second = amsha_longitude(7.5, Amsha::D30, None);
+        assert!(
+            (result_second - 315.0).abs() < 0.01,
+            "D30 odd second segment: got {result_second}"
+        );
+
+        let result_third = amsha_longitude(14.0, Amsha::D30, None);
+        assert!(
+            (result_third - 255.0).abs() < 0.01,
+            "D30 odd third segment: got {result_third}"
+        );
+    }
+
+    #[test]
+    fn d30_uses_even_segment_table() {
+        let result_first = amsha_longitude(32.5, Amsha::D30, None);
+        assert!(
+            (result_first - 45.0).abs() < 0.01,
+            "D30 even first segment: got {result_first}"
+        );
+
+        let result_second = amsha_longitude(38.5, Amsha::D30, None);
+        assert!(
+            (result_second - 165.0).abs() < 0.01,
+            "D30 even second segment: got {result_second}"
+        );
+
+        let result_third = amsha_longitude(46.0, Amsha::D30, None);
+        assert!(
+            (result_third - 345.0).abs() < 0.01,
+            "D30 even third segment: got {result_third}"
+        );
     }
 
     #[test]
