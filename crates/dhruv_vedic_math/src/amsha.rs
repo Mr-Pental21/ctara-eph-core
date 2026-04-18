@@ -570,8 +570,14 @@ fn amsha_target_rashi(
         // INCREMENT amshas: odd rashi = natal start, even rashi = natal + offset
         Amsha::D7 => increment_start(natal_rashi_idx, div_idx, 6),
         Amsha::D10 => increment_start(natal_rashi_idx, div_idx, 8),
-        Amsha::D24 => increment_start(natal_rashi_idx, div_idx, 4),
         Amsha::D40 => increment_start(natal_rashi_idx, div_idx, 6),
+
+        // D24: odd signs start from Simha(4), even signs from Karka(3)
+        Amsha::D24 => {
+            let is_odd_rashi = natal_rashi_idx.is_multiple_of(2);
+            let start: u16 = if is_odd_rashi { 4 } else { 3 };
+            ((start + div_idx) % 12) as u8
+        }
 
         // FEAW amshas: element-based fixed starting rashi
         Amsha::D9 | Amsha::D60 => {
@@ -1114,6 +1120,24 @@ mod tests {
 
         assert_eq!(result.rashi_index, 4); // Simha
         assert!((result.degrees_in_rashi - 15.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn d24_uses_simha_start_for_odd_signs() {
+        let natal_lon = 0.75;
+        let result = amsha_rashi_info(natal_lon, Amsha::D24, None);
+
+        assert_eq!(result.rashi_index, 4); // Simha
+        assert!((result.degrees_in_rashi - 18.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn d24_uses_karka_start_for_even_signs() {
+        let natal_lon = 30.75;
+        let result = amsha_rashi_info(natal_lon, Amsha::D24, None);
+
+        assert_eq!(result.rashi_index, 3); // Karka
+        assert!((result.degrees_in_rashi - 18.0).abs() < 1e-10);
     }
 
     #[test]
