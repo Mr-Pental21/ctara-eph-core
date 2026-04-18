@@ -23,6 +23,14 @@ pub enum RashiElement {
     Water,
 }
 
+/// Rashi modality classification used by some amsha starting rules.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RashiModality {
+    Chara,
+    Sthira,
+    Dviswabhava,
+}
+
 /// Determine the element of a rashi by 0-based index.
 ///
 /// Fire: 0,4,8 (Mesha, Simha, Dhanu)
@@ -36,6 +44,19 @@ pub fn rashi_element(rashi_index: u8) -> RashiElement {
         2 => RashiElement::Air,
         3 => RashiElement::Water,
         _ => unreachable!(),
+    }
+}
+
+/// Determine the modality of a rashi by 0-based index.
+///
+/// Chara: 0,3,6,9 (Mesha, Karka, Tula, Makara)
+/// Sthira: 1,4,7,10 (Vrishabha, Simha, Vrischika, Kumbha)
+/// Dviswabhava: 2,5,8,11 (Mithuna, Kanya, Dhanu, Meena)
+pub fn rashi_modality(rashi_index: u8) -> RashiModality {
+    match rashi_index % 3 {
+        0 => RashiModality::Chara,
+        1 => RashiModality::Sthira,
+        _ => RashiModality::Dviswabhava,
     }
 }
 
@@ -428,10 +449,7 @@ pub fn amsha_variation_info(
 }
 
 /// Resolve amsha-specific variation metadata from its stable name.
-pub fn amsha_variation_by_name(
-    amsha: Amsha,
-    name: &str,
-) -> Option<&'static AmshaVariationInfo> {
+pub fn amsha_variation_by_name(amsha: Amsha, name: &str) -> Option<&'static AmshaVariationInfo> {
     amsha_variations(amsha)
         .iter()
         .find(|info| info.name.eq_ignore_ascii_case(name))
@@ -481,7 +499,8 @@ impl AmshaRequest {
 
     /// Resolve None to the default variation.
     pub fn effective_variation(&self) -> AmshaVariationCode {
-        self.variation.unwrap_or(default_amsha_variation(self.amsha))
+        self.variation
+            .unwrap_or(default_amsha_variation(self.amsha))
     }
 }
 
@@ -565,11 +584,10 @@ fn amsha_target_rashi(
             ((start + div_idx) % 12) as u8
         }
         Amsha::D16 => {
-            let start: u16 = match rashi_element(natal_rashi_idx) {
-                RashiElement::Fire => 0,  // Mesha
-                RashiElement::Earth => 4, // Simha
-                RashiElement::Air => 8,   // Dhanu
-                RashiElement::Water => 0, // Mesha
+            let start: u16 = match rashi_modality(natal_rashi_idx) {
+                RashiModality::Chara => 0,       // Mesha
+                RashiModality::Sthira => 4,      // Simha
+                RashiModality::Dviswabhava => 8, // Dhanu
             };
             ((start + div_idx) % 12) as u8
         }
@@ -988,8 +1006,7 @@ mod tests {
     #[test]
     fn variation_catalog_lookup() {
         assert_eq!(
-            amsha_variation_info(Amsha::D9, DEFAULT_AMSHA_VARIATION_CODE)
-                .map(|info| info.name),
+            amsha_variation_info(Amsha::D9, DEFAULT_AMSHA_VARIATION_CODE).map(|info| info.name),
             Some("default")
         );
         assert_eq!(
@@ -998,8 +1015,7 @@ mod tests {
             Some("cancer-leo-only")
         );
         assert_eq!(
-            amsha_variation_info(Amsha::D2, DEFAULT_AMSHA_VARIATION_CODE)
-                .map(|info| info.label),
+            amsha_variation_info(Amsha::D2, DEFAULT_AMSHA_VARIATION_CODE).map(|info| info.label),
             Some("Parashara with even sign reversal (Uma Shambhu)")
         );
     }
@@ -1043,6 +1059,35 @@ mod tests {
         assert_eq!(rashi_element(9), RashiElement::Earth); // Makara
         assert_eq!(rashi_element(10), RashiElement::Air); // Kumbha
         assert_eq!(rashi_element(11), RashiElement::Water); // Meena
+    }
+
+    #[test]
+    fn rashi_modality_all_12() {
+        assert_eq!(rashi_modality(0), RashiModality::Chara); // Mesha
+        assert_eq!(rashi_modality(1), RashiModality::Sthira); // Vrishabha
+        assert_eq!(rashi_modality(2), RashiModality::Dviswabhava); // Mithuna
+        assert_eq!(rashi_modality(3), RashiModality::Chara); // Karka
+        assert_eq!(rashi_modality(4), RashiModality::Sthira); // Simha
+        assert_eq!(rashi_modality(5), RashiModality::Dviswabhava); // Kanya
+        assert_eq!(rashi_modality(6), RashiModality::Chara); // Tula
+        assert_eq!(rashi_modality(7), RashiModality::Sthira); // Vrischika
+        assert_eq!(rashi_modality(8), RashiModality::Dviswabhava); // Dhanu
+        assert_eq!(rashi_modality(9), RashiModality::Chara); // Makara
+        assert_eq!(rashi_modality(10), RashiModality::Sthira); // Kumbha
+        assert_eq!(rashi_modality(11), RashiModality::Dviswabhava); // Meena
+    }
+
+    #[test]
+    fn d16_uses_modality_start_for_tula_example() {
+        let natal_lon = 180.0 + 9.0 + (49.0 / 60.0) + (11.0 / 3600.0);
+        let result = amsha_rashi_info(natal_lon, Amsha::D16, None);
+
+        assert_eq!(result.rashi_index, 5); // Kanya
+        assert!(
+            (result.degrees_in_rashi - 7.115555555555555).abs() < 1e-10,
+            "expected Kanya 7°06'56\", got {}",
+            result.degrees_in_rashi
+        );
     }
 
     #[test]

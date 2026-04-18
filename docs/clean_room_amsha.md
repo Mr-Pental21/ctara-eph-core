@@ -84,7 +84,8 @@ D1, D2, D3, D4, D7, D9, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60
 | DOUBLE_MOD_REV_EVEN | odd signs: `start=(rashi*2)%12`, halves = `start,start+1`; even signs: halves = `start+1,start` | D2 (default) |
 | CANCER_LEO | Odd rashi → Cancer(3), Even → Leo(4) | D2 (HoraCancerLeoOnly variation) |
 | INCREMENT | Odd rashi → natal, Even → natal + offset | D7(+6), D10(+8), D24(+4), D40(+6) |
-| FEAW | Element-based fixed start | D9, D16, D20, D60 |
+| FEAW | Element-based fixed start | D9, D20, D60 |
+| MODALITY_FIXED | Chara → Mesha(0), Sthira → Simha(4), Dviswabhava → Dhanu(8) | D16 |
 | ODD_EVEN_FIXED | Odd → Mesha(0), Even → Meena(11) | D30 |
 
 ### Progression
@@ -104,9 +105,22 @@ FEAW starting rashi by amsha:
 | Amsha | Fire | Earth | Air | Water |
 |-------|------|-------|-----|-------|
 | D9 | Mesha(0) | Makara(9) | Tula(6) | Karka(3) |
-| D16 | Mesha(0) | Simha(4) | Dhanu(8) | Mesha(0) |
 | D20 | Mesha(0) | Dhanu(8) | Simha(4) | Mesha(0) |
 | D60 | Mesha(0) | Makara(9) | Tula(6) | Karka(3) |
+
+### D16 Modality Values
+
+Rashi modality classification:
+- Chara / movable: Mesha(0), Karka(3), Tula(6), Makara(9)
+- Sthira / fixed: Vrishabha(1), Simha(4), Vrischika(7), Kumbha(10)
+- Dviswabhava / dual: Mithuna(2), Kanya(5), Dhanu(8), Meena(11)
+
+D16 starting rashi:
+| Modality | Start |
+|----------|-------|
+| Chara | Mesha(0) |
+| Sthira | Simha(4) |
+| Dviswabhava | Dhanu(8) |
 
 ## Variations
 
