@@ -567,6 +567,12 @@ fn amsha_target_rashi(
             ((start + div_idx * 4) % 12) as u8
         }
 
+        // D4: kendra progression (+3 step)
+        Amsha::D4 => {
+            let start = natal_rashi_idx as u16;
+            ((start + div_idx * 3) % 12) as u8
+        }
+
         // INCREMENT amshas: odd rashi = natal start, even rashi = natal + offset
         Amsha::D7 => increment_start(natal_rashi_idx, div_idx, 6),
         Amsha::D10 => increment_start(natal_rashi_idx, div_idx, 8),
@@ -621,8 +627,7 @@ fn amsha_target_rashi(
         Amsha::D30 => unreachable!("D30 uses dedicated unequal-segment handling"),
 
         // FIXED(0): start from natal rashi, step +1
-        Amsha::D4
-        | Amsha::D5
+        Amsha::D5
         | Amsha::D6
         | Amsha::D8
         | Amsha::D11
@@ -923,6 +928,30 @@ mod tests {
         // result = 150 + 16.5 = 166.5
         let result = amsha_longitude(45.5, Amsha::D3, None);
         assert!((result - 166.5).abs() < 0.01, "D3 trine: got {result}");
+    }
+
+    #[test]
+    fn d4_kendra_progression_from_mesha() {
+        let first = amsha_longitude(1.0, Amsha::D4, None);
+        assert!((first - 4.0).abs() < 0.01, "D4 first quarter: got {first}");
+
+        let second = amsha_longitude(8.5, Amsha::D4, None);
+        assert!(
+            (second - 94.0).abs() < 0.01,
+            "D4 second quarter: got {second}"
+        );
+
+        let third = amsha_longitude(16.0, Amsha::D4, None);
+        assert!(
+            (third - 184.0).abs() < 0.01,
+            "D4 third quarter: got {third}"
+        );
+
+        let fourth = amsha_longitude(23.5, Amsha::D4, None);
+        assert!(
+            (fourth - 274.0).abs() < 0.01,
+            "D4 fourth quarter: got {fourth}"
+        );
     }
 
     #[test]
