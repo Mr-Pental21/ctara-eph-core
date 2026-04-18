@@ -14479,8 +14479,8 @@ mod tests {
     }
 
     #[test]
-    fn ffi_api_version_is_54() {
-        assert_eq!(dhruv_api_version(), 54);
+    fn ffi_api_version_matches_public_constant() {
+        assert_eq!(dhruv_api_version(), DHRUV_API_VERSION as u32);
     }
 
     #[test]

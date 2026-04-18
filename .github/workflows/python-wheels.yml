@@ -38,6 +38,7 @@ jobs:
             DHRUV_REPO_ROOT=/host${{ github.workspace }}
           CIBW_ENVIRONMENT_MACOS: >
             DHRUV_REPO_ROOT=${{ github.workspace }}
+            MACOSX_DEPLOYMENT_TARGET=10.12
           CIBW_ENVIRONMENT_WINDOWS: >
             DHRUV_REPO_ROOT=${{ github.workspace }}
           CIBW_BEFORE_ALL_LINUX: >

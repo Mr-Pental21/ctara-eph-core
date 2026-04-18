@@ -1,0 +1,5 @@
+[target.'cfg(all(windows, target_env = "msvc"))']
+# The CLI binary has a broad command surface and derives a large parse tree.
+# Windows ARM runners use a smaller default main-thread stack, so reserve a
+# larger stack for Windows binaries to avoid stack overflows in CLI smoke tests.
+rustflags = ["-C", "link-arg=/STACK:16777216"]
