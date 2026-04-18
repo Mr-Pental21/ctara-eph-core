@@ -49,6 +49,9 @@ Variation codes are amsha-scoped. The current catalog entries are:
 - `D2`: `0=default`, `1=cancer-leo-only`
 - every other supported amsha currently exposes `0=default`
 
+For `D2` default, odd signs map halves as `start,start+1` and even signs map
+halves as `start+1,start`, where `start = (rashi * 2) % 12`.
+
 Use the amsha variation discovery helpers as the authoritative source for the
 valid codes, names, labels, and defaults for any given amsha.
 

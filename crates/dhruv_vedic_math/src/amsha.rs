@@ -387,9 +387,9 @@ const D2_VARIATION_INFOS: [AmshaVariationInfo; 2] = [
     AmshaVariationInfo {
         variation_code: DEFAULT_AMSHA_VARIATION_CODE,
         name: "default",
-        label: "Traditional Parashari",
+        label: "Parashara with even sign reversal (Uma Shambhu)",
         is_default: true,
-        description: "Traditional Parashari hora method.",
+        description: "Parashara hora method with even-sign half reversal.",
     },
     AmshaVariationInfo {
         variation_code: D2_CANCER_LEO_ONLY_VARIATION_CODE,
@@ -520,13 +520,25 @@ fn amsha_target_rashi(
                 }
             }
             DEFAULT_AMSHA_VARIATION_CODE => {
-                // Zodiac cycling: start = (rashi * 2) % 12
+                // Uma Shambhu / Parashara default:
+                // odd signs  -> first half start, second half start+1
+                // even signs -> first half start+1, second half start
                 let start = (natal_rashi_idx as u16 * 2) % 12;
-                ((start + div_idx) % 12) as u8
+                let is_odd_rashi = natal_rashi_idx.is_multiple_of(2);
+                if is_odd_rashi {
+                    ((start + div_idx) % 12) as u8
+                } else {
+                    ((start + 1 - div_idx) % 12) as u8
+                }
             }
             _ => {
                 let start = (natal_rashi_idx as u16 * 2) % 12;
-                ((start + div_idx) % 12) as u8
+                let is_odd_rashi = natal_rashi_idx.is_multiple_of(2);
+                if is_odd_rashi {
+                    ((start + div_idx) % 12) as u8
+                } else {
+                    ((start + 1 - div_idx) % 12) as u8
+                }
             }
         },
 
@@ -785,11 +797,25 @@ mod tests {
         // Vrishabha (1) at 45.5 deg: pos_in_rashi=15.5
         // start = (1*2)%12 = 2, deg_per_div=15
         // div_idx = floor(15.5/15) = 1
-        // target = (2+1)%12 = 3 (Karka)
+        // even sign reversal -> second half maps to start = 2 (Mithuna)
         // scaled = (15.5-15)/15 * 30 = 1.0
-        // result = 90 + 1 = 91.0
+        // result = 60 + 1 = 61.0
         let result = amsha_longitude(45.5, Amsha::D2, None);
-        assert!((result - 91.0).abs() < 0.01, "D2 standard: got {result}");
+        assert!((result - 61.0).abs() < 0.01, "D2 standard: got {result}");
+    }
+
+    #[test]
+    fn d2_standard_even_first_half_reverses() {
+        // Vrishabha (1) at 40.0 deg: pos_in_rashi=10.0
+        // start = (1*2)%12 = 2
+        // even sign reversal -> first half maps to start+1 = 3 (Karka)
+        // scaled = 10/15 * 30 = 20.0
+        // result = 90 + 20 = 110.0
+        let result = amsha_longitude(40.0, Amsha::D2, None);
+        assert!(
+            (result - 110.0).abs() < 0.01,
+            "D2 standard even first half: got {result}"
+        );
     }
 
     #[test]
@@ -970,6 +996,11 @@ mod tests {
             amsha_variation_info(Amsha::D2, D2_CANCER_LEO_ONLY_VARIATION_CODE)
                 .map(|info| info.name),
             Some("cancer-leo-only")
+        );
+        assert_eq!(
+            amsha_variation_info(Amsha::D2, DEFAULT_AMSHA_VARIATION_CODE)
+                .map(|info| info.label),
+            Some("Parashara with even sign reversal (Uma Shambhu)")
         );
     }
 

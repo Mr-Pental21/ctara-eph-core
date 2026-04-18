@@ -81,7 +81,7 @@ D1, D2, D3, D4, D7, D9, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60
 | Rule Type | Description | Used By |
 |-----------|-------------|---------|
 | NATAL | Start from natal rashi | D3-D6, D8, D11-D12, D15, D18, D21-D22, D25, D27-D28, D36, D45, D48, D50, D54, D72, D81, D108, D144 |
-| DOUBLE_MOD | `(rashi * 2) % 12` | D2 (standard) |
+| DOUBLE_MOD_REV_EVEN | odd signs: `start=(rashi*2)%12`, halves = `start,start+1`; even signs: halves = `start+1,start` | D2 (default) |
 | CANCER_LEO | Odd rashi → Cancer(3), Even → Leo(4) | D2 (HoraCancerLeoOnly variation) |
 | INCREMENT | Odd rashi → natal, Even → natal + offset | D7(+6), D10(+8), D24(+4), D40(+6) |
 | FEAW | Element-based fixed start | D9, D16, D20, D60 |
