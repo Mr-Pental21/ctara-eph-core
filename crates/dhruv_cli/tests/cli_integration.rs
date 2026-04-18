@@ -72,7 +72,8 @@ fn cli_bala_commands_accept_amsha_selection() {
     }
 
     let shadbala_default_args = command_args("shadbala");
-    let shadbala_default_refs: Vec<&str> = shadbala_default_args.iter().map(String::as_str).collect();
+    let shadbala_default_refs: Vec<&str> =
+        shadbala_default_args.iter().map(String::as_str).collect();
     let shadbala_default = run_cli(&shadbala_default_refs);
     assert_success(&shadbala_default, "shadbala default");
 

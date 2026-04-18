@@ -9850,13 +9850,15 @@ fn write_amsha_chart(
     let graha_names = [
         "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu",
     ];
-    let variation_suffix = if chart.variation_code
-        == dhruv_vedic_base::default_amsha_variation(chart.amsha)
-    {
-        String::new()
-    } else {
-        format!(" [{}]", amsha_variation_name(chart.amsha, chart.variation_code))
-    };
+    let variation_suffix =
+        if chart.variation_code == dhruv_vedic_base::default_amsha_variation(chart.amsha) {
+            String::new()
+        } else {
+            format!(
+                " [{}]",
+                amsha_variation_name(chart.amsha, chart.variation_code)
+            )
+        };
 
     writeln!(
         w,

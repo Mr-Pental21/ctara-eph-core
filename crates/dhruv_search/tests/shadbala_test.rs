@@ -308,18 +308,17 @@ fn vimsopaka_single_graha_matches_all() {
 
     for i in 0..9 {
         let graha = dhruv_vedic_base::ALL_GRAHAS[i];
-        let single =
-            vimsopaka_for_graha(
-                &engine,
-                &eop,
-                &utc,
-                &location,
-                &aya_config,
-                policy,
-                &default_amsha_selection(),
-                graha,
-            )
-            .expect("vimsopaka_for_graha should succeed");
+        let single = vimsopaka_for_graha(
+            &engine,
+            &eop,
+            &utc,
+            &location,
+            &aya_config,
+            policy,
+            &default_amsha_selection(),
+            graha,
+        )
+        .expect("vimsopaka_for_graha should succeed");
         assert!(
             (single.shodasavarga - all.entries[i].shodasavarga).abs() < 0.01,
             "single vs all mismatch for graha {i}"

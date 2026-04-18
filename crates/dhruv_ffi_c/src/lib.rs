@@ -39,15 +39,15 @@ use dhruv_vedic_base::{
     Amsha, AmshaRequest, AmshaVariationCatalog, AmshaVariationInfo, AyanamshaSystem, BhavaConfig,
     BhavaReferenceMode, BhavaStartingPoint, BhavaSystem, CharakarakaScheme,
     DEFAULT_AMSHA_VARIATION_CODE, GeoLocation, LunarNode, NodeMode, RiseSetConfig, RiseSetEvent,
-    RiseSetResult, SunLimb, VedicError, amsha_longitude, amsha_rashi_info,
-    amsha_variation_catalog, approximate_local_noon_jd, ayana_from_sidereal_longitude,
-    ayanamsha_deg_with_catalog, ayanamsha_mean_deg_with_catalog, ayanamsha_true_deg,
-    compute_all_events, compute_bhavas, compute_rise_set, default_amsha_variation, deg_to_dms,
-    is_valid_amsha_variation, jd_tdb_to_centuries, karana_from_elongation, lunar_node_deg,
-    lunar_node_deg_for_epoch, masa_from_rashi_index, nakshatra_from_longitude,
-    nakshatra_from_tropical, nakshatra28_from_longitude, nakshatra28_from_tropical,
-    nth_rashi_from, rashi_from_longitude, rashi_from_tropical, samvatsara_from_year,
-    tithi_from_elongation, utc_day_start_jd, vaar_from_jd, yoga_from_sum,
+    RiseSetResult, SunLimb, VedicError, amsha_longitude, amsha_rashi_info, amsha_variation_catalog,
+    approximate_local_noon_jd, ayana_from_sidereal_longitude, ayanamsha_deg_with_catalog,
+    ayanamsha_mean_deg_with_catalog, ayanamsha_true_deg, compute_all_events, compute_bhavas,
+    compute_rise_set, default_amsha_variation, deg_to_dms, is_valid_amsha_variation,
+    jd_tdb_to_centuries, karana_from_elongation, lunar_node_deg, lunar_node_deg_for_epoch,
+    masa_from_rashi_index, nakshatra_from_longitude, nakshatra_from_tropical,
+    nakshatra28_from_longitude, nakshatra28_from_tropical, nth_rashi_from, rashi_from_longitude,
+    rashi_from_tropical, samvatsara_from_year, tithi_from_elongation, utc_day_start_jd,
+    vaar_from_jd, yoga_from_sum,
 };
 use dhruv_vedic_ops::{
     PANCHANG_INCLUDE_AYANA, PANCHANG_INCLUDE_GHATIKA, PANCHANG_INCLUDE_HORA,
@@ -997,9 +997,7 @@ fn full_kundali_config_from_ffi(
     })
 }
 
-fn amsha_selection_from_ffi(
-    cfg: &DhruvAmshaSelectionConfig,
-) -> dhruv_search::AmshaSelectionConfig {
+fn amsha_selection_from_ffi(cfg: &DhruvAmshaSelectionConfig) -> dhruv_search::AmshaSelectionConfig {
     dhruv_search::AmshaSelectionConfig {
         count: cfg.count,
         codes: cfg.codes,
@@ -10412,10 +10410,7 @@ fn write_fixed_c_string<const N: usize>(dst: &mut [c_char; N], src: &str) {
     }
 }
 
-fn amsha_variation_info_to_ffi(
-    amsha: Amsha,
-    info: &AmshaVariationInfo,
-) -> DhruvAmshaVariationInfo {
+fn amsha_variation_info_to_ffi(amsha: Amsha, info: &AmshaVariationInfo) -> DhruvAmshaVariationInfo {
     let mut out = DhruvAmshaVariationInfo::zeroed();
     out.amsha_code = amsha.code();
     out.variation_code = info.variation_code;

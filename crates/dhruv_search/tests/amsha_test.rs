@@ -459,7 +459,11 @@ fn full_kundali_returns_resolved_amsha_union_for_intermediate_sections() {
     .expect("full_kundali should succeed");
 
     let amshas = result.amshas.expect("amshas should be present");
-    assert_eq!(amshas.charts.len(), 16, "shadbala+vimsopaka union should be returned");
+    assert_eq!(
+        amshas.charts.len(),
+        16,
+        "shadbala+vimsopaka union should be returned"
+    );
     assert_eq!(amshas.charts[0].amsha, Amsha::D2);
     assert_eq!(
         amshas.charts[0].variation_code,

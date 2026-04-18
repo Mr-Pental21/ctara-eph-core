@@ -75,13 +75,12 @@ use dhruv_vedic_base::{
     ALL_GRAHAS, ALL_MASAS, ALL_NAKSHATRAS_27, ALL_NAKSHATRAS_28, ALL_RASHIS, ALL_SAMVATSARAS,
     ALL_UPAGRAHAS, ALL_VAARS, Amsha, AmshaRequest, AyanamshaSystem, BhavaConfig,
     BhavaReferenceMode, BhavaResult, BhavaStartingPoint, BhavaSystem, CharakarakaResult,
-    CharakarakaScheme, Graha, GulikaMaandiPlanet, LunarNode, Nakshatra28Info,
-    NodeDignityPolicy, NodeMode, RashiInfo, SunBasedUpagrahas, TimeUpagrahaConfig,
-    TimeUpagrahaPoint, Upagraha, amsha_variation_catalog, amsha_variation_info, compute_bhavas,
-    default_amsha_variation, is_valid_amsha_variation, lagna_longitude_rad, mc_longitude_rad,
-    nakshatra_from_longitude, nakshatra_from_tropical, nakshatra28_from_longitude,
-    nakshatra28_from_tropical, ramc_rad, rashi_from_longitude, rashi_from_tropical,
-    sun_based_upagrahas, time_upagraha_jd,
+    CharakarakaScheme, Graha, GulikaMaandiPlanet, LunarNode, Nakshatra28Info, NodeDignityPolicy,
+    NodeMode, RashiInfo, SunBasedUpagrahas, TimeUpagrahaConfig, TimeUpagrahaPoint, Upagraha,
+    amsha_variation_catalog, amsha_variation_info, compute_bhavas, default_amsha_variation,
+    is_valid_amsha_variation, lagna_longitude_rad, mc_longitude_rad, nakshatra_from_longitude,
+    nakshatra_from_tropical, nakshatra28_from_longitude, nakshatra28_from_tropical, ramc_rad,
+    rashi_from_longitude, rashi_from_tropical, sun_based_upagrahas, time_upagraha_jd,
 };
 use dhruv_vedic_base::{
     calculate_all_bav, calculate_ashtakavarga, calculate_bav, calculate_sav, ekadhipatya_sodhana,
@@ -3837,8 +3836,9 @@ fn handle_jyotish(resource: &ResourceArc<EngineResource>, request: JyotishReques
                     .unwrap_or_default()
                     .into_iter()
                     .map(|request| {
-                        let amsha = Amsha::from_code(request.code)
-                            .ok_or_else(|| error_payload("invalid_request", "unknown amsha code"))?;
+                        let amsha = Amsha::from_code(request.code).ok_or_else(|| {
+                            error_payload("invalid_request", "unknown amsha code")
+                        })?;
                         let variation = match request.variation {
                             Some(code) if is_valid_amsha_variation(amsha, code) => Some(code),
                             Some(_) => {

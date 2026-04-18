@@ -17,8 +17,7 @@ use dhruv_search::{
 use dhruv_time::{EopKernel, UtcTime};
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
 use dhruv_vedic_base::{
-    Amsha, AmshaRequest, BhavaConfig, D2_CANCER_LEO_ONLY_VARIATION_CODE,
-    Graha, NodeDignityPolicy,
+    Amsha, AmshaRequest, BhavaConfig, D2_CANCER_LEO_ONLY_VARIATION_CODE, Graha, NodeDignityPolicy,
 };
 
 const SPK_PATH: &str = "../../kernels/data/de442s.bsp";
@@ -106,7 +105,10 @@ fn amsha_charts_duplicate_requests_preserve_order_and_distinguish_variation() {
     .expect("amsha_charts_for_date should succeed");
 
     assert_eq!(result.charts.len(), 4);
-    assert_eq!(result.charts[0].variation_code, result.charts[1].variation_code);
+    assert_eq!(
+        result.charts[0].variation_code,
+        result.charts[1].variation_code
+    );
     for i in 0..9 {
         assert!(approx_eq(
             result.charts[0].grahas[i].sidereal_longitude,
@@ -120,7 +122,10 @@ fn amsha_charts_duplicate_requests_preserve_order_and_distinguish_variation() {
 
     assert_eq!(result.charts[2].amsha, Amsha::D2);
     assert_eq!(result.charts[3].amsha, Amsha::D2);
-    assert_ne!(result.charts[2].variation_code, result.charts[3].variation_code);
+    assert_ne!(
+        result.charts[2].variation_code,
+        result.charts[3].variation_code
+    );
     assert!(
         result.charts[2]
             .grahas

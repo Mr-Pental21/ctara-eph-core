@@ -25,21 +25,20 @@ use dhruv_vedic_base::{
     ALL_GRAHAS, AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AmshaRequest,
     ArudhaResult, AshtakavargaResult, AvasthaInputs, BhavaBalaBirthPeriod, BhavaBalaInputs,
     BhavaBalaResult, BhavaConfig, BhavaResult, CharakarakaResult, CharakarakaScheme, Dignity,
-    DrishtiEntry, Graha, GrahaAvasthas,
-    GrahaDrishtiMatrix, KalaBalaInputs, LajjitadiInputs, LunarNode, NodeDignityPolicy, NodeMode,
-    SAPTA_GRAHAS, SayanadiInputs, SayanadiResult, ShadbalaInputs, TimeUpagrahaConfig,
-    all_avasthas, all_combustion_status, all_shadbalas_from_inputs, all_sphutas,
-    amsha_longitude, baladi_avastha, bhava_bala_entry, bhrigu_bindu,
-    calculate_ashtakavarga, calculate_bhava_bala, charakarakas_from_longitudes, compute_bhavas,
-    deeptadi_avastha, default_amsha_variation, dignity_in_rashi_with_positions, ghati_lagna,
-    ghatikas_since_sunrise, graha_drishti, graha_drishti_matrix, hora_lagna,
-    hora_lord as graha_hora_lord, is_valid_amsha_variation, jagradadi_avastha,
-    jd_tdb_to_centuries, lagna_longitude_rad, lajjitadi_avastha, lost_planetary_war,
-    lunar_node_deg_for_epoch_on_plane, masa_lord as graha_masa_lord, nakshatra_from_longitude,
-    node_dignity_in_rashi, normalize_360, nth_rashi_from, pranapada_lagna, rashi_from_longitude,
-    rashi_lord_by_index, samvatsara_lord as graha_samvatsara_lord, sayanadi_all_sub_states,
-    sayanadi_avastha, shadbala_from_inputs, sree_lagna, sun_based_upagrahas,
-    time_upagraha_jd_with_config, vaar_lord as graha_vaar_lord,
+    DrishtiEntry, Graha, GrahaAvasthas, GrahaDrishtiMatrix, KalaBalaInputs, LajjitadiInputs,
+    LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS, SayanadiInputs, SayanadiResult,
+    ShadbalaInputs, TimeUpagrahaConfig, all_avasthas, all_combustion_status,
+    all_shadbalas_from_inputs, all_sphutas, amsha_longitude, baladi_avastha, bhava_bala_entry,
+    bhrigu_bindu, calculate_ashtakavarga, calculate_bhava_bala, charakarakas_from_longitudes,
+    compute_bhavas, deeptadi_avastha, default_amsha_variation, dignity_in_rashi_with_positions,
+    ghati_lagna, ghatikas_since_sunrise, graha_drishti, graha_drishti_matrix, hora_lagna,
+    hora_lord as graha_hora_lord, is_valid_amsha_variation, jagradadi_avastha, jd_tdb_to_centuries,
+    lagna_longitude_rad, lajjitadi_avastha, lost_planetary_war, lunar_node_deg_for_epoch_on_plane,
+    masa_lord as graha_masa_lord, nakshatra_from_longitude, node_dignity_in_rashi, normalize_360,
+    nth_rashi_from, pranapada_lagna, rashi_from_longitude, rashi_lord_by_index,
+    samvatsara_lord as graha_samvatsara_lord, sayanadi_all_sub_states, sayanadi_avastha,
+    shadbala_from_inputs, sree_lagna, sun_based_upagrahas, time_upagraha_jd_with_config,
+    vaar_lord as graha_vaar_lord,
 };
 
 use crate::conjunction::{body_ecliptic_lon_lat, body_ecliptic_state, body_lon_lat_on_plane};
@@ -124,13 +123,9 @@ impl AmshaGrahaCache {
         F: FnOnce() -> Result<CachedAmshaGrahaData, SearchError>,
     {
         let variation_code = request.effective_variation();
-        if let Some(index) = self
-            .entries
-            .iter()
-            .position(|cached| {
-                cached.amsha == request.amsha && cached.variation_code == variation_code
-            })
-        {
+        if let Some(index) = self.entries.iter().position(|cached| {
+            cached.amsha == request.amsha && cached.variation_code == variation_code
+        }) {
             return Ok(&self.entries[index]);
         }
         self.entries.push(compute()?);
@@ -587,8 +582,7 @@ impl JyotishContext {
                 let degrees_in_sign = normalized % 30.0;
                 let division_index = ((degrees_in_sign / division_span).floor() as u16)
                     .min(request.amsha.divisions().saturating_sub(1));
-                let amsha_lon =
-                    amsha_longitude(sidereal_lon, request.amsha, Some(variation_code));
+                let amsha_lon = amsha_longitude(sidereal_lon, request.amsha, Some(variation_code));
                 longitudes[i] = amsha_lon;
                 rashi_indices[i] = ((normalize_360(amsha_lon) / 30.0).floor() as u8).min(11);
                 division_indices[i] = division_index;
@@ -3119,11 +3113,7 @@ fn make_amsha_entry(sidereal_lon: f64) -> AmshaEntry {
 }
 
 /// Transform a sidereal longitude through an amsha and return an AmshaEntry.
-fn transform_to_amsha_entry(
-    sidereal_lon: f64,
-    amsha: Amsha,
-    variation: Option<u8>,
-) -> AmshaEntry {
+fn transform_to_amsha_entry(sidereal_lon: f64, amsha: Amsha, variation: Option<u8>) -> AmshaEntry {
     let amsha_lon = amsha_longitude(sidereal_lon, amsha, variation);
     make_amsha_entry(amsha_lon)
 }
@@ -3692,7 +3682,10 @@ mod tests {
         let decoded = decode_amsha_selection(&selection).expect("selection should decode");
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].amsha, Amsha::D9);
-        assert_eq!(decoded[0].effective_variation(), DEFAULT_AMSHA_VARIATION_CODE);
+        assert_eq!(
+            decoded[0].effective_variation(),
+            DEFAULT_AMSHA_VARIATION_CODE
+        );
     }
 
     #[test]
@@ -3796,18 +3789,15 @@ mod tests {
             .expect("default variation should cache");
 
         cache
-            .get_or_compute(
-                AmshaRequest::with_variation(Amsha::D2, 1),
-                || {
-                    Ok(CachedAmshaGrahaData {
-                        amsha: Amsha::D2,
-                        variation_code: 1,
-                        longitudes: [0.0; 9],
-                        rashi_indices: [0; 9],
-                        division_indices: [0; 9],
-                    })
-                },
-            )
+            .get_or_compute(AmshaRequest::with_variation(Amsha::D2, 1), || {
+                Ok(CachedAmshaGrahaData {
+                    amsha: Amsha::D2,
+                    variation_code: 1,
+                    longitudes: [0.0; 9],
+                    rashi_indices: [0; 9],
+                    division_indices: [0; 9],
+                })
+            })
             .expect("alternate variation should cache independently");
 
         assert_eq!(cache.len(), 2);
@@ -3828,7 +3818,10 @@ mod tests {
         assert_eq!(unique.len(), 3);
         assert_eq!(positions, vec![0, 0, 1, 2, 2]);
         assert_eq!(unique[0].amsha, Amsha::D9);
-        assert_eq!(unique[1].effective_variation(), DEFAULT_AMSHA_VARIATION_CODE);
+        assert_eq!(
+            unique[1].effective_variation(),
+            DEFAULT_AMSHA_VARIATION_CODE
+        );
         assert_eq!(unique[2].effective_variation(), 1);
     }
 
