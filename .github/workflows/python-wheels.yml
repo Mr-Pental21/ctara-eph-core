@@ -93,6 +93,7 @@ jobs:
           path: ./wheelhouse
       - run: python -m pip install pytest packaging
       - name: Install matching wheel
+        shell: bash
         run: |
           python - <<'PY'
           import subprocess

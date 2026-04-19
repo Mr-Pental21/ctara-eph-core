@@ -8,7 +8,7 @@ import pytest
 
 # Kernel files location (relative to repo root)
 _REPO_ROOT = Path(__file__).parent.parent.parent.parent
-_KERNEL_DIR = _REPO_ROOT / "kernels" / "data"
+_KERNEL_DIR = Path(os.environ.get("CTARA_DHRUV_TEST_KERNEL_DIR", _REPO_ROOT / "kernels" / "data"))
 _BSP_PATH = _KERNEL_DIR / "de442s.bsp"
 _LSK_PATH = _KERNEL_DIR / "naif0012.tls"
 _EOP_PATH = _KERNEL_DIR / "finals2000A.all"
@@ -86,6 +86,8 @@ class _EngineAccessor:
 @pytest.fixture(scope="session")
 def engine_handles(bsp_path, lsk_path, eop_path):
     """Create engine + LSK + EOP handles for session-scoped tests."""
+    if not _has_kernels():
+        pytest.skip("Kernel files not found in kernels/data/")
     import ctara_dhruv
     ctara_dhruv.init([bsp_path], lsk_path, eop_path)
     yield _EngineAccessor()
@@ -95,6 +97,8 @@ def engine_handles(bsp_path, lsk_path, eop_path):
 def _ensure_singleton(bsp_path, lsk_path, eop_path):
     """Re-init singleton if a prior test closed it."""
     yield
+    if not _has_kernels():
+        return
     try:
         import ctara_dhruv
         ctara_dhruv.engine()._ptr
