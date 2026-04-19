@@ -376,3 +376,7 @@ Defaults preserved by `TimeUpagrahaConfigDefault()`:
 - other time-based upagrahas = period start
 
 For build/runtime notes, see [`bindings/go-open/README.md`](../../../bindings/go-open/README.md).
+
+## Rashi-Bhava Bhava Config
+
+`BhavaConfig` includes `UseRashiBhavaForBalaAvastha` and `IncludeRashiBhavaResults`, both defaulting to `true`. Existing bhava fields remain configured-system outputs; rashi-bhava sibling fields such as `RashiBhavaCusps`, `RashiBhavaNumber`, and `GrahaToRashiBhava` expose the equal-house/whole-sign companion basis.

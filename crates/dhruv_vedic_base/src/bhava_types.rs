@@ -102,6 +102,10 @@ pub struct BhavaConfig {
     pub starting_point: BhavaStartingPoint,
     /// Whether the starting point is the start or middle of bhava 1.
     pub reference_mode: BhavaReferenceMode,
+    /// Use rashi-bhava/whole-sign style bhavas for bala and avastha calculations.
+    pub use_rashi_bhava_for_bala_avastha: bool,
+    /// Include rashi-bhava sibling outputs on bhava-aware public result surfaces.
+    pub include_rashi_bhava_results: bool,
 }
 
 impl Default for BhavaConfig {
@@ -110,6 +114,8 @@ impl Default for BhavaConfig {
             system: BhavaSystem::Equal,
             starting_point: BhavaStartingPoint::Lagna,
             reference_mode: BhavaReferenceMode::StartOfFirst,
+            use_rashi_bhava_for_bala_avastha: true,
+            include_rashi_bhava_results: true,
         }
     }
 }

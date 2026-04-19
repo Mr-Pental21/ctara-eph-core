@@ -55,6 +55,7 @@ fn new_delhi_lagna_reasonable_range() {
         system: BhavaSystem::Equal,
         starting_point: BhavaStartingPoint::Lagna,
         reference_mode: BhavaReferenceMode::StartOfFirst,
+        ..BhavaConfig::default()
     };
 
     let result = compute_bhavas(&engine, &lsk, &eop, &loc, jd_utc, &config)
@@ -118,6 +119,7 @@ fn sripati_angular_cusps_match_asc_ic_desc_mc() {
         system: BhavaSystem::Sripati,
         starting_point: BhavaStartingPoint::Lagna,
         reference_mode: BhavaReferenceMode::StartOfFirst,
+        ..BhavaConfig::default()
     };
     let result = compute_bhavas(&engine, &lsk, &eop, &loc, jd_utc, &config)
         .expect("compute_bhavas should succeed");
@@ -175,6 +177,7 @@ fn kp_placidus_valid_cusps() {
         system: BhavaSystem::KP,
         starting_point: BhavaStartingPoint::Lagna,
         reference_mode: BhavaReferenceMode::StartOfFirst,
+        ..BhavaConfig::default()
     };
     let result = compute_bhavas(&engine, &lsk, &eop, &loc, jd_utc, &config)
         .expect("KP should succeed at moderate latitude");
@@ -212,6 +215,7 @@ fn all_10_systems_produce_valid_results() {
             system,
             starting_point: BhavaStartingPoint::Lagna,
             reference_mode: BhavaReferenceMode::StartOfFirst,
+            ..BhavaConfig::default()
         };
 
         let result = compute_bhavas(&engine, &lsk, &eop, &loc, jd_utc, &config)
@@ -240,6 +244,7 @@ fn body_longitude_starting_point_sun() {
         system: BhavaSystem::Equal,
         starting_point: BhavaStartingPoint::BodyLongitude(Body::Sun),
         reference_mode: BhavaReferenceMode::StartOfFirst,
+        ..BhavaConfig::default()
     };
 
     let result = compute_bhavas(&engine, &lsk, &eop, &loc, jd_utc, &config)
@@ -266,6 +271,7 @@ fn extreme_latitude_kp_returns_error() {
         system: BhavaSystem::KP,
         starting_point: BhavaStartingPoint::Lagna,
         reference_mode: BhavaReferenceMode::StartOfFirst,
+        ..BhavaConfig::default()
     };
 
     let result = compute_bhavas(&engine, &lsk, &eop, &loc, jd_utc, &config);
@@ -284,11 +290,13 @@ fn middle_of_first_shifts_cusps() {
         system: BhavaSystem::Equal,
         starting_point: BhavaStartingPoint::Lagna,
         reference_mode: BhavaReferenceMode::StartOfFirst,
+        ..BhavaConfig::default()
     };
     let config_mid = BhavaConfig {
         system: BhavaSystem::Equal,
         starting_point: BhavaStartingPoint::Lagna,
         reference_mode: BhavaReferenceMode::MiddleOfFirst,
+        ..BhavaConfig::default()
     };
 
     let result_start = compute_bhavas(&engine, &lsk, &eop, &loc, jd_utc, &config_start).unwrap();
@@ -330,6 +338,7 @@ fn lagna_is_rising_point() {
         system: BhavaSystem::Equal,
         starting_point: BhavaStartingPoint::Lagna,
         reference_mode: BhavaReferenceMode::StartOfFirst,
+        ..BhavaConfig::default()
     };
     let result = compute_bhavas(&_engine, &_lsk, &eop, &loc, jd_utc, &config)
         .expect("compute_bhavas should succeed");
@@ -362,6 +371,7 @@ fn descendant_is_lagna_plus_180() {
         system: BhavaSystem::Sripati,
         starting_point: BhavaStartingPoint::Lagna,
         reference_mode: BhavaReferenceMode::StartOfFirst,
+        ..BhavaConfig::default()
     };
     let result = compute_bhavas(&engine, &lsk, &eop, &loc, jd_utc, &config)
         .expect("compute_bhavas should succeed");

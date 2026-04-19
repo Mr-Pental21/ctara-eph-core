@@ -840,12 +840,14 @@ class DrishtiResult:
 
     ``graha_to_graha``: 9x9 matrix.
     ``graha_to_bhava``: 9x12 matrix.
+    ``graha_to_rashi_bhava``: 9x12 matrix.
     ``graha_to_lagna``: 9 entries.
     ``graha_to_bindus``: 9x19 matrix.
     """
 
     graha_to_graha: list[list[DrishtiEntry]]
     graha_to_bhava: list[list[DrishtiEntry]]
+    graha_to_rashi_bhava: list[list[DrishtiEntry]]
     graha_to_lagna: list[DrishtiEntry]
     graha_to_bindus: list[list[DrishtiEntry]]
 
@@ -864,6 +866,7 @@ class GrahaEntry:
     ``nakshatra_index``: 0-based (0-26), 255 if not computed.
     ``pada``: 1-4, 0 if not computed.
     ``bhava_number``: 1-12, 0 if not computed.
+    ``rashi_bhava_number``: 1-12, 0 if not computed.
     """
 
     sidereal_longitude: float
@@ -871,6 +874,7 @@ class GrahaEntry:
     nakshatra_index: int
     pada: int
     bhava_number: int
+    rashi_bhava_number: int = 0
 
 
 @dataclass(frozen=True)
@@ -908,6 +912,7 @@ class BindusResult:
     hora_lagna: GrahaEntry
     ghati_lagna: GrahaEntry
     sree_lagna: GrahaEntry
+    rashi_bhava_arudha_padas: Optional[list[GrahaEntry]] = None
 
 
 # ---------------------------------------------------------------------------
@@ -946,7 +951,9 @@ class AmshaChart:
     grahas: list[AmshaEntry]
     lagna: AmshaEntry
     bhava_cusps: Optional[list[AmshaEntry]] = None
+    rashi_bhava_cusps: Optional[list[AmshaEntry]] = None
     arudha_padas: Optional[list[AmshaEntry]] = None
+    rashi_bhava_arudha_padas: Optional[list[AmshaEntry]] = None
     upagrahas: Optional[list[AmshaEntry]] = None
     sphutas: Optional[list[AmshaEntry]] = None
     special_lagnas: Optional[list[AmshaEntry]] = None
@@ -1275,6 +1282,7 @@ class FullKundaliResult:
 
     ayanamsha_deg: float
     bhava_cusps: Optional[BhavaResult] = None
+    rashi_bhava_cusps: Optional[BhavaResult] = None
     graha_positions: Optional[GrahaPositions] = None
     bindus: Optional[BindusResult] = None
     drishti: Optional[DrishtiResult] = None

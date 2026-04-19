@@ -258,27 +258,31 @@ func goRiseSetConfig(cfg C.DhruvRiseSetConfig) RiseSetConfig {
 
 func cBhavaConfig(cfg BhavaConfig) C.DhruvBhavaConfig {
 	return C.DhruvBhavaConfig{
-		system:           C.int32_t(cfg.System),
-		starting_point:   C.int32_t(cfg.StartingPoint),
-		custom_start_deg: C.double(cfg.CustomStartDeg),
-		reference_mode:   C.int32_t(cfg.ReferenceMode),
-		output_mode:      C.int32_t(cfg.OutputMode),
-		ayanamsha_system: C.int32_t(cfg.AyanamshaSystem),
-		use_nutation:     boolU8(cfg.UseNutation),
-		reference_plane:  C.int32_t(cfg.ReferencePlane),
+		system:                           C.int32_t(cfg.System),
+		starting_point:                   C.int32_t(cfg.StartingPoint),
+		custom_start_deg:                 C.double(cfg.CustomStartDeg),
+		reference_mode:                   C.int32_t(cfg.ReferenceMode),
+		output_mode:                      C.int32_t(cfg.OutputMode),
+		ayanamsha_system:                 C.int32_t(cfg.AyanamshaSystem),
+		use_nutation:                     boolU8(cfg.UseNutation),
+		reference_plane:                  C.int32_t(cfg.ReferencePlane),
+		use_rashi_bhava_for_bala_avastha: boolU8(cfg.UseRashiBhavaForBalaAvastha),
+		include_rashi_bhava_results:      boolU8(cfg.IncludeRashiBhavaResults),
 	}
 }
 
 func goBhavaConfig(cfg C.DhruvBhavaConfig) BhavaConfig {
 	return BhavaConfig{
-		System:          int32(cfg.system),
-		StartingPoint:   int32(cfg.starting_point),
-		CustomStartDeg:  float64(cfg.custom_start_deg),
-		ReferenceMode:   int32(cfg.reference_mode),
-		OutputMode:      int32(cfg.output_mode),
-		AyanamshaSystem: int32(cfg.ayanamsha_system),
-		UseNutation:     cfg.use_nutation != 0,
-		ReferencePlane:  int32(cfg.reference_plane),
+		System:                      int32(cfg.system),
+		StartingPoint:               int32(cfg.starting_point),
+		CustomStartDeg:              float64(cfg.custom_start_deg),
+		ReferenceMode:               int32(cfg.reference_mode),
+		OutputMode:                  int32(cfg.output_mode),
+		AyanamshaSystem:             int32(cfg.ayanamsha_system),
+		UseNutation:                 cfg.use_nutation != 0,
+		ReferencePlane:              int32(cfg.reference_plane),
+		UseRashiBhavaForBalaAvastha: cfg.use_rashi_bhava_for_bala_avastha != 0,
+		IncludeRashiBhavaResults:    cfg.include_rashi_bhava_results != 0,
 	}
 }
 
@@ -2229,6 +2233,10 @@ func FullKundaliForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc Geo
 		v := goBhavaResult(out.bhava_cusps)
 		res.BhavaCusps = &v
 	}
+	if out.rashi_bhava_cusps_valid != 0 {
+		v := goBhavaResult(out.rashi_bhava_cusps)
+		res.RashiBhavaCusps = &v
+	}
 	if out.graha_positions_valid != 0 {
 		v := GrahaPositions{Lagna: goGrahaEntry(out.graha_positions.lagna)}
 		for i := 0; i < GrahaCount; i++ {
@@ -2252,6 +2260,12 @@ func FullKundaliForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc Geo
 		for i := 0; i < 12; i++ {
 			v.ArudhaPadas[i] = goGrahaEntry(out.bindus.arudha_padas[i])
 		}
+		if out.bindus.rashi_bhava_arudha_padas_valid != 0 {
+			v.RashiBhavaArudhaPadasValid = true
+			for i := 0; i < 12; i++ {
+				v.RashiBhavaArudhaPadas[i] = goGrahaEntry(out.bindus.rashi_bhava_arudha_padas[i])
+			}
+		}
 		res.Bindus = &v
 	}
 	if out.drishti_valid != 0 {
@@ -2263,6 +2277,7 @@ func FullKundaliForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc Geo
 			}
 			for j := 0; j < 12; j++ {
 				v.GrahaToBhava[i][j] = goDrishtiEntry(out.drishti.graha_to_bhava[i][j])
+				v.GrahaToRashiBhava[i][j] = goDrishtiEntry(out.drishti.graha_to_rashi_bhava[i][j])
 			}
 			for j := 0; j < 19; j++ {
 				v.GrahaToBindus[i][j] = goDrishtiEntry(out.drishti.graha_to_bindus[i][j])
@@ -2302,14 +2317,16 @@ func FullKundaliForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc Geo
 		res.Amshas = make([]AmshaChart, int(out.amshas_count))
 		for i := 0; i < int(out.amshas_count); i++ {
 			chart := AmshaChart{
-				AmshaCode:          uint16(out.amshas[i].amsha_code),
-				VariationCode:      uint8(out.amshas[i].variation_code),
-				Lagna:              goAmshaEntry(out.amshas[i].lagna),
-				BhavaCuspsValid:    out.amshas[i].bhava_cusps_valid != 0,
-				ArudhaPadasValid:   out.amshas[i].arudha_padas_valid != 0,
-				UpagrahasValid:     out.amshas[i].upagrahas_valid != 0,
-				SphutasValid:       out.amshas[i].sphutas_valid != 0,
-				SpecialLagnasValid: out.amshas[i].special_lagnas_valid != 0,
+				AmshaCode:                  uint16(out.amshas[i].amsha_code),
+				VariationCode:              uint8(out.amshas[i].variation_code),
+				Lagna:                      goAmshaEntry(out.amshas[i].lagna),
+				BhavaCuspsValid:            out.amshas[i].bhava_cusps_valid != 0,
+				RashiBhavaCuspsValid:       out.amshas[i].rashi_bhava_cusps_valid != 0,
+				ArudhaPadasValid:           out.amshas[i].arudha_padas_valid != 0,
+				RashiBhavaArudhaPadasValid: out.amshas[i].rashi_bhava_arudha_padas_valid != 0,
+				UpagrahasValid:             out.amshas[i].upagrahas_valid != 0,
+				SphutasValid:               out.amshas[i].sphutas_valid != 0,
+				SpecialLagnasValid:         out.amshas[i].special_lagnas_valid != 0,
 			}
 			for j := 0; j < GrahaCount; j++ {
 				chart.Grahas[j] = goAmshaEntry(out.amshas[i].grahas[j])
@@ -2317,8 +2334,14 @@ func FullKundaliForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc Geo
 			if chart.BhavaCuspsValid {
 				chart.BhavaCusps = goAmshaEntries(out.amshas[i].bhava_cusps[:])
 			}
+			if chart.RashiBhavaCuspsValid {
+				chart.RashiBhavaCusps = goAmshaEntries(out.amshas[i].rashi_bhava_cusps[:])
+			}
 			if chart.ArudhaPadasValid {
 				chart.ArudhaPadas = goAmshaEntries(out.amshas[i].arudha_padas[:])
+			}
+			if chart.RashiBhavaArudhaPadasValid {
+				chart.RashiBhavaArudhaPadas = goAmshaEntries(out.amshas[i].rashi_bhava_arudha_padas[:])
 			}
 			if chart.UpagrahasValid {
 				chart.Upagrahas = goAmshaEntries(out.amshas[i].upagrahas[:])

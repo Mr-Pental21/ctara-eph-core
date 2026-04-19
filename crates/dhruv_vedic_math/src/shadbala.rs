@@ -292,22 +292,21 @@ pub fn all_sthana_balas(
 // 2c. Dig Bala
 // ---------------------------------------------------------------------------
 
-/// Dig Bala: 60 * (1 - dist/6), dist = min(|bhava-max|, 12-|bhava-max|) capped at 6.
-pub fn dig_bala(graha: Graha, bhava_number: u8) -> f64 {
-    if !is_sapta_graha(graha) || bhava_number == 0 || bhava_number > 12 {
+/// Dig Bala from exact angular distance to the graha's max-strength cusp.
+pub fn dig_bala(graha: Graha, graha_sidereal_lon: f64, max_cusp_sidereal_lon: f64) -> f64 {
+    if !is_sapta_graha(graha) {
         return 0.0;
     }
-    let max_bhava = DIG_BALA_BHAVA[graha.index() as usize];
-    let diff = (bhava_number as i16 - max_bhava as i16).unsigned_abs();
-    let dist = diff.min(12 - diff).min(6);
-    60.0 * (1.0 - dist as f64 / 6.0)
+    let diff = normalize_360(graha_sidereal_lon - max_cusp_sidereal_lon);
+    let smaller_angle = diff.min(360.0 - diff).min(180.0);
+    (60.0 * (1.0 - smaller_angle / 180.0)).clamp(0.0, 60.0)
 }
 
 /// Dig bala for all 7 sapta grahas.
-pub fn all_dig_balas(bhava_numbers: &[u8; 7]) -> [f64; 7] {
+pub fn all_dig_balas(sidereal_lons: &[f64; 7], max_cusp_sidereal_lons: &[f64; 7]) -> [f64; 7] {
     let mut result = [0.0; 7];
     for (i, g) in SAPTA_GRAHAS.iter().enumerate() {
-        result[i] = dig_bala(*g, bhava_numbers[i]);
+        result[i] = dig_bala(*g, sidereal_lons[i], max_cusp_sidereal_lons[i]);
     }
     result
 }
@@ -785,6 +784,8 @@ pub struct ShadbalaInputs {
     pub sidereal_lons: [f64; 9],
     /// Bhava numbers (1-12) for sapta grahas.
     pub bhava_numbers: [u8; 7],
+    /// Sidereal max-strength cusp longitude for each sapta graha's Dig Bala.
+    pub dig_bala_max_cusp_lons: [f64; 7],
     /// Speed (deg/day) for sapta grahas.
     pub speeds: [f64; 7],
     /// Kala bala inputs.
@@ -806,7 +807,11 @@ pub fn shadbala_from_inputs(graha: Graha, inputs: &ShadbalaInputs) -> ShadbalaBr
         inputs.bhava_numbers[gi],
         &inputs.varga_rashi_indices,
     );
-    let dig = dig_bala(graha, inputs.bhava_numbers[gi]);
+    let dig = dig_bala(
+        graha,
+        inputs.sidereal_lons[gi],
+        inputs.dig_bala_max_cusp_lons[gi],
+    );
     let kala_result = kala_bala(graha, &inputs.kala);
     let cheshta = cheshta_bala(graha, inputs.speeds[gi]);
     let nais = naisargika_bala(graha);
@@ -915,20 +920,24 @@ mod tests {
 
     #[test]
     fn dig_sun_at_max() {
-        // Sun strongest at bhava 10
-        assert!((dig_bala(Graha::Surya, 10) - 60.0).abs() < EPS);
+        assert!((dig_bala(Graha::Surya, 90.0, 90.0) - 60.0).abs() < EPS);
     }
 
     #[test]
     fn dig_sun_at_opposite() {
-        // Bhava 4 is 6 away from 10 → 60*(1-6/6)=0
-        assert!(dig_bala(Graha::Surya, 4).abs() < EPS);
+        assert!(dig_bala(Graha::Surya, 270.0, 90.0).abs() < EPS);
     }
 
     #[test]
-    fn dig_sun_at_bhava_7() {
-        // 10 to 7: |10-7|=3, min(3,9)=3 → 60*(1-3/6)=30
-        assert!((dig_bala(Graha::Surya, 7) - 30.0).abs() < EPS);
+    fn dig_sun_90_degrees_from_max() {
+        assert!((dig_bala(Graha::Surya, 180.0, 90.0) - 30.0).abs() < EPS);
+    }
+
+    #[test]
+    fn dig_same_bhava_can_differ_by_exact_longitude() {
+        let near = dig_bala(Graha::Surya, 95.0, 90.0);
+        let far = dig_bala(Graha::Surya, 119.0, 90.0);
+        assert!(near > far);
     }
 
     // --- Kendradi Bala ---
@@ -1117,7 +1126,7 @@ mod tests {
     #[test]
     fn rahu_ketu_all_zero() {
         assert!(uchcha_bala(Graha::Rahu, 100.0).abs() < EPS);
-        assert!(dig_bala(Graha::Ketu, 1).abs() < EPS);
+        assert!(dig_bala(Graha::Ketu, 0.0, 0.0).abs() < EPS);
         assert!(cheshta_bala(Graha::Rahu, -0.5).abs() < EPS);
         assert!(naisargika_bala(Graha::Ketu).abs() < EPS);
     }

@@ -517,6 +517,8 @@ typedef struct {
     int32_t ayanamsha_system;
     uint8_t use_nutation;
     int32_t reference_plane;
+    uint8_t use_rashi_bhava_for_bala_avastha;
+    uint8_t include_rashi_bhava_results;
 } DhruvBhavaConfig;
 
 typedef struct {
@@ -1054,6 +1056,7 @@ typedef struct {
 typedef struct {
     DhruvDrishtiEntry graha_to_graha[9][9];
     DhruvDrishtiEntry graha_to_bhava[9][12];
+    DhruvDrishtiEntry graha_to_rashi_bhava[9][12];
     DhruvDrishtiEntry graha_to_lagna[9];
     DhruvDrishtiEntry graha_to_bindus[9][19];
 } DhruvDrishtiResult;
@@ -1073,6 +1076,7 @@ typedef struct {
     uint8_t nakshatra_index;
     uint8_t pada;
     uint8_t bhava_number;
+    uint8_t rashi_bhava_number;
 } DhruvGrahaEntry;
 
 typedef struct {
@@ -1091,6 +1095,8 @@ typedef struct {
 
 typedef struct {
     DhruvGrahaEntry arudha_padas[12];
+    uint8_t rashi_bhava_arudha_padas_valid;
+    DhruvGrahaEntry rashi_bhava_arudha_padas[12];
     DhruvGrahaEntry bhrigu_bindu;
     DhruvGrahaEntry pranapada_lagna;
     DhruvGrahaEntry gulika;
@@ -1167,8 +1173,12 @@ typedef struct {
     DhruvAmshaEntry lagna;
     uint8_t         bhava_cusps_valid;
     DhruvAmshaEntry bhava_cusps[12];
+    uint8_t         rashi_bhava_cusps_valid;
+    DhruvAmshaEntry rashi_bhava_cusps[12];
     uint8_t         arudha_padas_valid;
     DhruvAmshaEntry arudha_padas[12];
+    uint8_t         rashi_bhava_arudha_padas_valid;
+    DhruvAmshaEntry rashi_bhava_arudha_padas[12];
     uint8_t         upagrahas_valid;
     DhruvAmshaEntry upagrahas[11];
     uint8_t         sphutas_valid;
@@ -1464,6 +1474,8 @@ typedef struct {
     double                    ayanamsha_deg;
     uint8_t                   bhava_cusps_valid;
     DhruvBhavaResult          bhava_cusps;
+    uint8_t                   rashi_bhava_cusps_valid;
+    DhruvBhavaResult          rashi_bhava_cusps;
     uint8_t                   graha_positions_valid;
     DhruvGrahaPositions       graha_positions;
     uint8_t                   bindus_valid;

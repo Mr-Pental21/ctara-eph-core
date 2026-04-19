@@ -19,7 +19,8 @@ use dhruv_vedic_base::vaar::vaar_from_jd;
 use dhruv_vedic_base::{
     ALL_GRAHAS, AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AmshaRequest,
     ArudhaResult, AshtakavargaResult, AvasthaInputs, BhavaConfig, BhavaResult, CharakarakaResult,
-    CharakarakaScheme, Dignity, DrishtiEntry, Graha, GrahaAvasthas, KalaBalaInputs,
+    CharakarakaScheme, DIG_BALA_BHAVA, Dignity, DrishtiEntry, Graha, GrahaAvasthas,
+    KalaBalaInputs,
     LajjitadiInputs, LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS, SayanadiInputs,
     ShadbalaInputs, TimeUpagrahaConfig, Upagraha, all_avasthas, all_combustion_status,
     all_dashavarga_vimsopaka, all_saptavarga_vimsopaka, all_shadbalas_from_inputs,
@@ -1833,11 +1834,18 @@ fn assemble_shadbala_inputs(
     // 2. Bhava numbers for sapta grahas
     let bhava_result = *ctx.bhava_result(engine, eop, location, bhava_config)?;
     let mut bhava_numbers = [0u8; 7];
+    let mut dig_bala_max_cusp_lons = [0.0f64; 7];
     for graha in SAPTA_GRAHAS {
         let idx = graha.index() as usize;
         bhava_numbers[idx] = find_bhava_number(
             sidereal_to_ecliptic_tropical(sidereal_lons[idx], aya, plane),
             &bhava_result,
+        );
+        let max_bhava = DIG_BALA_BHAVA[idx] as usize;
+        dig_bala_max_cusp_lons[idx] = ecliptic_to_sidereal(
+            bhava_result.bhavas[max_bhava - 1].cusp_deg,
+            aya,
+            plane,
         );
     }
 
@@ -1893,6 +1901,7 @@ fn assemble_shadbala_inputs(
     Ok(ShadbalaInputs {
         sidereal_lons,
         bhava_numbers,
+        dig_bala_max_cusp_lons,
         speeds,
         kala: KalaBalaInputs {
             is_daytime,

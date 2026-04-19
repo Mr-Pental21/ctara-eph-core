@@ -2205,6 +2205,10 @@ pub struct DhruvBhavaConfig {
     pub use_nutation: u8,
     /// Reference plane for sidereal output: 0=ecliptic, 1=invariable, -1=system default.
     pub reference_plane: i32,
+    /// Use rashi-bhava/equal-house basis for bala and avastha calculations.
+    pub use_rashi_bhava_for_bala_avastha: u8,
+    /// Include rashi-bhava sibling results where supported.
+    pub include_rashi_bhava_results: u8,
 }
 
 /// C-compatible single bhava result.
@@ -2257,6 +2261,8 @@ fn bhava_config_from_ffi(cfg: &DhruvBhavaConfig) -> Result<BhavaConfig, DhruvSta
         system,
         starting_point,
         reference_mode,
+        use_rashi_bhava_for_bala_avastha: cfg.use_rashi_bhava_for_bala_avastha != 0,
+        include_rashi_bhava_results: cfg.include_rashi_bhava_results != 0,
     })
 }
 
@@ -2353,6 +2359,8 @@ pub extern "C" fn dhruv_bhava_config_default() -> DhruvBhavaConfig {
         ayanamsha_system: 0,
         use_nutation: 0,
         reference_plane: -1,
+        use_rashi_bhava_for_bala_avastha: 1,
+        include_rashi_bhava_results: 1,
     }
 }
 
@@ -9692,6 +9700,8 @@ pub struct DhruvGrahaEntry {
     pub pada: u8,
     /// Bhava number (1-12), 0 if not computed.
     pub bhava_number: u8,
+    /// Rashi-bhava number (1-12), 0 if not computed.
+    pub rashi_bhava_number: u8,
 }
 
 /// C-compatible graha positions result.
@@ -9713,6 +9723,7 @@ fn graha_entry_to_ffi(entry: &dhruv_search::GrahaEntry) -> DhruvGrahaEntry {
         nakshatra_index: entry.nakshatra_index,
         pada: entry.pada,
         bhava_number: entry.bhava_number,
+        rashi_bhava_number: entry.rashi_bhava_number,
     }
 }
 
@@ -9815,6 +9826,10 @@ pub struct DhruvBindusConfig {
 pub struct DhruvBindusResult {
     /// 12 arudha padas (A1-A12).
     pub arudha_padas: [DhruvGrahaEntry; 12],
+    /// Whether rashi-bhava arudha padas are populated.
+    pub rashi_bhava_arudha_padas_valid: u8,
+    /// 12 rashi-bhava arudha padas (A1-A12).
+    pub rashi_bhava_arudha_padas: [DhruvGrahaEntry; 12],
     /// Bhrigu Bindu.
     pub bhrigu_bindu: DhruvGrahaEntry,
     /// Pranapada Lagna.
@@ -9905,6 +9920,12 @@ pub unsafe extern "C" fn dhruv_core_bindus(
             for i in 0..12 {
                 out.arudha_padas[i] = graha_entry_to_ffi(&result.arudha_padas[i]);
             }
+            if let Some(padas) = result.rashi_bhava_arudha_padas {
+                out.rashi_bhava_arudha_padas_valid = 1;
+                for (i, pada) in padas.iter().enumerate() {
+                    out.rashi_bhava_arudha_padas[i] = graha_entry_to_ffi(pada);
+                }
+            }
             out.bhrigu_bindu = graha_entry_to_ffi(&result.bhrigu_bindu);
             out.pranapada_lagna = graha_entry_to_ffi(&result.pranapada_lagna);
             out.gulika = graha_entry_to_ffi(&result.gulika);
@@ -9952,6 +9973,8 @@ pub struct DhruvDrishtiResult {
     pub graha_to_graha: [[DhruvDrishtiEntry; 9]; 9],
     /// 9×12 graha-to-bhava-cusp drishti.
     pub graha_to_bhava: [[DhruvDrishtiEntry; 12]; 9],
+    /// 9×12 graha-to-rashi-bhava-cusp drishti.
+    pub graha_to_rashi_bhava: [[DhruvDrishtiEntry; 12]; 9],
     /// 9×1 graha-to-lagna drishti.
     pub graha_to_lagna: [DhruvDrishtiEntry; 9],
     /// 9×19 graha-to-core-bindus drishti.
@@ -10217,6 +10240,8 @@ pub unsafe extern "C" fn dhruv_drishti(
                 out.graha_to_lagna[i] = drishti_entry_to_ffi(&result.graha_to_lagna[i]);
                 for j in 0..12 {
                     out.graha_to_bhava[i][j] = drishti_entry_to_ffi(&result.graha_to_bhava[i][j]);
+                    out.graha_to_rashi_bhava[i][j] =
+                        drishti_entry_to_ffi(&result.graha_to_rashi_bhava[i][j]);
                 }
                 for j in 0..19 {
                     out.graha_to_bindus[i][j] = drishti_entry_to_ffi(&result.graha_to_bindus[i][j]);
@@ -10364,9 +10389,15 @@ pub struct DhruvAmshaChart {
     /// Whether bhava cusps are populated.
     pub bhava_cusps_valid: u8,
     pub bhava_cusps: [DhruvAmshaEntry; 12],
+    /// Whether rashi-bhava cusps are populated.
+    pub rashi_bhava_cusps_valid: u8,
+    pub rashi_bhava_cusps: [DhruvAmshaEntry; 12],
     /// Whether arudha padas are populated.
     pub arudha_padas_valid: u8,
     pub arudha_padas: [DhruvAmshaEntry; 12],
+    /// Whether rashi-bhava arudha padas are populated.
+    pub rashi_bhava_arudha_padas_valid: u8,
+    pub rashi_bhava_arudha_padas: [DhruvAmshaEntry; 12],
     /// Whether upagrahas are populated.
     pub upagrahas_valid: u8,
     pub upagrahas: [DhruvAmshaEntry; 11],
@@ -10387,8 +10418,12 @@ impl DhruvAmshaChart {
             lagna: DhruvAmshaEntry::zeroed(),
             bhava_cusps_valid: 0,
             bhava_cusps: [DhruvAmshaEntry::zeroed(); 12],
+            rashi_bhava_cusps_valid: 0,
+            rashi_bhava_cusps: [DhruvAmshaEntry::zeroed(); 12],
             arudha_padas_valid: 0,
             arudha_padas: [DhruvAmshaEntry::zeroed(); 12],
+            rashi_bhava_arudha_padas_valid: 0,
+            rashi_bhava_arudha_padas: [DhruvAmshaEntry::zeroed(); 12],
             upagrahas_valid: 0,
             upagrahas: [DhruvAmshaEntry::zeroed(); 11],
             sphutas_valid: 0,
@@ -10458,10 +10493,22 @@ fn amsha_chart_to_ffi(chart: &dhruv_search::AmshaChart) -> DhruvAmshaChart {
             out.bhava_cusps[i] = amsha_entry_to_ffi(cusp);
         }
     }
+    if let Some(ref cusps) = chart.rashi_bhava_cusps {
+        out.rashi_bhava_cusps_valid = 1;
+        for (i, cusp) in cusps.iter().enumerate() {
+            out.rashi_bhava_cusps[i] = amsha_entry_to_ffi(cusp);
+        }
+    }
     if let Some(ref padas) = chart.arudha_padas {
         out.arudha_padas_valid = 1;
         for (i, pada) in padas.iter().enumerate() {
             out.arudha_padas[i] = amsha_entry_to_ffi(pada);
+        }
+    }
+    if let Some(ref padas) = chart.rashi_bhava_arudha_padas {
+        out.rashi_bhava_arudha_padas_valid = 1;
+        for (i, pada) in padas.iter().enumerate() {
+            out.rashi_bhava_arudha_padas[i] = amsha_entry_to_ffi(pada);
         }
     }
     if let Some(ref upa) = chart.upagrahas {
@@ -10805,6 +10852,9 @@ pub struct DhruvFullKundaliResult {
     /// 1 when `include_bhava_cusps` was non-zero and computation succeeded; 0 otherwise.
     pub bhava_cusps_valid: u8,
     pub bhava_cusps: DhruvBhavaResult,
+    /// 1 when rashi-bhava cusps were requested and computed; 0 otherwise.
+    pub rashi_bhava_cusps_valid: u8,
+    pub rashi_bhava_cusps: DhruvBhavaResult,
     pub graha_positions_valid: u8,
     pub graha_positions: DhruvGrahaPositions,
     pub bindus_valid: u8,
@@ -11023,16 +11073,12 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
 
             if let Some(bh) = result.bhava_cusps {
                 out.bhava_cusps_valid = 1;
-                for i in 0..12 {
-                    out.bhava_cusps.bhavas[i] = DhruvBhava {
-                        number: bh.bhavas[i].number,
-                        cusp_deg: bh.bhavas[i].cusp_deg,
-                        start_deg: bh.bhavas[i].start_deg,
-                        end_deg: bh.bhavas[i].end_deg,
-                    };
-                }
-                out.bhava_cusps.lagna_deg = bh.lagna_deg;
-                out.bhava_cusps.mc_deg = bh.mc_deg;
+                out.bhava_cusps = bhava_result_to_ffi_with_projection(&bh, None);
+            }
+
+            if let Some(bh) = result.rashi_bhava_cusps {
+                out.rashi_bhava_cusps_valid = 1;
+                out.rashi_bhava_cusps = bhava_result_to_ffi_with_projection(&bh, None);
             }
 
             if let Some(g) = result.graha_positions {
@@ -11050,6 +11096,12 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
                 out.bindus_valid = 1;
                 for i in 0..12 {
                     out.bindus.arudha_padas[i] = graha_entry_to_ffi(&b.arudha_padas[i]);
+                }
+                if let Some(padas) = b.rashi_bhava_arudha_padas {
+                    out.bindus.rashi_bhava_arudha_padas_valid = 1;
+                    for (i, pada) in padas.iter().enumerate() {
+                        out.bindus.rashi_bhava_arudha_padas[i] = graha_entry_to_ffi(pada);
+                    }
                 }
                 out.bindus.bhrigu_bindu = graha_entry_to_ffi(&b.bhrigu_bindu);
                 out.bindus.pranapada_lagna = graha_entry_to_ffi(&b.pranapada_lagna);
@@ -11071,6 +11123,8 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
                     for j in 0..12 {
                         out.drishti.graha_to_bhava[i][j] =
                             drishti_entry_to_ffi(&d.graha_to_bhava[i][j]);
+                        out.drishti.graha_to_rashi_bhava[i][j] =
+                            drishti_entry_to_ffi(&d.graha_to_rashi_bhava[i][j]);
                     }
                     for j in 0..19 {
                         out.drishti.graha_to_bindus[i][j] =
@@ -14041,6 +14095,8 @@ mod tests {
         assert_eq!(cfg.starting_point, DHRUV_BHAVA_START_LAGNA);
         assert_eq!(cfg.reference_mode, DHRUV_BHAVA_REF_START);
         assert!((cfg.custom_start_deg - 0.0).abs() < 1e-15);
+        assert_eq!(cfg.use_rashi_bhava_for_bala_avastha, 1);
+        assert_eq!(cfg.include_rashi_bhava_results, 1);
     }
 
     #[test]

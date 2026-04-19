@@ -88,6 +88,10 @@ def _make_bhava_config(bhava_config):
     cfg.starting_point = bhava_config.get("starting_point", -1)
     cfg.custom_start_deg = bhava_config.get("custom_start_deg", 0.0)
     cfg.reference_mode = bhava_config.get("reference_mode", 0)
+    cfg.use_rashi_bhava_for_bala_avastha = bhava_config.get(
+        "use_rashi_bhava_for_bala_avastha", 1
+    )
+    cfg.include_rashi_bhava_results = bhava_config.get("include_rashi_bhava_results", 1)
     return cfg
 
 

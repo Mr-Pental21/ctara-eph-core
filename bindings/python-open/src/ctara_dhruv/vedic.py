@@ -1422,6 +1422,10 @@ def drishti_for_date(engine, eop, utc: UtcTime, location: GeoLocation,
         [_drishti_entry(out.graha_to_bhava[i][j]) for j in range(12)]
         for i in range(9)
     ]
+    g2rb = [
+        [_drishti_entry(out.graha_to_rashi_bhava[i][j]) for j in range(12)]
+        for i in range(9)
+    ]
     g2l = [_drishti_entry(out.graha_to_lagna[i]) for i in range(9)]
     g2bindus = [
         [_drishti_entry(out.graha_to_bindus[i][j]) for j in range(19)]
@@ -1430,6 +1434,7 @@ def drishti_for_date(engine, eop, utc: UtcTime, location: GeoLocation,
     return DrishtiResult(
         graha_to_graha=g2g,
         graha_to_bhava=g2b,
+        graha_to_rashi_bhava=g2rb,
         graha_to_lagna=g2l,
         graha_to_bindus=g2bindus,
     )

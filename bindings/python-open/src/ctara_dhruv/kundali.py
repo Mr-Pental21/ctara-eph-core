@@ -98,6 +98,10 @@ def _make_bhava_config(bhava_config):
     cfg.ayanamsha_system = bhava_config.get("ayanamsha_system", 0)
     cfg.use_nutation = bhava_config.get("use_nutation", 0)
     cfg.reference_plane = bhava_config.get("reference_plane", -1)
+    cfg.use_rashi_bhava_for_bala_avastha = bhava_config.get(
+        "use_rashi_bhava_for_bala_avastha", 1
+    )
+    cfg.include_rashi_bhava_results = bhava_config.get("include_rashi_bhava_results", 1)
     return cfg
 
 
@@ -159,6 +163,7 @@ def _graha_entry_from_ffi(e):
         nakshatra_index=e.nakshatra_index,
         pada=e.pada,
         bhava_number=e.bhava_number,
+        rashi_bhava_number=e.rashi_bhava_number,
     )
 
 
@@ -395,9 +400,19 @@ def _extract_amsha_chart(c):
     if c.bhava_cusps_valid:
         bhava_cusps = [_extract_amsha_entry(c.bhava_cusps[i]) for i in range(12)]
 
+    rashi_bhava_cusps = None
+    if c.rashi_bhava_cusps_valid:
+        rashi_bhava_cusps = [_extract_amsha_entry(c.rashi_bhava_cusps[i]) for i in range(12)]
+
     arudha_padas = None
     if c.arudha_padas_valid:
         arudha_padas = [_extract_amsha_entry(c.arudha_padas[i]) for i in range(12)]
+
+    rashi_bhava_arudha_padas = None
+    if c.rashi_bhava_arudha_padas_valid:
+        rashi_bhava_arudha_padas = [
+            _extract_amsha_entry(c.rashi_bhava_arudha_padas[i]) for i in range(12)
+        ]
 
     upagrahas = None
     if c.upagrahas_valid:
@@ -417,7 +432,9 @@ def _extract_amsha_chart(c):
         grahas=grahas,
         lagna=lagna,
         bhava_cusps=bhava_cusps,
+        rashi_bhava_cusps=rashi_bhava_cusps,
         arudha_padas=arudha_padas,
+        rashi_bhava_arudha_padas=rashi_bhava_arudha_padas,
         upagrahas=upagrahas,
         sphutas=sphutas,
         special_lagnas=special_lagnas,
@@ -744,6 +761,21 @@ def full_kundali(
                 mc_deg=out.bhava_cusps.mc_deg,
             )
 
+        rashi_bhava_cusps = None
+        if out.rashi_bhava_cusps_valid:
+            bhavas = []
+            for i in range(12):
+                b = out.rashi_bhava_cusps.bhavas[i]
+                bhavas.append(BhavaEntry(
+                    number=b.number, cusp_deg=b.cusp_deg,
+                    start_deg=b.start_deg, end_deg=b.end_deg,
+                ))
+            rashi_bhava_cusps = BhavaResult(
+                bhavas=bhavas,
+                lagna_deg=out.rashi_bhava_cusps.lagna_deg,
+                mc_deg=out.rashi_bhava_cusps.mc_deg,
+            )
+
         # Graha positions
         graha_pos = None
         if out.graha_positions_valid:
@@ -756,6 +788,12 @@ def full_kundali(
         bindus = None
         if out.bindus_valid:
             arudha_padas = [_graha_entry_from_ffi(out.bindus.arudha_padas[i]) for i in range(12)]
+            rashi_bhava_arudha_padas = None
+            if out.bindus.rashi_bhava_arudha_padas_valid:
+                rashi_bhava_arudha_padas = [
+                    _graha_entry_from_ffi(out.bindus.rashi_bhava_arudha_padas[i])
+                    for i in range(12)
+                ]
             bindus = BindusResult(
                 arudha_padas=arudha_padas,
                 bhrigu_bindu=_graha_entry_from_ffi(out.bindus.bhrigu_bindu),
@@ -765,6 +803,7 @@ def full_kundali(
                 hora_lagna=_graha_entry_from_ffi(out.bindus.hora_lagna),
                 ghati_lagna=_graha_entry_from_ffi(out.bindus.ghati_lagna),
                 sree_lagna=_graha_entry_from_ffi(out.bindus.sree_lagna),
+                rashi_bhava_arudha_padas=rashi_bhava_arudha_padas,
             )
 
         # Drishti
@@ -778,6 +817,13 @@ def full_kundali(
                 [_extract_drishti_entry(out.drishti.graha_to_bhava[i][j]) for j in range(12)]
                 for i in range(9)
             ]
+            g2rb = [
+                [
+                    _extract_drishti_entry(out.drishti.graha_to_rashi_bhava[i][j])
+                    for j in range(12)
+                ]
+                for i in range(9)
+            ]
             g2l = [_extract_drishti_entry(out.drishti.graha_to_lagna[i]) for i in range(9)]
             g2bi = [
                 [_extract_drishti_entry(out.drishti.graha_to_bindus[i][j]) for j in range(19)]
@@ -786,6 +832,7 @@ def full_kundali(
             drishti = DrishtiResult(
                 graha_to_graha=g2g,
                 graha_to_bhava=g2b,
+                graha_to_rashi_bhava=g2rb,
                 graha_to_lagna=g2l,
                 graha_to_bindus=g2bi,
             )
@@ -920,6 +967,7 @@ def full_kundali(
         return FullKundaliResult(
             ayanamsha_deg=ayanamsha_deg,
             bhava_cusps=bhava_cusps,
+            rashi_bhava_cusps=rashi_bhava_cusps,
             graha_positions=graha_pos,
             bindus=bindus,
             drishti=drishti,

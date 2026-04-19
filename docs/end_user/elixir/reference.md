@@ -237,3 +237,7 @@ Accepted enum-style string values:
   alongside `:query_jd`.
 
 For build/runtime notes, see [`bindings/elixir-open/README.md`](../../../bindings/elixir-open/README.md).
+
+## Rashi-Bhava Bhava Config
+
+Elixir bhava config maps accept `:use_rashi_bhava_for_bala_avastha` and `:include_rashi_bhava_results`; both default to `true`. Existing bhava fields keep configured-system meaning. Rashi-bhava sibling keys such as `:rashi_bhava_cusps`, `:rashi_bhava_number`, and `:graha_to_rashi_bhava` expose the equal-house/whole-sign companion basis.

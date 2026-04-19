@@ -790,6 +790,8 @@ impl ConfigResolver {
                 system,
                 starting_point,
                 reference_mode,
+                use_rashi_bhava_for_bala_avastha: true,
+                include_rashi_bhava_results: true,
             },
             source_by_field: source,
         })

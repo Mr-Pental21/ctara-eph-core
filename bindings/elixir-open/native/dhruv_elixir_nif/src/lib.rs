@@ -351,6 +351,8 @@ struct RiseSetConfigInput {
 struct BhavaConfigInput {
     system: Option<EnumInput>,
     reference_mode: Option<EnumInput>,
+    use_rashi_bhava_for_bala_avastha: Option<bool>,
+    include_rashi_bhava_results: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1480,6 +1482,12 @@ fn to_bhava_config(
     if let Some(input) = input {
         config.system = parse_bhava_system(input.system.as_ref())?;
         config.reference_mode = parse_bhava_reference_mode(input.reference_mode.as_ref())?;
+        if let Some(value) = input.use_rashi_bhava_for_bala_avastha {
+            config.use_rashi_bhava_for_bala_avastha = value;
+        }
+        if let Some(value) = input.include_rashi_bhava_results {
+            config.include_rashi_bhava_results = value;
+        }
         config.starting_point = BhavaStartingPoint::Lagna;
     }
     Ok(config)
@@ -2519,7 +2527,8 @@ fn graha_entry_json(entry: dhruv_search::GrahaEntry, graha: Option<Graha>) -> Va
         "nakshatra": debug_name(entry.nakshatra),
         "nakshatra_index": entry.nakshatra_index,
         "pada": entry.pada,
-        "bhava_number": entry.bhava_number
+        "bhava_number": entry.bhava_number,
+        "rashi_bhava_number": entry.rashi_bhava_number
     })
 }
 
@@ -2616,6 +2625,12 @@ fn drishti_json(result: dhruv_search::DrishtiResult) -> Value {
         .collect::<Vec<_>>();
     json!({
         "graha_to_graha": graha_to_graha,
+        "graha_to_bhava": result.graha_to_bhava.iter().map(|row| {
+            row.iter().map(|entry| entry.total_virupa).collect::<Vec<_>>()
+        }).collect::<Vec<_>>(),
+        "graha_to_rashi_bhava": result.graha_to_rashi_bhava.iter().map(|row| {
+            row.iter().map(|entry| entry.total_virupa).collect::<Vec<_>>()
+        }).collect::<Vec<_>>(),
         "graha_to_lagna": result.graha_to_lagna.iter().map(|entry| entry.total_virupa).collect::<Vec<_>>()
     })
 }
@@ -2730,8 +2745,14 @@ fn amsha_result_json(result: dhruv_search::AmshaResult) -> Value {
             "bhava_cusps": chart
                 .bhava_cusps
                 .map(|entries| entries.into_iter().map(amsha_entry_json).collect::<Vec<_>>()),
+            "rashi_bhava_cusps": chart
+                .rashi_bhava_cusps
+                .map(|entries| entries.into_iter().map(amsha_entry_json).collect::<Vec<_>>()),
             "arudha_padas": chart
                 .arudha_padas
+                .map(|entries| entries.into_iter().map(amsha_entry_json).collect::<Vec<_>>()),
+            "rashi_bhava_arudha_padas": chart
+                .rashi_bhava_arudha_padas
                 .map(|entries| entries.into_iter().map(amsha_entry_json).collect::<Vec<_>>()),
             "upagrahas": chart
                 .upagrahas
@@ -2779,6 +2800,7 @@ fn amsha_entry_json(entry: dhruv_search::AmshaEntry) -> Value {
 fn bindus_json(bindus: dhruv_search::BindusResult) -> Value {
     json!({
         "arudha_padas": bindus.arudha_padas.into_iter().map(|entry| graha_entry_json(entry, None)).collect::<Vec<_>>(),
+        "rashi_bhava_arudha_padas": bindus.rashi_bhava_arudha_padas.map(|entries| entries.into_iter().map(|entry| graha_entry_json(entry, None)).collect::<Vec<_>>()),
         "bhrigu_bindu": graha_entry_json(bindus.bhrigu_bindu, None),
         "pranapada_lagna": graha_entry_json(bindus.pranapada_lagna, None),
         "gulika": graha_entry_json(bindus.gulika, None),
@@ -2793,6 +2815,7 @@ fn full_kundali_json(result: dhruv_search::FullKundaliResult) -> Value {
     json!({
         "ayanamsha_deg": result.ayanamsha_deg,
         "bhava_cusps": result.bhava_cusps.map(bhava_result_json),
+        "rashi_bhava_cusps": result.rashi_bhava_cusps.map(bhava_result_json),
         "graha_positions": result.graha_positions.map(graha_positions_json),
         "bindus": result.bindus.map(bindus_json),
         "drishti": result.drishti.map(drishti_json),

@@ -49,6 +49,10 @@ def _make_bhava_config(bhava_config):
     cfg.starting_point = bhava_config.get("starting_point", -1)
     cfg.custom_start_deg = bhava_config.get("custom_start_deg", 0.0)
     cfg.reference_mode = bhava_config.get("reference_mode", 0)
+    cfg.use_rashi_bhava_for_bala_avastha = bhava_config.get(
+        "use_rashi_bhava_for_bala_avastha", 1
+    )
+    cfg.include_rashi_bhava_results = bhava_config.get("include_rashi_bhava_results", 1)
     return cfg
 
 
@@ -276,9 +280,19 @@ def amsha_chart_for_date(
     if out.bhava_cusps_valid:
         bhava_cusps = [_extract_amsha_entry(out.bhava_cusps[i]) for i in range(12)]
 
+    rashi_bhava_cusps = None
+    if out.rashi_bhava_cusps_valid:
+        rashi_bhava_cusps = [_extract_amsha_entry(out.rashi_bhava_cusps[i]) for i in range(12)]
+
     arudha_padas = None
     if out.arudha_padas_valid:
         arudha_padas = [_extract_amsha_entry(out.arudha_padas[i]) for i in range(12)]
+
+    rashi_bhava_arudha_padas = None
+    if out.rashi_bhava_arudha_padas_valid:
+        rashi_bhava_arudha_padas = [
+            _extract_amsha_entry(out.rashi_bhava_arudha_padas[i]) for i in range(12)
+        ]
 
     upagrahas = None
     if out.upagrahas_valid:
@@ -298,7 +312,9 @@ def amsha_chart_for_date(
         grahas=grahas,
         lagna=lagna,
         bhava_cusps=bhava_cusps,
+        rashi_bhava_cusps=rashi_bhava_cusps,
         arudha_padas=arudha_padas,
+        rashi_bhava_arudha_padas=rashi_bhava_arudha_padas,
         upagrahas=upagrahas,
         sphutas=sphutas,
         special_lagnas=special_lagnas,

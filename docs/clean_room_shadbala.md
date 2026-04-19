@@ -73,7 +73,7 @@ Gender: Male = Sun, Mars, Jupiter. Female = Moon, Venus. Neuter = Mercury, Satur
 
 ## 2. Dig Bala (Directional Strength)
 
-Formula: `60 × (1 − dist/6)` where dist = min(|bhava − max_bhava|, 12 − |bhava − max_bhava|), capped at 6.
+Formula: `60 × (1 − smaller_angle/180)`, where `smaller_angle` is the exact sidereal angular distance in degrees between the graha and its max-strength cusp, clamped to `[0, 180]`.
 
 Maximum strength bhava:
 
@@ -83,6 +83,8 @@ Maximum strength bhava:
 | Moon, Venus | 4 (North/IC) |
 | Mercury, Jupiter | 1 (East/Asc) |
 | Saturn | 7 (West/Desc) |
+
+The cusp set is chosen by `BhavaConfig.use_rashi_bhava_for_bala_avastha`: rashi-bhava/equal-house cusps by default, or configured bhava-system cusps when explicitly disabled.
 
 ## 3. Kala Bala (Temporal Strength)
 

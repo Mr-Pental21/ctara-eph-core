@@ -330,14 +330,16 @@ type AyanamshaComputeRequest struct {
 }
 
 type BhavaConfig struct {
-	System          int32
-	StartingPoint   int32
-	CustomStartDeg  float64
-	ReferenceMode   int32
-	OutputMode      int32
-	AyanamshaSystem int32
-	UseNutation     bool
-	ReferencePlane  int32
+	System                      int32
+	StartingPoint               int32
+	CustomStartDeg              float64
+	ReferenceMode               int32
+	OutputMode                  int32
+	AyanamshaSystem             int32
+	UseNutation                 bool
+	ReferencePlane              int32
+	UseRashiBhavaForBalaAvastha bool
+	IncludeRashiBhavaResults    bool
 }
 
 type Bhava struct {
@@ -840,10 +842,11 @@ type GrahaDrishtiMatrix struct {
 }
 
 type DrishtiResult struct {
-	GrahaToGraha  [GrahaCount][GrahaCount]DrishtiEntry
-	GrahaToBhava  [GrahaCount][12]DrishtiEntry
-	GrahaToLagna  [GrahaCount]DrishtiEntry
-	GrahaToBindus [GrahaCount][19]DrishtiEntry
+	GrahaToGraha      [GrahaCount][GrahaCount]DrishtiEntry
+	GrahaToBhava      [GrahaCount][12]DrishtiEntry
+	GrahaToRashiBhava [GrahaCount][12]DrishtiEntry
+	GrahaToLagna      [GrahaCount]DrishtiEntry
+	GrahaToBindus     [GrahaCount][19]DrishtiEntry
 }
 
 type GrahaEntry struct {
@@ -852,6 +855,7 @@ type GrahaEntry struct {
 	NakshatraIndex    uint8
 	Pada              uint8
 	BhavaNumber       uint8
+	RashiBhavaNumber  uint8
 }
 
 type GrahaPositions struct {
@@ -861,14 +865,16 @@ type GrahaPositions struct {
 }
 
 type BindusResult struct {
-	ArudhaPadas    [12]GrahaEntry
-	BhriguBindu    GrahaEntry
-	PranapadaLagna GrahaEntry
-	Gulika         GrahaEntry
-	Maandi         GrahaEntry
-	HoraLagna      GrahaEntry
-	GhatiLagna     GrahaEntry
-	SreeLagna      GrahaEntry
+	ArudhaPadas                [12]GrahaEntry
+	RashiBhavaArudhaPadasValid bool
+	RashiBhavaArudhaPadas      [12]GrahaEntry
+	BhriguBindu                GrahaEntry
+	PranapadaLagna             GrahaEntry
+	Gulika                     GrahaEntry
+	Maandi                     GrahaEntry
+	HoraLagna                  GrahaEntry
+	GhatiLagna                 GrahaEntry
+	SreeLagna                  GrahaEntry
 }
 
 type BhinnaAshtakavarga struct {
@@ -906,20 +912,24 @@ type AmshaChartScope struct {
 }
 
 type AmshaChart struct {
-	AmshaCode          uint16
-	VariationCode      uint8
-	Grahas             [GrahaCount]AmshaEntry
-	Lagna              AmshaEntry
-	BhavaCusps         []AmshaEntry
-	ArudhaPadas        []AmshaEntry
-	Upagrahas          []AmshaEntry
-	Sphutas            []AmshaEntry
-	SpecialLagnas      []AmshaEntry
-	BhavaCuspsValid    bool
-	ArudhaPadasValid   bool
-	UpagrahasValid     bool
-	SphutasValid       bool
-	SpecialLagnasValid bool
+	AmshaCode                  uint16
+	VariationCode              uint8
+	Grahas                     [GrahaCount]AmshaEntry
+	Lagna                      AmshaEntry
+	BhavaCusps                 []AmshaEntry
+	RashiBhavaCusps            []AmshaEntry
+	ArudhaPadas                []AmshaEntry
+	RashiBhavaArudhaPadas      []AmshaEntry
+	Upagrahas                  []AmshaEntry
+	Sphutas                    []AmshaEntry
+	SpecialLagnas              []AmshaEntry
+	BhavaCuspsValid            bool
+	RashiBhavaCuspsValid       bool
+	ArudhaPadasValid           bool
+	RashiBhavaArudhaPadasValid bool
+	UpagrahasValid             bool
+	SphutasValid               bool
+	SpecialLagnasValid         bool
 }
 
 type AmshaVariationInfo struct {
@@ -932,9 +942,9 @@ type AmshaVariationInfo struct {
 }
 
 type AmshaVariationCatalog struct {
-	AmshaCode             uint16
-	DefaultVariationCode  uint8
-	Variations            []AmshaVariationInfo
+	AmshaCode            uint16
+	DefaultVariationCode uint8
+	Variations           []AmshaVariationInfo
 }
 
 type SthanaBalaBreakdown struct {
@@ -1241,22 +1251,23 @@ type FullKundaliDashaHierarchy struct {
 }
 
 type FullKundaliResult struct {
-	AyanamshaDeg   float64
-	BhavaCusps     *BhavaResult
-	GrahaPositions *GrahaPositions
-	Bindus         *BindusResult
-	Drishti        *DrishtiResult
-	Ashtakavarga   *AshtakavargaResult
-	Upagrahas      *AllUpagrahas
-	Sphutas        *SphutalResult
-	SpecialLagnas  *SpecialLagnas
-	Amshas         []AmshaChart
-	Shadbala       *ShadbalaResult
-	BhavaBala      *BhavaBalaResult
-	Vimsopaka      *VimsopakaResult
-	Avastha        *AllGrahaAvasthas
-	Charakaraka    *CharakarakaResult
-	Panchang       *FullPanchangInfo
-	Dasha          []FullKundaliDashaHierarchy
-	DashaSnapshots []DashaSnapshot
+	AyanamshaDeg    float64
+	BhavaCusps      *BhavaResult
+	RashiBhavaCusps *BhavaResult
+	GrahaPositions  *GrahaPositions
+	Bindus          *BindusResult
+	Drishti         *DrishtiResult
+	Ashtakavarga    *AshtakavargaResult
+	Upagrahas       *AllUpagrahas
+	Sphutas         *SphutalResult
+	SpecialLagnas   *SpecialLagnas
+	Amshas          []AmshaChart
+	Shadbala        *ShadbalaResult
+	BhavaBala       *BhavaBalaResult
+	Vimsopaka       *VimsopakaResult
+	Avastha         *AllGrahaAvasthas
+	Charakaraka     *CharakarakaResult
+	Panchang        *FullPanchangInfo
+	Dasha           []FullKundaliDashaHierarchy
+	DashaSnapshots  []DashaSnapshot
 }

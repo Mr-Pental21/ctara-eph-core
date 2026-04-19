@@ -23,8 +23,9 @@ use dhruv_vedic_base::vimsopaka::{
 };
 use dhruv_vedic_base::{
     ALL_GRAHAS, AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AmshaRequest,
-    ArudhaResult, AshtakavargaResult, AvasthaInputs, BhavaBalaBirthPeriod, BhavaBalaInputs,
+    ArudhaResult, AshtakavargaResult, AvasthaInputs, Bhava, BhavaBalaBirthPeriod, BhavaBalaInputs,
     BhavaBalaResult, BhavaConfig, BhavaResult, CharakarakaResult, CharakarakaScheme, Dignity,
+    DIG_BALA_BHAVA,
     DrishtiEntry, Graha, GrahaAvasthas, GrahaDrishtiMatrix, KalaBalaInputs, LajjitadiInputs,
     LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS, SayanadiInputs, SayanadiResult,
     ShadbalaInputs, TimeUpagrahaConfig, all_avasthas, all_combustion_status,
@@ -271,6 +272,49 @@ fn sidereal_to_ecliptic_tropical(sid_lon: f64, aya: f64, plane: ReferencePlane) 
     }
 }
 
+fn rashi_bhava_number_from_lagna(lagna_sid: f64, sid_lon: f64) -> u8 {
+    let lagna_rashi = (normalize(lagna_sid) / 30.0).floor().min(11.0) as u8;
+    let body_rashi = (normalize(sid_lon) / 30.0).floor().min(11.0) as u8;
+    ((body_rashi + 12 - lagna_rashi) % 12) + 1
+}
+
+fn rashi_bhava_result_from_lagna(lagna_sid: f64) -> BhavaResult {
+    let lagna_sid = normalize(lagna_sid);
+    let lagna_rashi = (lagna_sid / 30.0).floor().min(11.0) as u8;
+    let degrees_in_rashi = lagna_sid - f64::from(lagna_rashi) * 30.0;
+    let mut bhavas = [Bhava {
+        number: 1,
+        cusp_deg: 0.0,
+        start_deg: 0.0,
+        end_deg: 0.0,
+    }; 12];
+    for (i, bhava) in bhavas.iter_mut().enumerate() {
+        let rashi = (lagna_rashi + i as u8) % 12;
+        let cusp = normalize(f64::from(rashi) * 30.0 + degrees_in_rashi);
+        let next_rashi = (rashi + 1) % 12;
+        let end = normalize(f64::from(next_rashi) * 30.0 + degrees_in_rashi);
+        *bhava = Bhava {
+            number: i as u8 + 1,
+            cusp_deg: cusp,
+            start_deg: cusp,
+            end_deg: end,
+        };
+    }
+    BhavaResult {
+        bhavas,
+        lagna_deg: lagna_sid,
+        mc_deg: bhavas[9].cusp_deg,
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct BalaBhavaBasis {
+    bhava_numbers: [u8; 9],
+    cusp_sidereal_lons: [f64; 12],
+    ascendant_sidereal_lon: f64,
+    meridian_sidereal_lon: f64,
+}
+
 /// One-shot, function-local cache for shared intermediates.
 ///
 /// This is intentionally not exposed and not persisted across calls.
@@ -285,6 +329,9 @@ struct JyotishContext {
     bhava_result: Option<BhavaResult>,
     sidereal_bhava_cusps: Option<[f64; 12]>,
     graha_bhava_numbers: Option<[u8; 9]>,
+    rashi_bhava_result: Option<BhavaResult>,
+    rashi_bhava_cusps: Option<[f64; 12]>,
+    graha_rashi_bhava_numbers: Option<[u8; 9]>,
     sunrise_pair: Option<(f64, f64)>,
     sunset_jd: Option<f64>,
     graha_drishti_matrix: Option<GrahaDrishtiMatrix>,
@@ -320,6 +367,9 @@ impl JyotishContext {
             bhava_result: None,
             sidereal_bhava_cusps: None,
             graha_bhava_numbers: None,
+            rashi_bhava_result: None,
+            rashi_bhava_cusps: None,
+            graha_rashi_bhava_numbers: None,
             sunrise_pair: None,
             sunset_jd: None,
             graha_drishti_matrix: None,
@@ -424,6 +474,102 @@ impl JyotishContext {
         }
         self.graha_bhava_numbers = Some(numbers);
         Ok(numbers)
+    }
+
+    fn rashi_bhava_result(
+        &mut self,
+        engine: &Engine,
+        eop: &EopKernel,
+        location: &GeoLocation,
+    ) -> Result<BhavaResult, SearchError> {
+        if let Some(result) = self.rashi_bhava_result {
+            return Ok(result);
+        }
+        let lagna_sid = self.lagna_sid(engine, eop, location)?;
+        let result = rashi_bhava_result_from_lagna(lagna_sid);
+        self.rashi_bhava_result = Some(result);
+        Ok(result)
+    }
+
+    fn rashi_bhava_cusps(
+        &mut self,
+        engine: &Engine,
+        eop: &EopKernel,
+        location: &GeoLocation,
+    ) -> Result<[f64; 12], SearchError> {
+        if let Some(cusps) = self.rashi_bhava_cusps {
+            return Ok(cusps);
+        }
+        let result = self.rashi_bhava_result(engine, eop, location)?;
+        let mut cusps = [0.0f64; 12];
+        for (i, cusp) in cusps.iter_mut().enumerate() {
+            *cusp = result.bhavas[i].cusp_deg;
+        }
+        self.rashi_bhava_cusps = Some(cusps);
+        Ok(cusps)
+    }
+
+    fn graha_rashi_bhava_numbers(
+        &mut self,
+        engine: &Engine,
+        eop: &EopKernel,
+        location: &GeoLocation,
+        aya_config: &SankrantiConfig,
+    ) -> Result<[u8; 9], SearchError> {
+        if let Some(numbers) = self.graha_rashi_bhava_numbers {
+            return Ok(numbers);
+        }
+        let graha_lons = *self.graha_lons(engine, aya_config)?;
+        let lagna_sid = self.lagna_sid(engine, eop, location)?;
+        let mut numbers = [0u8; 9];
+        for graha in ALL_GRAHAS {
+            let idx = graha.index() as usize;
+            numbers[idx] = rashi_bhava_number_from_lagna(lagna_sid, graha_lons.longitudes[idx]);
+        }
+        self.graha_rashi_bhava_numbers = Some(numbers);
+        Ok(numbers)
+    }
+
+    fn bala_bhava_basis(
+        &mut self,
+        engine: &Engine,
+        eop: &EopKernel,
+        location: &GeoLocation,
+        bhava_config: &BhavaConfig,
+        aya_config: &SankrantiConfig,
+    ) -> Result<BalaBhavaBasis, SearchError> {
+        if bhava_config.use_rashi_bhava_for_bala_avastha {
+            let bhava_result = self.rashi_bhava_result(engine, eop, location)?;
+            Ok(BalaBhavaBasis {
+                bhava_numbers: self.graha_rashi_bhava_numbers(engine, eop, location, aya_config)?,
+                cusp_sidereal_lons: self.rashi_bhava_cusps(engine, eop, location)?,
+                ascendant_sidereal_lon: bhava_result.lagna_deg,
+                meridian_sidereal_lon: bhava_result.mc_deg,
+            })
+        } else {
+            let bhava_result = *self.bhava_result(engine, eop, location, bhava_config)?;
+            Ok(BalaBhavaBasis {
+                bhava_numbers: self.graha_bhava_numbers(
+                    engine,
+                    eop,
+                    location,
+                    bhava_config,
+                    aya_config,
+                )?,
+                cusp_sidereal_lons: self.sidereal_bhava_cusps(
+                    engine,
+                    eop,
+                    location,
+                    bhava_config,
+                )?,
+                ascendant_sidereal_lon: self.lagna_sid(engine, eop, location)?,
+                meridian_sidereal_lon: ecliptic_to_sidereal(
+                    bhava_result.mc_deg,
+                    self.ayanamsha,
+                    self.reference_plane,
+                ),
+            })
+        }
     }
 
     fn lagna_sid(
@@ -1161,7 +1307,12 @@ fn graha_positions_with_ctx(
     };
 
     let bhava_result = if config.include_bhava {
-        Some(ctx.bhava_result(engine, eop, location, bhava_config)?)
+        Some(*ctx.bhava_result(engine, eop, location, bhava_config)?)
+    } else {
+        None
+    };
+    let rashi_bhava_lagna_sid = if config.include_bhava && bhava_config.include_rashi_bhava_results {
+        Some(ctx.lagna_sid(engine, eop, location)?)
     } else {
         None
     };
@@ -1171,14 +1322,22 @@ fn graha_positions_with_ctx(
     for graha in ALL_GRAHAS {
         let idx = graha.index() as usize;
         let sid_lon = graha_lons.longitude(graha);
-        grahas[idx] = make_graha_entry(sid_lon, config, bhava_result, aya, plane);
+        grahas[idx] = make_graha_entry(
+            sid_lon,
+            config,
+            bhava_result.as_ref(),
+            rashi_bhava_lagna_sid,
+            aya,
+            plane,
+        );
     }
 
     let lagna = if config.include_lagna {
         make_graha_entry(
             lagna_sid.expect("include_lagna implies lagna_sid"),
             config,
-            bhava_result,
+            bhava_result.as_ref(),
+            rashi_bhava_lagna_sid,
             aya,
             plane,
         )
@@ -1193,7 +1352,14 @@ fn graha_positions_with_ctx(
             let (lon, _lat) =
                 body_lon_lat_on_plane(engine, body, jd_tdb, aya_config.precession_model, plane)?;
             let sid_lon = normalize(lon - aya);
-            entries[i] = make_graha_entry(sid_lon, config, bhava_result, aya, plane);
+            entries[i] = make_graha_entry(
+            sid_lon,
+            config,
+            bhava_result.as_ref(),
+            rashi_bhava_lagna_sid,
+            aya,
+            plane,
+            );
         }
         entries
     } else {
@@ -1212,6 +1378,7 @@ fn make_graha_entry(
     sid_lon: f64,
     config: &GrahaPositionsConfig,
     bhava_result: Option<&dhruv_vedic_base::BhavaResult>,
+    rashi_bhava_lagna_sid: Option<f64>,
     aya: f64,
     plane: ReferencePlane,
 ) -> GrahaEntry {
@@ -1230,6 +1397,9 @@ fn make_graha_entry(
     } else {
         0
     };
+    let rashi_bhava_number = rashi_bhava_lagna_sid
+        .map(|lagna_sid| rashi_bhava_number_from_lagna(lagna_sid, sid_lon))
+        .unwrap_or(0);
     GrahaEntry {
         sidereal_longitude: sid_lon,
         rashi: rashi_info.rashi,
@@ -1238,6 +1408,7 @@ fn make_graha_entry(
         nakshatra_index,
         pada,
         bhava_number,
+        rashi_bhava_number,
     }
 }
 
@@ -1404,9 +1575,14 @@ fn core_bindus_with_ctx(
     let gl_lon = ghati_lagna(sun_sid, ghatikas);
     let sl_lon = sree_lagna(moon_sid, lagna_sid);
 
-    let bhava_result = ctx.bhava_result(engine, eop, location, bhava_config)?;
+    let bhava_result = *ctx.bhava_result(engine, eop, location, bhava_config)?;
     let bhava_opt = if config.include_bhava {
         Some(bhava_result)
+    } else {
+        None
+    };
+    let rashi_bhava_lagna_sid = if config.include_bhava && bhava_config.include_rashi_bhava_results {
+        Some(lagna_sid)
     } else {
         None
     };
@@ -1427,21 +1603,97 @@ fn core_bindus_with_ctx(
         arudha_padas[i] = make_graha_entry(
             arudha_raw[i].longitude_deg,
             &gp_config,
-            bhava_opt,
+            bhava_opt.as_ref(),
+            rashi_bhava_lagna_sid,
             aya,
             plane,
         );
     }
 
+    let rashi_bhava_arudha_padas = if bhava_config.include_rashi_bhava_results {
+        let rashi_cusps = ctx.rashi_bhava_cusps(engine, eop, location)?;
+        let mut rashi_lord_lons = [0.0f64; 12];
+        for i in 0..12 {
+            let cusp_rashi_idx = (rashi_cusps[i] / 30.0).floor().min(11.0) as u8;
+            let lord = rashi_lord_by_index(cusp_rashi_idx).unwrap_or(Graha::Surya);
+            rashi_lord_lons[i] = graha_lons.longitude(lord);
+        }
+        let raw = all_arudha_padas(&rashi_cusps, &rashi_lord_lons);
+        let mut entries = [GrahaEntry::sentinel(); 12];
+        for i in 0..12 {
+            entries[i] = make_graha_entry(
+                raw[i].longitude_deg,
+                &gp_config,
+                bhava_opt.as_ref(),
+                rashi_bhava_lagna_sid,
+                aya,
+                plane,
+            );
+        }
+        Some(entries)
+    } else {
+        None
+    };
+
     Ok(BindusResult {
         arudha_padas,
-        bhrigu_bindu: make_graha_entry(bb_lon, &gp_config, bhava_opt, aya, plane),
-        pranapada_lagna: make_graha_entry(pp_lon, &gp_config, bhava_opt, aya, plane),
-        gulika: make_graha_entry(upagrahas.gulika, &gp_config, bhava_opt, aya, plane),
-        maandi: make_graha_entry(upagrahas.maandi, &gp_config, bhava_opt, aya, plane),
-        hora_lagna: make_graha_entry(hl_lon, &gp_config, bhava_opt, aya, plane),
-        ghati_lagna: make_graha_entry(gl_lon, &gp_config, bhava_opt, aya, plane),
-        sree_lagna: make_graha_entry(sl_lon, &gp_config, bhava_opt, aya, plane),
+        rashi_bhava_arudha_padas,
+        bhrigu_bindu: make_graha_entry(
+            bb_lon,
+            &gp_config,
+            bhava_opt.as_ref(),
+            rashi_bhava_lagna_sid,
+            aya,
+            plane,
+        ),
+        pranapada_lagna: make_graha_entry(
+            pp_lon,
+            &gp_config,
+            bhava_opt.as_ref(),
+            rashi_bhava_lagna_sid,
+            aya,
+            plane,
+        ),
+        gulika: make_graha_entry(
+            upagrahas.gulika,
+            &gp_config,
+            bhava_opt.as_ref(),
+            rashi_bhava_lagna_sid,
+            aya,
+            plane,
+        ),
+        maandi: make_graha_entry(
+            upagrahas.maandi,
+            &gp_config,
+            bhava_opt.as_ref(),
+            rashi_bhava_lagna_sid,
+            aya,
+            plane,
+        ),
+        hora_lagna: make_graha_entry(
+            hl_lon,
+            &gp_config,
+            bhava_opt.as_ref(),
+            rashi_bhava_lagna_sid,
+            aya,
+            plane,
+        ),
+        ghati_lagna: make_graha_entry(
+            gl_lon,
+            &gp_config,
+            bhava_opt.as_ref(),
+            rashi_bhava_lagna_sid,
+            aya,
+            plane,
+        ),
+        sree_lagna: make_graha_entry(
+            sl_lon,
+            &gp_config,
+            bhava_opt.as_ref(),
+            rashi_bhava_lagna_sid,
+            aya,
+            plane,
+        ),
     })
 }
 
@@ -1520,6 +1772,20 @@ fn drishti_for_date_with_ctx(
     } else {
         [[DrishtiEntry::zero(); 12]; 9]
     };
+    let graha_to_rashi_bhava =
+        if config.include_bhava && bhava_config.include_rashi_bhava_results {
+            let cusp_sid = ctx.rashi_bhava_cusps(engine, eop, location)?;
+            let mut entries = [[DrishtiEntry::zero(); 12]; 9];
+            for g in ALL_GRAHAS {
+                let gi = g.index() as usize;
+                for (ci, &cusp) in cusp_sid.iter().enumerate() {
+                    entries[gi][ci] = graha_drishti(g, graha_lons.longitudes[gi], cusp);
+                }
+            }
+            entries
+        } else {
+            [[DrishtiEntry::zero(); 12]; 9]
+        };
     let _ = (aya, plane);
 
     let graha_to_bindus = if config.include_bindus {
@@ -1568,6 +1834,7 @@ fn drishti_for_date_with_ctx(
     Ok(DrishtiResult {
         graha_to_graha,
         graha_to_bhava,
+        graha_to_rashi_bhava,
         graha_to_lagna,
         graha_to_bindus,
     })
@@ -1614,14 +1881,7 @@ pub fn full_kundali_for_date(
 
     // Bhava cusps — only computed when requested.
     let bhava_cusps = if config.include_bhava_cusps {
-        let tropical = compute_bhavas(
-            engine,
-            engine.lsk(),
-            eop,
-            location,
-            ctx.jd_utc,
-            bhava_config,
-        )?;
+        let tropical = *ctx.bhava_result(engine, eop, location, bhava_config)?;
         Some(siderealize_bhava_result(
             &tropical,
             ayanamsha,
@@ -1630,6 +1890,12 @@ pub fn full_kundali_for_date(
     } else {
         None
     };
+    let rashi_bhava_cusps =
+        if config.include_bhava_cusps && bhava_config.include_rashi_bhava_results {
+            Some(ctx.rashi_bhava_result(engine, eop, location)?)
+        } else {
+            None
+        };
 
     let graha_positions = if config.include_graha_positions {
         Some(graha_positions_with_ctx(
@@ -1748,6 +2014,7 @@ pub fn full_kundali_for_date(
             amsha_plan.requests(),
             &config.amsha_scope,
             &graha_positions,
+            &rashi_bhava_cusps,
             &bindus,
             &upagrahas,
             &sphutas,
@@ -1870,6 +2137,7 @@ pub fn full_kundali_for_date(
     Ok(FullKundaliResult {
         ayanamsha_deg: ayanamsha,
         bhava_cusps,
+        rashi_bhava_cusps,
         graha_positions,
         bindus,
         drishti,
@@ -2617,18 +2885,16 @@ fn assemble_shadbala_inputs(
     // 1. Sidereal longitudes (all 9, needed for drik bala)
     let graha_lons = *ctx.graha_lons(engine, aya_config)?;
     let sidereal_lons = graha_lons.longitudes;
-    let aya = ctx.ayanamsha;
-    let plane = ctx.reference_plane;
 
     // 2. Bhava numbers for sapta grahas
-    let bhava_result = *ctx.bhava_result(engine, eop, location, bhava_config)?;
+    let bhava_basis = ctx.bala_bhava_basis(engine, eop, location, bhava_config, aya_config)?;
     let mut bhava_numbers = [0u8; 7];
+    let mut dig_bala_max_cusp_lons = [0.0f64; 7];
     for graha in SAPTA_GRAHAS {
         let idx = graha.index() as usize;
-        bhava_numbers[idx] = find_bhava_number(
-            sidereal_to_ecliptic_tropical(sidereal_lons[idx], aya, plane),
-            &bhava_result,
-        );
+        bhava_numbers[idx] = bhava_basis.bhava_numbers[idx];
+        let max_bhava = DIG_BALA_BHAVA[idx] as usize;
+        dig_bala_max_cusp_lons[idx] = bhava_basis.cusp_sidereal_lons[max_bhava - 1];
     }
 
     // 3. Speeds (deg/day) for sapta grahas
@@ -2683,6 +2949,7 @@ fn assemble_shadbala_inputs(
     Ok(ShadbalaInputs {
         sidereal_lons,
         bhava_numbers,
+        dig_bala_max_cusp_lons,
         speeds,
         kala: KalaBalaInputs {
             is_daytime,
@@ -2715,13 +2982,9 @@ fn assemble_bhavabala_inputs(
     shadbala: &ShadbalaResult,
     ctx: &mut JyotishContext,
 ) -> Result<BhavaBalaInputs, SearchError> {
-    let aya = ctx.ayanamsha;
-    let plane = ctx.reference_plane;
     let graha_lons = *ctx.graha_lons(engine, aya_config)?;
-    let bhava_result = *ctx.bhava_result(engine, eop, location, bhava_config)?;
-    let lagna_sid = ctx.lagna_sid(engine, eop, location)?;
-
-    let cusp_sidereal_lons = ctx.sidereal_bhava_cusps(engine, eop, location, bhava_config)?;
+    let bhava_basis = ctx.bala_bhava_basis(engine, eop, location, bhava_config, aya_config)?;
+    let cusp_sidereal_lons = bhava_basis.cusp_sidereal_lons;
     let mut house_lord_strengths = [0.0; 12];
     for i in 0..12 {
         let rashi_index = rashi_from_longitude(cusp_sidereal_lons[i]).rashi_index;
@@ -2735,9 +2998,6 @@ fn assemble_bhavabala_inputs(
         }
         house_lord_strengths[i] = shadbala.entries[lord.index() as usize].total_shashtiamsas;
     }
-
-    let graha_bhava_numbers =
-        ctx.graha_bhava_numbers(engine, eop, location, bhava_config, aya_config)?;
 
     let mut aspect_virupas = [[0.0; 12]; 9];
     for graha in ALL_GRAHAS {
@@ -2755,9 +3015,9 @@ fn assemble_bhavabala_inputs(
     let birth_period = classify_bhavabala_birth_period(ctx.jd_tdb, vedic_sunrise, vedic_sunset);
     Ok(BhavaBalaInputs {
         cusp_sidereal_lons,
-        ascendant_sidereal_lon: lagna_sid,
-        meridian_sidereal_lon: ecliptic_to_sidereal(bhava_result.mc_deg, aya, plane),
-        graha_bhava_numbers,
+        ascendant_sidereal_lon: bhava_basis.ascendant_sidereal_lon,
+        meridian_sidereal_lon: bhava_basis.meridian_sidereal_lon,
+        graha_bhava_numbers: bhava_basis.bhava_numbers,
         house_lord_strengths,
         aspect_virupas,
         birth_period,
@@ -2999,7 +3259,9 @@ fn assemble_avastha_inputs(
     let rashi_indices = graha_lons.all_rashi_indices();
 
     // 2. Bhava numbers for all 9 grahas
-    let bhava_numbers = ctx.graha_bhava_numbers(engine, eop, location, bhava_config, aya_config)?;
+    let bhava_numbers = ctx
+        .bala_bhava_basis(engine, eop, location, bhava_config, aya_config)?
+        .bhava_numbers;
 
     // 3. Speeds → retrograde detection (sapta grahas only; Rahu/Ketu always false)
     let speeds = ctx.graha_speeds(engine)?;
@@ -3224,7 +3486,9 @@ fn build_amsha_chart(
     lagna_sid: f64,
     scope: &AmshaChartScope,
     bhava_cusps_sid: Option<&[f64; 12]>,
+    rashi_bhava_cusps_sid: Option<&[f64; 12]>,
     arudha_lons: Option<&[f64; 12]>,
+    rashi_bhava_arudha_lons: Option<&[f64; 12]>,
     upagraha_lons: Option<&[f64; 11]>,
     sphuta_lons: Option<&[f64; 16]>,
     special_lagna_lons: Option<&[f64; 8]>,
@@ -3257,9 +3521,31 @@ fn build_amsha_chart(
     } else {
         None
     };
+    let rashi_bhava_cusps = if scope.include_bhava_cusps {
+        rashi_bhava_cusps_sid.map(|cusps| {
+            let mut entries = [make_amsha_entry(0.0); 12];
+            for i in 0..12 {
+                entries[i] = transform_to_amsha_entry(cusps[i], amsha, variation);
+            }
+            entries
+        })
+    } else {
+        None
+    };
 
     let arudha_padas = if scope.include_arudha_padas {
         arudha_lons.map(|lons| {
+            let mut entries = [make_amsha_entry(0.0); 12];
+            for i in 0..12 {
+                entries[i] = transform_to_amsha_entry(lons[i], amsha, variation);
+            }
+            entries
+        })
+    } else {
+        None
+    };
+    let rashi_bhava_arudha_padas = if scope.include_arudha_padas {
+        rashi_bhava_arudha_lons.map(|lons| {
             let mut entries = [make_amsha_entry(0.0); 12];
             for i in 0..12 {
                 entries[i] = transform_to_amsha_entry(lons[i], amsha, variation);
@@ -3312,7 +3598,9 @@ fn build_amsha_chart(
         grahas,
         lagna,
         bhava_cusps,
+        rashi_bhava_cusps,
         arudha_padas,
+        rashi_bhava_arudha_padas,
         upagrahas,
         sphutas,
         special_lagnas,
@@ -3347,6 +3635,13 @@ pub fn amsha_charts_for_date(
     } else {
         None
     };
+    let rashi_bhava_cusps_sid = if bhava_config.include_rashi_bhava_results
+        && (scope.include_bhava_cusps || scope.include_arudha_padas)
+    {
+        Some(ctx.rashi_bhava_cusps(engine, eop, location)?)
+    } else {
+        None
+    };
 
     // Arudha padas
     let arudha_lons = if scope.include_arudha_padas {
@@ -3366,6 +3661,24 @@ pub fn amsha_charts_for_date(
     } else {
         None
     };
+    let rashi_bhava_arudha_lons =
+        if scope.include_arudha_padas && bhava_config.include_rashi_bhava_results {
+            let cusp_sid = rashi_bhava_cusps_sid.expect("rashi arudha requires rashi cusp cache");
+            let mut lord_lons = [0.0f64; 12];
+            for i in 0..12 {
+                let cusp_rashi_idx = (cusp_sid[i] / 30.0).floor().min(11.0) as u8;
+                let lord = rashi_lord_by_index(cusp_rashi_idx).unwrap_or(Graha::Surya);
+                lord_lons[i] = graha_lons.longitude(lord);
+            }
+            let raw = all_arudha_padas(&cusp_sid, &lord_lons);
+            let mut lons = [0.0f64; 12];
+            for (i, lon) in lons.iter_mut().enumerate() {
+                *lon = raw[i].longitude_deg;
+            }
+            Some(lons)
+        } else {
+            None
+        };
 
     // Upagrahas
     let upagraha_lons = if scope.include_upagrahas {
@@ -3427,7 +3740,9 @@ pub fn amsha_charts_for_date(
                 lagna_sid,
                 scope,
                 bhava_cusps_sid.as_ref(),
+                rashi_bhava_cusps_sid.as_ref(),
                 arudha_lons.as_ref(),
+                rashi_bhava_arudha_lons.as_ref(),
                 upagraha_lons.as_ref(),
                 sphuta_lons.as_ref(),
                 special_lagna_lons.as_ref(),
@@ -3469,6 +3784,17 @@ pub fn amsha_charts_from_kundali(
             "bhava_cusps_sid required when include_bhava_cusps is true",
         ));
     }
+    let rashi_bhava_cusps_sid = if scope.include_bhava_cusps {
+        kundali.rashi_bhava_cusps.as_ref().map(|result| {
+            let mut cusps = [0.0f64; 12];
+            for (i, cusp) in cusps.iter_mut().enumerate() {
+                *cusp = result.bhavas[i].cusp_deg;
+            }
+            cusps
+        })
+    } else {
+        None
+    };
 
     // Extract arudha padas if available
     let arudha_lons = if scope.include_arudha_padas {
@@ -3478,6 +3804,19 @@ pub fn amsha_charts_from_kundali(
                 *lon = b.arudha_padas[i].sidereal_longitude;
             }
             lons
+        })
+    } else {
+        None
+    };
+    let rashi_bhava_arudha_lons = if scope.include_arudha_padas {
+        kundali.bindus.as_ref().and_then(|b| {
+            b.rashi_bhava_arudha_padas.map(|entries| {
+                let mut lons = [0.0f64; 12];
+                for (i, lon) in lons.iter_mut().enumerate() {
+                    *lon = entries[i].sidereal_longitude;
+                }
+                lons
+            })
         })
     } else {
         None
@@ -3513,7 +3852,9 @@ pub fn amsha_charts_from_kundali(
                 lagna_sid,
                 scope,
                 bhava_cusps_sid,
+                rashi_bhava_cusps_sid.as_ref(),
                 arudha_lons.as_ref(),
+                rashi_bhava_arudha_lons.as_ref(),
                 upagraha_lons.as_ref(),
                 sphuta_lons.as_ref(),
                 special_lagna_lons.as_ref(),
@@ -3533,6 +3874,7 @@ fn amsha_charts_from_kundali_with_ctx(
     requests: &[AmshaRequest],
     scope: &AmshaChartScope,
     graha_positions: &Option<GrahaPositions>,
+    rashi_bhava_cusps: &Option<BhavaResult>,
     bindus: &Option<BindusResult>,
     upagrahas: &Option<AllUpagrahas>,
     sphutas: &Option<SphutalResult>,
@@ -3564,6 +3906,17 @@ fn amsha_charts_from_kundali_with_ctx(
     } else {
         None
     };
+    let rashi_bhava_cusps_sid = if scope.include_bhava_cusps {
+        rashi_bhava_cusps.as_ref().map(|result| {
+            let mut cusps = [0.0f64; 12];
+            for (i, cusp) in cusps.iter_mut().enumerate() {
+                *cusp = result.bhavas[i].cusp_deg;
+            }
+            cusps
+        })
+    } else {
+        None
+    };
 
     let arudha_lons = if scope.include_arudha_padas {
         bindus.as_ref().map(|b| {
@@ -3572,6 +3925,19 @@ fn amsha_charts_from_kundali_with_ctx(
                 *lon = b.arudha_padas[i].sidereal_longitude;
             }
             lons
+        })
+    } else {
+        None
+    };
+    let rashi_bhava_arudha_lons = if scope.include_arudha_padas {
+        bindus.as_ref().and_then(|b| {
+            b.rashi_bhava_arudha_padas.map(|entries| {
+                let mut lons = [0.0f64; 12];
+                for (i, lon) in lons.iter_mut().enumerate() {
+                    *lon = entries[i].sidereal_longitude;
+                }
+                lons
+            })
         })
     } else {
         None
@@ -3606,7 +3972,9 @@ fn amsha_charts_from_kundali_with_ctx(
                 lagna_sid,
                 scope,
                 bhava_cusps_sid.as_ref(),
+                rashi_bhava_cusps_sid.as_ref(),
                 arudha_lons.as_ref(),
+                rashi_bhava_arudha_lons.as_ref(),
                 upagraha_lons.as_ref(),
                 sphuta_lons.as_ref(),
                 special_lagna_lons.as_ref(),
@@ -3890,5 +4258,25 @@ mod tests {
         });
 
         assert_eq!(cache.len(), 3);
+    }
+
+    #[test]
+    fn rashi_bhava_basis_cusps_follow_lagna_degree_and_rashi_sequence() {
+        let result = rashi_bhava_result_from_lagna(48.25);
+
+        assert_eq!(result.bhavas[0].number, 1);
+        assert!((result.bhavas[0].cusp_deg - 48.25).abs() < 1e-12);
+        assert!((result.bhavas[1].cusp_deg - 78.25).abs() < 1e-12);
+        assert!((result.bhavas[11].cusp_deg - 18.25).abs() < 1e-12);
+        assert!((result.mc_deg - result.bhavas[9].cusp_deg).abs() < 1e-12);
+    }
+
+    #[test]
+    fn rashi_bhava_numbers_are_whole_sign_offsets_from_lagna() {
+        let lagna = 48.25;
+
+        assert_eq!(rashi_bhava_number_from_lagna(lagna, 49.0), 1);
+        assert_eq!(rashi_bhava_number_from_lagna(lagna, 78.0), 2);
+        assert_eq!(rashi_bhava_number_from_lagna(lagna, 17.0), 12);
     }
 }

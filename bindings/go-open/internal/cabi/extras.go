@@ -52,6 +52,7 @@ func goGrahaEntry(v C.DhruvGrahaEntry) GrahaEntry {
 		NakshatraIndex:    uint8(v.nakshatra_index),
 		Pada:              uint8(v.pada),
 		BhavaNumber:       uint8(v.bhava_number),
+		RashiBhavaNumber:  uint8(v.rashi_bhava_number),
 	}
 }
 
@@ -729,6 +730,7 @@ func DrishtiForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLoca
 		}
 		for j := 0; j < 12; j++ {
 			res.GrahaToBhava[i][j] = goDrishtiEntry(out.graha_to_bhava[i][j])
+			res.GrahaToRashiBhava[i][j] = goDrishtiEntry(out.graha_to_rashi_bhava[i][j])
 		}
 		res.GrahaToLagna[i] = goDrishtiEntry(out.graha_to_lagna[i])
 		for j := 0; j < 19; j++ {
@@ -883,14 +885,16 @@ func AmshaChartForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoL
 	var out C.DhruvAmshaChart
 	st := Status(C.dhruv_amsha_chart_for_date(engine.ptr, eop.ptr, &cutc, &cloc, &cbhava, &crise, C.uint32_t(ayanamshaSystem), boolU8(useNutation), C.uint16_t(amshaCode), C.uint8_t(variationCode), &cscope, &out))
 	res := AmshaChart{
-		AmshaCode:          uint16(out.amsha_code),
-		VariationCode:      uint8(out.variation_code),
-		Lagna:              goAmshaEntry(out.lagna),
-		BhavaCuspsValid:    out.bhava_cusps_valid != 0,
-		ArudhaPadasValid:   out.arudha_padas_valid != 0,
-		UpagrahasValid:     out.upagrahas_valid != 0,
-		SphutasValid:       out.sphutas_valid != 0,
-		SpecialLagnasValid: out.special_lagnas_valid != 0,
+		AmshaCode:                  uint16(out.amsha_code),
+		VariationCode:              uint8(out.variation_code),
+		Lagna:                      goAmshaEntry(out.lagna),
+		BhavaCuspsValid:            out.bhava_cusps_valid != 0,
+		RashiBhavaCuspsValid:       out.rashi_bhava_cusps_valid != 0,
+		ArudhaPadasValid:           out.arudha_padas_valid != 0,
+		RashiBhavaArudhaPadasValid: out.rashi_bhava_arudha_padas_valid != 0,
+		UpagrahasValid:             out.upagrahas_valid != 0,
+		SphutasValid:               out.sphutas_valid != 0,
+		SpecialLagnasValid:         out.special_lagnas_valid != 0,
 	}
 	for i := 0; i < GrahaCount; i++ {
 		res.Grahas[i] = goAmshaEntry(out.grahas[i])
@@ -898,8 +902,14 @@ func AmshaChartForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoL
 	if res.BhavaCuspsValid {
 		res.BhavaCusps = goAmshaEntries(out.bhava_cusps[:])
 	}
+	if res.RashiBhavaCuspsValid {
+		res.RashiBhavaCusps = goAmshaEntries(out.rashi_bhava_cusps[:])
+	}
 	if res.ArudhaPadasValid {
 		res.ArudhaPadas = goAmshaEntries(out.arudha_padas[:])
+	}
+	if res.RashiBhavaArudhaPadasValid {
+		res.RashiBhavaArudhaPadas = goAmshaEntries(out.rashi_bhava_arudha_padas[:])
 	}
 	if res.UpagrahasValid {
 		res.Upagrahas = goAmshaEntries(out.upagrahas[:])

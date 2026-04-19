@@ -330,3 +330,7 @@ Other public enum objects:
 `bindusConfig` and `fullKundaliConfig` both accept nested upagraha config.
 
 For build/runtime notes, see [`bindings/node-open/README.md`](../../../bindings/node-open/README.md).
+
+## Rashi-Bhava Bhava Config
+
+`bhavaConfigDefault()` includes `useRashiBhavaForBalaAvastha` and `includeRashiBhavaResults`, both defaulting to `true`. Existing fields keep configured bhava-system meaning; sibling fields such as `rashiBhavaCusps`, `rashiBhavaNumber`, and `grahaToRashiBhava` expose the rashi-bhava/equal-house basis.

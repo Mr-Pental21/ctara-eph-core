@@ -104,6 +104,7 @@ fn shadbala_bench(c: &mut Criterion) {
     let inputs = ShadbalaInputs {
         sidereal_lons,
         bhava_numbers,
+        dig_bala_max_cusp_lons: [270.0, 90.0, 270.0, 0.0, 0.0, 90.0, 180.0],
         speeds,
         kala,
         varga_rashi_indices: varga_rashi,

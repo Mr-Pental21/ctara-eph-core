@@ -346,12 +346,20 @@ typedef struct {
 
 ```c
 typedef struct {
-    int32_t system;           // DHRUV_BHAVA_* system code (0-9)
-    int32_t starting_point;   // -1=Asc, -2=custom deg, or positive NAIF body code
-    double  custom_start_deg; // Used only when starting_point == -2
-    int32_t reference_mode;   // DHRUV_BHAVA_REF_* constant
+    int32_t system;            // DHRUV_BHAVA_* system code (0-9)
+    int32_t starting_point;    // -1=Asc, -2=custom deg, or positive NAIF body code
+    double  custom_start_deg;  // Used only when starting_point == -2
+    int32_t reference_mode;    // DHRUV_BHAVA_REF_* constant
+    int32_t output_mode;       // 0=tropical, 1=sidereal
+    int32_t ayanamsha_system;  // used when output_mode == sidereal
+    uint8_t use_nutation;
+    int32_t reference_plane;
+    uint8_t use_rashi_bhava_for_bala_avastha; // default 1
+    uint8_t include_rashi_bhava_results;      // default 1
 } DhruvBhavaConfig;
 ```
+
+Existing bhava result fields keep the configured bhava-system meaning. High-level jyotish result structs add rashi-bhava sibling fields where applicable, such as `rashi_bhava_number`, `rashi_bhava_cusps`, `graha_to_rashi_bhava`, and rashi-bhava amsha cusp/arudha arrays. See `docs/dual_rashi_bhava_outputs.md`.
 
 ### DhruvBhava
 

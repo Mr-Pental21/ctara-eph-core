@@ -276,6 +276,8 @@ struct VaarArgs {
     /// Path to IERS EOP file (finals2000A.all)
     #[arg(long)]
     eop: PathBuf,
+    #[command(flatten)]
+    bhava_behavior: BhavaBehaviorArgs,
 }
 
 #[derive(clap::Args)]
@@ -419,6 +421,8 @@ struct ArudhaPadasArgs {
     /// Path to IERS EOP file (finals2000A.all)
     #[arg(long)]
     eop: PathBuf,
+    #[command(flatten)]
+    bhava_behavior: BhavaBehaviorArgs,
 }
 
 #[derive(clap::Args)]
@@ -457,6 +461,8 @@ struct PanchangArgs {
     /// Path to IERS EOP file (finals2000A.all)
     #[arg(long)]
     eop: PathBuf,
+    #[command(flatten)]
+    bhava_behavior: BhavaBehaviorArgs,
 }
 
 #[derive(clap::Args)]
@@ -572,6 +578,8 @@ struct UpagrahasArgs {
     eop: PathBuf,
     #[command(flatten)]
     upagraha: TimeUpagrahaArgs,
+    #[command(flatten)]
+    bhava_behavior: BhavaBehaviorArgs,
 }
 
 #[derive(clap::Args)]
@@ -621,6 +629,8 @@ struct GrahaPositionsArgs {
     /// Path to IERS EOP file (finals2000A.all)
     #[arg(long)]
     eop: PathBuf,
+    #[command(flatten)]
+    bhava_behavior: BhavaBehaviorArgs,
 }
 
 #[derive(clap::Args)]
@@ -660,6 +670,8 @@ struct CoreBindusArgs {
     eop: PathBuf,
     #[command(flatten)]
     upagraha: TimeUpagrahaArgs,
+    #[command(flatten)]
+    bhava_behavior: BhavaBehaviorArgs,
 }
 
 #[derive(clap::Args)]
@@ -700,6 +712,41 @@ struct DrishtiArgs {
     /// Path to IERS EOP file (finals2000A.all)
     #[arg(long)]
     eop: PathBuf,
+    #[command(flatten)]
+    bhava_behavior: BhavaBehaviorArgs,
+}
+
+#[derive(clap::Args)]
+struct BhavaBehaviorArgs {
+    /// Use rashi-bhava/equal-house basis for bala and avastha calculations
+    #[arg(long, conflicts_with = "use_configured_bhava_for_bala_avastha")]
+    use_rashi_bhava_for_bala_avastha: bool,
+    /// Use configured bhava-system basis for bala and avastha calculations
+    #[arg(long)]
+    use_configured_bhava_for_bala_avastha: bool,
+    /// Include rashi-bhava sibling result sections/columns
+    #[arg(long, conflicts_with = "no_rashi_bhava_results")]
+    include_rashi_bhava_results: bool,
+    /// Suppress rashi-bhava sibling result sections/columns
+    #[arg(long)]
+    no_rashi_bhava_results: bool,
+}
+
+fn bhava_config_from_cli(args: &BhavaBehaviorArgs) -> BhavaConfig {
+    let mut config = BhavaConfig::default();
+    if args.use_configured_bhava_for_bala_avastha {
+        config.use_rashi_bhava_for_bala_avastha = false;
+    }
+    if args.use_rashi_bhava_for_bala_avastha {
+        config.use_rashi_bhava_for_bala_avastha = true;
+    }
+    if args.no_rashi_bhava_results {
+        config.include_rashi_bhava_results = false;
+    }
+    if args.include_rashi_bhava_results {
+        config.include_rashi_bhava_results = true;
+    }
+    config
 }
 
 #[derive(clap::Args)]
@@ -811,6 +858,8 @@ struct KundaliArgs {
     all: bool,
     #[command(flatten)]
     upagraha: TimeUpagrahaArgs,
+    #[command(flatten)]
+    bhava_behavior: BhavaBehaviorArgs,
 }
 
 #[derive(clap::Args)]
@@ -860,6 +909,8 @@ struct AmshaChartArgs {
     /// Include special lagnas inside amsha charts
     #[arg(long)]
     include_special_lagnas: bool,
+    #[command(flatten)]
+    bhava_behavior: BhavaBehaviorArgs,
 }
 
 #[derive(clap::Args)]
@@ -1054,6 +1105,8 @@ struct BhavasArgs {
     /// Apply nutation when computing sidereal output.
     #[arg(long)]
     nutation: bool,
+    #[command(flatten)]
+    bhava_behavior: BhavaBehaviorArgs,
 }
 
 #[derive(clap::Args)]
@@ -1081,6 +1134,8 @@ struct LagnaComputeArgs {
     /// Apply nutation when computing sidereal output.
     #[arg(long)]
     nutation: bool,
+    #[command(flatten)]
+    bhava_behavior: BhavaBehaviorArgs,
 }
 
 #[derive(clap::Args)]
@@ -1619,6 +1674,8 @@ struct ShadbalaArgs {
     /// Path to IERS EOP file (finals2000A.all)
     #[arg(long)]
     eop: PathBuf,
+    #[command(flatten)]
+    bhava_behavior: BhavaBehaviorArgs,
 }
 
 #[derive(clap::Args)]
@@ -1653,6 +1710,8 @@ struct BhavabalaArgs {
     /// Path to IERS EOP file (finals2000A.all)
     #[arg(long)]
     eop: PathBuf,
+    #[command(flatten)]
+    bhava_behavior: BhavaBehaviorArgs,
 }
 
 #[derive(clap::Args)]
@@ -1730,6 +1789,8 @@ struct BalasArgs {
     /// Path to IERS EOP file (finals2000A.all)
     #[arg(long)]
     eop: PathBuf,
+    #[command(flatten)]
+    bhava_behavior: BhavaBehaviorArgs,
 }
 
 #[derive(clap::Args)]
@@ -1770,6 +1831,8 @@ struct AvasthaArgs {
     /// Path to IERS EOP file (finals2000A.all)
     #[arg(long)]
     eop: PathBuf,
+    #[command(flatten)]
+    bhava_behavior: BhavaBehaviorArgs,
 }
 
 #[derive(clap::Args)]
@@ -4040,7 +4103,7 @@ fn main() {
             let engine = load_engine(&args.bsp, &args.lsk);
             let eop_kernel = load_eop(&args.eop);
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
-            let bhava_config = BhavaConfig::default();
+            let bhava_config = bhava_config_from_cli(&args.bhava_behavior);
             let aya_config = SankrantiConfig::new(system, args.nutation);
 
             let results = dhruv_search::arudha_padas_for_date(
@@ -4399,7 +4462,7 @@ fn main() {
             } else {
                 let system = require_aya_system(args.ayanamsha);
                 let location = GeoLocation::new(args.lat, args.lon, args.alt);
-                let bhava_config = BhavaConfig::default();
+                let bhava_config = bhava_config_from_cli(&args.bhava_behavior);
                 let prec = parse_precession_model(&args.precession);
                 let aya_config = SankrantiConfig::new_with_model(system, args.nutation, prec);
                 let gp_config = dhruv_search::GrahaPositionsConfig {
@@ -4495,7 +4558,7 @@ fn main() {
             let engine = load_engine(&args.bsp, &args.lsk);
             let eop_kernel = load_eop(&args.eop);
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
-            let bhava_config = BhavaConfig::default();
+            let bhava_config = bhava_config_from_cli(&args.bhava_behavior);
             let rs_config = RiseSetConfig::default();
             let aya_config = SankrantiConfig::new(system, args.nutation);
             let upagraha_config = build_time_upagraha_config(&args.upagraha);
@@ -4605,7 +4668,7 @@ fn main() {
             let engine = load_engine(&args.bsp, &args.lsk);
             let eop_kernel = load_eop(&args.eop);
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
-            let bhava_config = BhavaConfig::default();
+            let bhava_config = bhava_config_from_cli(&args.bhava_behavior);
             let rs_config = RiseSetConfig::default();
             let aya_config = SankrantiConfig::new(system, args.nutation);
             let drishti_config = dhruv_search::DrishtiConfig {
@@ -4726,7 +4789,7 @@ fn main() {
             let engine = load_engine(&args.bsp, &args.lsk);
             let eop_kernel = load_eop(&args.eop);
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
-            let bhava_config = BhavaConfig::default();
+            let bhava_config = bhava_config_from_cli(&args.bhava_behavior);
             let rs_config = RiseSetConfig::default();
             let aya_config = SankrantiConfig::new(system, args.nutation);
 
@@ -5227,7 +5290,7 @@ fn main() {
             let engine = load_engine(&args.bsp, &args.lsk);
             let eop_kernel = load_eop(&args.eop);
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
-            let bhava_config = BhavaConfig::default();
+            let bhava_config = bhava_config_from_cli(&args.bhava_behavior);
             let jd_utc = utc_to_jd_utc(&utc);
             let output_label = if args.sidereal {
                 "sidereal"
@@ -5291,7 +5354,7 @@ fn main() {
             let eop_kernel = load_eop(&args.eop);
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
             let jd_utc = utc_to_jd_utc(&utc);
-            let bhava_config = BhavaConfig::default();
+            let bhava_config = bhava_config_from_cli(&args.bhava_behavior);
             let (lagna_label, lagna_deg, mc_label, mc_deg) = if args.sidereal {
                 let system = require_aya_system(args.ayanamsha);
                 let aya_config = SankrantiConfig::new(system, args.nutation);
@@ -7670,7 +7733,7 @@ fn main() {
             let engine = load_engine(&args.bsp, &args.lsk);
             let eop_kernel = load_eop(&args.eop);
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
-            let bhava_config = BhavaConfig::default();
+            let bhava_config = bhava_config_from_cli(&args.bhava_behavior);
             let rs_config = RiseSetConfig::default();
             let aya_config = SankrantiConfig::new(system, args.nutation);
             let amsha_selection = args
@@ -7763,7 +7826,7 @@ fn main() {
             let engine = load_engine(&args.bsp, &args.lsk);
             let eop_kernel = load_eop(&args.eop);
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
-            let bhava_config = BhavaConfig::default();
+            let bhava_config = bhava_config_from_cli(&args.bhava_behavior);
             let rs_config = RiseSetConfig::default();
             let aya_config = SankrantiConfig::new(system, args.nutation);
 
@@ -7964,7 +8027,7 @@ fn main() {
             let engine = load_engine(&args.bsp, &args.lsk);
             let eop_kernel = load_eop(&args.eop);
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
-            let bhava_config = BhavaConfig::default();
+            let bhava_config = bhava_config_from_cli(&args.bhava_behavior);
             let rs_config = RiseSetConfig::default();
             let aya_config = SankrantiConfig::new(system, args.nutation);
             let policy = parse_node_policy(&args.node_policy);
@@ -8110,7 +8173,7 @@ fn main() {
             let engine = load_engine(&args.bsp, &args.lsk);
             let eop_kernel = load_eop(&args.eop);
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
-            let bhava_config = BhavaConfig::default();
+            let bhava_config = bhava_config_from_cli(&args.bhava_behavior);
             let rs_config = RiseSetConfig::default();
             let aya_config = SankrantiConfig::new(system, args.nutation);
             let requests = parse_amsha_specs(&args.amsha);
@@ -9893,8 +9956,32 @@ fn write_amsha_chart(
         }
     }
 
+    if let Some(ref cusps) = chart.rashi_bhava_cusps {
+        writeln!(w, "{base_indent}  Rashi-Bhava Cusps:")?;
+        for (index, entry) in cusps.iter().enumerate() {
+            writeln!(
+                w,
+                "{base_indent}    Bhava {:>2}      {}",
+                index + 1,
+                format_rashi_dms(entry.sidereal_longitude)
+            )?;
+        }
+    }
+
     if let Some(ref arudha_padas) = chart.arudha_padas {
         writeln!(w, "{base_indent}  Arudha Padas:")?;
+        for (index, entry) in arudha_padas.iter().enumerate() {
+            writeln!(
+                w,
+                "{base_indent}    A{:<2}          {}",
+                index + 1,
+                format_rashi_dms(entry.sidereal_longitude)
+            )?;
+        }
+    }
+
+    if let Some(ref arudha_padas) = chart.rashi_bhava_arudha_padas {
+        writeln!(w, "{base_indent}  Rashi-Bhava Arudha Padas:")?;
         for (index, entry) in arudha_padas.iter().enumerate() {
             writeln!(
                 w,
@@ -9990,6 +10077,9 @@ fn print_kundali(
                 entry.pada,
                 entry.bhava_number,
             )?;
+            if entry.rashi_bhava_number > 0 {
+                writeln!(w, "           Rashi-Bhava: {}", entry.rashi_bhava_number)?;
+            }
         }
         writeln!(
             w,
@@ -10000,6 +10090,9 @@ fn print_kundali(
             g.lagna.pada,
             g.lagna.bhava_number,
         )?;
+        if g.lagna.rashi_bhava_number > 0 {
+            writeln!(w, "           Rashi-Bhava: {}", g.lagna.rashi_bhava_number)?;
+        }
         writeln!(w)?;
     }
 
@@ -10022,6 +10115,25 @@ fn print_kundali(
         }
         let mc_sid = (bh.mc_deg - aya).rem_euclid(360.0);
         writeln!(w, "  MC        {}", format_rashi_dms(mc_sid))?;
+        writeln!(w)?;
+    }
+
+    if flags.include_bhava_cusps
+        && let Some(ref bh) = result.rashi_bhava_cusps
+    {
+        writeln!(w, "Rashi-Bhava Cusps:")?;
+        for b in &bh.bhavas {
+            let nk = nakshatra_from_longitude(b.cusp_deg);
+            writeln!(
+                w,
+                "  Bhava {:>2}  {}  Nakshatra: {:<12} Pada: {}",
+                b.number,
+                format_rashi_dms(b.cusp_deg),
+                nk.nakshatra.name(),
+                nk.pada,
+            )?;
+        }
+        writeln!(w, "  Synthetic MC {}", format_rashi_dms(bh.mc_deg))?;
         writeln!(w)?;
     }
 
@@ -10862,6 +10974,7 @@ mod tests {
         dhruv_search::FullKundaliResult {
             ayanamsha_deg: 24.0,
             bhava_cusps: None,
+            rashi_bhava_cusps: None,
             graha_positions: None,
             bindus: None,
             drishti: None,

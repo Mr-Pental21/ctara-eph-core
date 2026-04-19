@@ -9,6 +9,12 @@
 Compute the Ascendant (Lagna), MC (Midheaven), and 12 bhava (house) cusps
 for 10 house division systems used in Vedic and Western astrology.
 
+High-level jyotish orchestration can also expose a rashi-bhava/equal-house
+companion basis. In that basis, bhava 1 is the lagna rashi at the lagna
+degree, each following bhava advances one sign while preserving the same
+degree/minute/second, and the synthetic 10th cusp is used as the meridian
+equivalent for bhava-strength calculations.
+
 ## Algorithms and Provenance
 
 ### Ascendant and MC

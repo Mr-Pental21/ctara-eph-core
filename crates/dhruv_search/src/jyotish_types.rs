@@ -145,6 +145,8 @@ pub struct GrahaEntry {
     pub pada: u8,
     /// Bhava number (1-12), 0 if not computed.
     pub bhava_number: u8,
+    /// Rashi-bhava/whole-sign bhava number (1-12), 0 if not computed.
+    pub rashi_bhava_number: u8,
 }
 
 impl GrahaEntry {
@@ -158,6 +160,7 @@ impl GrahaEntry {
             nakshatra_index: 255,
             pada: 0,
             bhava_number: 0,
+            rashi_bhava_number: 0,
         }
     }
 }
@@ -189,6 +192,8 @@ pub struct BindusConfig {
 pub struct BindusResult {
     /// 12 arudha padas (A1 through A12).
     pub arudha_padas: [GrahaEntry; 12],
+    /// 12 arudha padas derived from rashi-bhava cusps.
+    pub rashi_bhava_arudha_padas: Option<[GrahaEntry; 12]>,
     /// Bhrigu Bindu (midpoint Rahu→Moon).
     pub bhrigu_bindu: GrahaEntry,
     /// Pranapada Lagna.
@@ -223,6 +228,8 @@ pub struct DrishtiResult {
     pub graha_to_graha: GrahaDrishtiMatrix,
     /// 9×12 graha-to-bhava-cusp drishti (zeroed if flag off).
     pub graha_to_bhava: [[DrishtiEntry; 12]; 9],
+    /// 9×12 graha-to-rashi-bhava-cusp drishti (zeroed if flag off).
+    pub graha_to_rashi_bhava: [[DrishtiEntry; 12]; 9],
     /// 9×1 graha-to-lagna drishti (zeroed if flag off).
     pub graha_to_lagna: [DrishtiEntry; 9],
     /// 9×19 graha-to-core-bindus drishti (zeroed if flag off).
@@ -271,7 +278,9 @@ pub struct AmshaChart {
     pub grahas: [AmshaEntry; 9],
     pub lagna: AmshaEntry,
     pub bhava_cusps: Option<[AmshaEntry; 12]>,
+    pub rashi_bhava_cusps: Option<[AmshaEntry; 12]>,
     pub arudha_padas: Option<[AmshaEntry; 12]>,
+    pub rashi_bhava_arudha_padas: Option<[AmshaEntry; 12]>,
     pub upagrahas: Option<[AmshaEntry; 11]>,
     pub sphutas: Option<[AmshaEntry; 16]>,
     pub special_lagnas: Option<[AmshaEntry; 8]>,
@@ -620,6 +629,8 @@ pub struct FullKundaliResult {
     pub ayanamsha_deg: f64,
     /// Present when `FullKundaliConfig::include_bhava_cusps` is true.
     pub bhava_cusps: Option<BhavaResult>,
+    /// Present when configured to include rashi-bhava sibling bhava cusps.
+    pub rashi_bhava_cusps: Option<BhavaResult>,
     /// Present when `FullKundaliConfig::include_graha_positions` is true.
     pub graha_positions: Option<GrahaPositions>,
     /// Present when `FullKundaliConfig::include_bindus` is true.

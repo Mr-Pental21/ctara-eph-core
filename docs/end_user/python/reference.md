@@ -396,3 +396,7 @@ Accepted upagraha values:
 - Config names are mostly `snake_case`.
 - Public enums live in `ctara_dhruv.enums`; public dataclasses and result objects live in `ctara_dhruv.types`.
 - For wrapper setup and build notes, see [`bindings/python-open/README.md`](../../../bindings/python-open/README.md).
+
+## Rashi-Bhava Bhava Config
+
+Python `bhava_config` dictionaries may set `use_rashi_bhava_for_bala_avastha` and `include_rashi_bhava_results`; both default to `1`. Existing fields such as `bhava_cusps` and `bhava_number` remain configured-system outputs. New sibling fields such as `rashi_bhava_cusps`, `rashi_bhava_number`, and `graha_to_rashi_bhava` expose the rashi-bhava/equal-house basis.

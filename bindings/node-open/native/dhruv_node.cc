@@ -332,6 +332,18 @@ bool ReadBhavaConfig(napi_env env, napi_value obj, DhruvBhavaConfig* out) {
     }
     if (napi_has_named_property(env, obj, "referencePlane", &has) != napi_ok) return false;
     if (has && (!GetNamedProperty(env, obj, "referencePlane", &v) || !GetInt32(env, v, &out->reference_plane))) return false;
+    if (napi_has_named_property(env, obj, "useRashiBhavaForBalaAvastha", &has) != napi_ok) return false;
+    if (has) {
+        bool b = false;
+        if (!GetNamedProperty(env, obj, "useRashiBhavaForBalaAvastha", &v) || !GetBool(env, v, &b)) return false;
+        out->use_rashi_bhava_for_bala_avastha = b ? 1 : 0;
+    }
+    if (napi_has_named_property(env, obj, "includeRashiBhavaResults", &has) != napi_ok) return false;
+    if (has) {
+        bool b = false;
+        if (!GetNamedProperty(env, obj, "includeRashiBhavaResults", &v) || !GetBool(env, v, &b)) return false;
+        out->include_rashi_bhava_results = b ? 1 : 0;
+    }
     return true;
 }
 
@@ -1448,6 +1460,7 @@ napi_value WriteGrahaEntry(napi_env env, const DhruvGrahaEntry& g) {
     SetNamed(env, obj, "nakshatraIndex", MakeUint32(env, g.nakshatra_index));
     SetNamed(env, obj, "pada", MakeUint32(env, g.pada));
     SetNamed(env, obj, "bhavaNumber", MakeUint32(env, g.bhava_number));
+    SetNamed(env, obj, "rashiBhavaNumber", MakeUint32(env, g.rashi_bhava_number));
     return obj;
 }
 
@@ -1533,7 +1546,9 @@ napi_value WriteAmshaChart(napi_env env, const DhruvAmshaChart& a) {
     SetNamed(env, obj, "grahas", grahas);
     SetNamed(env, obj, "lagna", WriteAmshaEntry(env, a.lagna));
     SetNamed(env, obj, "bhavaCuspsValid", MakeBool(env, a.bhava_cusps_valid != 0));
+    SetNamed(env, obj, "rashiBhavaCuspsValid", MakeBool(env, a.rashi_bhava_cusps_valid != 0));
     SetNamed(env, obj, "arudhaPadasValid", MakeBool(env, a.arudha_padas_valid != 0));
+    SetNamed(env, obj, "rashiBhavaArudhaPadasValid", MakeBool(env, a.rashi_bhava_arudha_padas_valid != 0));
     SetNamed(env, obj, "upagrahasValid", MakeBool(env, a.upagrahas_valid != 0));
     SetNamed(env, obj, "sphutasValid", MakeBool(env, a.sphutas_valid != 0));
     SetNamed(env, obj, "specialLagnasValid", MakeBool(env, a.special_lagnas_valid != 0));
@@ -1545,6 +1560,14 @@ napi_value WriteAmshaChart(napi_env env, const DhruvAmshaChart& a) {
         }
         SetNamed(env, obj, "bhavaCusps", bhava_cusps);
     }
+    if (a.rashi_bhava_cusps_valid != 0) {
+        napi_value rashi_bhava_cusps;
+        napi_create_array_with_length(env, 12, &rashi_bhava_cusps);
+        for (uint32_t i = 0; i < 12; ++i) {
+            napi_set_element(env, rashi_bhava_cusps, i, WriteAmshaEntry(env, a.rashi_bhava_cusps[i]));
+        }
+        SetNamed(env, obj, "rashiBhavaCusps", rashi_bhava_cusps);
+    }
     if (a.arudha_padas_valid != 0) {
         napi_value arudha_padas;
         napi_create_array_with_length(env, 12, &arudha_padas);
@@ -1552,6 +1575,14 @@ napi_value WriteAmshaChart(napi_env env, const DhruvAmshaChart& a) {
             napi_set_element(env, arudha_padas, i, WriteAmshaEntry(env, a.arudha_padas[i]));
         }
         SetNamed(env, obj, "arudhaPadas", arudha_padas);
+    }
+    if (a.rashi_bhava_arudha_padas_valid != 0) {
+        napi_value rashi_bhava_arudha_padas;
+        napi_create_array_with_length(env, 12, &rashi_bhava_arudha_padas);
+        for (uint32_t i = 0; i < 12; ++i) {
+            napi_set_element(env, rashi_bhava_arudha_padas, i, WriteAmshaEntry(env, a.rashi_bhava_arudha_padas[i]));
+        }
+        SetNamed(env, obj, "rashiBhavaArudhaPadas", rashi_bhava_arudha_padas);
     }
     if (a.upagrahas_valid != 0) {
         napi_value upagrahas;
@@ -1628,6 +1659,8 @@ napi_value WriteDrishtiResult(napi_env env, const DhruvDrishtiResult& d) {
     napi_create_array_with_length(env, DHRUV_GRAHA_COUNT, &grahaToGraha);
     napi_value grahaToBhava;
     napi_create_array_with_length(env, DHRUV_GRAHA_COUNT, &grahaToBhava);
+    napi_value grahaToRashiBhava;
+    napi_create_array_with_length(env, DHRUV_GRAHA_COUNT, &grahaToRashiBhava);
     napi_value grahaToLagna;
     napi_create_array_with_length(env, DHRUV_GRAHA_COUNT, &grahaToLagna);
     napi_value grahaToBindus;
@@ -1648,6 +1681,13 @@ napi_value WriteDrishtiResult(napi_env env, const DhruvDrishtiResult& d) {
         }
         napi_set_element(env, grahaToBhava, i, rowGB);
 
+        napi_value rowGRB;
+        napi_create_array_with_length(env, 12, &rowGRB);
+        for (uint32_t j = 0; j < 12; ++j) {
+            napi_set_element(env, rowGRB, j, WriteDrishtiEntry(env, d.graha_to_rashi_bhava[i][j]));
+        }
+        napi_set_element(env, grahaToRashiBhava, i, rowGRB);
+
         napi_set_element(env, grahaToLagna, i, WriteDrishtiEntry(env, d.graha_to_lagna[i]));
 
         napi_value rowBindus;
@@ -1660,6 +1700,7 @@ napi_value WriteDrishtiResult(napi_env env, const DhruvDrishtiResult& d) {
 
     SetNamed(env, obj, "grahaToGraha", grahaToGraha);
     SetNamed(env, obj, "grahaToBhava", grahaToBhava);
+    SetNamed(env, obj, "grahaToRashiBhava", grahaToRashiBhava);
     SetNamed(env, obj, "grahaToLagna", grahaToLagna);
     SetNamed(env, obj, "grahaToBindus", grahaToBindus);
     return obj;
@@ -1693,6 +1734,15 @@ napi_value WriteBindusResult(napi_env env, const DhruvBindusResult& b) {
         napi_set_element(env, arudhas, i, WriteGrahaEntry(env, b.arudha_padas[i]));
     }
     SetNamed(env, obj, "arudhaPadas", arudhas);
+    SetNamed(env, obj, "rashiBhavaArudhaPadasValid", MakeBool(env, b.rashi_bhava_arudha_padas_valid != 0));
+    if (b.rashi_bhava_arudha_padas_valid != 0) {
+        napi_value rashi_arudhas;
+        napi_create_array_with_length(env, 12, &rashi_arudhas);
+        for (uint32_t i = 0; i < 12; ++i) {
+            napi_set_element(env, rashi_arudhas, i, WriteGrahaEntry(env, b.rashi_bhava_arudha_padas[i]));
+        }
+        SetNamed(env, obj, "rashiBhavaArudhaPadas", rashi_arudhas);
+    }
     SetNamed(env, obj, "bhriguBindu", WriteGrahaEntry(env, b.bhrigu_bindu));
     SetNamed(env, obj, "pranapadaLagna", WriteGrahaEntry(env, b.pranapada_lagna));
     SetNamed(env, obj, "gulika", WriteGrahaEntry(env, b.gulika));
@@ -3276,6 +3326,8 @@ napi_value BhavaConfigDefault(napi_env env, napi_callback_info info) {
     SetNamed(env, out, "ayanamshaSystem", MakeInt32(env, cfg.ayanamsha_system));
     SetNamed(env, out, "useNutation", MakeBool(env, cfg.use_nutation != 0));
     SetNamed(env, out, "referencePlane", MakeInt32(env, cfg.reference_plane));
+    SetNamed(env, out, "useRashiBhavaForBalaAvastha", MakeBool(env, cfg.use_rashi_bhava_for_bala_avastha != 0));
+    SetNamed(env, out, "includeRashiBhavaResults", MakeBool(env, cfg.include_rashi_bhava_results != 0));
     return out;
 }
 
@@ -6050,6 +6102,7 @@ napi_value FullKundaliForDate(napi_env env, napi_callback_info info) {
     napi_create_object(env, &obj);
     SetNamed(env, obj, "ayanamshaDeg", MakeDouble(env, result.ayanamsha_deg));
     if (result.bhava_cusps_valid != 0) SetNamed(env, obj, "bhavaCusps", WriteBhavaResult(env, result.bhava_cusps));
+    if (result.rashi_bhava_cusps_valid != 0) SetNamed(env, obj, "rashiBhavaCusps", WriteBhavaResult(env, result.rashi_bhava_cusps));
     if (result.graha_positions_valid != 0) SetNamed(env, obj, "grahaPositions", WriteGrahaPositions(env, result.graha_positions));
     if (result.bindus_valid != 0) SetNamed(env, obj, "bindus", WriteBindusResult(env, result.bindus));
     if (result.drishti_valid != 0) SetNamed(env, obj, "drishti", WriteDrishtiResult(env, result.drishti));
