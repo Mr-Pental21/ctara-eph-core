@@ -202,7 +202,7 @@ pub fn all_kendradi_balas(bhava_numbers: &[u8; 7]) -> [f64; 7] {
     result
 }
 
-/// Drekkana Bala: male in 1st decanate=15, female in 2nd=15, neuter in 3rd=15.
+/// Drekkana Bala: male in 1st decanate=15, neuter in 2nd=15, female in 3rd=15.
 pub fn drekkana_bala(graha: Graha, sidereal_lon: f64) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
@@ -220,8 +220,8 @@ pub fn drekkana_bala(graha: Graha, sidereal_lon: f64) -> f64 {
     let gender = graha_gender(graha);
     match (gender, decanate) {
         (GrahaGender::Male, 1) => 15.0,
-        (GrahaGender::Female, 2) => 15.0,
-        (GrahaGender::Neuter, 3) => 15.0,
+        (GrahaGender::Neuter, 2) => 15.0,
+        (GrahaGender::Female, 3) => 15.0,
         _ => 0.0,
     }
 }
@@ -969,15 +969,15 @@ mod tests {
     }
 
     #[test]
-    fn drekkana_female_second_decanate() {
-        // Moon (female) at 15 deg (2nd decanate)
-        assert!((drekkana_bala(Graha::Chandra, 15.0) - 15.0).abs() < EPS);
+    fn drekkana_female_third_decanate() {
+        // Moon (female) at 25 deg (3rd decanate)
+        assert!((drekkana_bala(Graha::Chandra, 25.0) - 15.0).abs() < EPS);
     }
 
     #[test]
-    fn drekkana_neuter_third_decanate() {
-        // Mercury (neuter) at 25 deg (3rd decanate)
-        assert!((drekkana_bala(Graha::Buddh, 25.0) - 15.0).abs() < EPS);
+    fn drekkana_neuter_second_decanate() {
+        // Mercury (neuter) at 15 deg (2nd decanate)
+        assert!((drekkana_bala(Graha::Buddh, 15.0) - 15.0).abs() < EPS);
     }
 
     // --- Nathonnatha Bala ---

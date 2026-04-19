@@ -66,8 +66,8 @@ Mercury and Saturn: 15 for odd rashi + 15 for even navamsa (or vice versa).
 
 ### 1e. Drekkana Bala (Decanate Strength)
 
-Male graha in 1st decanate (0-10°) = 15. Female in 2nd (10-20°) = 15.
-Neuter in 3rd (20-30°) = 15. Otherwise 0.
+Male graha in 1st decanate (0-10°) = 15. Neuter in 2nd (10-20°) = 15.
+Female in 3rd (20-30°) = 15. Otherwise 0.
 
 Gender: Male = Sun, Mars, Jupiter. Female = Moon, Venus. Neuter = Mercury, Saturn.
 
