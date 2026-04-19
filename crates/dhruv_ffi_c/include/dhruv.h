@@ -23,7 +23,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       56
+#define DHRUV_API_VERSION       57
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 #define DHRUV_MAX_AMSHA_VARIATIONS 16
@@ -532,6 +532,10 @@ typedef struct {
     DhruvBhava bhavas[12];
     double lagna_deg;
     double mc_deg;
+    uint8_t rashi_bhava_valid;
+    DhruvBhava rashi_bhava_bhavas[12];
+    double rashi_bhava_lagna_deg;
+    double rashi_bhava_mc_deg;
 } DhruvBhavaResult;
 
 /* --- Lunar node --- */

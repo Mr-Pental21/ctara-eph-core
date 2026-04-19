@@ -1887,6 +1887,25 @@ napi_value WriteBhavaResult(napi_env env, const DhruvBhavaResult& b) {
         napi_set_element(env, arr, i, x);
     }
     SetNamed(env, obj, "bhavas", arr);
+    if (b.rashi_bhava_valid != 0) {
+        napi_value rashi;
+        napi_create_object(env, &rashi);
+        SetNamed(env, rashi, "lagnaDeg", MakeDouble(env, b.rashi_bhava_lagna_deg));
+        SetNamed(env, rashi, "mcDeg", MakeDouble(env, b.rashi_bhava_mc_deg));
+        napi_value rashi_arr;
+        napi_create_array_with_length(env, 12, &rashi_arr);
+        for (uint32_t i = 0; i < 12; ++i) {
+            napi_value x;
+            napi_create_object(env, &x);
+            SetNamed(env, x, "number", MakeUint32(env, b.rashi_bhava_bhavas[i].number));
+            SetNamed(env, x, "cuspDeg", MakeDouble(env, b.rashi_bhava_bhavas[i].cusp_deg));
+            SetNamed(env, x, "startDeg", MakeDouble(env, b.rashi_bhava_bhavas[i].start_deg));
+            SetNamed(env, x, "endDeg", MakeDouble(env, b.rashi_bhava_bhavas[i].end_deg));
+            napi_set_element(env, rashi_arr, i, x);
+        }
+        SetNamed(env, rashi, "bhavas", rashi_arr);
+        SetNamed(env, obj, "rashiBhava", rashi);
+    }
     return obj;
 }
 

@@ -337,6 +337,35 @@ def bhava_system_count() -> int:
     return lib.dhruv_bhava_system_count()
 
 
+def _extract_bhava_result(out) -> BhavaResult:
+    bhavas = [
+        BhavaEntry(
+            number=out.bhavas[i].number,
+            cusp_deg=out.bhavas[i].cusp_deg,
+            start_deg=out.bhavas[i].start_deg,
+            end_deg=out.bhavas[i].end_deg,
+        )
+        for i in range(12)
+    ]
+    rashi_bhava = None
+    if out.rashi_bhava_valid:
+        rashi_bhavas = [
+            BhavaEntry(
+                number=out.rashi_bhava_bhavas[i].number,
+                cusp_deg=out.rashi_bhava_bhavas[i].cusp_deg,
+                start_deg=out.rashi_bhava_bhavas[i].start_deg,
+                end_deg=out.rashi_bhava_bhavas[i].end_deg,
+            )
+            for i in range(12)
+        ]
+        rashi_bhava = BhavaResult(
+            bhavas=rashi_bhavas,
+            lagna_deg=out.rashi_bhava_lagna_deg,
+            mc_deg=out.rashi_bhava_mc_deg,
+        )
+    return BhavaResult(bhavas=bhavas, lagna_deg=out.lagna_deg, mc_deg=out.mc_deg, rashi_bhava=rashi_bhava)
+
+
 def compute_bhavas(engine, lsk, eop, location: GeoLocation,
                    jd_utc: float, config=None) -> BhavaResult:
     """Compute 12 bhava cusps with lagna and MC.
@@ -350,16 +379,7 @@ def compute_bhavas(engine, lsk, eop, location: GeoLocation,
     cfg = config if config is not None else ffi.NULL
     status = lib.dhruv_compute_bhavas(engine, lsk, eop, geo, jd_utc, cfg, out)
     check(status, "dhruv_compute_bhavas")
-    bhavas = [
-        BhavaEntry(
-            number=out.bhavas[i].number,
-            cusp_deg=out.bhavas[i].cusp_deg,
-            start_deg=out.bhavas[i].start_deg,
-            end_deg=out.bhavas[i].end_deg,
-        )
-        for i in range(12)
-    ]
-    return BhavaResult(bhavas=bhavas, lagna_deg=out.lagna_deg, mc_deg=out.mc_deg)
+    return _extract_bhava_result(out)
 
 
 def lagna_deg(lsk, eop, location: GeoLocation, jd_utc: float, config=None) -> float:
@@ -429,16 +449,7 @@ def compute_bhavas_utc(engine, lsk, eop, location: GeoLocation,
     cfg = config if config is not None else ffi.NULL
     status = lib.dhruv_compute_bhavas_utc(engine, lsk, eop, geo, t, cfg, out)
     check(status, "dhruv_compute_bhavas_utc")
-    bhavas = [
-        BhavaEntry(
-            number=out.bhavas[i].number,
-            cusp_deg=out.bhavas[i].cusp_deg,
-            start_deg=out.bhavas[i].start_deg,
-            end_deg=out.bhavas[i].end_deg,
-        )
-        for i in range(12)
-    ]
-    return BhavaResult(bhavas=bhavas, lagna_deg=out.lagna_deg, mc_deg=out.mc_deg)
+    return _extract_bhava_result(out)
 
 
 def lagna_deg_utc(lsk, eop, location: GeoLocation, utc: UtcTime, config=None) -> float:

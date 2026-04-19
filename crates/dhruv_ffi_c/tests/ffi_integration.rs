@@ -1174,6 +1174,15 @@ fn ffi_bhava_equal_new_delhi() {
         }; 12],
         lagna_deg: 0.0,
         mc_deg: 0.0,
+        rashi_bhava_valid: 0,
+        rashi_bhava_bhavas: [DhruvBhava {
+            number: 0,
+            cusp_deg: 0.0,
+            start_deg: 0.0,
+            end_deg: 0.0,
+        }; 12],
+        rashi_bhava_lagna_deg: 0.0,
+        rashi_bhava_mc_deg: 0.0,
     };
 
     // SAFETY: All pointers are valid.
@@ -1400,6 +1409,15 @@ fn ffi_bhava_body_starting_point() {
         }; 12],
         lagna_deg: 0.0,
         mc_deg: 0.0,
+        rashi_bhava_valid: 0,
+        rashi_bhava_bhavas: [DhruvBhava {
+            number: 0,
+            cusp_deg: 0.0,
+            start_deg: 0.0,
+            end_deg: 0.0,
+        }; 12],
+        rashi_bhava_lagna_deg: 0.0,
+        rashi_bhava_mc_deg: 0.0,
     };
 
     let status = unsafe {

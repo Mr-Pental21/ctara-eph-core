@@ -749,6 +749,52 @@ fn bhava_config_from_cli(args: &BhavaBehaviorArgs) -> BhavaConfig {
     config
 }
 
+fn rashi_bhava_result_from_lagna(lagna_deg: f64) -> dhruv_vedic_base::BhavaResult {
+    let lagna = lagna_deg.rem_euclid(360.0);
+    let lagna_rashi = (lagna / 30.0).floor() as u8;
+    let degree_in_rashi = lagna % 30.0;
+    let mut bhavas = [dhruv_vedic_base::Bhava {
+        number: 0,
+        cusp_deg: 0.0,
+        start_deg: 0.0,
+        end_deg: 0.0,
+    }; 12];
+    for i in 0..12 {
+        let rashi = (lagna_rashi + i as u8) % 12;
+        let start = f64::from(rashi) * 30.0;
+        bhavas[i] = dhruv_vedic_base::Bhava {
+            number: (i + 1) as u8,
+            cusp_deg: (start + degree_in_rashi).rem_euclid(360.0),
+            start_deg: start,
+            end_deg: (start + 30.0).rem_euclid(360.0),
+        };
+    }
+    dhruv_vedic_base::BhavaResult {
+        bhavas,
+        lagna_deg: lagna,
+        mc_deg: bhavas[9].cusp_deg,
+    }
+}
+
+fn print_bhava_table(title: &str, result: &dhruv_vedic_base::BhavaResult) {
+    println!("{title}");
+    println!(
+        "  Lagna: {:.6}°  MC: {:.6}°\n",
+        result.lagna_deg, result.mc_deg
+    );
+    println!(
+        "{:>6} {:>10} {:>10} {:>10}",
+        "Bhava", "Cusp", "Start", "End"
+    );
+    println!("{}", "-".repeat(40));
+    for b in &result.bhavas {
+        println!(
+            "{:>6} {:>11.6}° {:>11.6}° {:>11.6}°",
+            b.number, b.cusp_deg, b.start_deg, b.end_deg
+        );
+    }
+}
+
 #[derive(clap::Args)]
 struct KundaliArgs {
     /// UTC datetime (YYYY-MM-DDThh:mm:ssZ)
@@ -5328,19 +5374,16 @@ fn main() {
                 "Bhavas for {} at {:.6}°N, {:.6}°E\n",
                 args.date, args.lat, args.lon
             );
-            println!(
-                "  Lagna ({output_label}): {:.6}°  MC ({output_label}): {:.6}°\n",
-                result.lagna_deg, result.mc_deg
+            print_bhava_table(
+                &format!("Configured bhava system ({output_label})"),
+                &result,
             );
-            println!(
-                "{:>6} {:>10} {:>10} {:>10}",
-                "Bhava", "Cusp", "Start", "End"
-            );
-            println!("{}", "-".repeat(40));
-            for b in &result.bhavas {
-                println!(
-                    "{:>6} {:>11.6}° {:>11.6}° {:>11.6}°",
-                    b.number, b.cusp_deg, b.start_deg, b.end_deg
+            if bhava_config.include_rashi_bhava_results {
+                let rashi_bhava = rashi_bhava_result_from_lagna(result.lagna_deg);
+                println!();
+                print_bhava_table(
+                    &format!("Rashi-bhava / equal-house sibling ({output_label})"),
+                    &rashi_bhava,
                 );
             }
         }

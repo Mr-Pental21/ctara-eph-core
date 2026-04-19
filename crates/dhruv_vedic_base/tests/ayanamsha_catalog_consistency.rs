@@ -9,8 +9,8 @@ use dhruv_frames::{PrecessionModel, ReferencePlane};
 use dhruv_tara::TaraCatalog;
 use dhruv_vedic_base::{
     AyanamshaSystem, ayanamsha_deg_on_plane, ayanamsha_deg_with_catalog_on_plane,
-    ayanamsha_mean_deg, ayanamsha_mean_deg_static, ayanamsha_mean_deg_static_on_plane,
-    ayanamsha_mean_deg_with_catalog_and_model, ayanamsha_mean_deg_with_model,
+    ayanamsha_mean_deg_static_on_plane, ayanamsha_mean_deg_with_catalog_and_model,
+    ayanamsha_mean_deg_with_model,
 };
 
 /// ayanamsha_mean_deg() == ayanamsha_mean_deg_with_catalog(Some(embedded))

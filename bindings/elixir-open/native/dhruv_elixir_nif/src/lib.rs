@@ -2258,6 +2258,41 @@ fn bhava_result_json(result: BhavaResult) -> Value {
     })
 }
 
+fn rashi_bhava_result_from_lagna(lagna_deg: f64) -> BhavaResult {
+    let lagna = lagna_deg.rem_euclid(360.0);
+    let lagna_rashi = (lagna / 30.0).floor() as u8;
+    let degree_in_rashi = lagna % 30.0;
+    let mut bhavas = [dhruv_vedic_base::Bhava {
+        number: 0,
+        cusp_deg: 0.0,
+        start_deg: 0.0,
+        end_deg: 0.0,
+    }; 12];
+    for i in 0..12 {
+        let rashi = (lagna_rashi + i as u8) % 12;
+        let start = f64::from(rashi) * 30.0;
+        bhavas[i] = dhruv_vedic_base::Bhava {
+            number: (i + 1) as u8,
+            cusp_deg: (start + degree_in_rashi).rem_euclid(360.0),
+            start_deg: start,
+            end_deg: (start + 30.0).rem_euclid(360.0),
+        };
+    }
+    BhavaResult {
+        bhavas,
+        lagna_deg: lagna,
+        mc_deg: bhavas[9].cusp_deg,
+    }
+}
+
+fn bhava_result_json_with_rashi(result: BhavaResult, include_rashi_bhava: bool) -> Value {
+    let mut value = bhava_result_json(result);
+    if include_rashi_bhava {
+        value["rashi_bhava"] = bhava_result_json(rashi_bhava_result_from_lagna(result.lagna_deg));
+    }
+    value
+}
+
 fn panchang_value_json(result: &PanchangResult) -> Value {
     json!({
         "tithi": result.tithi.map(tithi_json),
@@ -3208,11 +3243,21 @@ fn handle_vedic(resource: &ResourceArc<EngineResource>, request: VedicRequest) -
                         &bhava_config,
                         sankranti_config.as_ref().expect("sidereal config set"),
                     )
-                    .map(bhava_result_json)
+                    .map(|result| {
+                        bhava_result_json_with_rashi(
+                            result,
+                            bhava_config.include_rashi_bhava_results,
+                        )
+                    })
                     .map_err(|err| map_error("vedic_error", err)),
                     _ => {
                         compute_bhavas(engine, engine.lsk(), eop, &location, jd_utc, &bhava_config)
-                            .map(bhava_result_json)
+                            .map(|result| {
+                                bhava_result_json_with_rashi(
+                                    result,
+                                    bhava_config.include_rashi_bhava_results,
+                                )
+                            })
                             .map_err(|err| map_error("vedic_error", err))
                     }
                 }

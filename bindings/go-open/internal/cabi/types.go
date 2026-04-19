@@ -350,9 +350,10 @@ type Bhava struct {
 }
 
 type BhavaResult struct {
-	Bhavas   [12]Bhava
-	LagnaDeg float64
-	MCDeg    float64
+	Bhavas     [12]Bhava
+	LagnaDeg   float64
+	MCDeg      float64
+	RashiBhava *BhavaResult
 }
 
 type LunarNodeRequest struct {

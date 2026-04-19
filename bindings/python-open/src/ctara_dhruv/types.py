@@ -315,6 +315,7 @@ class BhavaResult:
     bhavas: list[BhavaEntry]
     lagna_deg: float
     mc_deg: float
+    rashi_bhava: Optional[BhavaResult] = None
 
 
 # ---------------------------------------------------------------------------

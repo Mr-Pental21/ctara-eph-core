@@ -57,7 +57,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 56;
+pub const DHRUV_API_VERSION: u32 = 57;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -2228,6 +2228,10 @@ pub struct DhruvBhavaResult {
     pub bhavas: [DhruvBhava; 12],
     pub lagna_deg: f64,
     pub mc_deg: f64,
+    pub rashi_bhava_valid: u8,
+    pub rashi_bhava_bhavas: [DhruvBhava; 12],
+    pub rashi_bhava_lagna_deg: f64,
+    pub rashi_bhava_mc_deg: f64,
 }
 
 /// Map integer code 0..9 to BhavaSystem enum variant.
@@ -2320,7 +2324,56 @@ fn bhava_result_to_ffi_with_projection(
         bhavas: ffi_bhavas,
         lagna_deg: view.lagna_deg,
         mc_deg: view.mc_deg,
+        rashi_bhava_valid: 0,
+        rashi_bhava_bhavas: [DhruvBhava {
+            number: 0,
+            cusp_deg: 0.0,
+            start_deg: 0.0,
+            end_deg: 0.0,
+        }; 12],
+        rashi_bhava_lagna_deg: 0.0,
+        rashi_bhava_mc_deg: 0.0,
     }
+}
+
+fn rashi_bhava_ffi_from_lagna(lagna_deg: f64) -> ([DhruvBhava; 12], f64, f64) {
+    let lagna = lagna_deg.rem_euclid(360.0);
+    let lagna_rashi = (lagna / 30.0).floor() as u8;
+    let degree_in_rashi = lagna % 30.0;
+    let mut bhavas = [DhruvBhava {
+        number: 0,
+        cusp_deg: 0.0,
+        start_deg: 0.0,
+        end_deg: 0.0,
+    }; 12];
+    for i in 0..12 {
+        let rashi = (lagna_rashi + i as u8) % 12;
+        let cusp = (f64::from(rashi) * 30.0 + degree_in_rashi).rem_euclid(360.0);
+        let start = f64::from(rashi) * 30.0;
+        bhavas[i] = DhruvBhava {
+            number: (i + 1) as u8,
+            cusp_deg: cusp,
+            start_deg: start,
+            end_deg: (start + 30.0).rem_euclid(360.0),
+        };
+    }
+    (bhavas, lagna, bhavas[9].cusp_deg)
+}
+
+fn bhava_result_to_ffi_with_projection_and_rashi(
+    result: &dhruv_vedic_base::BhavaResult,
+    projection: Option<BhavaOutputProjection>,
+    include_rashi_bhava: bool,
+) -> DhruvBhavaResult {
+    let mut out = bhava_result_to_ffi_with_projection(result, projection);
+    if include_rashi_bhava {
+        let (bhavas, lagna_deg, mc_deg) = rashi_bhava_ffi_from_lagna(out.lagna_deg);
+        out.rashi_bhava_valid = 1;
+        out.rashi_bhava_bhavas = bhavas;
+        out.rashi_bhava_lagna_deg = lagna_deg;
+        out.rashi_bhava_mc_deg = mc_deg;
+    }
+    out
 }
 
 fn jd_utc_to_jd_tdb_with_eop(
@@ -2429,7 +2482,11 @@ pub unsafe extern "C" fn dhruv_compute_bhavas(
             Ok(result) => {
                 // SAFETY: Pointer checked for null.
                 unsafe {
-                    *out_result = bhava_result_to_ffi_with_projection(&result, projection);
+                    *out_result = bhava_result_to_ffi_with_projection_and_rashi(
+                        &result,
+                        projection,
+                        rust_config.include_rashi_bhava_results,
+                    );
                 }
                 DhruvStatus::Ok
             }
@@ -6016,7 +6073,11 @@ pub unsafe extern "C" fn dhruv_compute_bhavas_utc(
         match compute_bhavas(engine_ref, lsk_ref, eop_ref, &geo, jd_utc, &rust_config) {
             Ok(result) => {
                 unsafe {
-                    *out_result = bhava_result_to_ffi_with_projection(&result, projection);
+                    *out_result = bhava_result_to_ffi_with_projection_and_rashi(
+                        &result,
+                        projection,
+                        rust_config.include_rashi_bhava_results,
+                    );
                 }
                 DhruvStatus::Ok
             }
@@ -14115,6 +14176,15 @@ mod tests {
             }; 12],
             lagna_deg: 0.0,
             mc_deg: 0.0,
+            rashi_bhava_valid: 0,
+            rashi_bhava_bhavas: [DhruvBhava {
+                number: 0,
+                cusp_deg: 0.0,
+                start_deg: 0.0,
+                end_deg: 0.0,
+            }; 12],
+            rashi_bhava_lagna_deg: 0.0,
+            rashi_bhava_mc_deg: 0.0,
         };
         // SAFETY: Null pointers intentional for validation.
         let status = unsafe {

@@ -8,7 +8,7 @@ Dhruv exposes two bhava bases on high-level jyotish surfaces:
 `BhavaConfig` has two behavior flags across Rust, C ABI, CLI, Python, Go, Node, and Elixir:
 
 - `use_rashi_bhava_for_bala_avastha` defaults to `true`. When true, shadbala, bhavabala, bundled balas, and avastha use the rashi-bhava basis. When false, they use the configured bhava-system basis.
-- `include_rashi_bhava_results` defaults to `true`. When true, high-level result surfaces include rashi-bhava sibling fields where that surface exposes bhava-derived results. When false, those sibling fields are suppressed.
+- `include_rashi_bhava_results` defaults to `true`. When true, high-level result surfaces and public bhava computation results include rashi-bhava sibling fields where that surface exposes bhava-derived results. When false, those sibling fields are suppressed.
 
 Rashi-bhava cusps are synthetic: bhava 1 is the lagna rashi at the lagna degree, and each following bhava advances one rashi while preserving the same degree/minute/second within the sign. The synthetic 10th cusp is used as the meridian equivalent for bhavabala when the rashi-bhava basis is selected.
 

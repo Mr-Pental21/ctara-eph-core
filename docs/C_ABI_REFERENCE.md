@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 56`
+**ABI version:** `DHRUV_API_VERSION = 57`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -379,8 +379,14 @@ typedef struct {
     DhruvBhava bhavas[12];
     double     lagna_deg;      // Lagna (Ascendant) longitude in degrees
     double     mc_deg;         // MC (Midheaven) longitude in degrees
+    uint8_t    rashi_bhava_valid;
+    DhruvBhava rashi_bhava_bhavas[12];
+    double     rashi_bhava_lagna_deg;
+    double     rashi_bhava_mc_deg;
 } DhruvBhavaResult;
 ```
+
+`bhavas`, `lagna_deg`, and `mc_deg` are always the configured bhava-system output. `dhruv_compute_bhavas*` also fills the rashi-bhava sibling fields when `include_rashi_bhava_results` is non-zero.
 
 ### DhruvConjunctionConfig
 
@@ -1043,7 +1049,7 @@ DhruvStatus dhruv_compute_bhavas(
 );
 ```
 
-Compute 12 bhava cusps with Ascendant and MC.
+Compute 12 configured bhava cusps with Ascendant and MC, plus optional rashi-bhava sibling cusps when requested by `DhruvBhavaConfig`.
 
 **Note:** KP, Koch, Topocentric, and Alcabitus systems require `|latitude| <= 66.5 deg`.
 

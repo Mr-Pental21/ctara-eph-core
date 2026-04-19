@@ -2,7 +2,7 @@ package dhruv
 
 import "ctara-dhruv-core/bindings/go-open/internal/cabi"
 
-const ExpectedAPIVersion = 56
+const ExpectedAPIVersion = 57
 
 const (
 	PathCapacity          = cabi.PathCapacity

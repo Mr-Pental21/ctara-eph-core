@@ -640,6 +640,21 @@ func goBhavaResult(v C.DhruvBhavaResult) BhavaResult {
 	}
 	out.LagnaDeg = float64(v.lagna_deg)
 	out.MCDeg = float64(v.mc_deg)
+	if v.rashi_bhava_valid != 0 {
+		rashi := BhavaResult{
+			LagnaDeg: float64(v.rashi_bhava_lagna_deg),
+			MCDeg:    float64(v.rashi_bhava_mc_deg),
+		}
+		for i := 0; i < 12; i++ {
+			rashi.Bhavas[i] = Bhava{
+				Number:   uint8(v.rashi_bhava_bhavas[i].number),
+				CuspDeg:  float64(v.rashi_bhava_bhavas[i].cusp_deg),
+				StartDeg: float64(v.rashi_bhava_bhavas[i].start_deg),
+				EndDeg:   float64(v.rashi_bhava_bhavas[i].end_deg),
+			}
+		}
+		out.RashiBhava = &rashi
+	}
 	return out
 }
 

@@ -24,19 +24,19 @@ use dhruv_vedic_base::vimsopaka::{
 use dhruv_vedic_base::{
     ALL_GRAHAS, AllGrahaAvasthas, AllSpecialLagnas, AllUpagrahas, Amsha, AmshaRequest,
     ArudhaResult, AshtakavargaResult, AvasthaInputs, Bhava, BhavaBalaBirthPeriod, BhavaBalaInputs,
-    BhavaBalaResult, BhavaConfig, BhavaResult, CharakarakaResult, CharakarakaScheme, Dignity,
-    DIG_BALA_BHAVA,
-    DrishtiEntry, Graha, GrahaAvasthas, GrahaDrishtiMatrix, KalaBalaInputs, LajjitadiInputs,
-    LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS, SayanadiInputs, SayanadiResult,
-    ShadbalaInputs, TimeUpagrahaConfig, all_avasthas, all_combustion_status,
-    all_shadbalas_from_inputs, all_sphutas, amsha_longitude, baladi_avastha, bhava_bala_entry,
-    bhrigu_bindu, calculate_ashtakavarga, calculate_bhava_bala, charakarakas_from_longitudes,
-    compute_bhavas, deeptadi_avastha, default_amsha_variation, dignity_in_rashi_with_positions,
-    ghati_lagna, ghatikas_since_sunrise, graha_drishti, graha_drishti_matrix, hora_lagna,
-    hora_lord as graha_hora_lord, is_valid_amsha_variation, jagradadi_avastha, jd_tdb_to_centuries,
-    lagna_longitude_rad, lajjitadi_avastha, lost_planetary_war, lunar_node_deg_for_epoch_on_plane,
-    masa_lord as graha_masa_lord, nakshatra_from_longitude, node_dignity_in_rashi, normalize_360,
-    nth_rashi_from, pranapada_lagna, rashi_from_longitude, rashi_lord_by_index,
+    BhavaBalaResult, BhavaConfig, BhavaResult, CharakarakaResult, CharakarakaScheme,
+    DIG_BALA_BHAVA, Dignity, DrishtiEntry, Graha, GrahaAvasthas, GrahaDrishtiMatrix,
+    KalaBalaInputs, LajjitadiInputs, LunarNode, NodeDignityPolicy, NodeMode, SAPTA_GRAHAS,
+    SayanadiInputs, SayanadiResult, ShadbalaInputs, TimeUpagrahaConfig, all_avasthas,
+    all_combustion_status, all_shadbalas_from_inputs, all_sphutas, amsha_longitude, baladi_avastha,
+    bhava_bala_entry, bhrigu_bindu, calculate_ashtakavarga, calculate_bhava_bala,
+    charakarakas_from_longitudes, compute_bhavas, deeptadi_avastha, default_amsha_variation,
+    dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise, graha_drishti,
+    graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord, is_valid_amsha_variation,
+    jagradadi_avastha, jd_tdb_to_centuries, lagna_longitude_rad, lajjitadi_avastha,
+    lost_planetary_war, lunar_node_deg_for_epoch_on_plane, masa_lord as graha_masa_lord,
+    nakshatra_from_longitude, node_dignity_in_rashi, normalize_360, nth_rashi_from,
+    pranapada_lagna, rashi_from_longitude, rashi_lord_by_index,
     samvatsara_lord as graha_samvatsara_lord, sayanadi_all_sub_states, sayanadi_avastha,
     shadbala_from_inputs, sree_lagna, sun_based_upagrahas, time_upagraha_jd_with_config,
     vaar_lord as graha_vaar_lord,
@@ -50,11 +50,11 @@ use crate::dasha::{
 use crate::error::SearchError;
 use crate::jyotish_types::{
     AmshaChart, AmshaChartScope, AmshaEntry, AmshaResult, AmshaSelectionConfig, BalaBundleResult,
-    BindusConfig, BindusResult, DashaSelectionConfig, DashaSnapshotTime, DrishtiConfig,
-    DrishtiResult, FullKundaliConfig, FullKundaliResult, GrahaEntry, GrahaLongitudeKind,
-    GrahaLongitudes, GrahaLongitudesConfig, GrahaPositions, GrahaPositionsConfig,
-    MAX_AMSHA_REQUESTS, ShadbalaEntry, ShadbalaResult, SphutalResult, VimsopakaEntry,
-    VimsopakaResult,
+    BhavaResultSet, BindusConfig, BindusResult, DashaSelectionConfig, DashaSnapshotTime,
+    DrishtiConfig, DrishtiResult, FullKundaliConfig, FullKundaliResult, GrahaEntry,
+    GrahaLongitudeKind, GrahaLongitudes, GrahaLongitudesConfig, GrahaPositions,
+    GrahaPositionsConfig, MAX_AMSHA_REQUESTS, ShadbalaEntry, ShadbalaResult, SphutalResult,
+    VimsopakaEntry, VimsopakaResult,
 };
 use crate::panchang::{
     hora_from_sunrises, masa_for_date_with_eop, panchang_for_date, varsha_for_date_with_eop,
@@ -1083,6 +1083,26 @@ pub fn sidereal_bhavas_for_date(
     ))
 }
 
+/// Compute configured sidereal bhava cusps plus optional rashi-bhava siblings.
+pub fn sidereal_bhava_results_for_date(
+    engine: &Engine,
+    eop: &EopKernel,
+    utc: &UtcTime,
+    location: &GeoLocation,
+    bhava_config: &BhavaConfig,
+    aya_config: &SankrantiConfig,
+) -> Result<BhavaResultSet, SearchError> {
+    let bhava_cusps =
+        sidereal_bhavas_for_date(engine, eop, utc, location, bhava_config, aya_config)?;
+    let rashi_bhava_cusps = bhava_config
+        .include_rashi_bhava_results
+        .then(|| rashi_bhava_result_from_lagna(bhava_cusps.lagna_deg));
+    Ok(BhavaResultSet {
+        bhava_cusps,
+        rashi_bhava_cusps,
+    })
+}
+
 /// Compute lagna (ascendant) on the configured sidereal zodiac.
 pub fn sidereal_lagna_for_date(
     engine: &Engine,
@@ -1311,7 +1331,8 @@ fn graha_positions_with_ctx(
     } else {
         None
     };
-    let rashi_bhava_lagna_sid = if config.include_bhava && bhava_config.include_rashi_bhava_results {
+    let rashi_bhava_lagna_sid = if config.include_bhava && bhava_config.include_rashi_bhava_results
+    {
         Some(ctx.lagna_sid(engine, eop, location)?)
     } else {
         None
@@ -1353,12 +1374,12 @@ fn graha_positions_with_ctx(
                 body_lon_lat_on_plane(engine, body, jd_tdb, aya_config.precession_model, plane)?;
             let sid_lon = normalize(lon - aya);
             entries[i] = make_graha_entry(
-            sid_lon,
-            config,
-            bhava_result.as_ref(),
-            rashi_bhava_lagna_sid,
-            aya,
-            plane,
+                sid_lon,
+                config,
+                bhava_result.as_ref(),
+                rashi_bhava_lagna_sid,
+                aya,
+                plane,
             );
         }
         entries
@@ -1581,7 +1602,8 @@ fn core_bindus_with_ctx(
     } else {
         None
     };
-    let rashi_bhava_lagna_sid = if config.include_bhava && bhava_config.include_rashi_bhava_results {
+    let rashi_bhava_lagna_sid = if config.include_bhava && bhava_config.include_rashi_bhava_results
+    {
         Some(lagna_sid)
     } else {
         None
@@ -1772,20 +1794,19 @@ fn drishti_for_date_with_ctx(
     } else {
         [[DrishtiEntry::zero(); 12]; 9]
     };
-    let graha_to_rashi_bhava =
-        if config.include_bhava && bhava_config.include_rashi_bhava_results {
-            let cusp_sid = ctx.rashi_bhava_cusps(engine, eop, location)?;
-            let mut entries = [[DrishtiEntry::zero(); 12]; 9];
-            for g in ALL_GRAHAS {
-                let gi = g.index() as usize;
-                for (ci, &cusp) in cusp_sid.iter().enumerate() {
-                    entries[gi][ci] = graha_drishti(g, graha_lons.longitudes[gi], cusp);
-                }
+    let graha_to_rashi_bhava = if config.include_bhava && bhava_config.include_rashi_bhava_results {
+        let cusp_sid = ctx.rashi_bhava_cusps(engine, eop, location)?;
+        let mut entries = [[DrishtiEntry::zero(); 12]; 9];
+        for g in ALL_GRAHAS {
+            let gi = g.index() as usize;
+            for (ci, &cusp) in cusp_sid.iter().enumerate() {
+                entries[gi][ci] = graha_drishti(g, graha_lons.longitudes[gi], cusp);
             }
-            entries
-        } else {
-            [[DrishtiEntry::zero(); 12]; 9]
-        };
+        }
+        entries
+    } else {
+        [[DrishtiEntry::zero(); 12]; 9]
+    };
     let _ = (aya, plane);
 
     let graha_to_bindus = if config.include_bindus {

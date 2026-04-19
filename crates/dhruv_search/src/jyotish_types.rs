@@ -622,6 +622,15 @@ pub struct SphutalResult {
     pub longitudes: [f64; 16],
 }
 
+/// Public bhava computation result set with configured and rashi-bhava outputs.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BhavaResultSet {
+    /// Bhava cusps from the configured bhava system.
+    pub bhava_cusps: BhavaResult,
+    /// Whole-sign/rashi-bhava sibling cusps when requested by config.
+    pub rashi_bhava_cusps: Option<BhavaResult>,
+}
+
 /// One-shot full kundali result.
 #[derive(Debug, Clone)]
 pub struct FullKundaliResult {
