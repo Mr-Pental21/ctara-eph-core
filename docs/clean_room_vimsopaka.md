@@ -88,23 +88,18 @@ For each varga, the planet's dignity in that varga's rashi determines points:
 
 | Dignity | Points |
 |---------|--------|
-| Exalted | 20 |
-| Moolatrikone | 18 |
-| Own Sign | 15 |
-| Adhi Mitra | 12 |
-| Mitra | 10 |
-| Sama | 7 |
-| Shatru | 5 |
-| Adhi Shatru | 3 |
-| Debilitated | 2 |
+| Own Sign | 20 |
+| Adhi Mitra | 18 |
+| Mitra | 15 |
+| Sama | 10 |
+| Shatru | 7 |
+| Adhi Shatru | 5 |
 
-D1/Rashi uses full dignity classification, including degree-specific
-moolatrikona and own-house portions in signs where the sign is partitioned. For
-example, Mercury in Virgo is exalted from 0°-15°, moolatrikona from 15°-20°,
-and own house from 20°-30°; Moon in Taurus is exalted from 0°-3° and
-moolatrikona from 3°-30°. Non-D1 vargas keep own-sign dignity where
-applicable and otherwise use compound friendship against the varga sign lord,
-with temporary friendship computed from D1 rashi positions.
+Vimsopaka does not use separate exaltation, debilitation, or moolatrikona
+categories. For every varga, including D1/Rashi, the planet is scored as own
+sign if the target rashi is one of the planet's own rashis; otherwise it is
+scored by compound friendship against the target rashi lord. Temporary
+friendship is computed from D1 rashi positions.
 
 ## Computation
 
@@ -144,7 +139,7 @@ lord. The temporal component uses D1 graha positions.
 
 ### AlwaysSama
 
-Conservative choice: Rahu and Ketu receive Sama (7 points) in every varga.
+Conservative choice: Rahu and Ketu receive Sama (10 points) in every varga.
 This is the safest option when no definitive BPHS source is available.
 
 **Note**: This policy is explicitly marked as "extension beyond strict BPHS"

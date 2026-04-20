@@ -14,8 +14,7 @@ use crate::amsha::{Amsha, amsha_longitude};
 use crate::error::VedicError;
 use crate::graha::{ALL_GRAHAS, Graha};
 use crate::graha_relationships::{
-    Dignity, NodeDignityPolicy, compound_dignity_in_rashi, dignity_in_rashi_with_positions,
-    node_dignity_in_rashi, own_signs,
+    Dignity, NodeDignityPolicy, compound_dignity_in_rashi, node_dignity_in_rashi, own_signs,
 };
 use crate::util::normalize_360;
 
@@ -209,15 +208,16 @@ pub const SHODASAVARGA: [VargaWeight; 16] = [
 /// Convert a Dignity to Vimsopaka points (0-20 scale).
 pub fn vimsopaka_dignity_points(dignity: Dignity) -> f64 {
     match dignity {
-        Dignity::Exalted => 20.0,
-        Dignity::Moolatrikone => 18.0,
-        Dignity::OwnSign => 15.0,
-        Dignity::AdhiMitra => 12.0,
-        Dignity::Mitra => 10.0,
-        Dignity::Sama => 7.0,
-        Dignity::Shatru => 5.0,
-        Dignity::AdhiShatru => 3.0,
-        Dignity::Debilitated => 2.0,
+        // Vimsopaka itself has no exalted, debilitated, or moolatrikona
+        // scoring categories. The full-computation path below only emits
+        // own-sign and compound-friendship dignities; these fallbacks keep
+        // low-level preassembled inputs bounded on the same 5..20 scale.
+        Dignity::Exalted | Dignity::Moolatrikone | Dignity::OwnSign => 20.0,
+        Dignity::AdhiMitra => 18.0,
+        Dignity::Mitra => 15.0,
+        Dignity::Sama => 10.0,
+        Dignity::Shatru => 7.0,
+        Dignity::AdhiShatru | Dignity::Debilitated => 5.0,
     }
 }
 
@@ -295,7 +295,7 @@ pub fn vimsopaka_from_entries(entries: &[VargaDignityEntry]) -> Result<f64, Vedi
 /// using the varga sign for target dignity and D1 positions for temporal friendship.
 pub fn vimsopaka_bala(
     graha: Graha,
-    sidereal_lon: f64,
+    _sidereal_lon: f64,
     all_sidereal_lons_9: &[f64; 9],
     vargas: &[VargaWeight],
     node_policy: NodeDignityPolicy,
@@ -330,14 +330,7 @@ pub fn vimsopaka_bala(
         let dignity = if is_node {
             node_dignity_in_rashi(graha, rashi_idx, &d1_rashi_9, node_policy)
         } else {
-            let varga_lon = if vw.amsha == Amsha::D1 {
-                normalize_360(sidereal_lon)
-            } else {
-                amsha_longitude(sidereal_lon, vw.amsha, None)
-            };
-            if vw.amsha == Amsha::D1 {
-                dignity_in_rashi_with_positions(graha, varga_lon, rashi_idx, &d1_sapta_rashi)
-            } else if own_signs(graha).contains(&rashi_idx) {
+            if own_signs(graha).contains(&rashi_idx) {
                 Dignity::OwnSign
             } else {
                 compound_dignity_in_rashi(graha, rashi_idx, &d1_sapta_rashi)
@@ -501,18 +494,13 @@ mod tests {
     // --- Dignity Points ---
 
     #[test]
-    fn dignity_points_exalted() {
-        assert!((vimsopaka_dignity_points(Dignity::Exalted) - 20.0).abs() < EPS);
-    }
-
-    #[test]
-    fn dignity_points_debilitated() {
-        assert!((vimsopaka_dignity_points(Dignity::Debilitated) - 2.0).abs() < EPS);
-    }
-
-    #[test]
-    fn dignity_points_sama() {
-        assert!((vimsopaka_dignity_points(Dignity::Sama) - 7.0).abs() < EPS);
+    fn dignity_points_use_vimsopaka_friendship_table() {
+        assert!((vimsopaka_dignity_points(Dignity::OwnSign) - 20.0).abs() < EPS);
+        assert!((vimsopaka_dignity_points(Dignity::AdhiMitra) - 18.0).abs() < EPS);
+        assert!((vimsopaka_dignity_points(Dignity::Mitra) - 15.0).abs() < EPS);
+        assert!((vimsopaka_dignity_points(Dignity::Sama) - 10.0).abs() < EPS);
+        assert!((vimsopaka_dignity_points(Dignity::Shatru) - 7.0).abs() < EPS);
+        assert!((vimsopaka_dignity_points(Dignity::AdhiShatru) - 5.0).abs() < EPS);
     }
 
     // --- Score Range ---
@@ -581,14 +569,14 @@ mod tests {
         );
 
         assert_eq!(result.entries[0].dignity, Dignity::AdhiShatru);
-        assert!((result.entries[0].points - 3.0).abs() < EPS);
+        assert!((result.entries[0].points - 5.0).abs() < EPS);
     }
 
     #[test]
-    fn non_d1_varga_dignity_ignores_moolatrikona() {
+    fn varga_dignity_ignores_moolatrikona() {
         // Mercury's D30 position from this longitude falls in Virgo's
-        // moolatrikona span, but non-D1 vargas ignore moolatrikona and keep
-        // only own-sign plus compound friendship categories.
+        // moolatrikona span, but Vimsopaka ignores moolatrikona and keeps
+        // only own-sign plus compound-friendship categories.
         let lons = [0.0, 0.0, 0.0, 339.289, 0.0, 0.0, 0.0, 0.0, 180.0];
         let result = vimsopaka_bala(
             Graha::Buddh,
@@ -602,7 +590,26 @@ mod tests {
         );
 
         assert_eq!(result.entries[0].dignity, Dignity::OwnSign);
-        assert!((result.entries[0].points - 15.0).abs() < EPS);
+        assert!((result.entries[0].points - 20.0).abs() < EPS);
+    }
+
+    #[test]
+    fn d1_vimsopaka_ignores_exaltation() {
+        // Sun in Mesha would be exalted in full dignity, but Vimsopaka uses
+        // only own-sign plus compound friendship even for D1.
+        let lons = [10.0, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 180.0];
+        let result = vimsopaka_bala(
+            Graha::Surya,
+            lons[Graha::Surya.index() as usize],
+            &lons,
+            &[VargaWeight {
+                amsha: Amsha::D1,
+                weight: 20.0,
+            }],
+            NodeDignityPolicy::default(),
+        );
+
+        assert_ne!(result.entries[0].dignity, Dignity::Exalted);
     }
 
     // --- Rahu/Ketu ---
@@ -624,15 +631,15 @@ mod tests {
         let lons = [45.0, 80.0, 150.0, 210.0, 280.0, 330.0, 15.0, 100.0, 250.0];
         let result =
             shadvarga_vimsopaka(Graha::Rahu, lons[7], &lons, NodeDignityPolicy::AlwaysSama);
-        // All entries should have Sama dignity → 7 points → score = 7.0
+        // All entries should have Sama dignity → 10 points → score = 10.0
         assert!(
-            (result.score - 7.0).abs() < EPS,
-            "AlwaysSama should give 7.0, got {}",
+            (result.score - 10.0).abs() < EPS,
+            "AlwaysSama should give 10.0, got {}",
             result.score
         );
         for entry in &result.entries {
             assert_eq!(entry.dignity, Dignity::Sama);
-            assert!((entry.points - 7.0).abs() < EPS);
+            assert!((entry.points - 10.0).abs() < EPS);
         }
     }
 

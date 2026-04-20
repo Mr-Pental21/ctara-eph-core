@@ -345,18 +345,18 @@ fn vimsopaka_always_sama_policy() {
     )
     .expect("vimsopaka_for_date should succeed");
 
-    // With AlwaysSama, Rahu/Ketu get Sama dignity (7 points) in every varga.
-    // shadvarga: sum(weight * 7) / sum(weight) = 7.0
+    // With AlwaysSama, Rahu/Ketu get Sama dignity (10 points) in every varga.
+    // shadvarga: sum(weight * 10) / sum(weight) = 10.0
     let rahu = &result.entries[Graha::Rahu.index() as usize];
     assert!(
-        (rahu.shadvarga - 7.0).abs() < 0.01,
-        "Rahu shadvarga with AlwaysSama should be 7.0, got {}",
+        (rahu.shadvarga - 10.0).abs() < 0.01,
+        "Rahu shadvarga with AlwaysSama should be 10.0, got {}",
         rahu.shadvarga
     );
     let ketu = &result.entries[Graha::Ketu.index() as usize];
     assert!(
-        (ketu.shadvarga - 7.0).abs() < 0.01,
-        "Ketu shadvarga with AlwaysSama should be 7.0, got {}",
+        (ketu.shadvarga - 10.0).abs() < 0.01,
+        "Ketu shadvarga with AlwaysSama should be 10.0, got {}",
         ketu.shadvarga
     );
 }
