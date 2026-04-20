@@ -871,14 +871,7 @@ impl JyotishContext {
             let dignity = if matches!(graha, Graha::Rahu | Graha::Ketu) {
                 node_dignity_in_rashi(graha, rashi_idx, &d1_rashi_indices, node_policy)
             } else {
-                let varga_lon = if request.amsha == Amsha::D1 {
-                    normalize_360(sidereal_lons[gi])
-                } else {
-                    cached_amsha.longitudes[gi]
-                };
-                if request.amsha == Amsha::D1 {
-                    dignity_in_rashi_with_positions(graha, varga_lon, rashi_idx, &d1_sapta_rashi)
-                } else if own_signs(graha).contains(&rashi_idx) {
+                if own_signs(graha).contains(&rashi_idx) {
                     Dignity::OwnSign
                 } else {
                     compound_dignity_in_rashi(graha, rashi_idx, &d1_sapta_rashi)
