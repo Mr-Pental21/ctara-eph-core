@@ -31,10 +31,10 @@ use dhruv_vedic_base::{
     all_combustion_status, all_shadbalas_from_inputs, all_sphutas, amsha_longitude, baladi_avastha,
     bhava_bala_entry, bhrigu_bindu, calculate_ashtakavarga, calculate_bhava_bala,
     charakarakas_from_longitudes, compound_dignity_in_rashi, compute_bhavas, deeptadi_avastha,
-    default_amsha_variation, dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise,
-    graha_drishti, graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord,
-    is_valid_amsha_variation, jagradadi_avastha, jd_tdb_to_centuries, lagna_longitude_rad,
-    lajjitadi_avastha, lost_planetary_war, lunar_node_deg_for_epoch_on_plane,
+    default_amsha_variation, dignity_in_rashi_with_positions, exaltation_degree, ghati_lagna,
+    ghatikas_since_sunrise, graha_drishti, graha_drishti_matrix, hora_lagna,
+    hora_lord as graha_hora_lord, is_valid_amsha_variation, jagradadi_avastha, jd_tdb_to_centuries,
+    lagna_longitude_rad, lajjitadi_avastha, lost_planetary_war, lunar_node_deg_for_epoch_on_plane,
     masa_lord as graha_masa_lord, nakshatra_from_longitude, node_dignity_in_rashi, normalize_360,
     nth_rashi_from, own_signs, pranapada_lagna, rashi_from_longitude, rashi_lord_by_index,
     samvatsara_lord as graha_samvatsara_lord, sayanadi_all_sub_states, sayanadi_avastha,
@@ -871,7 +871,9 @@ impl JyotishContext {
             let dignity = if matches!(graha, Graha::Rahu | Graha::Ketu) {
                 node_dignity_in_rashi(graha, rashi_idx, &d1_rashi_indices, node_policy)
             } else {
-                if own_signs(graha).contains(&rashi_idx) {
+                if is_vimsopaka_exaltation_sign(graha, rashi_idx) {
+                    Dignity::Exalted
+                } else if own_signs(graha).contains(&rashi_idx) {
                     Dignity::OwnSign
                 } else {
                     compound_dignity_in_rashi(graha, rashi_idx, &d1_sapta_rashi)
@@ -2821,6 +2823,12 @@ fn all_vimsopaka_balas_from_cache(
         };
     }
     Ok(results)
+}
+
+fn is_vimsopaka_exaltation_sign(graha: Graha, rashi_idx: u8) -> bool {
+    exaltation_degree(graha)
+        .map(|degree| ((degree / 30.0).floor() as u8).min(11) == rashi_idx)
+        .unwrap_or(false)
 }
 
 fn vimsopaka_entry_from_cache(

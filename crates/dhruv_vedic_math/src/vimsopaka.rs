@@ -14,7 +14,8 @@ use crate::amsha::{Amsha, amsha_longitude};
 use crate::error::VedicError;
 use crate::graha::{ALL_GRAHAS, Graha};
 use crate::graha_relationships::{
-    Dignity, NodeDignityPolicy, compound_dignity_in_rashi, node_dignity_in_rashi, own_signs,
+    Dignity, NodeDignityPolicy, compound_dignity_in_rashi, exaltation_degree,
+    node_dignity_in_rashi, own_signs,
 };
 use crate::util::normalize_360;
 
@@ -221,6 +222,12 @@ pub fn vimsopaka_dignity_points(dignity: Dignity) -> f64 {
     }
 }
 
+fn is_vimsopaka_exaltation_sign(graha: Graha, rashi_idx: u8) -> bool {
+    exaltation_degree(graha)
+        .map(|degree| ((degree / 30.0).floor() as u8).min(11) == rashi_idx)
+        .unwrap_or(false)
+}
+
 // ---------------------------------------------------------------------------
 // 3c. Precomputed Inputs & Low-Level Entrypoint
 // ---------------------------------------------------------------------------
@@ -329,7 +336,9 @@ pub fn vimsopaka_bala(
         let dignity = if is_node {
             node_dignity_in_rashi(graha, rashi_idx, &d1_rashi_9, node_policy)
         } else {
-            if own_signs(graha).contains(&rashi_idx) {
+            if is_vimsopaka_exaltation_sign(graha, rashi_idx) {
+                Dignity::Exalted
+            } else if own_signs(graha).contains(&rashi_idx) {
                 Dignity::OwnSign
             } else {
                 compound_dignity_in_rashi(graha, rashi_idx, &d1_sapta_rashi)
@@ -494,6 +503,7 @@ mod tests {
 
     #[test]
     fn dignity_points_use_vimsopaka_friendship_table() {
+        assert!((vimsopaka_dignity_points(Dignity::Exalted) - 20.0).abs() < EPS);
         assert!((vimsopaka_dignity_points(Dignity::OwnSign) - 20.0).abs() < EPS);
         assert!((vimsopaka_dignity_points(Dignity::AdhiMitra) - 18.0).abs() < EPS);
         assert!((vimsopaka_dignity_points(Dignity::Mitra) - 15.0).abs() < EPS);
@@ -572,10 +582,9 @@ mod tests {
     }
 
     #[test]
-    fn varga_dignity_ignores_moolatrikona() {
-        // Mercury's D30 position from this longitude falls in Virgo's
-        // moolatrikona span, but Vimsopaka ignores moolatrikona and keeps
-        // only own-sign plus compound-friendship categories.
+    fn varga_dignity_exaltation_sign_gets_full_points() {
+        // Mercury's D30 position from this longitude falls in Virgo. Vimsopaka
+        // treats the whole exaltation sign as full strength in any varga.
         let lons = [0.0, 0.0, 0.0, 339.289, 0.0, 0.0, 0.0, 0.0, 180.0];
         let result = vimsopaka_bala(
             Graha::Buddh,
@@ -588,14 +597,14 @@ mod tests {
             NodeDignityPolicy::default(),
         );
 
-        assert_eq!(result.entries[0].dignity, Dignity::OwnSign);
+        assert_eq!(result.entries[0].dignity, Dignity::Exalted);
         assert!((result.entries[0].points - 20.0).abs() < EPS);
     }
 
     #[test]
-    fn d1_vimsopaka_ignores_exaltation() {
-        // Sun in Mesha would be exalted in full dignity, but Vimsopaka uses
-        // only own-sign plus compound friendship even for D1.
+    fn d1_vimsopaka_uses_whole_exaltation_sign() {
+        // Sun in Mesha receives full Vimsopaka points anywhere in the
+        // exaltation sign; exact exaltation degree is not required.
         let lons = [10.0, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 180.0];
         let result = vimsopaka_bala(
             Graha::Surya,
@@ -608,7 +617,8 @@ mod tests {
             NodeDignityPolicy::default(),
         );
 
-        assert_ne!(result.entries[0].dignity, Dignity::Exalted);
+        assert_eq!(result.entries[0].dignity, Dignity::Exalted);
+        assert!((result.entries[0].points - 20.0).abs() < EPS);
     }
 
     // --- Rahu/Ketu ---
