@@ -73,19 +73,19 @@ pub const SAPTAVARGA: [VargaWeight; 7] = [
         weight: 3.0,
     },
     VargaWeight {
-        amsha: Amsha::D7,
+        amsha: Amsha::D9,
         weight: 2.5,
     },
     VargaWeight {
-        amsha: Amsha::D9,
+        amsha: Amsha::D12,
         weight: 4.5,
     },
     VargaWeight {
-        amsha: Amsha::D12,
+        amsha: Amsha::D30,
         weight: 2.0,
     },
     VargaWeight {
-        amsha: Amsha::D30,
+        amsha: Amsha::D7,
         weight: 1.0,
     },
 ];
@@ -105,15 +105,7 @@ pub const DASHAVARGA: [VargaWeight; 10] = [
         weight: 1.5,
     },
     VargaWeight {
-        amsha: Amsha::D7,
-        weight: 1.5,
-    },
-    VargaWeight {
         amsha: Amsha::D9,
-        weight: 3.0,
-    },
-    VargaWeight {
-        amsha: Amsha::D10,
         weight: 1.5,
     },
     VargaWeight {
@@ -121,16 +113,24 @@ pub const DASHAVARGA: [VargaWeight; 10] = [
         weight: 1.5,
     },
     VargaWeight {
-        amsha: Amsha::D16,
-        weight: 2.0,
+        amsha: Amsha::D30,
+        weight: 1.5,
     },
     VargaWeight {
-        amsha: Amsha::D30,
-        weight: 1.0,
+        amsha: Amsha::D7,
+        weight: 1.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D10,
+        weight: 1.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D16,
+        weight: 1.5,
     },
     VargaWeight {
         amsha: Amsha::D60,
-        weight: 3.5,
+        weight: 5.0,
     },
 ];
 
@@ -149,28 +149,32 @@ pub const SHODASAVARGA: [VargaWeight; 16] = [
         weight: 1.0,
     },
     VargaWeight {
-        amsha: Amsha::D4,
-        weight: 0.5,
-    },
-    VargaWeight {
-        amsha: Amsha::D7,
-        weight: 0.5,
-    },
-    VargaWeight {
         amsha: Amsha::D9,
         weight: 3.0,
-    },
-    VargaWeight {
-        amsha: Amsha::D10,
-        weight: 0.5,
     },
     VargaWeight {
         amsha: Amsha::D12,
         weight: 0.5,
     },
     VargaWeight {
+        amsha: Amsha::D30,
+        weight: 1.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D7,
+        weight: 0.5,
+    },
+    VargaWeight {
+        amsha: Amsha::D10,
+        weight: 0.5,
+    },
+    VargaWeight {
         amsha: Amsha::D16,
         weight: 2.0,
+    },
+    VargaWeight {
+        amsha: Amsha::D60,
+        weight: 4.0,
     },
     VargaWeight {
         amsha: Amsha::D20,
@@ -185,8 +189,8 @@ pub const SHODASAVARGA: [VargaWeight; 16] = [
         weight: 0.5,
     },
     VargaWeight {
-        amsha: Amsha::D30,
-        weight: 1.0,
+        amsha: Amsha::D4,
+        weight: 0.5,
     },
     VargaWeight {
         amsha: Amsha::D40,
@@ -195,10 +199,6 @@ pub const SHODASAVARGA: [VargaWeight; 16] = [
     VargaWeight {
         amsha: Amsha::D45,
         weight: 0.5,
-    },
-    VargaWeight {
-        amsha: Amsha::D60,
-        weight: 4.0,
     },
 ];
 

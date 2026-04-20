@@ -41,10 +41,10 @@ BPHS defines four groupings. Weights in each grouping sum to 20.
 | D1 | 5.0 |
 | D2 | 2.0 |
 | D3 | 3.0 |
-| D7 (Saptamsha) | 2.5 |
-| D9 | 4.5 |
-| D12 | 2.0 |
-| D30 | 1.0 |
+| D9 | 2.5 |
+| D12 | 4.5 |
+| D30 | 2.0 |
+| D7 (Saptamsha) | 1.0 |
 
 ### Dashavarga (10 divisions)
 
@@ -53,13 +53,13 @@ BPHS defines four groupings. Weights in each grouping sum to 20.
 | D1 | 3.0 |
 | D2 | 1.5 |
 | D3 | 1.5 |
-| D7 | 1.5 |
-| D9 | 3.0 |
-| D10 (Dashamsha) | 1.5 |
+| D9 | 1.5 |
 | D12 | 1.5 |
-| D16 (Shodashamsha) | 2.0 |
-| D30 | 1.0 |
-| D60 (Shashtiamsha) | 3.5 |
+| D30 | 1.5 |
+| D7 | 1.5 |
+| D10 (Dashamsha) | 1.5 |
+| D16 (Shodashamsha) | 1.5 |
+| D60 (Shashtiamsha) | 5.0 |
 
 ### Shodasavarga (16 divisions)
 
@@ -68,19 +68,19 @@ BPHS defines four groupings. Weights in each grouping sum to 20.
 | D1 | 3.5 |
 | D2 | 1.0 |
 | D3 | 1.0 |
-| D4 (Chaturthamsha) | 0.5 |
-| D7 | 0.5 |
 | D9 | 3.0 |
-| D10 | 0.5 |
 | D12 | 0.5 |
+| D30 | 1.0 |
+| D7 | 0.5 |
+| D10 | 0.5 |
 | D16 | 2.0 |
+| D60 | 4.0 |
 | D20 (Vimshamsha) | 0.5 |
 | D24 (Chaturvimshamsha) | 0.5 |
 | D27 (Saptavimshamsha) | 0.5 |
-| D30 | 1.0 |
+| D4 (Chaturthamsha) | 0.5 |
 | D40 (Khavedamsha) | 0.5 |
 | D45 (Akshavedamsha) | 0.5 |
-| D60 | 4.0 |
 
 ## Dignity Points
 
