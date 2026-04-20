@@ -14,8 +14,7 @@ use crate::amsha::{Amsha, amsha_longitude};
 use crate::error::VedicError;
 use crate::graha::{ALL_GRAHAS, Graha};
 use crate::graha_relationships::{
-    Dignity, NodeDignityPolicy, compound_dignity_in_rashi, exaltation_degree,
-    node_dignity_in_rashi, own_signs,
+    Dignity, NodeDignityPolicy, compound_dignity_in_rashi, node_dignity_in_rashi, own_signs,
 };
 use crate::util::normalize_360;
 
@@ -211,21 +210,15 @@ pub fn vimsopaka_dignity_points(dignity: Dignity) -> f64 {
     match dignity {
         // Vimsopaka itself has no exalted, debilitated, or moolatrikona
         // scoring categories. The full-computation path below only emits
-        // own-sign and compound-friendship dignities; these fallbacks keep
-        // low-level preassembled inputs bounded on the same 5..20 scale.
-        Dignity::Exalted | Dignity::Moolatrikone | Dignity::OwnSign => 20.0,
+        // own-sign and compound-friendship dignities.
+        Dignity::OwnSign => 20.0,
         Dignity::AdhiMitra => 18.0,
         Dignity::Mitra => 15.0,
         Dignity::Sama => 10.0,
         Dignity::Shatru => 7.0,
-        Dignity::AdhiShatru | Dignity::Debilitated => 5.0,
+        Dignity::AdhiShatru => 5.0,
+        Dignity::Exalted | Dignity::Moolatrikone | Dignity::Debilitated => 0.0,
     }
-}
-
-fn is_vimsopaka_exaltation_sign(graha: Graha, rashi_idx: u8) -> bool {
-    exaltation_degree(graha)
-        .map(|degree| ((degree / 30.0).floor() as u8).min(11) == rashi_idx)
-        .unwrap_or(false)
 }
 
 // ---------------------------------------------------------------------------
@@ -336,9 +329,7 @@ pub fn vimsopaka_bala(
         let dignity = if is_node {
             node_dignity_in_rashi(graha, rashi_idx, &d1_rashi_9, node_policy)
         } else {
-            if vw.amsha == Amsha::D1 && is_vimsopaka_exaltation_sign(graha, rashi_idx) {
-                Dignity::Exalted
-            } else if own_signs(graha).contains(&rashi_idx) {
+            if own_signs(graha).contains(&rashi_idx) {
                 Dignity::OwnSign
             } else {
                 compound_dignity_in_rashi(graha, rashi_idx, &d1_sapta_rashi)
@@ -503,13 +494,15 @@ mod tests {
 
     #[test]
     fn dignity_points_use_vimsopaka_friendship_table() {
-        assert!((vimsopaka_dignity_points(Dignity::Exalted) - 20.0).abs() < EPS);
         assert!((vimsopaka_dignity_points(Dignity::OwnSign) - 20.0).abs() < EPS);
         assert!((vimsopaka_dignity_points(Dignity::AdhiMitra) - 18.0).abs() < EPS);
         assert!((vimsopaka_dignity_points(Dignity::Mitra) - 15.0).abs() < EPS);
         assert!((vimsopaka_dignity_points(Dignity::Sama) - 10.0).abs() < EPS);
         assert!((vimsopaka_dignity_points(Dignity::Shatru) - 7.0).abs() < EPS);
         assert!((vimsopaka_dignity_points(Dignity::AdhiShatru) - 5.0).abs() < EPS);
+        assert!((vimsopaka_dignity_points(Dignity::Exalted) - 0.0).abs() < EPS);
+        assert!((vimsopaka_dignity_points(Dignity::Moolatrikone) - 0.0).abs() < EPS);
+        assert!((vimsopaka_dignity_points(Dignity::Debilitated) - 0.0).abs() < EPS);
     }
 
     // --- Score Range ---
@@ -582,10 +575,10 @@ mod tests {
     }
 
     #[test]
-    fn non_d1_varga_dignity_ignores_exaltation_sign() {
+    fn varga_dignity_ignores_exaltation_sign() {
         // Mercury's D30 position from this longitude falls in Virgo, Mercury's
-        // exaltation sign. Vimsopaka only applies exaltation-sign strength in D1,
-        // so non-D1 Virgo remains own-sign strength instead.
+        // exaltation sign. Vimsopaka ignores exaltation and keeps own-sign
+        // plus compound-friendship categories.
         let lons = [0.0, 0.0, 0.0, 339.289, 0.0, 0.0, 0.0, 0.0, 180.0];
         let result = vimsopaka_bala(
             Graha::Buddh,
@@ -603,9 +596,9 @@ mod tests {
     }
 
     #[test]
-    fn d1_vimsopaka_uses_whole_exaltation_sign() {
-        // Sun in Mesha receives full Vimsopaka points anywhere in the
-        // exaltation sign; exact exaltation degree is not required.
+    fn d1_vimsopaka_ignores_exaltation_sign() {
+        // Sun in Mesha would be exalted in full dignity, but Vimsopaka uses
+        // only own-sign plus compound friendship even for D1.
         let lons = [10.0, 0.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 180.0];
         let result = vimsopaka_bala(
             Graha::Surya,
@@ -618,8 +611,8 @@ mod tests {
             NodeDignityPolicy::default(),
         );
 
-        assert_eq!(result.entries[0].dignity, Dignity::Exalted);
-        assert!((result.entries[0].points - 20.0).abs() < EPS);
+        assert_eq!(result.entries[0].dignity, Dignity::Sama);
+        assert!((result.entries[0].points - 10.0).abs() < EPS);
     }
 
     // --- Rahu/Ketu ---

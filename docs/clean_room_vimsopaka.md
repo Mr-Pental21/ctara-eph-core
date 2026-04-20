@@ -88,7 +88,6 @@ For each varga, the planet's dignity in that varga's rashi determines points:
 
 | Dignity | Points |
 |---------|--------|
-| Exaltation Sign | 20 |
 | Own Sign | 20 |
 | Adhi Mitra | 18 |
 | Mitra | 15 |
@@ -96,14 +95,13 @@ For each varga, the planet's dignity in that varga's rashi determines points:
 | Shatru | 7 |
 | Adhi Shatru | 5 |
 
-In D1/Rashi only, the planet gets 20 points when the target rashi is its
-exaltation sign. The whole sign counts; exact exaltation degree is not used.
 For all vargas, including D1, the planet gets 20 points when the target rashi
 is one of the planet's own signs. Otherwise the varga is scored by compound
 friendship against the target rashi lord. Temporary friendship is computed from
 D1 rashi positions.
 
-Vimsopaka does not use separate debilitation or moolatrikona categories.
+Vimsopaka does not use separate exaltation, debilitation, or moolatrikona
+categories.
 
 ## Computation
 
