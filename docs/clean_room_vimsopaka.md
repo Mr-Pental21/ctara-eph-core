@@ -129,9 +129,10 @@ in the selected Vimsopaka grouping.
 
 ## Node Dignity Policy (Rahu/Ketu Extension)
 
-BPHS does not define exaltation, moolatrikone, or friendship tables for Rahu
-and Ketu in a universally agreed way. This implementation provides a
-configurable `NodeDignityPolicy`:
+BPHS does not define exaltation or moolatrikone for Rahu and Ketu in a
+universally agreed way. This implementation uses the project Rahu/Ketu natural
+friendship table (friends: Venus/Saturn; neutral: Jupiter/Mercury; enemies:
+Sun/Moon/Mars) and provides a configurable `NodeDignityPolicy`:
 
 ### SignLordBased (default)
 

@@ -204,6 +204,8 @@ is_strong = total_shashtiamsas >= required_strength.
 | Jupiter | Sun, Moon, Mars | Mercury, Venus | Saturn |
 | Venus | Mercury, Saturn | Sun, Moon | Mars, Jupiter |
 | Saturn | Mercury, Venus | Sun, Moon, Mars | Jupiter |
+| Rahu | Venus, Saturn | Sun, Moon, Mars | Jupiter, Mercury |
+| Ketu | Venus, Saturn | Sun, Moon, Mars | Jupiter, Mercury |
 
 ### Tatkalika Maitri (Temporal Friendship)
 

@@ -100,16 +100,20 @@ pub enum NaisargikaMaitri {
     Neutral,
 }
 
-/// Natural (naisargika) friendship between two sapta grahas (BPHS table).
-/// Returns Neutral for any pairing involving Rahu/Ketu.
+/// Natural (naisargika) friendship between grahas.
+///
+/// Sapta grahas use the BPHS table. Rahu/Ketu use the project node table:
+/// friends = Venus/Saturn, neutral = Jupiter/Mercury, enemies = Sun/Moon/Mars.
 pub const fn naisargika_maitri(graha: Graha, other: Graha) -> NaisargikaMaitri {
     use Graha::*;
     use NaisargikaMaitri::*;
 
-    // Rahu/Ketu: always Neutral
-    match (graha, other) {
-        (Rahu | Ketu, _) | (_, Rahu | Ketu) => return Neutral,
-        _ => {}
+    if matches!(graha, Rahu | Ketu) {
+        return match other {
+            Shukra | Shani => Friend,
+            Guru | Buddh | Rahu | Ketu => Neutral,
+            Surya | Chandra | Mangal => Enemy,
+        };
     }
 
     match (graha, other) {
@@ -154,7 +158,7 @@ pub const fn naisargika_maitri(graha: Graha, other: Graha) -> NaisargikaMaitri {
         (Shani, Guru) => Neutral,
         (Shani, Shani) => Neutral,
 
-        // Exhaustive: already handled Rahu/Ketu above
+        // Sapta-graha tables do not define directed relationships to nodes.
         _ => Neutral,
     }
 }
@@ -712,7 +716,7 @@ mod tests {
         assert!(is_own_sign_at_longitude(Graha::Buddh, 70.0, 2));
     }
 
-    // --- Naisargika Maitri (49 cells) ---
+    // --- Naisargika Maitri (81 cells) ---
 
     #[test]
     fn naisargika_sun_moon_friend() {
@@ -842,16 +846,24 @@ mod tests {
     }
 
     #[test]
-    fn naisargika_rahu_always_neutral() {
-        for g in ALL_GRAHAS {
-            assert_eq!(naisargika_maitri(Graha::Rahu, g), NaisargikaMaitri::Neutral);
+    fn naisargika_nodes_use_project_table() {
+        for node in [Graha::Rahu, Graha::Ketu] {
+            for friend in [Graha::Shukra, Graha::Shani] {
+                assert_eq!(naisargika_maitri(node, friend), NaisargikaMaitri::Friend);
+            }
+            for neutral in [Graha::Guru, Graha::Buddh, Graha::Rahu, Graha::Ketu] {
+                assert_eq!(naisargika_maitri(node, neutral), NaisargikaMaitri::Neutral);
+            }
+            for enemy in [Graha::Surya, Graha::Chandra, Graha::Mangal] {
+                assert_eq!(naisargika_maitri(node, enemy), NaisargikaMaitri::Enemy);
+            }
         }
     }
 
     #[test]
-    fn naisargika_all_49_cells_valid() {
-        for a in SAPTA_GRAHAS {
-            for b in SAPTA_GRAHAS {
+    fn naisargika_all_81_cells_valid() {
+        for a in ALL_GRAHAS {
+            for b in ALL_GRAHAS {
                 let _ = naisargika_maitri(a, b); // should not panic
             }
         }
