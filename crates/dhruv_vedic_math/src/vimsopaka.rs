@@ -636,6 +636,23 @@ mod tests {
     }
 
     #[test]
+    fn rahu_sign_lord_uses_direct_node_relationship() {
+        // Rahu in Taurus targets Venus as rashi lord. Venus is one sign from
+        // Rahu, so direct Rahu->Venus friendship plus temporary friendship
+        // produces AdhiMitra. The old dispositor proxy would have produced
+        // OwnSign here because Rahu's dispositor and target lord are both Venus.
+        let lons = [0.0, 0.0, 0.0, 0.0, 0.0, 70.0, 0.0, 40.0, 220.0];
+        let result = shadvarga_vimsopaka(
+            Graha::Rahu,
+            lons[7],
+            &lons,
+            NodeDignityPolicy::SignLordBased,
+        );
+        assert_eq!(result.entries[0].dignity, Dignity::AdhiMitra);
+        assert!((result.entries[0].points - 18.0).abs() < EPS);
+    }
+
+    #[test]
     fn rahu_always_sama_all_neutral() {
         let lons = [45.0, 80.0, 150.0, 210.0, 280.0, 330.0, 15.0, 100.0, 250.0];
         let result =

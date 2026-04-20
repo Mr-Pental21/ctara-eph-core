@@ -150,7 +150,9 @@ Saturn=3, Rahu=4, Ketu=4.
 
 Rahu and Ketu dignity is computed via `node_dignity_in_rashi()` with configurable
 `NodeDignityPolicy`:
-- **SignLordBased** (default): dignity based on naisargika maitri with sign lord
+- **SignLordBased** (default): compound dignity based on the node's direct
+  naisargika maitri with the target sign lord, plus node-to-lord temporary
+  relationship
 - **AlwaysSama**: always returns `Dignity::Sama` for nodes
 
 This affects Jagradadi, Deeptadi, and Lajjitadi avasthas for Rahu/Ketu.

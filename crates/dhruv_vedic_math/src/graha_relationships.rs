@@ -430,8 +430,8 @@ pub fn compound_dignity_in_rashi(
 /// This is a configurable extension, isolated for auditability.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum NodeDignityPolicy {
-    /// Sign-lord based: dignity = compound relationship between the node's
-    /// dispositor and target rashi lord in the supplied temporal context.
+    /// Sign-lord based: dignity = compound relationship between the node and
+    /// target rashi lord in the supplied temporal context.
     #[default]
     SignLordBased,
     /// Always Sama (neutral) — safest conservative choice.
@@ -457,14 +457,15 @@ pub fn node_dignity_in_rashi(
     )
 }
 
-/// Determine Rahu/Ketu dignity with separate dispositor and temporal contexts.
+/// Determine Rahu/Ketu dignity with separate node and temporal contexts.
 ///
-/// `dispositor_rashi_indices_9` decides the node's sign lord. `temporal_rashi_indices_9`
-/// decides the tatkalika component between that dispositor and the target sign lord.
+/// `temporal_rashi_indices_9` decides the tatkalika component between the node
+/// and the target sign lord. The node-context argument is kept for callers that
+/// already pass separate D1/varga contexts.
 pub fn node_dignity_in_rashi_with_temporal_context(
     graha: Graha,
     rashi_index: u8,
-    dispositor_rashi_indices_9: &[u8; 9],
+    _node_rashi_indices_9: &[u8; 9],
     temporal_rashi_indices_9: &[u8; 9],
     policy: NodeDignityPolicy,
 ) -> Dignity {
@@ -476,28 +477,17 @@ pub fn node_dignity_in_rashi_with_temporal_context(
     match policy {
         NodeDignityPolicy::AlwaysSama => Dignity::Sama,
         NodeDignityPolicy::SignLordBased => {
-            // Dispositor = lord of node's rashi in the chosen dispositor context.
-            let node_rashi = dispositor_rashi_indices_9[graha.index() as usize];
-            let dispositor = match rashi_lord_by_index(node_rashi) {
-                Some(lord) => lord,
-                None => return Dignity::Sama,
-            };
-
             // Target rashi lord
             let target_lord = match rashi_lord_by_index(rashi_index) {
                 Some(lord) => lord,
                 None => return Dignity::Sama,
             };
 
-            if dispositor == target_lord {
-                return Dignity::OwnSign;
-            }
-
-            // Compound relationship between dispositor and target lord
-            let nais = naisargika_maitri(dispositor, target_lord);
-            let disp_rashi = temporal_rashi_indices_9[dispositor.index() as usize];
+            // Compound relationship between the node and target lord.
+            let nais = naisargika_maitri(graha, target_lord);
+            let node_rashi = temporal_rashi_indices_9[graha.index() as usize];
             let target_lord_rashi = temporal_rashi_indices_9[target_lord.index() as usize];
-            let tatk = tatkalika_maitri(disp_rashi, target_lord_rashi);
+            let tatk = tatkalika_maitri(node_rashi, target_lord_rashi);
             let compound = panchadha_maitri(nais, tatk);
 
             match compound {
@@ -1003,11 +993,22 @@ mod tests {
 
     #[test]
     fn node_dignity_sign_lord_based() {
-        // Rahu in Mesha (0), dispositor=Mars. Target rashi=0 (Mesha), target lord=Mars.
-        // Dispositor == target lord → OwnSign.
+        // Rahu in Mesha targeting Mesha uses Rahu -> Mars natural enmity.
+        // Same-sign temporary enmity makes the compound dignity AdhiShatru.
         let indices: [u8; 9] = [0, 0, 0, 0, 0, 0, 0, 0, 0]; // Rahu in idx 7=0
         let d = node_dignity_in_rashi(Graha::Rahu, 0, &indices, NodeDignityPolicy::SignLordBased);
-        assert_eq!(d, Dignity::OwnSign);
+        assert_eq!(d, Dignity::AdhiShatru);
+    }
+
+    #[test]
+    fn node_dignity_uses_direct_node_natural_table() {
+        // Rahu -> Venus is a natural friend. With Venus one sign from Rahu,
+        // temporary friendship upgrades it to AdhiMitra.
+        let mut indices: [u8; 9] = [0; 9];
+        indices[Graha::Shukra.index() as usize] = 1;
+        indices[Graha::Rahu.index() as usize] = 0;
+        let d = node_dignity_in_rashi(Graha::Rahu, 1, &indices, NodeDignityPolicy::SignLordBased);
+        assert_eq!(d, Dignity::AdhiMitra);
     }
 
     #[test]

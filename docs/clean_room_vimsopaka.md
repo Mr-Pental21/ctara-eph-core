@@ -137,8 +137,10 @@ Sun/Moon/Mars) and provides a configurable `NodeDignityPolicy`:
 ### SignLordBased (default)
 
 The node's dignity in a rashi is determined by the relationship between the
-node's D1 dispositor and the target rashi's lord. For Vimsopaka, the temporal
-component uses the current varga's transformed graha positions.
+node itself and the target rashi's lord, using the project Rahu/Ketu natural
+friendship table. For Vimsopaka, the temporal component also uses the node's
+current varga rashi against the target lord's current varga rashi; dispositors
+are not used for either component.
 
 ### AlwaysSama
 
