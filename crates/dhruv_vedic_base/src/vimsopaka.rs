@@ -14,7 +14,8 @@ use crate::amsha::{Amsha, amsha_longitude};
 use crate::error::VedicError;
 use crate::graha::{ALL_GRAHAS, Graha};
 use crate::graha_relationships::{
-    Dignity, NodeDignityPolicy, dignity_in_rashi_with_positions, node_dignity_in_rashi,
+    Dignity, NodeDignityPolicy, compound_dignity_in_rashi, dignity_in_rashi_with_positions,
+    node_dignity_in_rashi, own_signs,
 };
 use crate::util::normalize_360;
 
@@ -329,13 +330,18 @@ pub fn vimsopaka_bala(
         let dignity = if is_node {
             node_dignity_in_rashi(graha, rashi_idx, &d1_rashi_9, node_policy)
         } else {
-            // For exaltation/debilitation check, use the varga-specific longitude
             let varga_lon = if vw.amsha == Amsha::D1 {
                 normalize_360(sidereal_lon)
             } else {
                 amsha_longitude(sidereal_lon, vw.amsha, None)
             };
-            dignity_in_rashi_with_positions(graha, varga_lon, rashi_idx, &d1_sapta_rashi)
+            if vw.amsha == Amsha::D1 {
+                dignity_in_rashi_with_positions(graha, varga_lon, rashi_idx, &d1_sapta_rashi)
+            } else if own_signs(graha).contains(&rashi_idx) {
+                Dignity::OwnSign
+            } else {
+                compound_dignity_in_rashi(graha, rashi_idx, &d1_sapta_rashi)
+            }
         };
 
         let points = vimsopaka_dignity_points(dignity);
@@ -576,6 +582,27 @@ mod tests {
 
         assert_eq!(result.entries[0].dignity, Dignity::AdhiShatru);
         assert!((result.entries[0].points - 3.0).abs() < EPS);
+    }
+
+    #[test]
+    fn non_d1_varga_dignity_ignores_moolatrikona() {
+        // Mercury's D30 position from this longitude falls in Virgo's
+        // moolatrikona span, but non-D1 vargas ignore moolatrikona and keep
+        // only own-sign plus compound friendship categories.
+        let lons = [0.0, 0.0, 0.0, 339.289, 0.0, 0.0, 0.0, 0.0, 180.0];
+        let result = vimsopaka_bala(
+            Graha::Buddh,
+            lons[Graha::Buddh.index() as usize],
+            &lons,
+            &[VargaWeight {
+                amsha: Amsha::D30,
+                weight: 20.0,
+            }],
+            NodeDignityPolicy::default(),
+        );
+
+        assert_eq!(result.entries[0].dignity, Dignity::OwnSign);
+        assert!((result.entries[0].points - 15.0).abs() < EPS);
     }
 
     // --- Rahu/Ketu ---

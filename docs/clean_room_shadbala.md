@@ -56,17 +56,17 @@ Dignity in each of 7 vargas (D1, D2, D3, D7, D9, D12, D30) contributes points:
 |---------|--------|
 | Moolatrikone | 45 |
 | Own Sign | 30 |
-| Adhi Mitra | 20 |
+| Adhi Mitra | 22.5 |
 | Mitra | 15 |
-| Sama | 10 |
-| Shatru | 4 |
-| Adhi Shatru | 2 |
+| Sama | 7.5 |
+| Shatru | 3.75 |
+| Adhi Shatru | 1.875 |
 
-Sum across 7 vargas. Each varga uses its own target rashi for the dignity being
-scored, including degree-specific moolatrikona and own-house portions from the
-amsha longitude. Temporary friendship for compound relationships is always
-computed from D1 rashi positions. Exaltation and debilitation are not separate
-Saptavargaja categories.
+Sum across 7 vargas. D1/Rashi may use degree-specific moolatrikona and
+own-house portions. The other vargas use own sign where applicable, otherwise
+compound friendship against the varga sign lord; temporary friendship for that
+compound relationship is always computed from D1 rashi positions. Exaltation
+and debilitation are not separate Saptavargaja categories.
 
 ### 1c. Ojhayugma Bala (Odd/Even Sign-Navamsa Strength)
 

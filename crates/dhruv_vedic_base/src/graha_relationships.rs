@@ -385,6 +385,38 @@ pub fn dignity_in_rashi_with_positions(
     }
 }
 
+/// Compound-friendship dignity against a sign lord only.
+///
+/// This intentionally ignores exaltation, debilitation, moolatrikona, and
+/// own-house dignity. It is used for non-D1 varga scoring where the varga sign
+/// is judged only by compound relationship to its lord, while temporary
+/// friendship still comes from D1 rashi positions.
+pub fn compound_dignity_in_rashi(
+    graha: Graha,
+    rashi_index: u8,
+    d1_rashi_indices: &[u8; 7],
+) -> Dignity {
+    if matches!(graha, Graha::Rahu | Graha::Ketu) {
+        return Dignity::Sama;
+    }
+
+    let Some(rashi_lord) = rashi_lord_by_index(rashi_index) else {
+        return Dignity::Sama;
+    };
+    let nais = naisargika_maitri(graha, rashi_lord);
+    let graha_rashi = d1_rashi_indices[graha.index() as usize];
+    let lord_rashi = d1_rashi_indices[rashi_lord.index() as usize];
+    let tatk = tatkalika_maitri(graha_rashi, lord_rashi);
+
+    match panchadha_maitri(nais, tatk) {
+        PanchadhaMaitri::AdhiMitra => Dignity::AdhiMitra,
+        PanchadhaMaitri::Mitra => Dignity::Mitra,
+        PanchadhaMaitri::Sama => Dignity::Sama,
+        PanchadhaMaitri::Shatru => Dignity::Shatru,
+        PanchadhaMaitri::AdhiShatru => Dignity::AdhiShatru,
+    }
+}
+
 // ---------------------------------------------------------------------------
 // 1f. Node Dignity Policy (Rahu/Ketu)
 // ---------------------------------------------------------------------------

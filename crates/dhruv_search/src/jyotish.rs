@@ -30,13 +30,13 @@ use dhruv_vedic_base::{
     SayanadiInputs, SayanadiResult, ShadbalaInputs, TimeUpagrahaConfig, all_avasthas,
     all_combustion_status, all_shadbalas_from_inputs, all_sphutas, amsha_longitude, baladi_avastha,
     bhava_bala_entry, bhrigu_bindu, calculate_ashtakavarga, calculate_bhava_bala,
-    charakarakas_from_longitudes, compute_bhavas, deeptadi_avastha, default_amsha_variation,
-    dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise, graha_drishti,
-    graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord, is_valid_amsha_variation,
-    jagradadi_avastha, jd_tdb_to_centuries, lagna_longitude_rad, lajjitadi_avastha,
-    lost_planetary_war, lunar_node_deg_for_epoch_on_plane, masa_lord as graha_masa_lord,
-    nakshatra_from_longitude, node_dignity_in_rashi, normalize_360, nth_rashi_from,
-    pranapada_lagna, rashi_from_longitude, rashi_lord_by_index,
+    charakarakas_from_longitudes, compound_dignity_in_rashi, compute_bhavas, deeptadi_avastha,
+    default_amsha_variation, dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise,
+    graha_drishti, graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord,
+    is_valid_amsha_variation, jagradadi_avastha, jd_tdb_to_centuries, lagna_longitude_rad,
+    lajjitadi_avastha, lost_planetary_war, lunar_node_deg_for_epoch_on_plane,
+    masa_lord as graha_masa_lord, nakshatra_from_longitude, node_dignity_in_rashi, normalize_360,
+    nth_rashi_from, own_signs, pranapada_lagna, rashi_from_longitude, rashi_lord_by_index,
     samvatsara_lord as graha_samvatsara_lord, sayanadi_all_sub_states, sayanadi_avastha,
     shadbala_from_inputs, sree_lagna, sun_based_upagrahas, time_upagraha_jd_with_config,
     vaar_lord as graha_vaar_lord,
@@ -876,7 +876,13 @@ impl JyotishContext {
                 } else {
                     cached_amsha.longitudes[gi]
                 };
-                dignity_in_rashi_with_positions(graha, varga_lon, rashi_idx, &d1_sapta_rashi)
+                if request.amsha == Amsha::D1 {
+                    dignity_in_rashi_with_positions(graha, varga_lon, rashi_idx, &d1_sapta_rashi)
+                } else if own_signs(graha).contains(&rashi_idx) {
+                    Dignity::OwnSign
+                } else {
+                    compound_dignity_in_rashi(graha, rashi_idx, &d1_sapta_rashi)
+                }
             };
             dignities[gi] = dignity;
             points[gi] = vimsopaka_dignity_points(dignity);
