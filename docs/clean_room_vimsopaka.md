@@ -98,7 +98,7 @@ For each varga, the planet's dignity in that varga's rashi determines points:
 For all vargas, including D1, the planet gets 20 points when the target rashi
 is one of the planet's own signs. Otherwise the varga is scored by compound
 friendship against the target rashi lord. Temporary friendship is computed from
-D1 rashi positions.
+that same varga's transformed rashi positions.
 
 Vimsopaka does not use separate exaltation, debilitation, or moolatrikona
 categories.
@@ -123,9 +123,9 @@ Result is in [0, 20].
 
 For each varga, the planet's dignity is evaluated in that varga's target rashi.
 When that dignity falls through to compound friendship, the temporary friendship
-component is computed from D1 rashi positions, not from the varga-transformed
-positions. This keeps the Panchadha Maitri basis stable across all varga
-scoring.
+component is computed from that varga's transformed rashi positions. This means
+the Panchadha Maitri basis can differ between D1, D2, D3, and every other varga
+in the selected Vimsopaka grouping.
 
 ## Node Dignity Policy (Rahu/Ketu Extension)
 
@@ -136,8 +136,8 @@ configurable `NodeDignityPolicy`:
 ### SignLordBased (default)
 
 The node's dignity in a rashi is determined by the relationship between the
-node's dispositor (sign lord of the node's D1 rashi) and the target rashi's
-lord. The temporal component uses D1 graha positions.
+node's D1 dispositor and the target rashi's lord. For Vimsopaka, the temporal
+component uses the current varga's transformed graha positions.
 
 ### AlwaysSama
 

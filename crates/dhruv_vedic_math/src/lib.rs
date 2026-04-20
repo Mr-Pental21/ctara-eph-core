@@ -87,8 +87,9 @@ pub use graha_relationships::{
     TatkalikaMaitri, compound_dignity_in_rashi, debilitation_degree, dignity_in_rashi,
     dignity_in_rashi_with_positions, exaltation_degree, graha_gender, hora_lord,
     is_own_sign_at_longitude, masa_lord, moolatrikone_range, moon_benefic_nature,
-    naisargika_maitri, natural_benefic_malefic, node_dignity_in_rashi, own_signs, panchadha_maitri,
-    samvatsara_lord, tatkalika_maitri, vaar_lord,
+    naisargika_maitri, natural_benefic_malefic, node_dignity_in_rashi,
+    node_dignity_in_rashi_with_temporal_context, own_signs, panchadha_maitri, samvatsara_lord,
+    tatkalika_maitri, vaar_lord,
 };
 pub use hora::{CHALDEAN_SEQUENCE, HORA_COUNT, Hora, hora_at, vaar_day_lord};
 pub use karana::{ALL_KARANAS, KARANA_SEGMENT_DEG, Karana, KaranaPosition, karana_from_elongation};

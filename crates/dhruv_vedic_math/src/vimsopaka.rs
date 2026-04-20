@@ -14,7 +14,8 @@ use crate::amsha::{Amsha, amsha_longitude};
 use crate::error::VedicError;
 use crate::graha::{ALL_GRAHAS, Graha};
 use crate::graha_relationships::{
-    Dignity, NodeDignityPolicy, compound_dignity_in_rashi, node_dignity_in_rashi, own_signs,
+    Dignity, NodeDignityPolicy, compound_dignity_in_rashi,
+    node_dignity_in_rashi_with_temporal_context, own_signs,
 };
 use crate::util::normalize_360;
 
@@ -292,7 +293,7 @@ pub fn vimsopaka_from_entries(entries: &[VargaDignityEntry]) -> Result<f64, Vedi
 /// Compute Vimsopaka Bala for a single graha using full computation.
 ///
 /// Computes amsha positions for each varga, determines dignity per-varga
-/// using the varga sign for target dignity and D1 positions for temporal friendship.
+/// using the varga sign for target dignity and varga positions for temporal friendship.
 pub fn vimsopaka_bala(
     graha: Graha,
     _sidereal_lon: f64,
@@ -308,9 +309,6 @@ pub fn vimsopaka_bala(
     let mut total_weight = 0.0;
     let d1_rashi_9: [u8; 9] =
         std::array::from_fn(|j| (normalize_360(all_sidereal_lons_9[j]) / 30.0).floor() as u8);
-    let mut d1_sapta_rashi = [0u8; 7];
-    d1_sapta_rashi.copy_from_slice(&d1_rashi_9[..7]);
-
     for vw in vargas {
         // Compute per-varga rashi indices for all 9 grahas
         let mut varga_rashi_9 = [0u8; 9];
@@ -324,15 +322,23 @@ pub fn vimsopaka_bala(
         }
 
         let rashi_idx = varga_rashi_9[gi];
+        let mut varga_sapta_rashi = [0u8; 7];
+        varga_sapta_rashi.copy_from_slice(&varga_rashi_9[..7]);
 
         // Determine dignity
         let dignity = if is_node {
-            node_dignity_in_rashi(graha, rashi_idx, &d1_rashi_9, node_policy)
+            node_dignity_in_rashi_with_temporal_context(
+                graha,
+                rashi_idx,
+                &d1_rashi_9,
+                &varga_rashi_9,
+                node_policy,
+            )
         } else {
             if own_signs(graha).contains(&rashi_idx) {
                 Dignity::OwnSign
             } else {
-                compound_dignity_in_rashi(graha, rashi_idx, &d1_sapta_rashi)
+                compound_dignity_in_rashi(graha, rashi_idx, &varga_sapta_rashi)
             }
         };
 
@@ -553,11 +559,11 @@ mod tests {
     }
 
     #[test]
-    fn compound_friendship_uses_d1_positions() {
+    fn compound_friendship_uses_varga_positions() {
         // Mercury evaluates in D2 Karka, whose lord is Moon.
         // D1 Mercury and Moon are both in Vrishabha, so temporary friendship is enemy.
-        // In D2, Moon moves to Mithuna, which would be temporary friend from Karka;
-        // this test proves that varga-transformed positions are not used for tatkalika.
+        // In D2, Moon moves to Mithuna, which is temporary friend from Karka;
+        // this test proves Vimsopaka uses the varga-transformed positions for tatkalika.
         let lons = [0.0, 50.0, 0.0, 35.0, 0.0, 0.0, 0.0, 0.0, 180.0];
         let result = vimsopaka_bala(
             Graha::Buddh,
@@ -570,8 +576,8 @@ mod tests {
             NodeDignityPolicy::default(),
         );
 
-        assert_eq!(result.entries[0].dignity, Dignity::AdhiShatru);
-        assert!((result.entries[0].points - 5.0).abs() < EPS);
+        assert_eq!(result.entries[0].dignity, Dignity::Sama);
+        assert!((result.entries[0].points - 10.0).abs() < EPS);
     }
 
     #[test]

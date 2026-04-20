@@ -35,8 +35,9 @@ use dhruv_vedic_base::{
     graha_drishti, graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord,
     is_valid_amsha_variation, jagradadi_avastha, jd_tdb_to_centuries, lagna_longitude_rad,
     lajjitadi_avastha, lost_planetary_war, lunar_node_deg_for_epoch_on_plane,
-    masa_lord as graha_masa_lord, nakshatra_from_longitude, node_dignity_in_rashi, normalize_360,
-    nth_rashi_from, own_signs, pranapada_lagna, rashi_from_longitude, rashi_lord_by_index,
+    masa_lord as graha_masa_lord, nakshatra_from_longitude, node_dignity_in_rashi,
+    node_dignity_in_rashi_with_temporal_context, normalize_360, nth_rashi_from, own_signs,
+    pranapada_lagna, rashi_from_longitude, rashi_lord_by_index,
     samvatsara_lord as graha_samvatsara_lord, sayanadi_all_sub_states, sayanadi_avastha,
     shadbala_from_inputs, sree_lagna, sun_based_upagrahas, time_upagraha_jd_with_config,
     vaar_lord as graha_vaar_lord,
@@ -844,7 +845,6 @@ impl JyotishContext {
         aya_config: &SankrantiConfig,
         request: AmshaRequest,
         node_policy: NodeDignityPolicy,
-        sidereal_lons: &[f64; 9],
     ) -> Result<&'a CachedVimsopakaVargaData, SearchError> {
         if let Some(index) = self
             .vimsopaka_varga_cache
@@ -859,22 +859,30 @@ impl JyotishContext {
             return Ok(&self.vimsopaka_varga_cache.entries[index]);
         }
         let cached_amsha = *self.amsha_graha_data(engine, aya_config, request)?;
-        let d1_rashi_indices: [u8; 9] =
-            std::array::from_fn(|idx| (normalize_360(sidereal_lons[idx]) / 30.0).floor() as u8);
-        let mut d1_sapta_rashi = [0u8; 7];
-        d1_sapta_rashi.copy_from_slice(&d1_rashi_indices[..7]);
+        let varga_rashi_indices = cached_amsha.rashi_indices;
+        let d1_rashi_indices = self
+            .amsha_graha_data(engine, aya_config, AmshaRequest::new(Amsha::D1))?
+            .rashi_indices;
+        let mut varga_sapta_rashi = [0u8; 7];
+        varga_sapta_rashi.copy_from_slice(&varga_rashi_indices[..7]);
         let mut dignities = [Dignity::Sama; 9];
         let mut points = [0.0f64; 9];
         for graha in ALL_GRAHAS {
             let gi = graha.index() as usize;
-            let rashi_idx = cached_amsha.rashi_indices[gi];
+            let rashi_idx = varga_rashi_indices[gi];
             let dignity = if matches!(graha, Graha::Rahu | Graha::Ketu) {
-                node_dignity_in_rashi(graha, rashi_idx, &d1_rashi_indices, node_policy)
+                node_dignity_in_rashi_with_temporal_context(
+                    graha,
+                    rashi_idx,
+                    &d1_rashi_indices,
+                    &varga_rashi_indices,
+                    node_policy,
+                )
             } else {
                 if own_signs(graha).contains(&rashi_idx) {
                     Dignity::OwnSign
                 } else {
-                    compound_dignity_in_rashi(graha, rashi_idx, &d1_sapta_rashi)
+                    compound_dignity_in_rashi(graha, rashi_idx, &varga_sapta_rashi)
                 }
             };
             dignities[gi] = dignity;
@@ -2712,15 +2720,11 @@ fn vimsopaka_for_date_with_ctx(
     amsha_plan: &ResolvedAmshaPlan,
     ctx: &mut JyotishContext,
 ) -> Result<VimsopakaResult, SearchError> {
-    let graha_lons = *ctx.graha_lons(engine, aya_config)?;
-    let lons9 = graha_lons.longitudes;
-
     let shad = all_vimsopaka_balas_from_cache(
         engine,
         aya_config,
         amsha_plan,
         ctx,
-        &lons9,
         &VIMSOPAKA_SHADVARGA,
         node_policy,
     )?;
@@ -2729,7 +2733,6 @@ fn vimsopaka_for_date_with_ctx(
         aya_config,
         amsha_plan,
         ctx,
-        &lons9,
         &VIMSOPAKA_SAPTAVARGA,
         node_policy,
     )?;
@@ -2738,7 +2741,6 @@ fn vimsopaka_for_date_with_ctx(
         aya_config,
         amsha_plan,
         ctx,
-        &lons9,
         &VIMSOPAKA_DASHAVARGA,
         node_policy,
     )?;
@@ -2747,7 +2749,6 @@ fn vimsopaka_for_date_with_ctx(
         aya_config,
         amsha_plan,
         ctx,
-        &lons9,
         &VIMSOPAKA_SHODASAVARGA,
         node_policy,
     )?;
@@ -2779,7 +2780,6 @@ fn all_vimsopaka_balas_from_cache(
     aya_config: &SankrantiConfig,
     amsha_plan: &ResolvedAmshaPlan,
     ctx: &mut JyotishContext,
-    sidereal_lons: &[f64; 9],
     vargas: &[VargaWeight],
     node_policy: NodeDignityPolicy,
 ) -> Result<[dhruv_vedic_base::vimsopaka::VimsopakaBala; 9], SearchError> {
@@ -2795,7 +2795,6 @@ fn all_vimsopaka_balas_from_cache(
             aya_config,
             amsha_plan.request_for(varga.amsha),
             node_policy,
-            sidereal_lons,
         )?;
         for graha in ALL_GRAHAS {
             let gi = graha.index() as usize;
@@ -2828,7 +2827,6 @@ fn vimsopaka_entry_from_cache(
     aya_config: &SankrantiConfig,
     amsha_plan: &ResolvedAmshaPlan,
     ctx: &mut JyotishContext,
-    sidereal_lons: &[f64; 9],
     graha: Graha,
     node_policy: NodeDignityPolicy,
 ) -> Result<VimsopakaEntry, SearchError> {
@@ -2843,7 +2841,6 @@ fn vimsopaka_entry_from_cache(
                     aya_config,
                     amsha_plan.request_for(varga.amsha),
                     node_policy,
-                    sidereal_lons,
                 )?;
                 weighted_sum += cached.points[gi] * varga.weight;
                 total_weight += varga.weight;
@@ -2878,14 +2875,12 @@ pub fn vimsopaka_for_graha(
     let mut ctx = JyotishContext::new(engine, Some(eop), utc, aya_config);
     let amsha_plan = resolve_amsha_plan(amsha_selection, false, true, false)?;
     ctx.prime_amsha_graha_data(engine, aya_config, amsha_plan.requests())?;
-    let graha_lons = *ctx.graha_lons(engine, aya_config)?;
     let _ = location;
     vimsopaka_entry_from_cache(
         engine,
         aya_config,
         &amsha_plan,
         &mut ctx,
-        &graha_lons.longitudes,
         graha,
         node_policy,
     )
