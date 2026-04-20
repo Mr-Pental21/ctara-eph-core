@@ -871,7 +871,7 @@ impl JyotishContext {
             let dignity = if matches!(graha, Graha::Rahu | Graha::Ketu) {
                 node_dignity_in_rashi(graha, rashi_idx, &d1_rashi_indices, node_policy)
             } else {
-                if is_vimsopaka_exaltation_sign(graha, rashi_idx) {
+                if request.amsha == Amsha::D1 && is_vimsopaka_exaltation_sign(graha, rashi_idx) {
                     Dignity::Exalted
                 } else if own_signs(graha).contains(&rashi_idx) {
                     Dignity::OwnSign

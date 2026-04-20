@@ -336,7 +336,7 @@ pub fn vimsopaka_bala(
         let dignity = if is_node {
             node_dignity_in_rashi(graha, rashi_idx, &d1_rashi_9, node_policy)
         } else {
-            if is_vimsopaka_exaltation_sign(graha, rashi_idx) {
+            if vw.amsha == Amsha::D1 && is_vimsopaka_exaltation_sign(graha, rashi_idx) {
                 Dignity::Exalted
             } else if own_signs(graha).contains(&rashi_idx) {
                 Dignity::OwnSign
@@ -582,9 +582,10 @@ mod tests {
     }
 
     #[test]
-    fn varga_dignity_exaltation_sign_gets_full_points() {
-        // Mercury's D30 position from this longitude falls in Virgo. Vimsopaka
-        // treats the whole exaltation sign as full strength in any varga.
+    fn non_d1_varga_dignity_ignores_exaltation_sign() {
+        // Mercury's D30 position from this longitude falls in Virgo, Mercury's
+        // exaltation sign. Vimsopaka only applies exaltation-sign strength in D1,
+        // so non-D1 Virgo remains own-sign strength instead.
         let lons = [0.0, 0.0, 0.0, 339.289, 0.0, 0.0, 0.0, 0.0, 180.0];
         let result = vimsopaka_bala(
             Graha::Buddh,
@@ -597,7 +598,7 @@ mod tests {
             NodeDignityPolicy::default(),
         );
 
-        assert_eq!(result.entries[0].dignity, Dignity::Exalted);
+        assert_eq!(result.entries[0].dignity, Dignity::OwnSign);
         assert!((result.entries[0].points - 20.0).abs() < EPS);
     }
 
