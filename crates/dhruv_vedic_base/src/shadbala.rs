@@ -76,7 +76,7 @@ fn is_sapta_graha(graha: Graha) -> bool {
 fn saptavargaja_dignity(
     graha: Graha,
     rashi_index: u8,
-    all_rashi_indices: &[u8; 7],
+    d1_rashi_indices: &[u8; 7],
 ) -> Dignity {
     if matches!(graha, Graha::Rahu | Graha::Ketu) {
         return Dignity::Sama;
@@ -99,8 +99,8 @@ fn saptavargaja_dignity(
     }
 
     let nais = naisargika_maitri(graha, rashi_lord);
-    let graha_rashi = all_rashi_indices[graha.index() as usize];
-    let lord_rashi = all_rashi_indices[rashi_lord.index() as usize];
+    let graha_rashi = d1_rashi_indices[graha.index() as usize];
+    let lord_rashi = d1_rashi_indices[rashi_lord.index() as usize];
     let tatk = tatkalika_maitri(graha_rashi, lord_rashi);
 
     match panchadha_maitri(nais, tatk) {
@@ -143,17 +143,18 @@ pub fn all_uchcha_balas(sidereal_lons: &[f64; 7]) -> [f64; 7] {
 /// Saptavargaja Bala: sum of dignity points across 7 vargas (D1,D2,D3,D7,D9,D12,D30).
 ///
 /// `varga_rashi` is a 7x7 array: `varga_rashi[varga][graha]` = rashi index in that varga.
-/// Uses per-varga rashi positions for compound friendship, NOT D1 reuse.
+/// Uses each varga's target sign, but D1 rashi positions for compound friendship.
 /// Exaltation/debilitation are not Saptavargaja categories.
 pub fn saptavargaja_bala(graha: Graha, _sid_lon: f64, varga_rashi: &[[u8; 7]; 7]) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
     }
     let gi = graha.index() as usize;
+    let d1_rashi_indices = &varga_rashi[0];
     let mut total = 0.0;
     for row in varga_rashi.iter().take(7) {
         let rashi_idx = row[gi];
-        let dignity = saptavargaja_dignity(graha, rashi_idx, row);
+        let dignity = saptavargaja_dignity(graha, rashi_idx, d1_rashi_indices);
         total += saptavargaja_dignity_points(dignity);
     }
     total
@@ -1126,30 +1127,21 @@ mod tests {
     // --- Saptavargaja ---
 
     #[test]
-    fn saptavargaja_per_varga_positions_used() {
+    fn saptavargaja_uses_d1_positions_for_temporal_friendship() {
         // Mercury at 45 deg (Vrishabha). Not exalted/debilitated/own — relies on friendship.
         // Vrishabha lord = Venus. Mercury-Venus = naisargika Friend.
-        // varga1: all grahas at rashi 0 (same sign as Mercury) → tatkalika enemy → Sama
-        // varga2: Venus at rashi 1 (near Mercury rashi 1) → tatkalika friend → AdhiMitra
-        let varga1: [[u8; 7]; 7] = [[1; 7]; 7]; // all in Vrishabha
-        let mut varga2: [[u8; 7]; 7] = [[1; 7]; 7]; // all in Vrishabha
-        // In varga2, shift Venus (idx 5) to rashi 2 → dist from Mercury(1)=1 → friend
-        for v in &mut varga2 {
-            v[5] = 2; // Venus in Mithuna
+        // D1 keeps Venus in the same sign as Mercury: temporary enemy → Sama.
+        // Other vargas move Venus to the next sign, which would be temporary friend
+        // if the implementation incorrectly used each varga for temporal friendship.
+        let mut varga_rashi: [[u8; 7]; 7] = [[1; 7]; 7]; // all in Vrishabha
+        for row in varga_rashi.iter_mut().skip(1) {
+            row[5] = 2; // Venus in Mithuna outside D1
         }
-        // In varga1, Venus at rashi 1 (same) → dist=0 → enemy
 
-        let b1 = saptavargaja_bala(Graha::Buddh, 45.0, &varga1);
-        let b2 = saptavargaja_bala(Graha::Buddh, 45.0, &varga2);
+        let bala = saptavargaja_bala(Graha::Buddh, 45.0, &varga_rashi);
 
-        // b1: Mercury-Venus naisargika=Friend, tatkalika=enemy → Sama → 10 per varga
-        // b2: Mercury-Venus naisargika=Friend, tatkalika=friend → AdhiMitra → 20 per varga
-        assert!((b1 - 70.0).abs() < EPS, "expected 7 Sama vargas");
-        assert!((b2 - 140.0).abs() < EPS, "expected 7 AdhiMitra vargas");
-        assert!(
-            (b1 - b2).abs() > 0.1,
-            "per-varga positions should matter: b1={b1}, b2={b2}"
-        );
+        // Mercury-Venus naisargika=Friend, D1 tatkalika=enemy → Sama → 10 per varga.
+        assert!((bala - 70.0).abs() < EPS, "expected 7 Sama vargas");
     }
 
     #[test]

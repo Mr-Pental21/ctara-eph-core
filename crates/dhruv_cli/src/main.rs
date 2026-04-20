@@ -7168,11 +7168,11 @@ fn main() {
                 let all_rashi_indices = parse_u8s::<7>(
                     args.all_rashi_indices_7.as_deref().unwrap_or_else(|| {
                         eprintln!(
-                            "--all-rashi-indices-7 is required for --op dignity-in-rashi-with-positions"
+                            "--all-rashi-indices-7 is required as D1 positions for --op dignity-in-rashi-with-positions"
                         );
                         std::process::exit(1);
                     }),
-                    "rashi index",
+                    "D1 rashi index",
                 );
                 println!(
                     "{}",
@@ -7196,11 +7196,11 @@ fn main() {
                 let all_rashi_indices = parse_u8s::<9>(
                     args.all_rashi_indices_9.as_deref().unwrap_or_else(|| {
                         eprintln!(
-                            "--all-rashi-indices-9 is required for --op node-dignity-in-rashi"
+                            "--all-rashi-indices-9 is required as D1 positions for --op node-dignity-in-rashi"
                         );
                         std::process::exit(1);
                     }),
-                    "rashi index",
+                    "D1 rashi index",
                 );
                 println!(
                     "{}",

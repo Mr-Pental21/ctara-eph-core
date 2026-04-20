@@ -314,13 +314,13 @@ pub fn dignity_in_rashi(graha: Graha, sidereal_lon: f64, rashi_index: u8) -> Dig
 
 /// Full dignity with temporal (compound) friendship.
 ///
-/// `all_rashi_indices` = 7 sapta graha rashi positions (indexed 0-6).
+/// `d1_rashi_indices` = 7 sapta graha D1 rashi positions (indexed 0-6).
 /// Priority: exaltation > debilitation > moolatrikone > own sign > compound friendship.
 pub fn dignity_in_rashi_with_positions(
     graha: Graha,
     sidereal_lon: f64,
     rashi_index: u8,
-    all_rashi_indices: &[u8; 7],
+    d1_rashi_indices: &[u8; 7],
 ) -> Dignity {
     // Rahu/Ketu: use naisargika-only
     if matches!(graha, Graha::Rahu | Graha::Ketu) {
@@ -350,8 +350,8 @@ pub fn dignity_in_rashi_with_positions(
 
     // For compound friendship, need naisargika + tatkalika
     let nais = naisargika_maitri(graha, rashi_lord);
-    let graha_rashi = all_rashi_indices[graha.index() as usize];
-    let lord_rashi = all_rashi_indices[rashi_lord.index() as usize];
+    let graha_rashi = d1_rashi_indices[graha.index() as usize];
+    let lord_rashi = d1_rashi_indices[rashi_lord.index() as usize];
     let tatk = tatkalika_maitri(graha_rashi, lord_rashi);
     let compound = panchadha_maitri(nais, tatk);
 
@@ -374,8 +374,8 @@ pub fn dignity_in_rashi_with_positions(
 /// This is a configurable extension, isolated for auditability.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum NodeDignityPolicy {
-    /// Sign-lord based: dignity = compound relationship between node's dispositor
-    /// and target rashi lord. Temporal component uses node's rashi vs other positions.
+    /// Sign-lord based: dignity = compound relationship between node's D1 dispositor
+    /// and target rashi lord. Temporal component uses D1 graha positions.
     #[default]
     SignLordBased,
     /// Always Sama (neutral) — safest conservative choice.
@@ -384,12 +384,12 @@ pub enum NodeDignityPolicy {
 
 /// Determine dignity for Rahu/Ketu using the selected policy.
 ///
-/// Requires all 9 graha rashi indices for temporal context.
+/// Requires all 9 D1 graha rashi indices for temporal context.
 /// Returns Sama for non-node grahas (use `dignity_in_rashi_with_positions` instead).
 pub fn node_dignity_in_rashi(
     graha: Graha,
     rashi_index: u8,
-    all_rashi_indices_9: &[u8; 9],
+    d1_rashi_indices_9: &[u8; 9],
     policy: NodeDignityPolicy,
 ) -> Dignity {
     // Only applies to Rahu/Ketu
@@ -400,8 +400,8 @@ pub fn node_dignity_in_rashi(
     match policy {
         NodeDignityPolicy::AlwaysSama => Dignity::Sama,
         NodeDignityPolicy::SignLordBased => {
-            // Dispositor = lord of node's rashi
-            let node_rashi = all_rashi_indices_9[graha.index() as usize];
+            // Dispositor = lord of node's D1 rashi
+            let node_rashi = d1_rashi_indices_9[graha.index() as usize];
             let dispositor = match rashi_lord_by_index(node_rashi) {
                 Some(lord) => lord,
                 None => return Dignity::Sama,
@@ -419,8 +419,8 @@ pub fn node_dignity_in_rashi(
 
             // Compound relationship between dispositor and target lord
             let nais = naisargika_maitri(dispositor, target_lord);
-            let disp_rashi = all_rashi_indices_9[dispositor.index() as usize];
-            let target_lord_rashi = all_rashi_indices_9[target_lord.index() as usize];
+            let disp_rashi = d1_rashi_indices_9[dispositor.index() as usize];
+            let target_lord_rashi = d1_rashi_indices_9[target_lord.index() as usize];
             let tatk = tatkalika_maitri(disp_rashi, target_lord_rashi);
             let compound = panchadha_maitri(nais, tatk);
 

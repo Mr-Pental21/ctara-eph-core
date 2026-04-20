@@ -859,22 +859,24 @@ impl JyotishContext {
             return Ok(&self.vimsopaka_varga_cache.entries[index]);
         }
         let cached_amsha = *self.amsha_graha_data(engine, aya_config, request)?;
+        let d1_rashi_indices: [u8; 9] =
+            std::array::from_fn(|idx| (normalize_360(sidereal_lons[idx]) / 30.0).floor() as u8);
+        let mut d1_sapta_rashi = [0u8; 7];
+        d1_sapta_rashi.copy_from_slice(&d1_rashi_indices[..7]);
         let mut dignities = [Dignity::Sama; 9];
         let mut points = [0.0f64; 9];
         for graha in ALL_GRAHAS {
             let gi = graha.index() as usize;
             let rashi_idx = cached_amsha.rashi_indices[gi];
             let dignity = if matches!(graha, Graha::Rahu | Graha::Ketu) {
-                node_dignity_in_rashi(graha, rashi_idx, &cached_amsha.rashi_indices, node_policy)
+                node_dignity_in_rashi(graha, rashi_idx, &d1_rashi_indices, node_policy)
             } else {
-                let mut sapta_rashi = [0u8; 7];
-                sapta_rashi.copy_from_slice(&cached_amsha.rashi_indices[..7]);
                 let varga_lon = if request.amsha == Amsha::D1 {
                     normalize_360(sidereal_lons[gi])
                 } else {
                     cached_amsha.longitudes[gi]
                 };
-                dignity_in_rashi_with_positions(graha, varga_lon, rashi_idx, &sapta_rashi)
+                dignity_in_rashi_with_positions(graha, varga_lon, rashi_idx, &d1_sapta_rashi)
             };
             dignities[gi] = dignity;
             points[gi] = vimsopaka_dignity_points(dignity);

@@ -114,12 +114,13 @@ score = Σ(weight_i × points_i) / 20
 
 Result is in [0, 20].
 
-## Per-Varga Temporal Friendship
+## Temporal Friendship Basis
 
-For each varga, the planet's temporal friendship is determined by its rashi
-position **within that varga** (i.e., the amsha-transformed position), not by
-the D1 rashi position. This is important because a planet may be in different
-rashis in different vargas, leading to different temporal friendship patterns.
+For each varga, the planet's dignity is evaluated in that varga's target rashi.
+When that dignity falls through to compound friendship, the temporary friendship
+component is computed from D1 rashi positions, not from the varga-transformed
+positions. This keeps the Panchadha Maitri basis stable across all varga
+scoring.
 
 ## Node Dignity Policy (Rahu/Ketu Extension)
 
@@ -131,7 +132,7 @@ configurable `NodeDignityPolicy`:
 
 The node's dignity in a rashi is determined by the relationship between the
 node's dispositor (sign lord of the node's D1 rashi) and the target rashi's
-lord. Temporal component uses the node's rashi position vs other grahas.
+lord. The temporal component uses D1 graha positions.
 
 ### AlwaysSama
 

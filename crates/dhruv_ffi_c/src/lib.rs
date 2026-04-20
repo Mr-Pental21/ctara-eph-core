@@ -9542,10 +9542,10 @@ pub unsafe extern "C" fn dhruv_dignity_in_rashi(
     DhruvStatus::Ok
 }
 
-/// Determine dignity in a rashi using sapta-graha positions for compound friendship.
+/// Determine dignity in a rashi using D1 sapta-graha positions for compound friendship.
 ///
 /// # Safety
-/// `sapta_rashi_indices_7` must point to 7 contiguous values and `out_code` must be valid.
+/// `sapta_rashi_indices_7` must point to 7 contiguous D1 values and `out_code` must be valid.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_dignity_in_rashi_with_positions(
     graha_index: u32,
@@ -9577,10 +9577,10 @@ pub unsafe extern "C" fn dhruv_dignity_in_rashi_with_positions(
     DhruvStatus::Ok
 }
 
-/// Determine node dignity in a rashi using the selected policy.
+/// Determine node dignity in a rashi using D1 graha positions and the selected policy.
 ///
 /// # Safety
-/// `graha_rashi_indices_9` must point to 9 contiguous values and `out_code` must be valid.
+/// `graha_rashi_indices_9` must point to 9 contiguous D1 values and `out_code` must be valid.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dhruv_node_dignity_in_rashi(
     graha_index: u32,

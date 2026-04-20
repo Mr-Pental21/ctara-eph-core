@@ -47,8 +47,9 @@ Dignity in each of 7 vargas (D1, D2, D3, D7, D9, D12, D30) contributes points:
 | Shatru | 4 |
 | Adhi Shatru | 2 |
 
-Sum across 7 vargas. Each varga uses its own rashi positions for temporal friendship
-(not D1 positions reused). Exaltation and debilitation are not separate
+Sum across 7 vargas. Each varga uses its own target rashi for the dignity being
+scored, but temporary friendship for compound relationships is always computed
+from D1 rashi positions. Exaltation and debilitation are not separate
 Saptavargaja categories; each varga is scored from the planet's varga sign.
 
 ### 1c. Ojhayugma Bala (Odd/Even Sign-Navamsa Strength)
