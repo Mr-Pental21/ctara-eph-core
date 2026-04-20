@@ -14,10 +14,11 @@
 //! Clean-room implementation from BPHS.
 
 use crate::drishti::{base_virupa, special_virupa};
-use crate::graha::{Graha, SAPTA_GRAHAS};
+use crate::graha::{Graha, SAPTA_GRAHAS, rashi_lord_by_index};
 use crate::graha_relationships::{
-    BeneficNature, Dignity, GrahaGender, dignity_in_rashi_with_positions, graha_gender,
-    moon_benefic_nature, natural_benefic_malefic,
+    BeneficNature, Dignity, GrahaGender, PanchadhaMaitri, graha_gender, moolatrikone_range,
+    moon_benefic_nature, naisargika_maitri, natural_benefic_malefic, own_signs,
+    panchadha_maitri, tatkalika_maitri,
 };
 use crate::util::normalize_360;
 
@@ -39,34 +40,76 @@ pub const MAX_SPEED: [f64; 7] = [1.0, 15.0, 0.8, 2.2, 0.25, 1.6, 0.13];
 pub const REQUIRED_STRENGTH: [f64; 7] = [390.0, 360.0, 300.0, 420.0, 390.0, 330.0, 300.0];
 
 /// Saptavargaja dignity-to-points mapping.
-const SAPTAVARGAJA_POINTS: [f64; 9] = [
-    30.0, // Exalted
-    22.5, // Moolatrikone
-    20.0, // OwnSign
-    15.0, // AdhiMitra
-    10.0, // Mitra
-    7.5,  // Sama
-    5.0,  // Shatru
-    2.5,  // AdhiShatru
-    1.25, // Debilitated
+///
+/// BPHS Saptavargaja uses moolatrikona/own/five-fold friendship categories
+/// for each varga sign; exaltation and debilitation are not separate
+/// categories in this component.
+const SAPTAVARGAJA_POINTS: [f64; 7] = [
+    45.0, // Moolatrikone
+    30.0, // OwnSign
+    20.0, // AdhiMitra
+    15.0, // Mitra
+    10.0, // Sama
+    4.0,  // Shatru
+    2.0,  // AdhiShatru
 ];
 
 fn saptavargaja_dignity_points(dignity: Dignity) -> f64 {
     match dignity {
-        Dignity::Exalted => SAPTAVARGAJA_POINTS[0],
-        Dignity::Moolatrikone => SAPTAVARGAJA_POINTS[1],
-        Dignity::OwnSign => SAPTAVARGAJA_POINTS[2],
-        Dignity::AdhiMitra => SAPTAVARGAJA_POINTS[3],
-        Dignity::Mitra => SAPTAVARGAJA_POINTS[4],
-        Dignity::Sama => SAPTAVARGAJA_POINTS[5],
-        Dignity::Shatru => SAPTAVARGAJA_POINTS[6],
-        Dignity::AdhiShatru => SAPTAVARGAJA_POINTS[7],
-        Dignity::Debilitated => SAPTAVARGAJA_POINTS[8],
+        Dignity::Moolatrikone => SAPTAVARGAJA_POINTS[0],
+        Dignity::OwnSign => SAPTAVARGAJA_POINTS[1],
+        Dignity::AdhiMitra => SAPTAVARGAJA_POINTS[2],
+        Dignity::Mitra => SAPTAVARGAJA_POINTS[3],
+        Dignity::Sama => SAPTAVARGAJA_POINTS[4],
+        Dignity::Shatru => SAPTAVARGAJA_POINTS[5],
+        Dignity::AdhiShatru => SAPTAVARGAJA_POINTS[6],
+        Dignity::Exalted | Dignity::Debilitated => {
+            unreachable!("Saptavargaja scoring does not classify exaltation/debilitation")
+        }
     }
 }
 
 fn is_sapta_graha(graha: Graha) -> bool {
     graha.index() < 7
+}
+
+fn saptavargaja_dignity(
+    graha: Graha,
+    rashi_index: u8,
+    all_rashi_indices: &[u8; 7],
+) -> Dignity {
+    if matches!(graha, Graha::Rahu | Graha::Ketu) {
+        return Dignity::Sama;
+    }
+
+    if moolatrikone_range(graha).is_some_and(|(mt_rashi, _, _)| mt_rashi == rashi_index) {
+        return Dignity::Moolatrikone;
+    }
+
+    if own_signs(graha).contains(&rashi_index) {
+        return Dignity::OwnSign;
+    }
+
+    let rashi_lord = match rashi_lord_by_index(rashi_index) {
+        Some(lord) => lord,
+        None => return Dignity::Sama,
+    };
+    if rashi_lord == graha {
+        return Dignity::OwnSign;
+    }
+
+    let nais = naisargika_maitri(graha, rashi_lord);
+    let graha_rashi = all_rashi_indices[graha.index() as usize];
+    let lord_rashi = all_rashi_indices[rashi_lord.index() as usize];
+    let tatk = tatkalika_maitri(graha_rashi, lord_rashi);
+
+    match panchadha_maitri(nais, tatk) {
+        PanchadhaMaitri::AdhiMitra => Dignity::AdhiMitra,
+        PanchadhaMaitri::Mitra => Dignity::Mitra,
+        PanchadhaMaitri::Sama => Dignity::Sama,
+        PanchadhaMaitri::Shatru => Dignity::Shatru,
+        PanchadhaMaitri::AdhiShatru => Dignity::AdhiShatru,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -101,7 +144,8 @@ pub fn all_uchcha_balas(sidereal_lons: &[f64; 7]) -> [f64; 7] {
 ///
 /// `varga_rashi` is a 7x7 array: `varga_rashi[varga][graha]` = rashi index in that varga.
 /// Uses per-varga rashi positions for compound friendship, NOT D1 reuse.
-pub fn saptavargaja_bala(graha: Graha, sid_lon: f64, varga_rashi: &[[u8; 7]; 7]) -> f64 {
+/// Exaltation/debilitation are not Saptavargaja categories.
+pub fn saptavargaja_bala(graha: Graha, _sid_lon: f64, varga_rashi: &[[u8; 7]; 7]) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
     }
@@ -109,7 +153,7 @@ pub fn saptavargaja_bala(graha: Graha, sid_lon: f64, varga_rashi: &[[u8; 7]; 7])
     let mut total = 0.0;
     for row in varga_rashi.iter().take(7) {
         let rashi_idx = row[gi];
-        let dignity = dignity_in_rashi_with_positions(graha, sid_lon, rashi_idx, row);
+        let dignity = saptavargaja_dignity(graha, rashi_idx, row);
         total += saptavargaja_dignity_points(dignity);
     }
     total
@@ -1098,12 +1142,24 @@ mod tests {
         let b1 = saptavargaja_bala(Graha::Buddh, 45.0, &varga1);
         let b2 = saptavargaja_bala(Graha::Buddh, 45.0, &varga2);
 
-        // b1: Mercury-Venus naisargika=Friend, tatkalika=enemy → Sama → 7.5 per varga
-        // b2: Mercury-Venus naisargika=Friend, tatkalika=friend → AdhiMitra → 15 per varga
+        // b1: Mercury-Venus naisargika=Friend, tatkalika=enemy → Sama → 10 per varga
+        // b2: Mercury-Venus naisargika=Friend, tatkalika=friend → AdhiMitra → 20 per varga
+        assert!((b1 - 70.0).abs() < EPS, "expected 7 Sama vargas");
+        assert!((b2 - 140.0).abs() < EPS, "expected 7 AdhiMitra vargas");
         assert!(
             (b1 - b2).abs() > 0.1,
             "per-varga positions should matter: b1={b1}, b2={b2}"
         );
+    }
+
+    #[test]
+    fn saptavargaja_uses_varga_sign_not_natal_exaltation() {
+        // Natal Sun in Mesha must not make Sun exalted in Vrishabha vargas.
+        // Vrishabha lord Venus is Sun's natural enemy; with all grahas in the
+        // same sign, temporal relation is enemy, so each varga is AdhiShatru.
+        let varga_rashi: [[u8; 7]; 7] = [[1; 7]; 7];
+        let bala = saptavargaja_bala(Graha::Surya, 3.0, &varga_rashi);
+        assert!((bala - 14.0).abs() < EPS);
     }
 
     // --- all_* = individual ---

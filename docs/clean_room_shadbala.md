@@ -41,14 +41,15 @@ Dignity in each of 7 vargas (D1, D2, D3, D7, D9, D12, D30) contributes points:
 |---------|--------|
 | Moolatrikone | 45 |
 | Own Sign | 30 |
-| Adhi Mitra | 22.5 |
+| Adhi Mitra | 20 |
 | Mitra | 15 |
-| Sama | 7.5 |
-| Shatru | 3.75 |
-| Adhi Shatru | 1.875 |
+| Sama | 10 |
+| Shatru | 4 |
+| Adhi Shatru | 2 |
 
 Sum across 7 vargas. Each varga uses its own rashi positions for temporal friendship
-(not D1 positions reused).
+(not D1 positions reused). Exaltation and debilitation are not separate
+Saptavargaja categories; each varga is scored from the planet's varga sign.
 
 ### 1c. Ojhayugma Bala (Odd/Even Sign-Navamsa Strength)
 
@@ -203,6 +204,6 @@ Enemy otherwise.
 | Enemy + Friend | Sama |
 | Enemy + Enemy | Adhi Shatru |
 
-### Dignity Hierarchy
+### General Dignity Hierarchy
 
 Check order: Exalted → Debilitated → Moolatrikone → Own Sign → Compound friendship.
