@@ -98,6 +98,11 @@ For each varga, the planet's dignity in that varga's rashi determines points:
 | Adhi Shatru | 3 |
 | Debilitated | 2 |
 
+Moolatrikona and own-house classifications are degree-specific in signs where
+the sign is partitioned. For example, Mercury in Virgo is exalted from
+0°-15°, moolatrikona from 15°-20°, and own house from 20°-30°; Moon in Taurus
+is exalted from 0°-3° and moolatrikona from 3°-30°.
+
 ## Computation
 
 For each varga grouping:

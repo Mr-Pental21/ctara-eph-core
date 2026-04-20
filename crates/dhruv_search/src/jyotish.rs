@@ -2923,8 +2923,9 @@ fn assemble_shadbala_inputs(
     // 3. Speeds (deg/day) for sapta grahas
     let speeds = ctx.graha_speeds(engine)?;
 
-    // 4. Varga rashi indices: 7 vargas × 7 grahas for saptavargaja bala
-    let varga_rashi_indices = assemble_varga_rashi_indices(engine, aya_config, ctx, amsha_plan)?;
+    // 4. Varga data: 7 vargas × 7 grahas for saptavargaja bala
+    let (varga_rashi_indices, varga_longitudes) =
+        assemble_varga_data(engine, aya_config, ctx, amsha_plan)?;
 
     // 5. Kala Bala inputs
     let (jd_sunrise, jd_next_sunrise) =
@@ -2990,6 +2991,7 @@ fn assemble_shadbala_inputs(
             },
         },
         varga_rashi_indices,
+        varga_longitudes,
     })
 }
 
@@ -3068,22 +3070,23 @@ fn classify_bhavabala_birth_period(
     }
 }
 
-/// Compute varga rashi indices for the 7 saptavargaja vargas × 7 sapta grahas.
+/// Compute varga longitudes and rashi indices for the 7 saptavargaja vargas × 7 sapta grahas.
 ///
 /// The 7 vargas are: D1, D2, D3, D7, D9, D12, D30.
-/// For each varga, compute amsha_longitude for each sapta graha and derive rashi index.
-fn assemble_varga_rashi_indices(
+fn assemble_varga_data(
     engine: &Engine,
     aya_config: &SankrantiConfig,
     ctx: &mut JyotishContext,
     plan: &ResolvedAmshaPlan,
-) -> Result<[[u8; 7]; 7], SearchError> {
-    let mut result = [[0u8; 7]; 7];
+) -> Result<([[u8; 7]; 7], [[f64; 7]; 7]), SearchError> {
+    let mut rashi_indices = [[0u8; 7]; 7];
+    let mut longitudes = [[0.0f64; 7]; 7];
     for (vi, amsha) in SHADBALA_REQUIRED_AMSHAS.iter().enumerate() {
         let cached = ctx.amsha_graha_data(engine, aya_config, plan.request_for(*amsha))?;
-        result[vi].copy_from_slice(&cached.rashi_indices[..7]);
+        rashi_indices[vi].copy_from_slice(&cached.rashi_indices[..7]);
+        longitudes[vi].copy_from_slice(&cached.longitudes[..7]);
     }
-    Ok(result)
+    Ok((rashi_indices, longitudes))
 }
 
 /// Resolve the four Kala Bala lords: year, month, weekday, hora.

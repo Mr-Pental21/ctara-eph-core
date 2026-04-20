@@ -16,9 +16,9 @@
 use crate::drishti::{base_virupa, special_virupa};
 use crate::graha::{Graha, SAPTA_GRAHAS, rashi_lord_by_index};
 use crate::graha_relationships::{
-    BeneficNature, Dignity, GrahaGender, PanchadhaMaitri, graha_gender, moolatrikone_range,
-    moon_benefic_nature, naisargika_maitri, natural_benefic_malefic, own_signs, panchadha_maitri,
-    tatkalika_maitri,
+    BeneficNature, Dignity, GrahaGender, PanchadhaMaitri, graha_gender, is_own_sign_at_longitude,
+    moolatrikone_range, moon_benefic_nature, naisargika_maitri, natural_benefic_malefic,
+    panchadha_maitri, tatkalika_maitri,
 };
 use crate::util::normalize_360;
 
@@ -73,16 +73,34 @@ fn is_sapta_graha(graha: Graha) -> bool {
     graha.index() < 7
 }
 
-fn saptavargaja_dignity(graha: Graha, rashi_index: u8, d1_rashi_indices: &[u8; 7]) -> Dignity {
+fn is_saptavargaja_moolatrikone(graha: Graha, varga_lon: f64) -> bool {
+    let Some((mt_rashi, start, end)) = moolatrikone_range(graha) else {
+        return false;
+    };
+    let lon = normalize_360(varga_lon);
+    let lon_rashi = ((lon / 30.0).floor() as u8).min(11);
+    if lon_rashi != mt_rashi {
+        return false;
+    }
+    let deg_in_rashi = lon - (mt_rashi as f64) * 30.0;
+    deg_in_rashi >= start && deg_in_rashi < end
+}
+
+fn saptavargaja_dignity(
+    graha: Graha,
+    varga_lon: f64,
+    rashi_index: u8,
+    d1_rashi_indices: &[u8; 7],
+) -> Dignity {
     if matches!(graha, Graha::Rahu | Graha::Ketu) {
         return Dignity::Sama;
     }
 
-    if moolatrikone_range(graha).is_some_and(|(mt_rashi, _, _)| mt_rashi == rashi_index) {
+    if is_saptavargaja_moolatrikone(graha, varga_lon) {
         return Dignity::Moolatrikone;
     }
 
-    if own_signs(graha).contains(&rashi_index) {
+    if is_own_sign_at_longitude(graha, varga_lon, rashi_index) {
         return Dignity::OwnSign;
     }
 
@@ -90,10 +108,6 @@ fn saptavargaja_dignity(graha: Graha, rashi_index: u8, d1_rashi_indices: &[u8; 7
         Some(lord) => lord,
         None => return Dignity::Sama,
     };
-    if rashi_lord == graha {
-        return Dignity::OwnSign;
-    }
-
     let nais = naisargika_maitri(graha, rashi_lord);
     let graha_rashi = d1_rashi_indices[graha.index() as usize];
     let lord_rashi = d1_rashi_indices[rashi_lord.index() as usize];
@@ -139,28 +153,37 @@ pub fn all_uchcha_balas(sidereal_lons: &[f64; 7]) -> [f64; 7] {
 /// Saptavargaja Bala: sum of dignity points across 7 vargas (D1,D2,D3,D7,D9,D12,D30).
 ///
 /// `varga_rashi` is a 7x7 array: `varga_rashi[varga][graha]` = rashi index in that varga.
+/// `varga_longitudes` is the matching amsha longitude array.
 /// Uses each varga's target sign, but D1 rashi positions for compound friendship.
 /// Exaltation/debilitation are not Saptavargaja categories.
-pub fn saptavargaja_bala(graha: Graha, _sid_lon: f64, varga_rashi: &[[u8; 7]; 7]) -> f64 {
+pub fn saptavargaja_bala(
+    graha: Graha,
+    varga_rashi: &[[u8; 7]; 7],
+    varga_longitudes: &[[f64; 7]; 7],
+) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
     }
     let gi = graha.index() as usize;
     let d1_rashi_indices = &varga_rashi[0];
     let mut total = 0.0;
-    for row in varga_rashi.iter().take(7) {
+    for (vi, row) in varga_rashi.iter().take(7).enumerate() {
         let rashi_idx = row[gi];
-        let dignity = saptavargaja_dignity(graha, rashi_idx, d1_rashi_indices);
+        let dignity =
+            saptavargaja_dignity(graha, varga_longitudes[vi][gi], rashi_idx, d1_rashi_indices);
         total += saptavargaja_dignity_points(dignity);
     }
     total
 }
 
 /// Saptavargaja bala for all 7 sapta grahas.
-pub fn all_saptavargaja_balas(sidereal_lons: &[f64; 7], varga_rashi: &[[u8; 7]; 7]) -> [f64; 7] {
+pub fn all_saptavargaja_balas(
+    varga_rashi: &[[u8; 7]; 7],
+    varga_longitudes: &[[f64; 7]; 7],
+) -> [f64; 7] {
     let mut result = [0.0; 7];
     for (i, g) in SAPTA_GRAHAS.iter().enumerate() {
-        result[i] = saptavargaja_bala(*g, sidereal_lons[i], varga_rashi);
+        result[i] = saptavargaja_bala(*g, varga_rashi, varga_longitudes);
     }
     result
 }
@@ -293,9 +316,10 @@ pub fn sthana_bala(
     sid_lon: f64,
     bhava: u8,
     varga_rashi: &[[u8; 7]; 7],
+    varga_longitudes: &[[f64; 7]; 7],
 ) -> SthanaBalaBreakdown {
     let u = uchcha_bala(graha, sid_lon);
-    let s = saptavargaja_bala(graha, sid_lon, varga_rashi);
+    let s = saptavargaja_bala(graha, varga_rashi, varga_longitudes);
     let o = ojhayugma_bala(graha, sid_lon);
     let k = kendradi_bala(bhava);
     let d = drekkana_bala(graha, sid_lon);
@@ -314,6 +338,7 @@ pub fn all_sthana_balas(
     lons: &[f64; 7],
     bhavas: &[u8; 7],
     varga_rashi: &[[u8; 7]; 7],
+    varga_longitudes: &[[f64; 7]; 7],
 ) -> [SthanaBalaBreakdown; 7] {
     let mut result = [SthanaBalaBreakdown {
         uchcha: 0.0,
@@ -324,7 +349,7 @@ pub fn all_sthana_balas(
         total: 0.0,
     }; 7];
     for (i, g) in SAPTA_GRAHAS.iter().enumerate() {
-        result[i] = sthana_bala(*g, lons[i], bhavas[i], varga_rashi);
+        result[i] = sthana_bala(*g, lons[i], bhavas[i], varga_rashi, varga_longitudes);
     }
     result
 }
@@ -833,6 +858,8 @@ pub struct ShadbalaInputs {
     pub kala: KalaBalaInputs,
     /// 7 vargas x 7 grahas rashi indices (for saptavargaja bala).
     pub varga_rashi_indices: [[u8; 7]; 7],
+    /// 7 vargas x 7 grahas amsha longitudes (for degree-specific saptavargaja bala).
+    pub varga_longitudes: [[f64; 7]; 7],
 }
 
 /// Compute complete Shadbala for a single graha.
@@ -847,6 +874,7 @@ pub fn shadbala_from_inputs(graha: Graha, inputs: &ShadbalaInputs) -> ShadbalaBr
         inputs.sidereal_lons[gi],
         inputs.bhava_numbers[gi],
         &inputs.varga_rashi_indices,
+        &inputs.varga_longitudes,
     );
     let dig = dig_bala(
         graha,
@@ -1133,8 +1161,9 @@ mod tests {
         for row in varga_rashi.iter_mut().skip(1) {
             row[5] = 2; // Venus in Mithuna outside D1
         }
+        let varga_longitudes = [[45.0; 7]; 7];
 
-        let bala = saptavargaja_bala(Graha::Buddh, 45.0, &varga_rashi);
+        let bala = saptavargaja_bala(Graha::Buddh, &varga_rashi, &varga_longitudes);
 
         // Mercury-Venus naisargika=Friend, D1 tatkalika=enemy → Sama → 10 per varga.
         assert!((bala - 70.0).abs() < EPS, "expected 7 Sama vargas");
@@ -1146,8 +1175,48 @@ mod tests {
         // Vrishabha lord Venus is Sun's natural enemy; with all grahas in the
         // same sign, temporal relation is enemy, so each varga is AdhiShatru.
         let varga_rashi: [[u8; 7]; 7] = [[1; 7]; 7];
-        let bala = saptavargaja_bala(Graha::Surya, 3.0, &varga_rashi);
+        let varga_longitudes = [[45.0; 7]; 7];
+        let bala = saptavargaja_bala(Graha::Surya, &varga_rashi, &varga_longitudes);
         assert!((bala - 14.0).abs() < EPS);
+    }
+
+    #[test]
+    fn saptavargaja_moolatrikona_is_degree_specific() {
+        let mut varga_rashi = [[0u8; 7]; 7];
+        let mut varga_longitudes = [[0.0f64; 7]; 7];
+
+        // Before the MT zone, Mercury in Kanya falls through to self-lord
+        // compound friendship (Shatru here), and Moon in Vrishabha falls
+        // through to Venus compound friendship (Mitra here).
+        for row in &mut varga_rashi {
+            row[Graha::Buddh.index() as usize] = 5; // Kanya
+            row[Graha::Chandra.index() as usize] = 1; // Vrishabha
+        }
+        for row in &mut varga_longitudes {
+            row[Graha::Buddh.index() as usize] = 165.0; // Kanya 15° -> MT starts
+            row[Graha::Chandra.index() as usize] = 33.0; // Vrishabha 3° -> MT starts
+        }
+
+        assert!(
+            (saptavargaja_bala(Graha::Buddh, &varga_rashi, &varga_longitudes) - 315.0).abs() < EPS
+        );
+        assert!(
+            (saptavargaja_bala(Graha::Chandra, &varga_rashi, &varga_longitudes) - 315.0).abs()
+                < EPS
+        );
+
+        for row in &mut varga_longitudes {
+            row[Graha::Buddh.index() as usize] = 164.999; // still exaltation zone, not MT
+            row[Graha::Chandra.index() as usize] = 32.999; // still exaltation zone, not MT
+        }
+
+        assert!(
+            (saptavargaja_bala(Graha::Buddh, &varga_rashi, &varga_longitudes) - 28.0).abs() < EPS
+        );
+        assert!(
+            (saptavargaja_bala(Graha::Chandra, &varga_rashi, &varga_longitudes) - 105.0).abs()
+                < EPS
+        );
     }
 
     // --- all_* = individual ---

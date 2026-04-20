@@ -33,6 +33,21 @@ Exaltation degrees (BPHS ch.3):
 
 Debilitation = exaltation + 180° mod 360°.
 
+### 1a.1 Moolatrikona And Own-House Portions
+
+When a planet's own sign also contains a moolatrikona or exaltation portion,
+only the specified degree span receives that dignity:
+
+| Graha | Sign | Portion |
+|-------|------|---------|
+| Sun | Leo | 0°-20° moolatrikona; 20°-30° own house |
+| Moon | Taurus | 0°-3° exaltation; 3°-30° moolatrikona |
+| Mars | Aries | 0°-12° moolatrikona; 12°-30° own house |
+| Mercury | Virgo | 0°-15° exaltation; 15°-20° moolatrikona; 20°-30° own house |
+| Jupiter | Sagittarius | 0°-10° moolatrikona; 10°-30° own house |
+| Venus | Libra | 0°-15° moolatrikona; 15°-30° own house |
+| Saturn | Aquarius | 0°-20° moolatrikona; 20°-30° own house |
+
 ### 1b. Saptavargaja Bala (Seven-Division Dignity Strength)
 
 Dignity in each of 7 vargas (D1, D2, D3, D7, D9, D12, D30) contributes points:
@@ -48,9 +63,10 @@ Dignity in each of 7 vargas (D1, D2, D3, D7, D9, D12, D30) contributes points:
 | Adhi Shatru | 2 |
 
 Sum across 7 vargas. Each varga uses its own target rashi for the dignity being
-scored, but temporary friendship for compound relationships is always computed
-from D1 rashi positions. Exaltation and debilitation are not separate
-Saptavargaja categories; each varga is scored from the planet's varga sign.
+scored, including degree-specific moolatrikona and own-house portions from the
+amsha longitude. Temporary friendship for compound relationships is always
+computed from D1 rashi positions. Exaltation and debilitation are not separate
+Saptavargaja categories.
 
 ### 1c. Ojhayugma Bala (Odd/Even Sign-Navamsa Strength)
 

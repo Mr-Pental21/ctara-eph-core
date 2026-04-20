@@ -101,6 +101,7 @@ fn shadbala_bench(c: &mut Criterion) {
         sidereal_lons: [280.0, 120.0, 15.0, 170.0, 220.0, 350.0, 195.0],
     };
     let varga_rashi = [[9, 4, 0, 5, 7, 11, 6]; 7];
+    let varga_longitudes = [[280.0, 120.0, 15.0, 170.0, 220.0, 350.0, 195.0]; 7];
     let inputs = ShadbalaInputs {
         sidereal_lons,
         bhava_numbers,
@@ -108,6 +109,7 @@ fn shadbala_bench(c: &mut Criterion) {
         speeds,
         kala,
         varga_rashi_indices: varga_rashi,
+        varga_longitudes,
     };
 
     let mut group = c.benchmark_group("shadbala");

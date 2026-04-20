@@ -1848,8 +1848,8 @@ fn assemble_shadbala_inputs(
     // 3. Speeds (deg/day) for sapta grahas
     let speeds = ctx.graha_speeds(engine)?;
 
-    // 4. Varga rashi indices: 7 vargas × 7 grahas for saptavargaja bala
-    let varga_rashi_indices = assemble_varga_rashi_indices(&sidereal_lons);
+    // 4. Varga data: 7 vargas × 7 grahas for saptavargaja bala
+    let (varga_rashi_indices, varga_longitudes) = assemble_varga_data(&sidereal_lons);
 
     // 5. Kala Bala inputs
     let (jd_sunrise, jd_next_sunrise) =
@@ -1915,14 +1915,14 @@ fn assemble_shadbala_inputs(
             },
         },
         varga_rashi_indices,
+        varga_longitudes,
     })
 }
 
-/// Compute varga rashi indices for the 7 saptavargaja vargas × 7 sapta grahas.
+/// Compute varga longitudes and rashi indices for the 7 saptavargaja vargas × 7 sapta grahas.
 ///
 /// The 7 vargas are: D1, D2, D3, D7, D9, D12, D30.
-/// For each varga, compute amsha_longitude for each sapta graha and derive rashi index.
-fn assemble_varga_rashi_indices(sidereal_lons: &[f64; 9]) -> [[u8; 7]; 7] {
+fn assemble_varga_data(sidereal_lons: &[f64; 9]) -> ([[u8; 7]; 7], [[f64; 7]; 7]) {
     const SAPTAVARGAJA_AMSHAS: [Amsha; 7] = [
         Amsha::D1,
         Amsha::D2,
@@ -1932,14 +1932,16 @@ fn assemble_varga_rashi_indices(sidereal_lons: &[f64; 9]) -> [[u8; 7]; 7] {
         Amsha::D12,
         Amsha::D30,
     ];
-    let mut result = [[0u8; 7]; 7];
+    let mut rashi_indices = [[0u8; 7]; 7];
+    let mut longitudes = [[0.0f64; 7]; 7];
     for (vi, amsha) in SAPTAVARGAJA_AMSHAS.iter().enumerate() {
         for (gi, &sid_lon) in sidereal_lons.iter().enumerate().take(7) {
             let varga_lon = amsha_longitude(sid_lon, *amsha, None);
-            result[vi][gi] = ((varga_lon / 30.0).floor() as u8).min(11);
+            longitudes[vi][gi] = varga_lon;
+            rashi_indices[vi][gi] = ((varga_lon / 30.0).floor() as u8).min(11);
         }
     }
-    result
+    (rashi_indices, longitudes)
 }
 
 /// Resolve the four Kala Bala lords: year, month, weekday, hora.

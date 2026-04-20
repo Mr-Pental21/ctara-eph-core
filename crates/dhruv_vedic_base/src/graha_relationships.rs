@@ -52,14 +52,14 @@ pub const fn debilitation_degree(graha: Graha) -> Option<f64> {
 /// Moolatrikone range: (rashi_index, start_deg_in_rashi, end_deg_in_rashi).
 /// Returns None for Rahu/Ketu.
 ///
-/// Sun 0-20 Leo, Moon 4-20 Tau, Mars 0-12 Ari, Mercury 16-20 Vir,
+/// Sun 0-20 Leo, Moon 3-30 Tau, Mars 0-12 Ari, Mercury 15-20 Vir,
 /// Jupiter 0-10 Sag, Venus 0-15 Lib, Saturn 0-20 Aqu.
 pub const fn moolatrikone_range(graha: Graha) -> Option<(u8, f64, f64)> {
     match graha {
         Graha::Surya => Some((4, 0.0, 20.0)),   // Simha (Leo)
-        Graha::Chandra => Some((1, 4.0, 20.0)), // Vrishabha (Taurus)
+        Graha::Chandra => Some((1, 3.0, 30.0)), // Vrishabha (Taurus), after exaltation zone
         Graha::Mangal => Some((0, 0.0, 12.0)),  // Mesha (Aries)
-        Graha::Buddh => Some((5, 16.0, 20.0)),  // Kanya (Virgo)
+        Graha::Buddh => Some((5, 15.0, 20.0)),  // Kanya (Virgo), after exaltation zone
         Graha::Guru => Some((8, 0.0, 10.0)),    // Dhanu (Sagittarius)
         Graha::Shukra => Some((6, 0.0, 15.0)),  // Tula (Libra)
         Graha::Shani => Some((10, 0.0, 20.0)),  // Kumbha (Aquarius)
@@ -232,14 +232,24 @@ pub enum Dignity {
     Debilitated,
 }
 
-/// Check if sidereal longitude falls in the exaltation rashi.
+/// Check if sidereal longitude falls in the exaltation zone.
 fn is_exalted(graha: Graha, sidereal_lon: f64) -> bool {
-    if let Some(exalt) = exaltation_degree(graha) {
-        let exalt_rashi = (exalt / 30.0) as u8;
-        let lon_rashi = (normalize_360_inner(sidereal_lon) / 30.0).floor() as u8;
-        exalt_rashi == lon_rashi.min(11)
-    } else {
-        false
+    let Some(exalt) = exaltation_degree(graha) else {
+        return false;
+    };
+    let lon = normalize_360_inner(sidereal_lon);
+    let exalt_rashi = (exalt / 30.0) as u8;
+    let lon_rashi = ((lon / 30.0).floor() as u8).min(11);
+    if lon_rashi != exalt_rashi {
+        return false;
+    }
+
+    let deg_in_rashi = lon - (exalt_rashi as f64) * 30.0;
+    match graha {
+        // These exaltation signs overlap the planet's moolatrikona sign.
+        Graha::Chandra => deg_in_rashi < 3.0,
+        Graha::Buddh => deg_in_rashi < 15.0,
+        _ => true,
     }
 }
 
@@ -269,9 +279,28 @@ fn is_in_moolatrikone(graha: Graha, sidereal_lon: f64) -> bool {
     }
 }
 
-/// Check if rashi_index is an own sign for the graha.
-fn is_own_sign(graha: Graha, rashi_index: u8) -> bool {
-    own_signs(graha).contains(&rashi_index)
+/// Check if the longitude is in the planet's own-house portion.
+pub fn is_own_sign_at_longitude(graha: Graha, sidereal_lon: f64, rashi_index: u8) -> bool {
+    if !own_signs(graha).contains(&rashi_index) {
+        return false;
+    }
+
+    let lon = normalize_360_inner(sidereal_lon);
+    let lon_rashi = ((lon / 30.0).floor() as u8).min(11);
+    if lon_rashi != rashi_index {
+        return false;
+    }
+    let deg_in_rashi = lon - (rashi_index as f64) * 30.0;
+
+    match (graha, rashi_index) {
+        (Graha::Surya, 4) => deg_in_rashi >= 20.0,
+        (Graha::Mangal, 0) => deg_in_rashi >= 12.0,
+        (Graha::Buddh, 5) => deg_in_rashi >= 20.0,
+        (Graha::Guru, 8) => deg_in_rashi >= 10.0,
+        (Graha::Shukra, 6) => deg_in_rashi >= 15.0,
+        (Graha::Shani, 10) => deg_in_rashi >= 20.0,
+        _ => true,
+    }
 }
 
 /// Naisargika-only dignity (no temporal context).
@@ -292,7 +321,7 @@ pub fn dignity_in_rashi(graha: Graha, sidereal_lon: f64, rashi_index: u8) -> Dig
     if is_in_moolatrikone(graha, sidereal_lon) {
         return Dignity::Moolatrikone;
     }
-    if is_own_sign(graha, rashi_index) {
+    if is_own_sign_at_longitude(graha, sidereal_lon, rashi_index) {
         return Dignity::OwnSign;
     }
 
@@ -301,10 +330,6 @@ pub fn dignity_in_rashi(graha: Graha, sidereal_lon: f64, rashi_index: u8) -> Dig
         Some(lord) => lord,
         None => return Dignity::Sama,
     };
-    if rashi_lord == graha {
-        return Dignity::OwnSign;
-    }
-
     match naisargika_maitri(graha, rashi_lord) {
         NaisargikaMaitri::Friend => Dignity::Mitra,
         NaisargikaMaitri::Enemy => Dignity::Shatru,
@@ -336,7 +361,7 @@ pub fn dignity_in_rashi_with_positions(
     if is_in_moolatrikone(graha, sidereal_lon) {
         return Dignity::Moolatrikone;
     }
-    if is_own_sign(graha, rashi_index) {
+    if is_own_sign_at_longitude(graha, sidereal_lon, rashi_index) {
         return Dignity::OwnSign;
     }
 
@@ -344,10 +369,6 @@ pub fn dignity_in_rashi_with_positions(
         Some(lord) => lord,
         None => return Dignity::Sama,
     };
-    if rashi_lord == graha {
-        return Dignity::OwnSign;
-    }
-
     // For compound friendship, need naisargika + tatkalika
     let nais = naisargika_maitri(graha, rashi_lord);
     let graha_rashi = d1_rashi_indices[graha.index() as usize];
@@ -606,6 +627,15 @@ mod tests {
     }
 
     #[test]
+    fn moolatrikone_moon_and_mercury_ranges_start_after_exaltation_zone() {
+        assert_eq!(
+            moolatrikone_range(Graha::Chandra),
+            Some((1, 3.0, 30.0))
+        );
+        assert_eq!(moolatrikone_range(Graha::Buddh), Some((5, 15.0, 20.0)));
+    }
+
+    #[test]
     fn moolatrikone_none_rahu() {
         assert!(moolatrikone_range(Graha::Rahu).is_none());
     }
@@ -621,6 +651,17 @@ mod tests {
     #[test]
     fn own_signs_empty_for_rahu() {
         assert!(own_signs(Graha::Rahu).is_empty());
+    }
+
+    #[test]
+    fn own_house_portions_are_degree_specific_in_moolatrikona_signs() {
+        assert!(!is_own_sign_at_longitude(Graha::Surya, 139.999, 4));
+        assert!(is_own_sign_at_longitude(Graha::Surya, 140.0, 4));
+        assert!(!is_own_sign_at_longitude(Graha::Mangal, 11.999, 0));
+        assert!(is_own_sign_at_longitude(Graha::Mangal, 12.0, 0));
+        assert!(!is_own_sign_at_longitude(Graha::Buddh, 169.999, 5));
+        assert!(is_own_sign_at_longitude(Graha::Buddh, 170.0, 5));
+        assert!(is_own_sign_at_longitude(Graha::Buddh, 70.0, 2));
     }
 
     // --- Naisargika Maitri (49 cells) ---
@@ -844,6 +885,25 @@ mod tests {
         // Sun at 145 deg = 25 Leo, past moolatrikone range
         let d = dignity_in_rashi(Graha::Surya, 145.0, 4);
         assert_eq!(d, Dignity::OwnSign);
+    }
+
+    #[test]
+    fn dignity_moon_taurus_exaltation_then_moolatrikona() {
+        assert_eq!(dignity_in_rashi(Graha::Chandra, 32.999, 1), Dignity::Exalted);
+        assert_eq!(
+            dignity_in_rashi(Graha::Chandra, 33.0, 1),
+            Dignity::Moolatrikone
+        );
+    }
+
+    #[test]
+    fn dignity_mercury_virgo_exaltation_moolatrikona_own() {
+        assert_eq!(dignity_in_rashi(Graha::Buddh, 164.999, 5), Dignity::Exalted);
+        assert_eq!(
+            dignity_in_rashi(Graha::Buddh, 165.0, 5),
+            Dignity::Moolatrikone
+        );
+        assert_eq!(dignity_in_rashi(Graha::Buddh, 170.0, 5), Dignity::OwnSign);
     }
 
     #[test]
