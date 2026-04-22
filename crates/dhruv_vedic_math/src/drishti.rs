@@ -44,24 +44,30 @@ pub struct GrahaDrishtiMatrix {
 /// Piecewise base virupa for a given angular distance.
 ///
 /// The formula maps angular separation to aspect strength (virupa units):
-/// - `[0, 30)`:   0
-/// - `[30, 90)`:  `(A - 30) * 0.75`       → 0..45
-/// - `[90, 150)`: `45 - (A - 90) * 0.75`   → 45..0
-/// - `[150, 180)`: `(A - 150) * 2`          → 0..60
-/// - `[180, 300)`: `60 - (A - 180) * 0.5`   → 60..0
+/// - `[0, 30)`:    0
+/// - `[30, 60)`:   `(A - 30) / 2`          → 0..15
+/// - `[60, 90)`:   `A - 45`                → 15..45
+/// - `[90, 120)`:  `30 + (120 - A) / 2`    → 45..30
+/// - `[120, 150)`: `150 - A`               → 30..0
+/// - `[150, 180)`: `(A - 150) * 2`         → 0..60
+/// - `[180, 300)`: `(300 - A) * 0.5`       → 60..0
 /// - `[300, 360)`: 0
 pub fn base_virupa(angular_distance: f64) -> f64 {
     let a = normalize_360(angular_distance);
     if a < 30.0 {
         0.0
+    } else if a < 60.0 {
+        (a - 30.0) / 2.0
     } else if a < 90.0 {
-        (a - 30.0) * 0.75
+        a - 45.0
+    } else if a < 120.0 {
+        30.0 + (120.0 - a) / 2.0
     } else if a < 150.0 {
-        45.0 - (a - 90.0) * 0.75
+        150.0 - a
     } else if a < 180.0 {
         (a - 150.0) * 2.0
     } else if a < 300.0 {
-        60.0 - (a - 180.0) * 0.5
+        (300.0 - a) * 0.5
     } else {
         0.0
     }
@@ -157,27 +163,26 @@ mod tests {
 
     #[test]
     fn base_virupa_at_30() {
-        // Start of [30, 90): (30-30)*0.75 = 0
+        // Start of [30, 60): (30-30)/2 = 0
         assert!((base_virupa(30.0)).abs() < EPS);
     }
 
     #[test]
     fn base_virupa_at_60() {
-        // (60-30)*0.75 = 22.5
-        assert!((base_virupa(60.0) - 22.5).abs() < EPS);
+        // Boundary: enters [60,90), 60-45 = 15
+        assert!((base_virupa(60.0) - 15.0).abs() < EPS);
     }
 
     #[test]
     fn base_virupa_at_90() {
-        // Boundary: from [30,90) last value approaches 45
-        // At 90: enters [90,150), 45-(90-90)*0.75 = 45
+        // Boundary: enters [90,120), 30+(120-90)/2 = 45
         assert!((base_virupa(90.0) - 45.0).abs() < EPS);
     }
 
     #[test]
     fn base_virupa_at_120() {
-        // 45 - (120-90)*0.75 = 45 - 22.5 = 22.5
-        assert!((base_virupa(120.0) - 22.5).abs() < EPS);
+        // Boundary: enters [120,150), 150-120 = 30
+        assert!((base_virupa(120.0) - 30.0).abs() < EPS);
     }
 
     #[test]
@@ -194,13 +199,13 @@ mod tests {
 
     #[test]
     fn base_virupa_at_180() {
-        // [180,300): 60-(180-180)*0.5 = 60
+        // [180,300): (300-180)*0.5 = 60
         assert!((base_virupa(180.0) - 60.0).abs() < EPS);
     }
 
     #[test]
     fn base_virupa_at_240() {
-        // 60-(240-180)*0.5 = 60-30 = 30
+        // (300-240)*0.5 = 30
         assert!((base_virupa(240.0) - 30.0).abs() < EPS);
     }
 
@@ -330,7 +335,7 @@ mod tests {
         // source=350, target=20 → distance=30
         let entry = graha_drishti(Graha::Surya, 350.0, 20.0);
         assert!((entry.angular_distance - 30.0).abs() < EPS);
-        // At 30: (30-30)*0.75 = 0
+        // At 30: (30-30)/2 = 0
         assert!((entry.base_virupa).abs() < EPS);
     }
 
@@ -339,30 +344,30 @@ mod tests {
         // Mars at 0°, target at 100° → distance=100 in [90,120)
         let entry = graha_drishti(Graha::Mangal, 0.0, 100.0);
         assert!((entry.angular_distance - 100.0).abs() < EPS);
-        // base: 45 - (100-90)*0.75 = 45 - 7.5 = 37.5
-        assert!((entry.base_virupa - 37.5).abs() < EPS);
+        // base: 30 + (120-100)/2 = 40
+        assert!((entry.base_virupa - 40.0).abs() < EPS);
         assert!((entry.special_virupa - 15.0).abs() < EPS);
-        assert!((entry.total_virupa - 52.5).abs() < EPS);
+        assert!((entry.total_virupa - 55.0).abs() < EPS);
     }
 
     #[test]
     fn graha_drishti_jupiter_special() {
         // Jupiter at 0°, target at 135° → distance=135 in [120,150)
         let entry = graha_drishti(Graha::Guru, 0.0, 135.0);
-        // base: 45 - (135-90)*0.75 = 45 - 33.75 = 11.25
-        assert!((entry.base_virupa - 11.25).abs() < EPS);
+        // base: 150-135 = 15
+        assert!((entry.base_virupa - 15.0).abs() < EPS);
         assert!((entry.special_virupa - 30.0).abs() < EPS);
-        assert!((entry.total_virupa - 41.25).abs() < EPS);
+        assert!((entry.total_virupa - 45.0).abs() < EPS);
     }
 
     #[test]
     fn graha_drishti_saturn_special() {
         // Saturn at 0°, target at 75° → distance=75 in [60,90)
         let entry = graha_drishti(Graha::Shani, 0.0, 75.0);
-        // base: (75-30)*0.75 = 33.75
-        assert!((entry.base_virupa - 33.75).abs() < EPS);
+        // base: 75-45 = 30
+        assert!((entry.base_virupa - 30.0).abs() < EPS);
         assert!((entry.special_virupa - 45.0).abs() < EPS);
-        assert!((entry.total_virupa - 78.75).abs() < EPS);
+        assert!((entry.total_virupa - 75.0).abs() < EPS);
     }
 
     // --- graha_drishti_matrix tests ---
