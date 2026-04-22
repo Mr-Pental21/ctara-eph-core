@@ -1489,7 +1489,7 @@ DhruvStatus dhruv_moving_osculating_apogees_for_date(
 );
 ```
 
-Batch geocentric moving osculating apogees for Mangal=2, Buddh=3, Guru=4,
+Batch heliocentric moving osculating apogees for Mangal=2, Buddh=3, Guru=4,
 Shukra=5, and Shani=6. Entries preserve caller order and duplicate
 multiplicity. Surya, Chandra, Rahu, and Ketu return invalid input.
 

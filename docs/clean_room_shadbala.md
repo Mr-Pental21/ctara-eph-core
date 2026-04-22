@@ -148,7 +148,7 @@ Winner = planet with more northerly declination. Winner gets +60, loser gets −
 
 ## 4. Cheshta Bala (Motional Strength)
 
-Mangal, Buddh, Guru, Shukra, and Shani use their geocentric moving osculating
+Mangal, Buddh, Guru, Shukra, and Shani use their heliocentric moving osculating
 apogee longitude:
 
 ```text

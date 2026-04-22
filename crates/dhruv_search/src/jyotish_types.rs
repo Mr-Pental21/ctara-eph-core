@@ -120,7 +120,7 @@ impl Default for GrahaLongitudesConfig {
 pub struct MovingOsculatingApogeeEntry {
     /// Requested graha.
     pub graha: Graha,
-    /// Longitude of the geocentric anti-periapsis direction on the configured
+    /// Longitude of the heliocentric aphelion direction on the configured
     /// reference plane before ayanamsha subtraction.
     pub reference_plane_longitude: f64,
     /// Ayanamsha value subtracted from the reference-plane longitude.

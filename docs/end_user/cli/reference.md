@@ -139,7 +139,7 @@ For `shadbala`, `vimsopaka`, `balas`, `avastha`, and `kundali`, use
 resolved union of explicit selections and internally required bala/avastha
 amshas.
 
-`osculating-apogee` returns moving geocentric osculating apogee longitudes for
+`osculating-apogee` returns moving heliocentric osculating apogee longitudes for
 `Mangal,Buddh,Guru,Shukra,Shani`:
 
 ```bash

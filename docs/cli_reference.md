@@ -115,7 +115,7 @@ Adds `--ayanamsha` and `--nutation` flags.
 dhruv graha-longitudes --date 2024-03-20T12:00:00Z --bsp de442s.bsp --lsk naif0012.tls
 ```
 
-### `osculating-apogee` — Moving geocentric osculating apogees
+### `osculating-apogee` — Moving heliocentric osculating apogees
 
 ```
 dhruv osculating-apogee --date 2024-03-20T12:00:00Z \

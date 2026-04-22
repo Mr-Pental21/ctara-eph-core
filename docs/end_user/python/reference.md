@@ -251,7 +251,7 @@ The fuller public surface is intentionally module-based.
 - `graha_longitudes`
   Accepts optional `GrahaLongitudesConfig` with `GrahaLongitudeKind` / `PrecessionModel` selectors, or the default sidereal settings via keyword args.
 - `moving_osculating_apogees_for_date`
-  Returns moving geocentric osculating apogees for graha indices 2..6
+  Returns moving heliocentric osculating apogees for graha indices 2..6
   (`Mangal,Buddh,Guru,Shukra,Shani`) with sidereal longitude, ayanamsha, and
   reference-plane longitude.
 - `graha_positions`

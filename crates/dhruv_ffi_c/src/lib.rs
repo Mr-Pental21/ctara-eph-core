@@ -12218,7 +12218,7 @@ pub unsafe extern "C" fn dhruv_graha_longitudes(
     }
 }
 
-/// Compute geocentric moving osculating apogees for requested grahas at UTC date.
+/// Compute heliocentric moving osculating apogees for requested grahas at UTC date.
 ///
 /// `graha_indices` uses Graha order: Mangal=2, Buddh=3, Guru=4, Shukra=5,
 /// Shani=6. Surya, Chandra, Rahu, and Ketu are rejected.

@@ -730,7 +730,7 @@ pub fn cheshta_kendra(apogee_sidereal_longitude: f64, graha_sidereal_longitude: 
 /// Cheshta Bala from moving osculating apogee.
 ///
 /// Mangal through Shani use the smaller angular distance between the graha
-/// and its geocentric moving osculating apogee, divided by 3. Surya and
+/// and its heliocentric moving osculating apogee, divided by 3. Surya and
 /// Chandra remain 0.
 pub fn cheshta_bala(
     graha: Graha,

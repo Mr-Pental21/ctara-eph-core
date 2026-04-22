@@ -2468,7 +2468,7 @@ enum Commands {
     SiderealLongitude(SiderealLongitudeArgs),
     /// Sidereal longitudes of all 9 grahas
     GrahaLongitudes(GrahaLongitudesArgs),
-    /// Moving osculating apogee longitudes for Mangal/Buddh/Guru/Shukra/Shani
+    /// Moving heliocentric osculating apogee longitudes for Mangal/Buddh/Guru/Shukra/Shani
     OsculatingApogee(OsculatingApogeeArgs),
 
     // -------------------------------------------------------------------
@@ -6805,7 +6805,7 @@ fn main() {
             });
 
             println!(
-                "Moving osculating apogees (system={system:?}{}, plane={reference_plane:?}, precession={precession_model:?}):",
+                "Moving heliocentric osculating apogees (system={system:?}{}, plane={reference_plane:?}, precession={precession_model:?}):",
                 if args.nutation { " +nutation" } else { "" }
             );
             println!(

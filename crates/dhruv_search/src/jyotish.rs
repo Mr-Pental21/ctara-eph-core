@@ -66,10 +66,10 @@ use crate::panchang_types::{MasaInfo, VarshaInfo};
 use crate::sankranti_types::SankrantiConfig;
 
 const BHAVABALA_TWILIGHT_HALF_DAYS: f64 = 5.0 / 60.0;
-/// IAU 2015 nominal Earth gravitational parameter, km^3/s^2.
+/// IAU 2015 nominal solar gravitational parameter, km^3/s^2.
 ///
 /// Provenance is recorded in `docs/clean_room_osculating_apogee.md`.
-const EARTH_GM_KM3_S2: f64 = 398_600.435_436;
+const SOLAR_GM_KM3_S2: f64 = 132_712_440_000.0;
 const SHADBALA_REQUIRED_AMSHAS: [Amsha; 7] = [
     Amsha::D1,
     Amsha::D2,
@@ -1032,7 +1032,7 @@ fn moving_osculating_apogee_entry(
     ))?;
     let state = engine.query(Query {
         target: body,
-        observer: Observer::Body(Body::Earth),
+        observer: Observer::Body(Body::Sun),
         frame: Frame::IcrfJ2000,
         epoch_tdb_jd: jd_tdb,
     })?;
@@ -1041,19 +1041,19 @@ fn moving_osculating_apogee_entry(
     let r_norm = norm(r);
     if r_norm <= f64::EPSILON {
         return Err(SearchError::NoConvergence(
-            "geocentric apogee vector is zero",
+            "heliocentric apogee vector is zero",
         ));
     }
     let h = cross(r, v);
     let vxh = cross(v, h);
     let eccentricity = [
-        vxh[0] / EARTH_GM_KM3_S2 - r[0] / r_norm,
-        vxh[1] / EARTH_GM_KM3_S2 - r[1] / r_norm,
-        vxh[2] / EARTH_GM_KM3_S2 - r[2] / r_norm,
+        vxh[0] / SOLAR_GM_KM3_S2 - r[0] / r_norm,
+        vxh[1] / SOLAR_GM_KM3_S2 - r[1] / r_norm,
+        vxh[2] / SOLAR_GM_KM3_S2 - r[2] / r_norm,
     ];
     if norm(eccentricity) <= f64::EPSILON {
         return Err(SearchError::NoConvergence(
-            "geocentric osculating eccentricity vector is zero",
+            "heliocentric osculating eccentricity vector is zero",
         ));
     }
     let anti_periapsis = [-eccentricity[0], -eccentricity[1], -eccentricity[2]];

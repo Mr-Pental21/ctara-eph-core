@@ -218,7 +218,7 @@ def moving_osculating_apogees_for_date(
     ayanamsha_system=0,
     use_nutation=1,
 ):
-    """Return geocentric moving osculating apogees for requested grahas.
+    """Return heliocentric moving osculating apogees for requested grahas.
 
     `grahas` is an iterable of graha indices. Only Mangal=2, Buddh=3,
     Guru=4, Shukra=5, and Shani=6 are accepted by the core endpoint.

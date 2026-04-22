@@ -93,7 +93,7 @@ fn cli_osculating_apogee_accepts_supported_grahas_and_rejects_sun() {
     let output = run_cli(&refs);
     assert_success(&output, "osculating-apogee");
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("Moving osculating apogees"));
+    assert!(stdout.contains("Moving heliocentric osculating apogees"));
     assert!(stdout.contains("Mangal"));
     assert!(stdout.contains("Buddh"));
 
