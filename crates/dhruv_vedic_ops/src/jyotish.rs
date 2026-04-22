@@ -1845,8 +1845,29 @@ fn assemble_shadbala_inputs(
             ecliptic_to_sidereal(bhava_result.bhavas[max_bhava - 1].cusp_deg, aya, plane);
     }
 
-    // 3. Speeds (deg/day) for sapta grahas
-    let speeds = ctx.graha_speeds(engine)?;
+    // 3. Moving osculating apogees for Cheshta Bala (Surya/Chandra remain 0).
+    let cheshta_config = dhruv_search::GrahaLongitudesConfig::sidereal_with_model(
+        aya_config.ayanamsha_system,
+        aya_config.use_nutation,
+        aya_config.precession_model,
+        aya_config.reference_plane,
+    );
+    let cheshta_apogees = dhruv_search::moving_osculating_apogees(
+        engine,
+        ctx.jd_tdb,
+        &cheshta_config,
+        &[
+            Graha::Mangal,
+            Graha::Buddh,
+            Graha::Guru,
+            Graha::Shukra,
+            Graha::Shani,
+        ],
+    )?;
+    let mut cheshta_apogee_lons = [0.0f64; 7];
+    for entry in cheshta_apogees.entries {
+        cheshta_apogee_lons[entry.graha.index() as usize] = entry.sidereal_longitude;
+    }
 
     // 4. Varga data: 7 vargas × 7 grahas for saptavargaja bala
     let (varga_rashi_indices, varga_longitudes) = assemble_varga_data(&sidereal_lons);
@@ -1898,7 +1919,7 @@ fn assemble_shadbala_inputs(
         sidereal_lons,
         bhava_numbers,
         dig_bala_max_cusp_lons,
-        speeds,
+        cheshta_apogee_lons,
         kala: KalaBalaInputs {
             is_daytime,
             day_night_fraction,

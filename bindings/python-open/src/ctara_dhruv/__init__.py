@@ -104,6 +104,8 @@ from ctara_dhruv.types import (
     SankrantiEvent,
     GrahaEntry,
     GrahaPositions,
+    MovingOsculatingApogeeEntry,
+    MovingOsculatingApogees,
     AmshaVariationCatalog,
     AmshaVariationInfo,
     CharakarakaEntry,
@@ -190,7 +192,8 @@ __all__ = [
     "ChandraGrahanResult", "SuryaGrahanResult",
     "StationaryEvent", "MaxSpeedEvent",
     "LunarPhaseEvent", "SankrantiEvent",
-    "GrahaEntry", "GrahaPositions", "CharakarakaEntry", "CharakarakaResult", "DashaPeriod",
+    "GrahaEntry", "GrahaPositions", "MovingOsculatingApogeeEntry", "MovingOsculatingApogees",
+    "CharakarakaEntry", "CharakarakaResult", "DashaPeriod",
     "DashaSnapshot", "AmshaVariationCatalog", "AmshaVariationInfo",
     # Errors
     "DhruvError",

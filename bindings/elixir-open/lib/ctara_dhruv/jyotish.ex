@@ -14,6 +14,14 @@ defmodule CtaraDhruv.Jyotish do
     do:
       Native.call_engine(&Native.jyotish_run/2, engine, Map.put(request, :op, :graha_longitudes))
 
+  def moving_osculating_apogees(engine, request),
+    do:
+      Native.call_engine(
+        &Native.jyotish_run/2,
+        engine,
+        Map.put(request, :op, :moving_osculating_apogees)
+      )
+
   def graha_positions(engine, request),
     do: Native.call_engine(&Native.jyotish_run/2, engine, Map.put(request, :op, :graha_positions))
 

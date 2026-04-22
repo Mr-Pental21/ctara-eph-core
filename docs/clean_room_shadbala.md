@@ -148,10 +148,23 @@ Winner = planet with more northerly declination. Winner gets +60, loser gets −
 
 ## 4. Cheshta Bala (Motional Strength)
 
-Retrograde = 60. Direct = (|speed| / max_speed) × 60, capped at 60.
-Sun and Moon always = 0 (they never retrograde; their motion is handled elsewhere).
+Mangal, Buddh, Guru, Shukra, and Shani use their geocentric moving osculating
+apogee longitude:
 
-Max speeds (deg/day): Sun=1.0, Moon=15.0, Mars=0.8, Mercury=2.2, Jupiter=0.25, Venus=1.6, Saturn=0.13.
+```text
+cheshta_kendra = normalize_360(apogee_sidereal_longitude - graha_sidereal_longitude)
+
+if cheshta_kendra <= 180:
+    cheshta_bala = cheshta_kendra / 3
+else:
+    cheshta_bala = (360 - cheshta_kendra) / 3
+```
+
+Surya and Chandra always receive 0 Cheshta Bala. Rahu and Ketu are outside the
+Shadbala graha set.
+
+The moving osculating apogee helper and physical constant provenance are
+documented in `docs/clean_room_osculating_apogee.md`.
 
 ## 5. Naisargika Bala (Natural Strength)
 

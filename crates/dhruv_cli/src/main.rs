@@ -1556,6 +1556,34 @@ struct GrahaLongitudesArgs {
 }
 
 #[derive(clap::Args)]
+struct OsculatingApogeeArgs {
+    /// UTC datetime (YYYY-MM-DDThh:mm:ssZ)
+    #[arg(long)]
+    date: String,
+    /// Comma-separated grahas: Mangal,Buddh,Guru,Shukra,Shani
+    #[arg(long)]
+    graha: String,
+    /// Ayanamsha system code (0-19, default 0=Lahiri)
+    #[arg(long, default_value = "0")]
+    ayanamsha: i32,
+    /// Apply nutation correction
+    #[arg(long)]
+    nutation: bool,
+    /// Precession model: vondrak2011 (default), iau2006, lieske1977, newcomb1895
+    #[arg(long, default_value = "vondrak2011")]
+    precession: String,
+    /// Reference plane: default, ecliptic, invariable
+    #[arg(long, default_value = "default")]
+    reference_plane: String,
+    /// Path to SPK kernel
+    #[arg(long)]
+    bsp: Option<PathBuf>,
+    /// Path to leap second kernel
+    #[arg(long)]
+    lsk: Option<PathBuf>,
+}
+
+#[derive(clap::Args)]
 struct KshetraSphutaArgs {
     #[arg(long)]
     venus: f64,
@@ -2440,6 +2468,8 @@ enum Commands {
     SiderealLongitude(SiderealLongitudeArgs),
     /// Sidereal longitudes of all 9 grahas
     GrahaLongitudes(GrahaLongitudesArgs),
+    /// Moving osculating apogee longitudes for Mangal/Buddh/Guru/Shukra/Shani
+    OsculatingApogee(OsculatingApogeeArgs),
 
     // -------------------------------------------------------------------
     // Individual Sphuta Formulas (pure math)
@@ -2958,6 +2988,20 @@ fn parse_graha_name(s: &str) -> Graha {
             eprintln!("Valid: Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, Rahu, Ketu");
             std::process::exit(1);
         }
+    }
+}
+
+fn graha_display_name(graha: Graha) -> &'static str {
+    match graha {
+        Graha::Surya => "Surya",
+        Graha::Chandra => "Chandra",
+        Graha::Mangal => "Mangal",
+        Graha::Buddh => "Buddh",
+        Graha::Guru => "Guru",
+        Graha::Shukra => "Shukra",
+        Graha::Shani => "Shani",
+        Graha::Rahu => "Rahu",
+        Graha::Ketu => "Ketu",
     }
 }
 
@@ -6724,6 +6768,57 @@ fn main() {
                     rashi_info.dms.degrees,
                     rashi_info.dms.minutes,
                     rashi_info.dms.seconds,
+                );
+            }
+        }
+
+        Commands::OsculatingApogee(args) => {
+            let utc = parse_utc(&args.date).unwrap_or_else(|e| {
+                eprintln!("{e}");
+                std::process::exit(1);
+            });
+            let system = require_aya_system(args.ayanamsha);
+            let engine = load_engine(&args.bsp, &args.lsk);
+            let jd_tdb = utc_to_jd_tdb_with_policy(&utc, engine.lsk(), time_policy);
+            let precession_model = parse_precession_model(&args.precession);
+            let reference_plane =
+                parse_reference_plane_arg(&args.reference_plane, system.default_reference_plane());
+            let grahas: Vec<Graha> = args
+                .graha
+                .split(',')
+                .map(|name| parse_graha_name(name.trim()))
+                .collect();
+            let result = dhruv_search::moving_osculating_apogees(
+                &engine,
+                jd_tdb,
+                &dhruv_search::GrahaLongitudesConfig::sidereal_with_model(
+                    system,
+                    args.nutation,
+                    precession_model,
+                    reference_plane,
+                ),
+                &grahas,
+            )
+            .unwrap_or_else(|e| {
+                eprintln!("Error: {e}");
+                std::process::exit(1);
+            });
+
+            println!(
+                "Moving osculating apogees (system={system:?}{}, plane={reference_plane:?}, precession={precession_model:?}):",
+                if args.nutation { " +nutation" } else { "" }
+            );
+            println!(
+                "{:<10} {:>14} {:>14} {:>14}",
+                "Graha", "Sidereal", "Ayanamsha", "Ref-plane"
+            );
+            for entry in result.entries {
+                println!(
+                    "{:<10} {:>13.6}° {:>13.6}° {:>13.6}°",
+                    graha_display_name(entry.graha),
+                    entry.sidereal_longitude,
+                    entry.ayanamsha_deg,
+                    entry.reference_plane_longitude,
                 );
             }
         }

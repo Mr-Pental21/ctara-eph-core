@@ -128,6 +128,7 @@ are omitted, the Elixir wrapper aligns with the shared wrapper convention:
 `CtaraDhruv.Jyotish`:
 
 - `graha_longitudes/2`
+- `moving_osculating_apogees/2`
 - `graha_positions/2`
 - `special_lagnas/2`
 - `arudha/2`

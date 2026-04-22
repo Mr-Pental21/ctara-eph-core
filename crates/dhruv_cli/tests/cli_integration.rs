@@ -35,6 +35,16 @@ fn kernel_args() -> Vec<String> {
     ]
 }
 
+fn kernel_args_no_eop() -> Vec<String> {
+    let base = kernel_base();
+    vec![
+        "--bsp".to_string(),
+        base.join("de442s.bsp").display().to_string(),
+        "--lsk".to_string(),
+        base.join("naif0012.tls").display().to_string(),
+    ]
+}
+
 fn common_date_location_args() -> Vec<String> {
     vec![
         "--date".to_string(),
@@ -62,6 +72,44 @@ fn assert_success(output: &Output, context: &str) {
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
+}
+
+#[test]
+fn cli_osculating_apogee_accepts_supported_grahas_and_rejects_sun() {
+    if !kernels_available() {
+        eprintln!("Skipping cli_osculating_apogee: kernels not found");
+        return;
+    }
+    let mut args = vec![
+        "--no-config".to_string(),
+        "osculating-apogee".to_string(),
+        "--date".to_string(),
+        "2025-01-15T12:00:00Z".to_string(),
+        "--graha".to_string(),
+        "Mangal,Buddh,Mangal".to_string(),
+    ];
+    args.extend(kernel_args_no_eop());
+    let refs = args.iter().map(String::as_str).collect::<Vec<_>>();
+    let output = run_cli(&refs);
+    assert_success(&output, "osculating-apogee");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Moving osculating apogees"));
+    assert!(stdout.contains("Mangal"));
+    assert!(stdout.contains("Buddh"));
+
+    let mut invalid = vec![
+        "--no-config".to_string(),
+        "osculating-apogee".to_string(),
+        "--date".to_string(),
+        "2025-01-15T12:00:00Z".to_string(),
+        "--graha".to_string(),
+        "Surya".to_string(),
+    ];
+    invalid.extend(kernel_args_no_eop());
+    let invalid_refs = invalid.iter().map(String::as_str).collect::<Vec<_>>();
+    let output = run_cli(&invalid_refs);
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("supports only"));
 }
 
 #[test]

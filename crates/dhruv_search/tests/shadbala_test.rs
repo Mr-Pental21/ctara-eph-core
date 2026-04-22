@@ -8,11 +8,11 @@ use dhruv_core::{Engine, EngineConfig};
 use dhruv_search::sankranti_types::SankrantiConfig;
 use dhruv_search::{
     AmshaSelectionConfig, FullKundaliConfig, GrahaPositionsConfig, balas_for_date,
-    bhavabala_for_bhava, bhavabala_for_date, shadbala_for_date, shadbala_for_graha,
-    vimsopaka_for_date, vimsopaka_for_graha,
+    bhavabala_for_bhava, bhavabala_for_date, moving_osculating_apogees_for_date, shadbala_for_date,
+    shadbala_for_graha, vimsopaka_for_date, vimsopaka_for_graha,
 };
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
-use dhruv_vedic_base::{BhavaConfig, Graha, NodeDignityPolicy};
+use dhruv_vedic_base::{BhavaConfig, Graha, NodeDignityPolicy, cheshta_bala};
 
 use dhruv_time::{EopKernel, UtcTime};
 
@@ -43,6 +43,76 @@ fn default_aya_config() -> SankrantiConfig {
 
 fn new_delhi() -> GeoLocation {
     GeoLocation::new(28.6139, 77.2090, 0.0)
+}
+
+#[test]
+fn shadbala_cheshta_uses_moving_osculating_apogee() {
+    let engine = match load_engine() {
+        Some(e) => e,
+        None => return,
+    };
+    let eop = match load_eop() {
+        Some(e) => e,
+        None => return,
+    };
+    let utc = UtcTime {
+        year: 2026,
+        month: 4,
+        day: 17,
+        hour: 13,
+        minute: 25,
+        second: 39.0,
+    };
+    let location = new_delhi();
+    let bhava_config = BhavaConfig::default();
+    let riseset_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+    let shadbala = shadbala_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &bhava_config,
+        &riseset_config,
+        &aya_config,
+        &AmshaSelectionConfig::default(),
+    )
+    .expect("shadbala should succeed");
+    let apogees = moving_osculating_apogees_for_date(
+        &engine,
+        Some(&eop),
+        &utc,
+        &dhruv_search::GrahaLongitudesConfig::sidereal_with_model(
+            aya_config.ayanamsha_system,
+            aya_config.use_nutation,
+            aya_config.precession_model,
+            aya_config.reference_plane,
+        ),
+        &[Graha::Mangal],
+    )
+    .expect("apogee should succeed");
+    let mangal = shadbala
+        .entries
+        .iter()
+        .find(|entry| entry.graha == Graha::Mangal)
+        .expect("Mangal entry");
+    let graha_lons = dhruv_search::graha_longitudes(
+        &engine,
+        utc.to_jd_tdb(engine.lsk()),
+        &dhruv_search::GrahaLongitudesConfig::sidereal_with_model(
+            aya_config.ayanamsha_system,
+            aya_config.use_nutation,
+            aya_config.precession_model,
+            aya_config.reference_plane,
+        ),
+    )
+    .expect("graha longitudes should succeed");
+    let expected = cheshta_bala(
+        Graha::Mangal,
+        graha_lons.longitude(Graha::Mangal),
+        apogees.entries[0].sidereal_longitude,
+    );
+    assert!((mangal.cheshta - expected).abs() < 1e-9);
 }
 
 fn utc_2024_jan_15() -> UtcTime {

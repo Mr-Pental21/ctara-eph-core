@@ -125,6 +125,7 @@ Jyotish and chart building:
 - `drishti`
 - `ashtakavarga`
 - `charakaraka`
+- `osculating-apogee`
 - `shadbala`
 - `bhavabala`
 - `balas`
@@ -137,6 +138,17 @@ For `shadbala`, `vimsopaka`, `balas`, `avastha`, and `kundali`, use
 `kundali --include-amshas` is enabled, returned amsha charts include the full
 resolved union of explicit selections and internally required bala/avastha
 amshas.
+
+`osculating-apogee` returns moving geocentric osculating apogee longitudes for
+`Mangal,Buddh,Guru,Shukra,Shani`:
+
+```bash
+dhruv osculating-apogee --date 2026-04-17T13:25:39Z \
+  --graha Mangal,Buddh,Guru --ayanamsha 0 --nutation
+```
+
+The output includes sidereal apogee longitude, ayanamsha, and reference-plane
+longitude. Surya, Chandra, Rahu, and Ketu are invalid for this endpoint.
 
 Amsha:
 

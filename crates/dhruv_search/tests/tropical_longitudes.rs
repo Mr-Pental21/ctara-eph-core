@@ -5,8 +5,8 @@
 use std::path::Path;
 
 use dhruv_core::{Engine, EngineConfig};
-use dhruv_search::{GrahaLongitudesConfig, graha_longitudes};
-use dhruv_vedic_base::{ALL_GRAHAS, AyanamshaSystem, ayanamsha_deg, jd_tdb_to_centuries};
+use dhruv_search::{GrahaLongitudesConfig, graha_longitudes, moving_osculating_apogees};
+use dhruv_vedic_base::{ALL_GRAHAS, AyanamshaSystem, Graha, ayanamsha_deg, jd_tdb_to_centuries};
 
 const SPK_PATH: &str = "../../kernels/data/de442s.bsp";
 const LSK_PATH: &str = "../../kernels/data/naif0012.tls";
@@ -18,6 +18,52 @@ fn load_engine() -> Option<Engine> {
     }
     let config = EngineConfig::with_single_spk(SPK_PATH.into(), LSK_PATH.into(), 1024, false);
     Engine::new(config).ok()
+}
+
+#[test]
+fn moving_osculating_apogees_batch_preserves_order_and_duplicates() {
+    let engine = match load_engine() {
+        Some(e) => e,
+        None => return,
+    };
+    let result = moving_osculating_apogees(
+        &engine,
+        2_451_545.0,
+        &GrahaLongitudesConfig::sidereal(AyanamshaSystem::Lahiri, false),
+        &[Graha::Mangal, Graha::Buddh, Graha::Mangal, Graha::Shani],
+    )
+    .expect("moving apogees should succeed");
+
+    assert_eq!(result.entries.len(), 4);
+    assert_eq!(result.entries[0].graha, Graha::Mangal);
+    assert_eq!(result.entries[1].graha, Graha::Buddh);
+    assert_eq!(result.entries[2].graha, Graha::Mangal);
+    assert_eq!(result.entries[3].graha, Graha::Shani);
+    assert_eq!(
+        result.entries[0].sidereal_longitude,
+        result.entries[2].sidereal_longitude
+    );
+    for entry in result.entries {
+        assert!(entry.sidereal_longitude >= 0.0 && entry.sidereal_longitude < 360.0);
+        assert!(entry.reference_plane_longitude >= 0.0 && entry.reference_plane_longitude < 360.0);
+        assert!(entry.ayanamsha_deg.is_finite());
+    }
+}
+
+#[test]
+fn moving_osculating_apogees_rejects_unsupported_graha() {
+    let engine = match load_engine() {
+        Some(e) => e,
+        None => return,
+    };
+    let err = moving_osculating_apogees(
+        &engine,
+        2_451_545.0,
+        &GrahaLongitudesConfig::sidereal(AyanamshaSystem::Lahiri, false),
+        &[Graha::Surya],
+    )
+    .expect_err("Surya apogee should be rejected");
+    assert!(err.to_string().contains("supports only"));
 }
 
 /// For ecliptic-plane ayanamsha systems, tropical ≈ sidereal + ayanamsha (mod 360)

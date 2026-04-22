@@ -656,6 +656,17 @@ type GrahaLongitudes struct {
 	Longitudes [GrahaCount]float64
 }
 
+type MovingOsculatingApogeeEntry struct {
+	GrahaIndex              uint8
+	SiderealLongitude       float64
+	AyanamshaDeg            float64
+	ReferencePlaneLongitude float64
+}
+
+type MovingOsculatingApogees struct {
+	Entries []MovingOsculatingApogeeEntry
+}
+
 type SpecialLagnas struct {
 	BhavaLagna     float64
 	HoraLagna      float64

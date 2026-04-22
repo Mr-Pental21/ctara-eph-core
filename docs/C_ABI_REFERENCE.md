@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 57`
+**ABI version:** `DHRUV_API_VERSION = 58`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -1464,6 +1464,34 @@ DhruvStatus dhruv_graha_longitudes(
 ```
 
 Query graha longitudes (degrees, 0..360) of all 9 grahas at a given JD (TDB). `config->kind` selects sidereal vs tropical/reference-plane output. The same config carries ayanamsha choice, nutation, precession model, and reference-plane selection instead of splitting those variations across separate symbol names.
+
+```c
+typedef struct {
+    uint8_t graha_index;
+    double sidereal_longitude;
+    double ayanamsha_deg;
+    double reference_plane_longitude;
+} DhruvMovingOsculatingApogeeEntry;
+
+typedef struct {
+    uint8_t count;
+    DhruvMovingOsculatingApogeeEntry entries[DHRUV_MAX_OSCULATING_APOGEE_REQUESTS];
+} DhruvMovingOsculatingApogees;
+
+DhruvStatus dhruv_moving_osculating_apogees_for_date(
+    const DhruvEngineHandle*              engine,
+    const DhruvEopHandle*                 eop,
+    const DhruvUtcTime*                   utc,
+    const uint8_t*                        graha_indices,
+    uint8_t                               graha_count,
+    const DhruvGrahaLongitudesConfig*     config,
+    DhruvMovingOsculatingApogees*         out
+);
+```
+
+Batch geocentric moving osculating apogees for Mangal=2, Buddh=3, Guru=4,
+Shukra=5, and Shani=6. Entries preserve caller order and duplicate
+multiplicity. Surya, Chandra, Rahu, and Ketu return invalid input.
 
 ---
 

@@ -107,10 +107,10 @@ pub use shadbala::{
     all_hora_balas, all_kala_balas, all_kendradi_balas, all_masa_balas, all_naisargika_balas,
     all_nathonnatha_balas, all_ojhayugma_balas, all_paksha_balas, all_shadbalas_from_inputs,
     all_sthana_balas, all_tribhaga_balas, all_uchcha_balas, all_vara_balas, all_yuddha_balas,
-    ayana_bala, cheshta_bala, dig_bala, drekkana_bala, drik_bala, hora_bala as shadbala_hora_bala,
-    kala_bala, kendradi_bala, masa_bala as shadbala_masa_bala, naisargika_bala, nathonnatha_bala,
-    ojhayugma_bala, paksha_bala, shadbala_from_inputs, sthana_bala, tribhaga_bala, uchcha_bala,
-    vara_bala, yuddha_bala,
+    ayana_bala, cheshta_bala, cheshta_kendra, dig_bala, drekkana_bala, drik_bala,
+    hora_bala as shadbala_hora_bala, kala_bala, kendradi_bala, masa_bala as shadbala_masa_bala,
+    naisargika_bala, nathonnatha_bala, ojhayugma_bala, paksha_bala, shadbala_from_inputs,
+    sthana_bala, tribhaga_bala, uchcha_bala, vara_bala, yuddha_bala,
 };
 pub use special_lagna::{
     ALL_SPECIAL_LAGNAS, AllSpecialLagnas, SpecialLagna, all_special_lagnas, bhava_lagna,

@@ -249,6 +249,10 @@ functions instead of introducing `*UtcSearch` variants.
 - `fullKundaliForDate`
 - `fullKundaliSummaryForDate`
 
+`jyotish.js` also exports `movingOsculatingApogeesForDate(engine, eop, utc,
+grahas, config)`, where `grahas` is an array of graha indices. Supported
+indices are 2..6 (`Mangal,Buddh,Guru,Shukra,Shani`).
+
 `shadbalaForDate`, `vimsopakaForDate`, `balasForDate`, and `avasthaForDate`
 accept an `amshaSelection` object aligned with `fullKundaliConfigDefault()`.
 Embedded `fullKundaliForDate(...).amshas` returns the resolved amsha union used

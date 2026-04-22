@@ -88,6 +88,8 @@ Total runtime functions documented here: **57**.
 | Function | Inputs | Output | What it does |
 |---|---|---|---|
 | `graha_longitudes` | `engine`, `jd_tdb`, `config` | `Result<GrahaLongitudes, SearchError>` | 9 graha longitudes on the selected plane; `config.kind` chooses sidereal vs tropical/reference-plane output and config carries model/ayanamsha choices. |
+| `moving_osculating_apogees` | `engine`, `jd_tdb`, `config`, `grahas` | `Result<MovingOsculatingApogees, SearchError>` | Moving geocentric osculating apogees for Mangal, Buddh, Guru, Shukra, and Shani. |
+| `moving_osculating_apogees_for_date` | `engine`, `eop`, `utc`, `config`, `grahas` | `Result<MovingOsculatingApogees, SearchError>` | UTC-date moving apogee helper using the same sidereal config semantics. |
 | `special_lagnas_for_date` | `engine`, `eop`, `utc`, `location`, `riseset_config`, `aya_config` | `Result<AllSpecialLagnas, SearchError>` | Computes all special lagnas. |
 | `arudha_padas_for_date` | `engine`, `eop`, `utc`, `location`, `bhava_config`, `aya_config` | `Result<[ArudhaResult; 12], SearchError>` | Computes arudha padas for 12 houses. |
 | `all_upagrahas_for_date` | `engine`, `eop`, `utc`, `location`, `riseset_config`, `aya_config` | `Result<AllUpagrahas, SearchError>` | Computes all 11 upagrahas. |

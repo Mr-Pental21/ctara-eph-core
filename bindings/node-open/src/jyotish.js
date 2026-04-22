@@ -64,6 +64,14 @@ function grahaLongitudes(engine, jdTdb, config = undefined) {
   return r.longitudes;
 }
 
+function movingOsculatingApogeesForDate(engine, eop, utc, grahas, config = undefined) {
+  const r = config === undefined
+    ? addon.movingOsculatingApogeesForDate(engine._handle, eop._handle, utc, grahas)
+    : addon.movingOsculatingApogeesForDate(engine._handle, eop._handle, utc, grahas, config);
+  checkStatus('moving_osculating_apogees_for_date', r.status);
+  return r.entries;
+}
+
 function specialLagnasForDate(engine, eop, utc, location, risesetConfig, ayanamshaSystem = 0, useNutation = true) {
   const r = addon.specialLagnasForDate(engine._handle, eop._handle, utc, location, risesetConfig, ayanamshaSystem, !!useNutation);
   checkStatus('special_lagnas_for_date', r.status);
@@ -226,6 +234,7 @@ module.exports = {
   GRAHA_LONGITUDE_KIND,
   PRECESSION_MODEL,
   grahaLongitudes,
+  movingOsculatingApogeesForDate,
   specialLagnasForDate,
   arudhaPadasForDate,
   allUpagrahasForDate,

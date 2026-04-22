@@ -21,8 +21,8 @@ use dhruv_search::{
     all_upagrahas_for_date_with_config, amsha_charts_for_date, arudha_padas_for_date,
     ashtakavarga_for_date, avastha_for_date, balas_for_date, bhavabala_for_date,
     charakaraka_for_date, core_bindus, drishti_for_date, graha_positions as graha_positions_fn,
-    shadbala_for_date, sidereal_bhavas_for_date, sidereal_lagna_for_date, sidereal_mc_for_date,
-    special_lagnas_for_date, vimsopaka_for_date,
+    moving_osculating_apogees_for_date, shadbala_for_date, sidereal_bhavas_for_date,
+    sidereal_lagna_for_date, sidereal_mc_for_date, special_lagnas_for_date, vimsopaka_for_date,
 };
 use dhruv_search::{
     PANCHANG_INCLUDE_ALL, PANCHANG_INCLUDE_AYANA, PANCHANG_INCLUDE_MASA, PANCHANG_INCLUDE_VARSHA,
@@ -277,6 +277,7 @@ struct JyotishRequest {
     location: Option<GeoLocationInput>,
     kind: Option<EnumInput>,
     system: Option<EnumInput>,
+    grahas: Option<Vec<EnumInput>>,
     scheme: Option<EnumInput>,
     node_dignity_policy: Option<EnumInput>,
     upagraha_config: Option<TimeUpagrahaConfigInput>,
@@ -2581,6 +2582,20 @@ fn graha_longitudes_json(result: dhruv_search::GrahaLongitudes) -> Value {
     json!({ "grahas": grahas, "longitudes": result.longitudes })
 }
 
+fn moving_osculating_apogees_json(result: dhruv_search::MovingOsculatingApogees) -> Value {
+    json!({
+        "entries": result.entries.into_iter().map(|entry| {
+            json!({
+                "graha": debug_name(entry.graha),
+                "graha_index": entry.graha.index(),
+                "sidereal_longitude": entry.sidereal_longitude,
+                "ayanamsha_deg": entry.ayanamsha_deg,
+                "reference_plane_longitude": entry.reference_plane_longitude
+            })
+        }).collect::<Vec<_>>()
+    })
+}
+
 fn graha_positions_json(result: dhruv_search::GrahaPositions) -> Value {
     json!({
         "grahas": ALL_GRAHAS.iter().enumerate().map(|(idx, graha)| graha_entry_json(result.grahas[idx], Some(*graha))).collect::<Vec<_>>(),
@@ -3698,6 +3713,36 @@ fn handle_jyotish(resource: &ResourceArc<EngineResource>, request: JyotishReques
                     &config,
                 )
                 .map(graha_longitudes_json)
+                .map_err(|err| map_error("search_error", err))
+            }
+            "moving_osculating_apogees" => {
+                let system = request
+                    .system
+                    .as_ref()
+                    .map(|_| parse_ayanamsha_system(request.system.as_ref()))
+                    .transpose()?
+                    .unwrap_or(sankranti_config.ayanamsha_system);
+                let config = GrahaLongitudesConfig::sidereal_with_model(
+                    system,
+                    sankranti_config.use_nutation,
+                    sankranti_config.precession_model,
+                    sankranti_config.reference_plane,
+                );
+                let grahas = request
+                    .grahas
+                    .as_ref()
+                    .ok_or_else(|| error_payload("invalid_request", "grahas is required"))?
+                    .iter()
+                    .map(parse_graha)
+                    .collect::<Result<Vec<_>, _>>()?;
+                moving_osculating_apogees_for_date(
+                    engine,
+                    Some(eop),
+                    &utc.ok_or_else(|| error_payload("invalid_request", "utc is required"))?,
+                    &config,
+                    &grahas,
+                )
+                .map(moving_osculating_apogees_json)
                 .map_err(|err| map_error("search_error", err))
             }
             "graha_positions" => {

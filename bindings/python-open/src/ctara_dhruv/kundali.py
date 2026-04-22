@@ -36,6 +36,8 @@ from .types import (
     GrahaLongitudes,
     GrahaLongitudesConfig,
     GrahaPositions,
+    MovingOsculatingApogeeEntry,
+    MovingOsculatingApogees,
     HoraInfo,
     KaranaInfo,
     MasaInfo,
@@ -205,6 +207,55 @@ def graha_longitudes(engine, jd_tdb, config=None, ayanamsha_system=0, use_nutati
         "graha_longitudes",
     )
     return GrahaLongitudes(longitudes=[out.longitudes[i] for i in range(9)])
+
+
+def moving_osculating_apogees_for_date(
+    engine,
+    eop,
+    jd_utc,
+    grahas,
+    config=None,
+    ayanamsha_system=0,
+    use_nutation=1,
+):
+    """Return geocentric moving osculating apogees for requested grahas.
+
+    `grahas` is an iterable of graha indices. Only Mangal=2, Buddh=3,
+    Guru=4, Shukra=5, and Shani=6 are accepted by the core endpoint.
+    """
+    utc = _make_utc(jd_utc)
+    graha_list = list(grahas)
+    graha_indices = ffi.new("uint8_t[]", graha_list)
+    cfg = _make_graha_longitudes_config(
+        config if config is not None else GrahaLongitudesConfig(
+            ayanamsha_system=ayanamsha_system,
+            use_nutation=bool(use_nutation),
+        )
+    )
+    out = ffi.new("DhruvMovingOsculatingApogees *")
+    check(
+        lib.dhruv_moving_osculating_apogees_for_date(
+            engine._ptr,
+            eop,
+            utc,
+            graha_indices,
+            len(graha_list),
+            cfg,
+            out,
+        ),
+        "moving_osculating_apogees_for_date",
+    )
+    return MovingOsculatingApogees(
+        entries=[
+            MovingOsculatingApogeeEntry(
+                graha_index=out.entries[i].graha_index,
+                sidereal_longitude=out.entries[i].sidereal_longitude,
+                ayanamsha_deg=out.entries[i].ayanamsha_deg,
+                reference_plane_longitude=out.entries[i].reference_plane_longitude,
+            )
+            for i in range(out.count)
+        ]
+    )
 
 
 # ---------------------------------------------------------------------------

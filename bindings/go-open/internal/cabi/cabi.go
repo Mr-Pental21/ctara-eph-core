@@ -1263,6 +1263,36 @@ func ComputeGrahaLongitudes(engine EngineHandle, jdTdb float64, cfg GrahaLongitu
 	return goOut, st
 }
 
+func MovingOsculatingApogeesForDate(engine EngineHandle, eop EopHandle, utc UtcTime, grahas []uint8, cfg GrahaLongitudesConfig) (MovingOsculatingApogees, Status) {
+	cutc := cUTC(utc)
+	ccfg := cGrahaLongitudesConfig(cfg)
+	var out C.DhruvMovingOsculatingApogees
+	var ptr *C.uint8_t
+	if len(grahas) > 0 {
+		ptr = (*C.uint8_t)(&grahas[0])
+	}
+	st := Status(C.dhruv_moving_osculating_apogees_for_date(
+		engine.ptr,
+		eop.ptr,
+		&cutc,
+		ptr,
+		C.uint8_t(len(grahas)),
+		&ccfg,
+		&out,
+	))
+	goOut := MovingOsculatingApogees{Entries: make([]MovingOsculatingApogeeEntry, int(out.count))}
+	for i := 0; i < int(out.count); i++ {
+		entry := out.entries[i]
+		goOut.Entries[i] = MovingOsculatingApogeeEntry{
+			GrahaIndex:              uint8(entry.graha_index),
+			SiderealLongitude:       float64(entry.sidereal_longitude),
+			AyanamshaDeg:            float64(entry.ayanamsha_deg),
+			ReferencePlaneLongitude: float64(entry.reference_plane_longitude),
+		}
+	}
+	return goOut, st
+}
+
 func SpecialLagnasForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLocation, riseset RiseSetConfig, ayanamshaSystem uint32, useNutation bool) (SpecialLagnas, Status) {
 	cutc, cloc, ccfg := cUTC(utc), cGeo(loc), cRiseSetConfig(riseset)
 	var out C.DhruvSpecialLagnas

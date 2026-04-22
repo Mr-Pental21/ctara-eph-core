@@ -290,6 +290,10 @@ Jyotish and charts:
 
 - `(*Engine).GrahaLongitudes`
   Uses `GrahaLongitudesConfig` with `GrahaLongitudeKindSidereal` or `GrahaLongitudeKindTropical`, plus optional `PrecessionModel*` and `ReferencePlane*` choices.
+- `(*Engine).MovingOsculatingApogeesForDate`
+  Returns moving geocentric osculating apogees for graha indices 2..6
+  (`Mangal,Buddh,Guru,Shukra,Shani`) with sidereal longitude, ayanamsha, and
+  reference-plane longitude.
 - `(*Engine).SpecialLagnasForDate`
 - `(*Engine).ArudhaPadasForDate`
 - `(*Engine).AllUpagrahasForDate`

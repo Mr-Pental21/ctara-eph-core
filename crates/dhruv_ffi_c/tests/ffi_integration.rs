@@ -4106,3 +4106,66 @@ fn ffi_tropical_equals_sidereal_plus_ayanamsha() {
 
     unsafe { dhruv_engine_free(engine_ptr) };
 }
+
+#[test]
+fn ffi_moving_osculating_apogees_for_date_basic_and_invalid_graha() {
+    let config = match real_config() {
+        Some(c) => c,
+        None => return,
+    };
+    let mut engine_ptr: *mut DhruvEngineHandle = ptr::null_mut();
+    let s = unsafe { dhruv_engine_new(&config, &mut engine_ptr) };
+    assert_eq!(s, DhruvStatus::Ok);
+    let engine_raw = engine_ptr.cast::<dhruv_core::Engine>();
+    let utc = DhruvUtcTime {
+        year: 2026,
+        month: 4,
+        day: 17,
+        hour: 13,
+        minute: 25,
+        second: 39.0,
+    };
+    let cfg = dhruv_graha_longitudes_config_default();
+    let grahas = [2u8, 3, 2, 6];
+    let mut out: DhruvMovingOsculatingApogees = unsafe { std::mem::zeroed() };
+    let s = unsafe {
+        dhruv_moving_osculating_apogees_for_date(
+            engine_raw,
+            ptr::null(),
+            &utc,
+            grahas.as_ptr(),
+            grahas.len() as u8,
+            &cfg,
+            &mut out,
+        )
+    };
+    assert_eq!(s, DhruvStatus::Ok);
+    assert_eq!(out.count, 4);
+    assert_eq!(out.entries[0].graha_index, 2);
+    assert_eq!(out.entries[2].graha_index, 2);
+    assert_eq!(
+        out.entries[0].sidereal_longitude,
+        out.entries[2].sidereal_longitude
+    );
+    for entry in out.entries.iter().take(out.count as usize) {
+        assert!((0.0..360.0).contains(&entry.sidereal_longitude));
+        assert!((0.0..360.0).contains(&entry.reference_plane_longitude));
+        assert!(entry.ayanamsha_deg.is_finite());
+    }
+
+    let invalid = [0u8];
+    let s = unsafe {
+        dhruv_moving_osculating_apogees_for_date(
+            engine_raw,
+            ptr::null(),
+            &utc,
+            invalid.as_ptr(),
+            invalid.len() as u8,
+            &cfg,
+            &mut out,
+        )
+    };
+    assert_eq!(s, DhruvStatus::InvalidSearchConfig);
+
+    unsafe { dhruv_engine_free(engine_ptr) };
+}

@@ -115,6 +115,18 @@ Adds `--ayanamsha` and `--nutation` flags.
 dhruv graha-longitudes --date 2024-03-20T12:00:00Z --bsp de442s.bsp --lsk naif0012.tls
 ```
 
+### `osculating-apogee` — Moving geocentric osculating apogees
+
+```
+dhruv osculating-apogee --date 2024-03-20T12:00:00Z \
+  --graha Mangal,Buddh,Guru,Shukra,Shani \
+  --ayanamsha 0 --nutation --bsp de442s.bsp --lsk naif0012.tls
+```
+
+Returns caller-ordered entries for Mangal, Buddh, Guru, Shukra, and Shani.
+Each entry prints sidereal apogee longitude, ayanamsha, and the underlying
+reference-plane longitude. Surya, Chandra, Rahu, and Ketu are rejected.
+
 ---
 
 ## Rashi / Nakshatra

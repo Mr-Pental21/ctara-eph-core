@@ -23,10 +23,11 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       57
+#define DHRUV_API_VERSION       58
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 #define DHRUV_MAX_AMSHA_VARIATIONS 16
+#define DHRUV_MAX_OSCULATING_APOGEE_REQUESTS 32
 #define DHRUV_AMSHA_VARIATION_NAME_CAPACITY 48
 #define DHRUV_AMSHA_VARIATION_LABEL_CAPACITY 64
 #define DHRUV_AMSHA_VARIATION_DESCRIPTION_CAPACITY 160
@@ -1123,6 +1124,18 @@ typedef struct {
     int32_t precession_model;
     int32_t reference_plane;
 } DhruvGrahaLongitudesConfig;
+
+typedef struct {
+    uint8_t graha_index;
+    double sidereal_longitude;
+    double ayanamsha_deg;
+    double reference_plane_longitude;
+} DhruvMovingOsculatingApogeeEntry;
+
+typedef struct {
+    uint8_t count;
+    DhruvMovingOsculatingApogeeEntry entries[DHRUV_MAX_OSCULATING_APOGEE_REQUESTS];
+} DhruvMovingOsculatingApogees;
 
 /* --- Amsha (divisional chart) --- */
 
@@ -2325,6 +2338,14 @@ DhruvStatus dhruv_graha_longitudes(
     double jd_tdb,
     const DhruvGrahaLongitudesConfig *config,
     DhruvGrahaLongitudes *out);
+DhruvStatus dhruv_moving_osculating_apogees_for_date(
+    const DhruvEngineHandle *engine,
+    const DhruvEopHandle *eop,
+    const DhruvUtcTime *utc,
+    const uint8_t *graha_indices,
+    uint8_t graha_count,
+    const DhruvGrahaLongitudesConfig *config,
+    DhruvMovingOsculatingApogees *out);
 
 /* --- Nakshatra at --- */
 DhruvStatus dhruv_nakshatra_at(

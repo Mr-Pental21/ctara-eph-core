@@ -7,6 +7,11 @@ func (e *Engine) GrahaLongitudes(jdTdb float64, cfg GrahaLongitudesConfig) (Grah
 	return out, statusErr("graha_longitudes", st)
 }
 
+func (e *Engine) MovingOsculatingApogeesForDate(ep *EOP, utc UtcTime, grahas []uint8, cfg GrahaLongitudesConfig) (MovingOsculatingApogees, error) {
+	out, st := cabi.MovingOsculatingApogeesForDate(e.h, ep.h, utc, grahas, cfg)
+	return out, statusErr("moving_osculating_apogees_for_date", st)
+}
+
 func (e *Engine) SpecialLagnasForDate(ep *EOP, utc UtcTime, loc GeoLocation, riseset RiseSetConfig, ayanamshaSystem uint32, useNutation bool) (SpecialLagnas, error) {
 	out, st := cabi.SpecialLagnasForDate(e.h, ep.h, utc, loc, riseset, ayanamshaSystem, useNutation)
 	return out, statusErr("special_lagnas_for_date", st)

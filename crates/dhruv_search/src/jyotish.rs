@@ -4,10 +4,11 @@
 //! Vedic calculation modules. Queries all 9 graha positions at a given
 //! epoch and converts to sidereal longitudes.
 
-use dhruv_core::{Body, Engine};
+use dhruv_core::{Body, Engine, Frame, Observer, Query};
 use dhruv_frames::{
-    ReferencePlane, ecliptic_lon_to_invariable_lon, invariable_lon_to_ecliptic_lon,
-    mean_obliquity_of_date_rad,
+    ReferencePlane, cartesian_to_spherical, ecliptic_lon_to_invariable_lon, icrf_to_ecliptic,
+    icrf_to_invariable, invariable_lon_to_ecliptic_lon, mean_obliquity_of_date_rad,
+    precess_ecliptic_j2000_to_date_with_model,
 };
 use dhruv_time::{EopKernel, UtcTime, jd_to_tdb_seconds, tdb_seconds_to_jd};
 use dhruv_vedic_base::arudha::all_arudha_padas;
@@ -54,8 +55,8 @@ use crate::jyotish_types::{
     BhavaResultSet, BindusConfig, BindusResult, DashaSelectionConfig, DashaSnapshotTime,
     DrishtiConfig, DrishtiResult, FullKundaliConfig, FullKundaliResult, GrahaEntry,
     GrahaLongitudeKind, GrahaLongitudes, GrahaLongitudesConfig, GrahaPositions,
-    GrahaPositionsConfig, MAX_AMSHA_REQUESTS, ShadbalaEntry, ShadbalaResult, SphutalResult,
-    VimsopakaEntry, VimsopakaResult,
+    GrahaPositionsConfig, MAX_AMSHA_REQUESTS, MovingOsculatingApogeeEntry, MovingOsculatingApogees,
+    ShadbalaEntry, ShadbalaResult, SphutalResult, VimsopakaEntry, VimsopakaResult,
 };
 use crate::panchang::{
     hora_from_sunrises, masa_for_date_with_eop, panchang_for_date, varsha_for_date_with_eop,
@@ -65,6 +66,10 @@ use crate::panchang_types::{MasaInfo, VarshaInfo};
 use crate::sankranti_types::SankrantiConfig;
 
 const BHAVABALA_TWILIGHT_HALF_DAYS: f64 = 5.0 / 60.0;
+/// IAU 2015 nominal Earth gravitational parameter, km^3/s^2.
+///
+/// Provenance is recorded in `docs/clean_room_osculating_apogee.md`.
+const EARTH_GM_KM3_S2: f64 = 398_600.435_436;
 const SHADBALA_REQUIRED_AMSHAS: [Amsha; 7] = [
     Amsha::D1,
     Amsha::D2,
@@ -316,6 +321,13 @@ struct BalaBhavaBasis {
     meridian_sidereal_lon: f64,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct CachedMovingOsculatingApogee {
+    graha: Graha,
+    config: GrahaLongitudesConfig,
+    entry: MovingOsculatingApogeeEntry,
+}
+
 /// One-shot, function-local cache for shared intermediates.
 ///
 /// This is intentionally not exposed and not persisted across calls.
@@ -342,6 +354,7 @@ struct JyotishContext {
     graha_speeds: Option<[f64; 7]>,
     /// Ecliptic declinations (deg) for sapta grahas (indices 0-6).
     graha_declinations: Option<[f64; 7]>,
+    moving_osculating_apogees: Vec<CachedMovingOsculatingApogee>,
     amsha_graha_cache: AmshaGrahaCache,
     upagraha_cache: UpagrahaCache,
     vimsopaka_varga_cache: VimsopakaVargaCache,
@@ -378,6 +391,7 @@ impl JyotishContext {
             varsha_info: None,
             graha_speeds: None,
             graha_declinations: None,
+            moving_osculating_apogees: Vec::new(),
             amsha_graha_cache: AmshaGrahaCache::default(),
             upagraha_cache: UpagrahaCache::default(),
             vimsopaka_varga_cache: VimsopakaVargaCache::default(),
@@ -709,6 +723,29 @@ impl JyotishContext {
         Ok(decls)
     }
 
+    fn moving_osculating_apogee(
+        &mut self,
+        engine: &Engine,
+        graha: Graha,
+        config: GrahaLongitudesConfig,
+    ) -> Result<MovingOsculatingApogeeEntry, SearchError> {
+        if let Some(cached) = self
+            .moving_osculating_apogees
+            .iter()
+            .find(|cached| cached.graha == graha && cached.config == config)
+        {
+            return Ok(cached.entry);
+        }
+        let entry = moving_osculating_apogee_entry(engine, self.jd_tdb, graha, &config)?;
+        self.moving_osculating_apogees
+            .push(CachedMovingOsculatingApogee {
+                graha,
+                config,
+                entry,
+            });
+        Ok(entry)
+    }
+
     fn amsha_graha_data<'a>(
         &'a mut self,
         engine: &Engine,
@@ -938,6 +975,143 @@ fn query_sapta_graha_declinations(engine: &Engine, jd_tdb: f64) -> Result<[f64; 
         decls[graha.index() as usize] = sin_dec.clamp(-1.0, 1.0).asin().to_degrees();
     }
     Ok(decls)
+}
+
+fn apogee_supported_body(graha: Graha) -> Option<Body> {
+    match graha {
+        Graha::Mangal => Some(Body::Mars),
+        Graha::Buddh => Some(Body::Mercury),
+        Graha::Guru => Some(Body::Jupiter),
+        Graha::Shukra => Some(Body::Venus),
+        Graha::Shani => Some(Body::Saturn),
+        _ => None,
+    }
+}
+
+fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+
+fn norm(v: [f64; 3]) -> f64 {
+    (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt()
+}
+
+fn reference_plane_vector(
+    icrf_vector: &[f64; 3],
+    jd_tdb: f64,
+    config: &GrahaLongitudesConfig,
+) -> [f64; 3] {
+    match config.reference_plane {
+        ReferencePlane::Ecliptic => {
+            let ecl_j2000 = icrf_to_ecliptic(icrf_vector);
+            let t = jd_tdb_to_centuries(jd_tdb);
+            precess_ecliptic_j2000_to_date_with_model(&ecl_j2000, t, config.precession_model)
+        }
+        ReferencePlane::Invariable => icrf_to_invariable(icrf_vector),
+    }
+}
+
+fn moving_osculating_apogee_entry(
+    engine: &Engine,
+    jd_tdb: f64,
+    graha: Graha,
+    config: &GrahaLongitudesConfig,
+) -> Result<MovingOsculatingApogeeEntry, SearchError> {
+    if config.kind != GrahaLongitudeKind::Sidereal {
+        return Err(SearchError::InvalidConfig(
+            "moving osculating apogee requires sidereal longitude config",
+        ));
+    }
+
+    let body = apogee_supported_body(graha).ok_or(SearchError::InvalidConfig(
+        "moving osculating apogee supports only Mangal, Buddh, Guru, Shukra, and Shani",
+    ))?;
+    let state = engine.query(Query {
+        target: body,
+        observer: Observer::Body(Body::Earth),
+        frame: Frame::IcrfJ2000,
+        epoch_tdb_jd: jd_tdb,
+    })?;
+    let r = state.position_km;
+    let v = state.velocity_km_s;
+    let r_norm = norm(r);
+    if r_norm <= f64::EPSILON {
+        return Err(SearchError::NoConvergence(
+            "geocentric apogee vector is zero",
+        ));
+    }
+    let h = cross(r, v);
+    let vxh = cross(v, h);
+    let eccentricity = [
+        vxh[0] / EARTH_GM_KM3_S2 - r[0] / r_norm,
+        vxh[1] / EARTH_GM_KM3_S2 - r[1] / r_norm,
+        vxh[2] / EARTH_GM_KM3_S2 - r[2] / r_norm,
+    ];
+    if norm(eccentricity) <= f64::EPSILON {
+        return Err(SearchError::NoConvergence(
+            "geocentric osculating eccentricity vector is zero",
+        ));
+    }
+    let anti_periapsis = [-eccentricity[0], -eccentricity[1], -eccentricity[2]];
+    let on_plane = reference_plane_vector(&anti_periapsis, jd_tdb, config);
+    let reference_plane_longitude = normalize_360(cartesian_to_spherical(&on_plane).lon_deg);
+    let t = jd_tdb_to_centuries(jd_tdb);
+    let ayanamsha_deg = dhruv_vedic_base::ayanamsha_deg_on_plane(
+        config.ayanamsha_system,
+        t,
+        config.use_nutation,
+        config.precession_model,
+        config.reference_plane,
+    );
+    let sidereal_longitude = normalize_360(reference_plane_longitude - ayanamsha_deg);
+
+    Ok(MovingOsculatingApogeeEntry {
+        graha,
+        reference_plane_longitude,
+        ayanamsha_deg,
+        sidereal_longitude,
+    })
+}
+
+/// Compute moving osculating apogees at a TDB epoch.
+///
+/// Entries are returned in caller request order. Duplicate graha requests are
+/// fanned out from one per-call computation.
+pub fn moving_osculating_apogees(
+    engine: &Engine,
+    jd_tdb: f64,
+    config: &GrahaLongitudesConfig,
+    grahas: &[Graha],
+) -> Result<MovingOsculatingApogees, SearchError> {
+    let mut cache: Vec<(Graha, MovingOsculatingApogeeEntry)> = Vec::new();
+    let mut entries = Vec::with_capacity(grahas.len());
+    for &graha in grahas {
+        let entry = if let Some((_, entry)) = cache.iter().find(|(g, _)| *g == graha) {
+            *entry
+        } else {
+            let entry = moving_osculating_apogee_entry(engine, jd_tdb, graha, config)?;
+            cache.push((graha, entry));
+            entry
+        };
+        entries.push(entry);
+    }
+    Ok(MovingOsculatingApogees { entries })
+}
+
+/// Compute moving osculating apogees for a UTC date.
+pub fn moving_osculating_apogees_for_date(
+    engine: &Engine,
+    eop: Option<&EopKernel>,
+    utc: &UtcTime,
+    config: &GrahaLongitudesConfig,
+    grahas: &[Graha],
+) -> Result<MovingOsculatingApogees, SearchError> {
+    let jd_tdb = crate::search_util::utc_to_jd_tdb_with_eop(engine, eop, utc);
+    moving_osculating_apogees(engine, jd_tdb, config, grahas)
 }
 
 /// Query all 9 graha longitudes at a given TDB epoch.
@@ -2914,8 +3088,26 @@ fn assemble_shadbala_inputs(
         dig_bala_max_cusp_lons[idx] = bhava_basis.cusp_sidereal_lons[max_bhava - 1];
     }
 
-    // 3. Speeds (deg/day) for sapta grahas
-    let speeds = ctx.graha_speeds(engine)?;
+    // 3. Moving osculating apogees for Cheshta Bala (Surya/Chandra remain 0).
+    let cheshta_config = GrahaLongitudesConfig::sidereal_with_model(
+        aya_config.ayanamsha_system,
+        aya_config.use_nutation,
+        aya_config.precession_model,
+        aya_config.reference_plane,
+    );
+    let mut cheshta_apogee_lons = [0.0f64; 7];
+    for graha in [
+        Graha::Mangal,
+        Graha::Buddh,
+        Graha::Guru,
+        Graha::Shukra,
+        Graha::Shani,
+    ] {
+        let idx = graha.index() as usize;
+        cheshta_apogee_lons[idx] = ctx
+            .moving_osculating_apogee(engine, graha, cheshta_config)?
+            .sidereal_longitude;
+    }
 
     // 4. Varga data: 7 vargas × 7 grahas for saptavargaja bala
     let (varga_rashi_indices, varga_longitudes) =
@@ -2968,7 +3160,7 @@ fn assemble_shadbala_inputs(
         sidereal_lons,
         bhava_numbers,
         dig_bala_max_cusp_lons,
-        speeds,
+        cheshta_apogee_lons,
         kala: KalaBalaInputs {
             is_daytime,
             day_night_fraction,

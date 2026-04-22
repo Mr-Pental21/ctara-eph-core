@@ -18,13 +18,14 @@ use dhruv_search::{
     dasha_level0_entity_with_inputs, dasha_level0_with_inputs, dasha_snapshot_with_inputs,
     elongation_at, full_kundali_for_date, ghatika_for_date, ghatika_from_sunrises,
     graha_longitudes, hora_for_date, hora_from_sunrises, karana_at, karana_for_date, masa_for_date,
-    nakshatra_at, nakshatra_for_date, next_amavasya, next_chandra_grahan, next_conjunction,
-    next_max_speed, next_purnima, next_sankranti, next_specific_sankranti, next_stationary,
-    next_surya_grahan, prev_amavasya, prev_chandra_grahan, prev_conjunction, prev_max_speed,
-    prev_purnima, prev_sankranti, prev_specific_sankranti, prev_stationary, prev_surya_grahan,
-    search_amavasyas, search_chandra_grahan, search_conjunctions, search_max_speed,
-    search_purnimas, search_sankrantis, search_stationary, search_surya_grahan, shadbala_for_date,
-    sidereal_sum_at, siderealize_bhava_result, special_lagnas_for_date, tithi_at, tithi_for_date,
+    moving_osculating_apogees_for_date, nakshatra_at, nakshatra_for_date, next_amavasya,
+    next_chandra_grahan, next_conjunction, next_max_speed, next_purnima, next_sankranti,
+    next_specific_sankranti, next_stationary, next_surya_grahan, prev_amavasya,
+    prev_chandra_grahan, prev_conjunction, prev_max_speed, prev_purnima, prev_sankranti,
+    prev_specific_sankranti, prev_stationary, prev_surya_grahan, search_amavasyas,
+    search_chandra_grahan, search_conjunctions, search_max_speed, search_purnimas,
+    search_sankrantis, search_stationary, search_surya_grahan, shadbala_for_date, sidereal_sum_at,
+    siderealize_bhava_result, special_lagnas_for_date, tithi_at, tithi_for_date,
     tropical_to_sidereal_longitude, vaar_for_date, vaar_from_sunrises, varsha_for_date,
     vedic_day_sunrises, vimsopaka_for_date, yoga_at, yoga_for_date,
 };
@@ -57,7 +58,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 57;
+pub const DHRUV_API_VERSION: u32 = 58;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -66,6 +67,8 @@ pub const DHRUV_PATH_CAPACITY: usize = 512;
 pub const DHRUV_MAX_SPK_PATHS: usize = 8;
 /// Maximum number of variations exposed for one amsha catalog.
 pub const DHRUV_MAX_AMSHA_VARIATIONS: usize = 16;
+/// Maximum number of moving osculating apogee graha requests in one C call.
+pub const DHRUV_MAX_OSCULATING_APOGEE_REQUESTS: usize = 32;
 /// Fixed UTF-8 buffer size for amsha variation machine names.
 pub const DHRUV_AMSHA_VARIATION_NAME_CAPACITY: usize = 48;
 /// Fixed UTF-8 buffer size for amsha variation labels.
@@ -12140,6 +12143,45 @@ pub struct DhruvGrahaLongitudesConfig {
     pub reference_plane: i32,
 }
 
+/// One moving osculating apogee result entry.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvMovingOsculatingApogeeEntry {
+    pub graha_index: u8,
+    pub sidereal_longitude: f64,
+    pub ayanamsha_deg: f64,
+    pub reference_plane_longitude: f64,
+}
+
+impl DhruvMovingOsculatingApogeeEntry {
+    const fn zeroed() -> Self {
+        Self {
+            graha_index: 0,
+            sidereal_longitude: 0.0,
+            ayanamsha_deg: 0.0,
+            reference_plane_longitude: 0.0,
+        }
+    }
+}
+
+/// Batch moving osculating apogee result.
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct DhruvMovingOsculatingApogees {
+    pub count: u8,
+    pub entries: [DhruvMovingOsculatingApogeeEntry; DHRUV_MAX_OSCULATING_APOGEE_REQUESTS],
+}
+
+impl DhruvMovingOsculatingApogees {
+    const fn zeroed() -> Self {
+        Self {
+            count: 0,
+            entries: [DhruvMovingOsculatingApogeeEntry::zeroed();
+                DHRUV_MAX_OSCULATING_APOGEE_REQUESTS],
+        }
+    }
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn dhruv_graha_longitudes_config_default() -> DhruvGrahaLongitudesConfig {
     DhruvGrahaLongitudesConfig {
@@ -12170,6 +12212,87 @@ pub unsafe extern "C" fn dhruv_graha_longitudes(
         Ok(result) => {
             let out = unsafe { &mut *out };
             out.longitudes = result.longitudes;
+            DhruvStatus::Ok
+        }
+        Err(e) => DhruvStatus::from(&e),
+    }
+}
+
+/// Compute geocentric moving osculating apogees for requested grahas at UTC date.
+///
+/// `graha_indices` uses Graha order: Mangal=2, Buddh=3, Guru=4, Shukra=5,
+/// Shani=6. Surya, Chandra, Rahu, and Ketu are rejected.
+///
+/// # Safety
+/// `engine`, `utc`, `graha_indices`, `config`, and `out` must be valid pointers.
+/// `eop` may be NULL; UTC to TDB conversion will then use the engine LSK only.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_moving_osculating_apogees_for_date(
+    engine: *const Engine,
+    eop: *const dhruv_time::EopKernel,
+    utc: *const DhruvUtcTime,
+    graha_indices: *const u8,
+    graha_count: u8,
+    config: *const DhruvGrahaLongitudesConfig,
+    out: *mut DhruvMovingOsculatingApogees,
+) -> DhruvStatus {
+    if engine.is_null() || utc.is_null() || out.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    if graha_count > 0 && graha_indices.is_null() {
+        return DhruvStatus::NullPointer;
+    }
+    if graha_count as usize > DHRUV_MAX_OSCULATING_APOGEE_REQUESTS {
+        return DhruvStatus::InvalidQuery;
+    }
+
+    let engine = unsafe { &*engine };
+    let utc_c = unsafe { &*utc };
+    let utc_time = UtcTime {
+        year: utc_c.year,
+        month: utc_c.month,
+        day: utc_c.day,
+        hour: utc_c.hour,
+        minute: utc_c.minute,
+        second: utc_c.second,
+    };
+    let rust_config = match resolve_graha_longitudes_config_ptr(config) {
+        Ok(cfg) => cfg,
+        Err(status) => return status,
+    };
+    let grahas = if graha_count == 0 {
+        Vec::new()
+    } else {
+        let raw = unsafe { std::slice::from_raw_parts(graha_indices, graha_count as usize) };
+        let mut grahas = Vec::with_capacity(raw.len());
+        for &index in raw {
+            let graha = match graha_from_index(index as u32) {
+                Some(g) => g,
+                None => return DhruvStatus::InvalidQuery,
+            };
+            grahas.push(graha);
+        }
+        grahas
+    };
+    let eop_ref = if eop.is_null() {
+        None
+    } else {
+        Some(unsafe { &*eop })
+    };
+
+    match moving_osculating_apogees_for_date(engine, eop_ref, &utc_time, &rust_config, &grahas) {
+        Ok(result) => {
+            let out = unsafe { &mut *out };
+            *out = DhruvMovingOsculatingApogees::zeroed();
+            out.count = result.entries.len() as u8;
+            for (dst, src) in out.entries.iter_mut().zip(result.entries.iter()) {
+                *dst = DhruvMovingOsculatingApogeeEntry {
+                    graha_index: src.graha.index(),
+                    sidereal_longitude: src.sidereal_longitude,
+                    ayanamsha_deg: src.ayanamsha_deg,
+                    reference_plane_longitude: src.reference_plane_longitude,
+                };
+            }
             DhruvStatus::Ok
         }
         Err(e) => DhruvStatus::from(&e),

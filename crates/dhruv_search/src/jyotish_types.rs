@@ -115,6 +115,27 @@ impl Default for GrahaLongitudesConfig {
     }
 }
 
+/// Moving osculating apogee longitude for one graha.
+#[derive(Debug, Clone, Copy)]
+pub struct MovingOsculatingApogeeEntry {
+    /// Requested graha.
+    pub graha: Graha,
+    /// Longitude of the geocentric anti-periapsis direction on the configured
+    /// reference plane before ayanamsha subtraction.
+    pub reference_plane_longitude: f64,
+    /// Ayanamsha value subtracted from the reference-plane longitude.
+    pub ayanamsha_deg: f64,
+    /// Sidereal longitude of the moving osculating apogee.
+    pub sidereal_longitude: f64,
+}
+
+/// Batch moving osculating apogee result.
+#[derive(Debug, Clone)]
+pub struct MovingOsculatingApogees {
+    /// Entries in caller request order, including duplicate requests.
+    pub entries: Vec<MovingOsculatingApogeeEntry>,
+}
+
 /// Configuration flags for graha_positions computation.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct GrahaPositionsConfig {

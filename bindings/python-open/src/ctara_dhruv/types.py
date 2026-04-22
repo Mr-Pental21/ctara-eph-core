@@ -1269,6 +1269,23 @@ class GrahaLongitudes:
     longitudes: list[float]
 
 
+@dataclass(frozen=True)
+class MovingOsculatingApogeeEntry:
+    """Moving osculating apogee longitude for one graha."""
+
+    graha_index: int
+    sidereal_longitude: float
+    ayanamsha_deg: float
+    reference_plane_longitude: float
+
+
+@dataclass(frozen=True)
+class MovingOsculatingApogees:
+    """Batch moving osculating apogee result."""
+
+    entries: list[MovingOsculatingApogeeEntry]
+
+
 # ---------------------------------------------------------------------------
 # Full Kundali
 # ---------------------------------------------------------------------------

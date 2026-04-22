@@ -2830,6 +2830,61 @@ napi_value GrahaLongitudes(napi_env env, napi_callback_info info) {
     return out;
 }
 
+napi_value MovingOsculatingApogeesForDate(napi_env env, napi_callback_info info) {
+    size_t argc = 5;
+    napi_value args[5];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 4) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    void* engine_ptr = nullptr;
+    void* eop_ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &engine_ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    if (!ReadExternalPtr(env, args[1], &eop_ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvUtcTime utc{};
+    if (!ReadUtcTime(env, args[2], &utc)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    bool is_array = false;
+    napi_is_array(env, args[3], &is_array);
+    if (!is_array) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    uint32_t graha_count = 0;
+    napi_get_array_length(env, args[3], &graha_count);
+    if (graha_count > DHRUV_MAX_OSCULATING_APOGEE_REQUESTS) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    uint8_t grahas[DHRUV_MAX_OSCULATING_APOGEE_REQUESTS]{};
+    for (uint32_t i = 0; i < graha_count; ++i) {
+        napi_value item;
+        napi_get_element(env, args[3], i, &item);
+        uint32_t value = 0;
+        if (!GetUint32(env, item, &value) || value > 255) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+        grahas[i] = static_cast<uint8_t>(value);
+    }
+    DhruvGrahaLongitudesConfig cfg = dhruv_graha_longitudes_config_default();
+    if (argc >= 5 && !ReadGrahaLongitudesConfig(env, args[4], &cfg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+    DhruvMovingOsculatingApogees apogees{};
+    int32_t status = dhruv_moving_osculating_apogees_for_date(
+        static_cast<const DhruvEngineHandle*>(engine_ptr),
+        static_cast<const DhruvEopHandle*>(eop_ptr),
+        &utc,
+        grahas,
+        static_cast<uint8_t>(graha_count),
+        &cfg,
+        &apogees
+    );
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) {
+        napi_value arr;
+        napi_create_array_with_length(env, apogees.count, &arr);
+        for (uint32_t i = 0; i < apogees.count; ++i) {
+            napi_value entry;
+            napi_create_object(env, &entry);
+            SetNamed(env, entry, "grahaIndex", MakeUint32(env, apogees.entries[i].graha_index));
+            SetNamed(env, entry, "siderealLongitude", MakeDouble(env, apogees.entries[i].sidereal_longitude));
+            SetNamed(env, entry, "ayanamshaDeg", MakeDouble(env, apogees.entries[i].ayanamsha_deg));
+            SetNamed(env, entry, "referencePlaneLongitude", MakeDouble(env, apogees.entries[i].reference_plane_longitude));
+            napi_set_element(env, arr, i, entry);
+        }
+        SetNamed(env, out, "entries", arr);
+    }
+    return out;
+}
+
 napi_value NameLookup(napi_env env, napi_callback_info info, const char* (*fn)(uint32_t)) {
     size_t argc = 1;
     napi_value args[1];
@@ -7047,6 +7102,7 @@ napi_value Init(napi_env env, napi_value exports) {
         {"nakshatraFromTropicalUtc", nullptr, NakshatraFromTropicalUtc, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"nakshatra28FromTropicalUtc", nullptr, Nakshatra28FromTropicalUtc, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"grahaLongitudes", nullptr, GrahaLongitudes, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"movingOsculatingApogeesForDate", nullptr, MovingOsculatingApogeesForDate, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"rashiName", nullptr, RashiName, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"nakshatraName", nullptr, NakshatraName, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"nakshatra28Name", nullptr, Nakshatra28Name, nullptr, nullptr, nullptr, napi_default, nullptr},
