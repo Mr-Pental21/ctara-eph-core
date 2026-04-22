@@ -1845,28 +1845,25 @@ fn assemble_shadbala_inputs(
             ecliptic_to_sidereal(bhava_result.bhavas[max_bhava - 1].cusp_deg, aya, plane);
     }
 
-    // 3. Moving osculating apogees for Cheshta Bala (Surya/Chandra remain 0).
+    // 3. Correction-model motion inputs for Cheshta Bala (Surya/Chandra remain 0).
     let cheshta_config = dhruv_search::GrahaLongitudesConfig::sidereal_with_model(
         aya_config.ayanamsha_system,
         aya_config.use_nutation,
         aya_config.precession_model,
         aya_config.reference_plane,
     );
-    let cheshta_apogees = dhruv_search::moving_osculating_apogees(
+    let cheshta_motions = dhruv_search::jyotish::cheshta_motion_entries(
         engine,
         ctx.jd_tdb,
         &cheshta_config,
-        &[
-            Graha::Mangal,
-            Graha::Buddh,
-            Graha::Guru,
-            Graha::Shukra,
-            Graha::Shani,
-        ],
+        &sidereal_lons,
     )?;
-    let mut cheshta_apogee_lons = [0.0f64; 7];
-    for entry in cheshta_apogees.entries {
-        cheshta_apogee_lons[entry.graha.index() as usize] = entry.sidereal_longitude;
+    let mut cheshta_madhyama_lons = [0.0f64; 7];
+    let mut cheshta_chaloccha_lons = [0.0f64; 7];
+    for motion in cheshta_motions.into_iter().flatten() {
+        let idx = motion.graha.index() as usize;
+        cheshta_madhyama_lons[idx] = motion.madhyama_longitude;
+        cheshta_chaloccha_lons[idx] = motion.chaloccha_longitude;
     }
 
     // 4. Varga data: 7 vargas × 7 grahas for saptavargaja bala
@@ -1919,7 +1916,8 @@ fn assemble_shadbala_inputs(
         sidereal_lons,
         bhava_numbers,
         dig_bala_max_cusp_lons,
-        cheshta_apogee_lons,
+        cheshta_madhyama_lons,
+        cheshta_chaloccha_lons,
         kala: KalaBalaInputs {
             is_daytime,
             day_night_fraction,

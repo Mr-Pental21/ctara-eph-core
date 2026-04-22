@@ -88,7 +88,8 @@ fn amsha_bench(c: &mut Criterion) {
 fn shadbala_bench(c: &mut Criterion) {
     let sidereal_lons = [280.0, 120.0, 15.0, 170.0, 220.0, 350.0, 195.0, 90.0, 270.0];
     let bhava_numbers = [10u8, 4, 1, 7, 1, 4, 7];
-    let cheshta_apogee_lons = [0.0, 0.0, 195.0, 350.0, 40.0, 170.0, 15.0];
+    let cheshta_madhyama_lons = [0.0, 0.0, 120.0, 120.0, 220.0, 120.0, 195.0];
+    let cheshta_chaloccha_lons = [0.0, 0.0, 120.0, 170.0, 120.0, 350.0, 120.0];
     let kala = KalaBalaInputs {
         is_daytime: true,
         day_night_fraction: 0.5,
@@ -106,7 +107,8 @@ fn shadbala_bench(c: &mut Criterion) {
         sidereal_lons,
         bhava_numbers,
         dig_bala_max_cusp_lons: [270.0, 90.0, 270.0, 0.0, 0.0, 90.0, 180.0],
-        cheshta_apogee_lons,
+        cheshta_madhyama_lons,
+        cheshta_chaloccha_lons,
         kala,
         varga_rashi_indices: varga_rashi,
         varga_longitudes,

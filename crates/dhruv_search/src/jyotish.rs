@@ -321,11 +321,30 @@ struct BalaBhavaBasis {
     meridian_sidereal_lon: f64,
 }
 
+#[doc(hidden)]
 #[derive(Debug, Clone, Copy)]
-struct CachedMovingOsculatingApogee {
+pub struct CheshtaMotionEntry {
+    pub graha: Graha,
+    pub sphuta_longitude: f64,
+    pub madhyama_longitude: f64,
+    pub chaloccha_longitude: f64,
+    pub mean_sun_longitude: f64,
+    pub graha_heliocentric_mean_longitude: f64,
+    pub graha_heliocentric_aphelion_longitude: f64,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CachedCheshtaMotion {
     graha: Graha,
     config: GrahaLongitudesConfig,
-    entry: MovingOsculatingApogeeEntry,
+    sphuta_longitude: f64,
+    entry: CheshtaMotionEntry,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CachedMeanSun {
+    config: GrahaLongitudesConfig,
+    longitude: f64,
 }
 
 /// One-shot, function-local cache for shared intermediates.
@@ -354,7 +373,8 @@ struct JyotishContext {
     graha_speeds: Option<[f64; 7]>,
     /// Ecliptic declinations (deg) for sapta grahas (indices 0-6).
     graha_declinations: Option<[f64; 7]>,
-    moving_osculating_apogees: Vec<CachedMovingOsculatingApogee>,
+    mean_sun_longitudes: Vec<CachedMeanSun>,
+    cheshta_motion: Vec<CachedCheshtaMotion>,
     amsha_graha_cache: AmshaGrahaCache,
     upagraha_cache: UpagrahaCache,
     vimsopaka_varga_cache: VimsopakaVargaCache,
@@ -391,7 +411,8 @@ impl JyotishContext {
             varsha_info: None,
             graha_speeds: None,
             graha_declinations: None,
-            moving_osculating_apogees: Vec::new(),
+            mean_sun_longitudes: Vec::new(),
+            cheshta_motion: Vec::new(),
             amsha_graha_cache: AmshaGrahaCache::default(),
             upagraha_cache: UpagrahaCache::default(),
             vimsopaka_varga_cache: VimsopakaVargaCache::default(),
@@ -723,27 +744,59 @@ impl JyotishContext {
         Ok(decls)
     }
 
-    fn moving_osculating_apogee(
+    fn cheshta_motion(
         &mut self,
         engine: &Engine,
         graha: Graha,
+        sphuta_longitude: f64,
         config: GrahaLongitudesConfig,
-    ) -> Result<MovingOsculatingApogeeEntry, SearchError> {
-        if let Some(cached) = self
-            .moving_osculating_apogees
+    ) -> Result<CheshtaMotionEntry, SearchError> {
+        if let Some(entry) = self
+            .cheshta_motion
             .iter()
-            .find(|cached| cached.graha == graha && cached.config == config)
+            .find(|cached| {
+                cached.graha == graha
+                    && cached.config == config
+                    && cached.sphuta_longitude.to_bits() == sphuta_longitude.to_bits()
+            })
+            .map(|cached| cached.entry)
         {
-            return Ok(cached.entry);
+            return Ok(entry);
         }
-        let entry = moving_osculating_apogee_entry(engine, self.jd_tdb, graha, &config)?;
-        self.moving_osculating_apogees
-            .push(CachedMovingOsculatingApogee {
-                graha,
-                config,
-                entry,
-            });
+        let mean_sun_longitude = self.mean_sun_longitude(engine, config)?;
+        let entry = cheshta_motion_entry_with_mean_sun(
+            engine,
+            self.jd_tdb,
+            graha,
+            sphuta_longitude,
+            &config,
+            mean_sun_longitude,
+        )?;
+        self.cheshta_motion.push(CachedCheshtaMotion {
+            graha,
+            config,
+            sphuta_longitude,
+            entry,
+        });
         Ok(entry)
+    }
+
+    fn mean_sun_longitude(
+        &mut self,
+        engine: &Engine,
+        config: GrahaLongitudesConfig,
+    ) -> Result<f64, SearchError> {
+        if let Some(cached) = self
+            .mean_sun_longitudes
+            .iter()
+            .find(|cached| cached.config == config)
+        {
+            return Ok(cached.longitude);
+        }
+        let longitude = mean_sun_sidereal_longitude(engine, self.jd_tdb, &config)?;
+        self.mean_sun_longitudes
+            .push(CachedMeanSun { config, longitude });
+        Ok(longitude)
     }
 
     fn amsha_graha_data<'a>(
@@ -1000,6 +1053,10 @@ fn norm(v: [f64; 3]) -> f64 {
     (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt()
 }
 
+fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
 fn reference_plane_vector(
     icrf_vector: &[f64; 3],
     jd_tdb: f64,
@@ -1013,6 +1070,103 @@ fn reference_plane_vector(
         }
         ReferencePlane::Invariable => icrf_to_invariable(icrf_vector),
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct OsculatingLongitudes {
+    mean_sidereal_longitude: f64,
+    aphelion_sidereal_longitude: f64,
+    aphelion_reference_plane_longitude: f64,
+    ayanamsha_deg: f64,
+}
+
+fn osculating_longitudes_for_body(
+    engine: &Engine,
+    jd_tdb: f64,
+    body: Body,
+    config: &GrahaLongitudesConfig,
+) -> Result<OsculatingLongitudes, SearchError> {
+    let state = engine.query(Query {
+        target: body,
+        observer: Observer::Body(Body::Sun),
+        frame: Frame::IcrfJ2000,
+        epoch_tdb_jd: jd_tdb,
+    })?;
+    osculating_longitudes_from_heliocentric_state(
+        state.position_km,
+        state.velocity_km_s,
+        jd_tdb,
+        config,
+    )
+}
+
+fn osculating_longitudes_from_heliocentric_state(
+    r: [f64; 3],
+    v: [f64; 3],
+    jd_tdb: f64,
+    config: &GrahaLongitudesConfig,
+) -> Result<OsculatingLongitudes, SearchError> {
+    let r_norm = norm(r);
+    let v_norm = norm(v);
+    if r_norm <= f64::EPSILON || v_norm <= f64::EPSILON {
+        return Err(SearchError::NoConvergence(
+            "heliocentric osculating state vector is degenerate",
+        ));
+    }
+
+    let h = cross(r, v);
+    let h_norm = norm(h);
+    if h_norm <= f64::EPSILON {
+        return Err(SearchError::NoConvergence(
+            "heliocentric osculating angular momentum vector is zero",
+        ));
+    }
+
+    let vxh = cross(v, h);
+    let eccentricity = [
+        vxh[0] / SOLAR_GM_KM3_S2 - r[0] / r_norm,
+        vxh[1] / SOLAR_GM_KM3_S2 - r[1] / r_norm,
+        vxh[2] / SOLAR_GM_KM3_S2 - r[2] / r_norm,
+    ];
+    let e_norm = norm(eccentricity);
+    if e_norm <= f64::EPSILON || e_norm >= 1.0 {
+        return Err(SearchError::NoConvergence(
+            "heliocentric osculating eccentricity is unsupported",
+        ));
+    }
+
+    let cos_true_anomaly = (dot(eccentricity, r) / (e_norm * r_norm)).clamp(-1.0, 1.0);
+    let sin_true_anomaly =
+        (dot(cross(eccentricity, r), h) / (e_norm * r_norm * h_norm)).clamp(-1.0, 1.0);
+    let eccentric_anomaly =
+        ((1.0 - e_norm * e_norm).sqrt() * sin_true_anomaly).atan2(e_norm + cos_true_anomaly);
+    let mean_anomaly_deg =
+        normalize_360((eccentric_anomaly - e_norm * eccentric_anomaly.sin()).to_degrees());
+
+    let periapsis_on_plane = reference_plane_vector(&eccentricity, jd_tdb, config);
+    let periapsis_reference_plane_longitude =
+        normalize_360(cartesian_to_spherical(&periapsis_on_plane).lon_deg);
+    let aphelion_reference_plane_longitude =
+        normalize_360(periapsis_reference_plane_longitude + 180.0);
+    let t = jd_tdb_to_centuries(jd_tdb);
+    let ayanamsha_deg = dhruv_vedic_base::ayanamsha_deg_on_plane(
+        config.ayanamsha_system,
+        t,
+        config.use_nutation,
+        config.precession_model,
+        config.reference_plane,
+    );
+
+    Ok(OsculatingLongitudes {
+        mean_sidereal_longitude: normalize_360(
+            periapsis_reference_plane_longitude + mean_anomaly_deg - ayanamsha_deg,
+        ),
+        aphelion_sidereal_longitude: normalize_360(
+            aphelion_reference_plane_longitude - ayanamsha_deg,
+        ),
+        aphelion_reference_plane_longitude,
+        ayanamsha_deg,
+    })
 }
 
 fn moving_osculating_apogee_entry(
@@ -1030,51 +1184,87 @@ fn moving_osculating_apogee_entry(
     let body = apogee_supported_body(graha).ok_or(SearchError::InvalidConfig(
         "moving osculating apogee supports only Mangal, Buddh, Guru, Shukra, and Shani",
     ))?;
-    let state = engine.query(Query {
-        target: body,
-        observer: Observer::Body(Body::Sun),
-        frame: Frame::IcrfJ2000,
-        epoch_tdb_jd: jd_tdb,
-    })?;
-    let r = state.position_km;
-    let v = state.velocity_km_s;
-    let r_norm = norm(r);
-    if r_norm <= f64::EPSILON {
-        return Err(SearchError::NoConvergence(
-            "heliocentric apogee vector is zero",
-        ));
-    }
-    let h = cross(r, v);
-    let vxh = cross(v, h);
-    let eccentricity = [
-        vxh[0] / SOLAR_GM_KM3_S2 - r[0] / r_norm,
-        vxh[1] / SOLAR_GM_KM3_S2 - r[1] / r_norm,
-        vxh[2] / SOLAR_GM_KM3_S2 - r[2] / r_norm,
-    ];
-    if norm(eccentricity) <= f64::EPSILON {
-        return Err(SearchError::NoConvergence(
-            "heliocentric osculating eccentricity vector is zero",
-        ));
-    }
-    let anti_periapsis = [-eccentricity[0], -eccentricity[1], -eccentricity[2]];
-    let on_plane = reference_plane_vector(&anti_periapsis, jd_tdb, config);
-    let reference_plane_longitude = normalize_360(cartesian_to_spherical(&on_plane).lon_deg);
-    let t = jd_tdb_to_centuries(jd_tdb);
-    let ayanamsha_deg = dhruv_vedic_base::ayanamsha_deg_on_plane(
-        config.ayanamsha_system,
-        t,
-        config.use_nutation,
-        config.precession_model,
-        config.reference_plane,
-    );
-    let sidereal_longitude = normalize_360(reference_plane_longitude - ayanamsha_deg);
+    let longitudes = osculating_longitudes_for_body(engine, jd_tdb, body, config)?;
 
     Ok(MovingOsculatingApogeeEntry {
         graha,
-        reference_plane_longitude,
-        ayanamsha_deg,
-        sidereal_longitude,
+        reference_plane_longitude: longitudes.aphelion_reference_plane_longitude,
+        ayanamsha_deg: longitudes.ayanamsha_deg,
+        sidereal_longitude: longitudes.aphelion_sidereal_longitude,
     })
+}
+
+fn mean_sun_sidereal_longitude(
+    engine: &Engine,
+    jd_tdb: f64,
+    config: &GrahaLongitudesConfig,
+) -> Result<f64, SearchError> {
+    if config.kind != GrahaLongitudeKind::Sidereal {
+        return Err(SearchError::InvalidConfig(
+            "mean Sun correction longitude requires sidereal longitude config",
+        ));
+    }
+    let earth = osculating_longitudes_for_body(engine, jd_tdb, Body::Earth, config)?;
+    Ok(normalize_360(earth.mean_sidereal_longitude + 180.0))
+}
+
+fn cheshta_motion_entry_with_mean_sun(
+    engine: &Engine,
+    jd_tdb: f64,
+    graha: Graha,
+    sphuta_longitude: f64,
+    config: &GrahaLongitudesConfig,
+    mean_sun_longitude: f64,
+) -> Result<CheshtaMotionEntry, SearchError> {
+    let body = apogee_supported_body(graha).ok_or(SearchError::InvalidConfig(
+        "cheshta motion supports only Mangal, Buddh, Guru, Shukra, and Shani",
+    ))?;
+    let graha_motion = osculating_longitudes_for_body(engine, jd_tdb, body, config)?;
+    let graha_mean = graha_motion.mean_sidereal_longitude;
+    let (madhyama_longitude, chaloccha_longitude) = match graha {
+        Graha::Mangal | Graha::Guru | Graha::Shani => (graha_mean, mean_sun_longitude),
+        Graha::Buddh | Graha::Shukra => (mean_sun_longitude, graha_mean),
+        _ => unreachable!("unsupported graha rejected above"),
+    };
+
+    Ok(CheshtaMotionEntry {
+        graha,
+        sphuta_longitude,
+        madhyama_longitude,
+        chaloccha_longitude,
+        mean_sun_longitude,
+        graha_heliocentric_mean_longitude: graha_mean,
+        graha_heliocentric_aphelion_longitude: graha_motion.aphelion_sidereal_longitude,
+    })
+}
+
+#[doc(hidden)]
+pub fn cheshta_motion_entries(
+    engine: &Engine,
+    jd_tdb: f64,
+    config: &GrahaLongitudesConfig,
+    sphuta_longitudes: &[f64; 9],
+) -> Result<[Option<CheshtaMotionEntry>; 7], SearchError> {
+    let mut entries = [None; 7];
+    let mean_sun_longitude = mean_sun_sidereal_longitude(engine, jd_tdb, config)?;
+    for graha in [
+        Graha::Mangal,
+        Graha::Buddh,
+        Graha::Guru,
+        Graha::Shukra,
+        Graha::Shani,
+    ] {
+        let idx = graha.index() as usize;
+        entries[idx] = Some(cheshta_motion_entry_with_mean_sun(
+            engine,
+            jd_tdb,
+            graha,
+            sphuta_longitudes[idx],
+            config,
+            mean_sun_longitude,
+        )?);
+    }
+    Ok(entries)
 }
 
 /// Compute moving osculating apogees at a TDB epoch.
@@ -3088,14 +3278,15 @@ fn assemble_shadbala_inputs(
         dig_bala_max_cusp_lons[idx] = bhava_basis.cusp_sidereal_lons[max_bhava - 1];
     }
 
-    // 3. Moving osculating apogees for Cheshta Bala (Surya/Chandra remain 0).
+    // 3. Correction-model motion inputs for Cheshta Bala (Surya/Chandra remain 0).
     let cheshta_config = GrahaLongitudesConfig::sidereal_with_model(
         aya_config.ayanamsha_system,
         aya_config.use_nutation,
         aya_config.precession_model,
         aya_config.reference_plane,
     );
-    let mut cheshta_apogee_lons = [0.0f64; 7];
+    let mut cheshta_madhyama_lons = [0.0f64; 7];
+    let mut cheshta_chaloccha_lons = [0.0f64; 7];
     for graha in [
         Graha::Mangal,
         Graha::Buddh,
@@ -3104,9 +3295,9 @@ fn assemble_shadbala_inputs(
         Graha::Shani,
     ] {
         let idx = graha.index() as usize;
-        cheshta_apogee_lons[idx] = ctx
-            .moving_osculating_apogee(engine, graha, cheshta_config)?
-            .sidereal_longitude;
+        let motion = ctx.cheshta_motion(engine, graha, sidereal_lons[idx], cheshta_config)?;
+        cheshta_madhyama_lons[idx] = motion.madhyama_longitude;
+        cheshta_chaloccha_lons[idx] = motion.chaloccha_longitude;
     }
 
     // 4. Varga data: 7 vargas × 7 grahas for saptavargaja bala
@@ -3160,7 +3351,8 @@ fn assemble_shadbala_inputs(
         sidereal_lons,
         bhava_numbers,
         dig_bala_max_cusp_lons,
-        cheshta_apogee_lons,
+        cheshta_madhyama_lons,
+        cheshta_chaloccha_lons,
         kala: KalaBalaInputs {
             is_daytime,
             day_night_fraction,

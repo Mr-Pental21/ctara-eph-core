@@ -33,7 +33,10 @@ pub const NAISARGIKA_BALA: [f64; 7] = [60.0, 51.43, 17.14, 25.71, 34.29, 42.86, 
 /// Sun=10, Moon=4, Mars=10, Mercury=1, Jupiter=1, Venus=4, Saturn=7.
 pub const DIG_BALA_BHAVA: [u8; 7] = [10, 4, 10, 1, 1, 4, 7];
 
-/// Maximum daily speed (deg/day) for cheshta bala normalization.
+/// Legacy maximum daily speeds (deg/day), retained for source compatibility.
+///
+/// Cheshta Bala is computed from correction-model madhyama/sphuta/chaloccha
+/// longitudes, not speed normalization.
 pub const MAX_SPEED: [f64; 7] = [1.0, 15.0, 0.8, 2.2, 0.25, 1.6, 0.13];
 
 /// Required strength (shashtiamsas) for a graha to be considered strong.
@@ -722,20 +725,48 @@ pub fn all_kala_balas(inputs: &KalaBalaInputs) -> [KalaBalaBreakdown; 7] {
 // 2e. Cheshta Bala
 // ---------------------------------------------------------------------------
 
-/// Cheshta Kendra from moving osculating apogee to current graha longitude.
-pub fn cheshta_kendra(apogee_sidereal_longitude: f64, graha_sidereal_longitude: f64) -> f64 {
-    normalize_360(apogee_sidereal_longitude - graha_sidereal_longitude)
+/// Circular midpoint of two longitudes.
+///
+/// The second longitude is first unwrapped to the nearest equivalent position
+/// relative to the first longitude so a pair such as 350° and 10° averages to
+/// 0° instead of 180°.
+pub fn circular_longitude_midpoint(a: f64, b: f64) -> f64 {
+    let delta = normalize_360(b - a);
+    let signed_delta = if delta > 180.0 { delta - 360.0 } else { delta };
+    normalize_360(a + signed_delta / 2.0)
 }
 
-/// Cheshta Bala from moving osculating apogee.
+/// Fold an angular separation to the smaller 0..=180° arc.
+pub fn smaller_longitude_arc(separation: f64) -> f64 {
+    let normalized = normalize_360(separation);
+    if normalized <= 180.0 {
+        normalized
+    } else {
+        360.0 - normalized
+    }
+}
+
+/// Cheshta Kendra from correction-model madhyama/sphuta/chaloccha longitudes.
+pub fn cheshta_kendra(
+    madhyama_sidereal_longitude: f64,
+    sphuta_sidereal_longitude: f64,
+    chaloccha_sidereal_longitude: f64,
+) -> f64 {
+    let midpoint =
+        circular_longitude_midpoint(madhyama_sidereal_longitude, sphuta_sidereal_longitude);
+    smaller_longitude_arc(chaloccha_sidereal_longitude - midpoint)
+}
+
+/// Cheshta Bala from correction-model chaloccha.
 ///
-/// Mangal through Shani use the smaller angular distance between the graha
-/// and its heliocentric moving osculating apogee, divided by 3. Surya and
-/// Chandra remain 0.
+/// Mangal through Shani use the smaller angular distance between their
+/// correction-model chaloccha and the midpoint of madhyama+sphuta, divided by
+/// 3. Surya and Chandra remain 0.
 pub fn cheshta_bala(
     graha: Graha,
-    graha_sidereal_longitude: f64,
-    apogee_sidereal_longitude: f64,
+    madhyama_sidereal_longitude: f64,
+    sphuta_sidereal_longitude: f64,
+    chaloccha_sidereal_longitude: f64,
 ) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
@@ -745,22 +776,27 @@ pub fn cheshta_bala(
         return 0.0;
     }
 
-    let kendra = cheshta_kendra(apogee_sidereal_longitude, graha_sidereal_longitude);
-    if kendra <= 180.0 {
-        kendra / 3.0
-    } else {
-        (360.0 - kendra) / 3.0
-    }
+    cheshta_kendra(
+        madhyama_sidereal_longitude,
+        sphuta_sidereal_longitude,
+        chaloccha_sidereal_longitude,
+    ) / 3.0
 }
 
 /// Cheshta bala for all 7.
 pub fn all_cheshta_balas(
-    sidereal_lons: &[f64; 7],
-    apogee_sidereal_lons: &[f64; 7],
+    madhyama_sidereal_lons: &[f64; 7],
+    sphuta_sidereal_lons: &[f64; 7],
+    chaloccha_sidereal_lons: &[f64; 7],
 ) -> [f64; 7] {
     let mut result = [0.0; 7];
     for (i, g) in SAPTA_GRAHAS.iter().enumerate() {
-        result[i] = cheshta_bala(*g, sidereal_lons[i], apogee_sidereal_lons[i]);
+        result[i] = cheshta_bala(
+            *g,
+            madhyama_sidereal_lons[i],
+            sphuta_sidereal_lons[i],
+            chaloccha_sidereal_lons[i],
+        );
     }
     result
 }
@@ -862,8 +898,10 @@ pub struct ShadbalaInputs {
     pub bhava_numbers: [u8; 7],
     /// Sidereal max-strength cusp longitude for each sapta graha's Dig Bala.
     pub dig_bala_max_cusp_lons: [f64; 7],
-    /// Moving osculating apogee sidereal longitude for sapta grahas.
-    pub cheshta_apogee_lons: [f64; 7],
+    /// Correction-model madhyama longitude for sapta grahas.
+    pub cheshta_madhyama_lons: [f64; 7],
+    /// Correction-model chaloccha longitude for sapta grahas.
+    pub cheshta_chaloccha_lons: [f64; 7],
     /// Kala bala inputs.
     pub kala: KalaBalaInputs,
     /// 7 vargas x 7 grahas rashi indices (for saptavargaja bala).
@@ -894,8 +932,9 @@ pub fn shadbala_from_inputs(graha: Graha, inputs: &ShadbalaInputs) -> ShadbalaBr
     let kala_result = kala_bala(graha, &inputs.kala);
     let cheshta = cheshta_bala(
         graha,
+        inputs.cheshta_madhyama_lons[gi],
         inputs.sidereal_lons[gi],
-        inputs.cheshta_apogee_lons[gi],
+        inputs.cheshta_chaloccha_lons[gi],
     );
     let nais = naisargika_bala(graha);
     let drik = drik_bala(
@@ -1129,24 +1168,31 @@ mod tests {
     // --- Cheshta Bala ---
 
     #[test]
-    fn cheshta_kendra_formula_quadrants() {
-        assert!((cheshta_bala(Graha::Mangal, 10.0, 10.0) - 0.0).abs() < EPS);
-        assert!((cheshta_bala(Graha::Mangal, 10.0, 100.0) - 30.0).abs() < EPS);
-        assert!((cheshta_bala(Graha::Mangal, 10.0, 190.0) - 60.0).abs() < EPS);
-        assert!((cheshta_bala(Graha::Mangal, 10.0, 280.0) - 30.0).abs() < EPS);
-        assert!((cheshta_bala(Graha::Mangal, 10.0, 370.0) - 0.0).abs() < EPS);
+    fn circular_midpoint_handles_wrap() {
+        assert!((circular_longitude_midpoint(350.0, 10.0) - 0.0).abs() < EPS);
+        assert!((circular_longitude_midpoint(10.0, 350.0) - 0.0).abs() < EPS);
+        assert!((circular_longitude_midpoint(20.0, 80.0) - 50.0).abs() < EPS);
     }
 
     #[test]
-    fn cheshta_kendra_normalizes_negative_apogee_delta() {
-        assert!((cheshta_kendra(350.0, 10.0) - 340.0).abs() < EPS);
-        assert!((cheshta_bala(Graha::Mangal, 10.0, 350.0) - (20.0 / 3.0)).abs() < EPS);
+    fn cheshta_kendra_formula_quadrants() {
+        assert!((cheshta_bala(Graha::Mangal, 10.0, 10.0, 10.0) - 0.0).abs() < EPS);
+        assert!((cheshta_bala(Graha::Mangal, 10.0, 10.0, 100.0) - 30.0).abs() < EPS);
+        assert!((cheshta_bala(Graha::Mangal, 10.0, 10.0, 190.0) - 60.0).abs() < EPS);
+        assert!((cheshta_bala(Graha::Mangal, 10.0, 10.0, 280.0) - 30.0).abs() < EPS);
+        assert!((cheshta_bala(Graha::Mangal, 10.0, 10.0, 370.0) - 0.0).abs() < EPS);
+    }
+
+    #[test]
+    fn cheshta_kendra_uses_midpoint_and_folds_arc() {
+        assert!((cheshta_kendra(350.0, 10.0, 270.0) - 90.0).abs() < EPS);
+        assert!((cheshta_bala(Graha::Mangal, 350.0, 10.0, 350.0) - (10.0 / 3.0)).abs() < EPS);
     }
 
     #[test]
     fn cheshta_sun_always_zero() {
-        assert!(cheshta_bala(Graha::Surya, 10.0, 190.0).abs() < EPS);
-        assert!(cheshta_bala(Graha::Chandra, 10.0, 190.0).abs() < EPS);
+        assert!(cheshta_bala(Graha::Surya, 10.0, 10.0, 190.0).abs() < EPS);
+        assert!(cheshta_bala(Graha::Chandra, 10.0, 10.0, 190.0).abs() < EPS);
     }
 
     // --- Naisargika Bala ---
@@ -1260,7 +1306,7 @@ mod tests {
     fn rahu_ketu_all_zero() {
         assert!(uchcha_bala(Graha::Rahu, 100.0).abs() < EPS);
         assert!(dig_bala(Graha::Ketu, 0.0, 0.0).abs() < EPS);
-        assert!(cheshta_bala(Graha::Rahu, 10.0, 190.0).abs() < EPS);
+        assert!(cheshta_bala(Graha::Rahu, 10.0, 10.0, 190.0).abs() < EPS);
         assert!(naisargika_bala(Graha::Ketu).abs() < EPS);
     }
 }

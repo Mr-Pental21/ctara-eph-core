@@ -148,23 +148,35 @@ Winner = planet with more northerly declination. Winner gets +60, loser gets −
 
 ## 4. Cheshta Bala (Motional Strength)
 
-Mangal, Buddh, Guru, Shukra, and Shani use their heliocentric moving osculating
-apogee longitude:
+Mangal, Buddh, Guru, Shukra, and Shani use a modern correction-model
+interpretation of the sloka's madhyama, sphuta, and chaloccha quantities. This
+does not use the physical moving osculating apogee endpoint directly.
 
 ```text
-cheshta_kendra = normalize_360(apogee_sidereal_longitude - graha_sidereal_longitude)
+mid = circular_midpoint(madhyama_longitude, sphuta_longitude)
+raw_cheshta_kendra = normalize_360(chaloccha_longitude - mid)
 
-if cheshta_kendra <= 180:
-    cheshta_bala = cheshta_kendra / 3
+if raw_cheshta_kendra <= 180:
+    cheshta_kendra = raw_cheshta_kendra
 else:
-    cheshta_bala = (360 - cheshta_kendra) / 3
+    cheshta_kendra = 360 - raw_cheshta_kendra
+
+cheshta_bala = cheshta_kendra / 3
 ```
+
+Interior/exterior mapping:
+
+- Exterior grahas Mangal, Guru, Shani: madhyama = graha heliocentric
+  osculating mean longitude, chaloccha = modern mean Sun longitude.
+- Interior grahas Buddh, Shukra: madhyama = modern mean Sun longitude,
+  chaloccha = graha heliocentric osculating mean longitude.
 
 Surya and Chandra always receive 0 Cheshta Bala. Rahu and Ketu are outside the
 Shadbala graha set.
 
-The moving osculating apogee helper and physical constant provenance are
-documented in `docs/clean_room_osculating_apogee.md`.
+The physical moving osculating apogee helper and the osculating-element
+provenance used for the modern mean-longitude approximation are documented in
+`docs/clean_room_osculating_apogee.md`.
 
 ## 5. Naisargika Bala (Natural Strength)
 

@@ -22,6 +22,7 @@ from .types import (
 
 _SEARCH_TIME_JD_TDB = 0
 _SEARCH_TIME_UTC = 1
+_JD_ABSENT = -1.0
 
 
 # ---------------------------------------------------------------------------
@@ -117,13 +118,13 @@ def _chandra_grahan(r) -> ChandraGrahanResult:
         greatest_grahan_jd=r.greatest_grahan_jd,
         p1_utc=_utc_from_c(r.p1_utc),
         p1_jd=r.p1_jd,
-        u1_utc=None if r.u1_jd == lib.DHRUV_JD_ABSENT else _utc_from_c(r.u1_utc),
+        u1_utc=None if r.u1_jd == _JD_ABSENT else _utc_from_c(r.u1_utc),
         u1_jd=r.u1_jd,
-        u2_utc=None if r.u2_jd == lib.DHRUV_JD_ABSENT else _utc_from_c(r.u2_utc),
+        u2_utc=None if r.u2_jd == _JD_ABSENT else _utc_from_c(r.u2_utc),
         u2_jd=r.u2_jd,
-        u3_utc=None if r.u3_jd == lib.DHRUV_JD_ABSENT else _utc_from_c(r.u3_utc),
+        u3_utc=None if r.u3_jd == _JD_ABSENT else _utc_from_c(r.u3_utc),
         u3_jd=r.u3_jd,
-        u4_utc=None if r.u4_jd == lib.DHRUV_JD_ABSENT else _utc_from_c(r.u4_utc),
+        u4_utc=None if r.u4_jd == _JD_ABSENT else _utc_from_c(r.u4_utc),
         u4_jd=r.u4_jd,
         p4_utc=_utc_from_c(r.p4_utc),
         p4_jd=r.p4_jd,
@@ -138,13 +139,13 @@ def _surya_grahan(r) -> SuryaGrahanResult:
         magnitude=r.magnitude,
         greatest_grahan_utc=_utc_from_c(r.greatest_grahan_utc),
         greatest_grahan_jd=r.greatest_grahan_jd,
-        c1_utc=None if r.c1_jd == lib.DHRUV_JD_ABSENT else _utc_from_c(r.c1_utc),
+        c1_utc=None if r.c1_jd == _JD_ABSENT else _utc_from_c(r.c1_utc),
         c1_jd=r.c1_jd,
-        c2_utc=None if r.c2_jd == lib.DHRUV_JD_ABSENT else _utc_from_c(r.c2_utc),
+        c2_utc=None if r.c2_jd == _JD_ABSENT else _utc_from_c(r.c2_utc),
         c2_jd=r.c2_jd,
-        c3_utc=None if r.c3_jd == lib.DHRUV_JD_ABSENT else _utc_from_c(r.c3_utc),
+        c3_utc=None if r.c3_jd == _JD_ABSENT else _utc_from_c(r.c3_utc),
         c3_jd=r.c3_jd,
-        c4_utc=None if r.c4_jd == lib.DHRUV_JD_ABSENT else _utc_from_c(r.c4_utc),
+        c4_utc=None if r.c4_jd == _JD_ABSENT else _utc_from_c(r.c4_utc),
         c4_jd=r.c4_jd,
         moon_ecliptic_lat_deg=r.moon_ecliptic_lat_deg,
         angular_separation_deg=r.angular_separation_deg,

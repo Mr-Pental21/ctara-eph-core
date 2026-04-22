@@ -8,8 +8,8 @@ use dhruv_core::{Engine, EngineConfig};
 use dhruv_search::sankranti_types::SankrantiConfig;
 use dhruv_search::{
     AmshaSelectionConfig, FullKundaliConfig, GrahaPositionsConfig, balas_for_date,
-    bhavabala_for_bhava, bhavabala_for_date, moving_osculating_apogees_for_date, shadbala_for_date,
-    shadbala_for_graha, vimsopaka_for_date, vimsopaka_for_graha,
+    bhavabala_for_bhava, bhavabala_for_date, shadbala_for_date, shadbala_for_graha,
+    vimsopaka_for_date, vimsopaka_for_graha,
 };
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
 use dhruv_vedic_base::{BhavaConfig, Graha, NodeDignityPolicy, cheshta_bala};
@@ -46,7 +46,7 @@ fn new_delhi() -> GeoLocation {
 }
 
 #[test]
-fn shadbala_cheshta_uses_moving_osculating_apogee() {
+fn shadbala_cheshta_uses_correction_model_motion() {
     let engine = match load_engine() {
         Some(e) => e,
         None => return,
@@ -78,19 +78,6 @@ fn shadbala_cheshta_uses_moving_osculating_apogee() {
         &AmshaSelectionConfig::default(),
     )
     .expect("shadbala should succeed");
-    let apogees = moving_osculating_apogees_for_date(
-        &engine,
-        Some(&eop),
-        &utc,
-        &dhruv_search::GrahaLongitudesConfig::sidereal_with_model(
-            aya_config.ayanamsha_system,
-            aya_config.use_nutation,
-            aya_config.precession_model,
-            aya_config.reference_plane,
-        ),
-        &[Graha::Mangal],
-    )
-    .expect("apogee should succeed");
     let mangal = shadbala
         .entries
         .iter()
@@ -107,12 +94,79 @@ fn shadbala_cheshta_uses_moving_osculating_apogee() {
         ),
     )
     .expect("graha longitudes should succeed");
+    let cheshta_config = dhruv_search::GrahaLongitudesConfig::sidereal_with_model(
+        aya_config.ayanamsha_system,
+        aya_config.use_nutation,
+        aya_config.precession_model,
+        aya_config.reference_plane,
+    );
+    let motions = dhruv_search::jyotish::cheshta_motion_entries(
+        &engine,
+        utc.to_jd_tdb(engine.lsk()),
+        &cheshta_config,
+        &graha_lons.longitudes,
+    )
+    .expect("cheshta motions should succeed");
+    let motion = motions[Graha::Mangal.index() as usize].expect("Mangal motion");
     let expected = cheshta_bala(
         Graha::Mangal,
+        motion.madhyama_longitude,
         graha_lons.longitude(Graha::Mangal),
-        apogees.entries[0].sidereal_longitude,
+        motion.chaloccha_longitude,
     );
     assert!((mangal.cheshta - expected).abs() < 1e-9);
+}
+
+#[test]
+fn cheshta_motion_maps_interior_and_exterior_differently() {
+    let engine = match load_engine() {
+        Some(e) => e,
+        None => return,
+    };
+    let utc = UtcTime {
+        year: 2026,
+        month: 4,
+        day: 17,
+        hour: 13,
+        minute: 25,
+        second: 39.0,
+    };
+    let aya_config = default_aya_config();
+    let config = dhruv_search::GrahaLongitudesConfig::sidereal_with_model(
+        aya_config.ayanamsha_system,
+        aya_config.use_nutation,
+        aya_config.precession_model,
+        aya_config.reference_plane,
+    );
+    let jd_tdb = utc.to_jd_tdb(engine.lsk());
+    let graha_lons = dhruv_search::graha_longitudes(&engine, jd_tdb, &config).expect("longitudes");
+    let motions = dhruv_search::jyotish::cheshta_motion_entries(
+        &engine,
+        jd_tdb,
+        &config,
+        &graha_lons.longitudes,
+    )
+    .expect("cheshta motion");
+
+    for graha in [Graha::Mangal, Graha::Guru, Graha::Shani] {
+        let motion = motions[graha.index() as usize].expect("motion");
+        assert!(
+            (motion.madhyama_longitude - motion.graha_heliocentric_mean_longitude).abs() < 1e-12
+        );
+        assert!((motion.chaloccha_longitude - motion.mean_sun_longitude).abs() < 1e-12);
+    }
+
+    for graha in [Graha::Buddh, Graha::Shukra] {
+        let motion = motions[graha.index() as usize].expect("motion");
+        assert!((motion.madhyama_longitude - motion.mean_sun_longitude).abs() < 1e-12);
+        assert!(
+            (motion.chaloccha_longitude - motion.graha_heliocentric_mean_longitude).abs() < 1e-12
+        );
+        assert!(
+            (motion.chaloccha_longitude - motion.mean_sun_longitude).abs() > 1.0,
+            "interior chaloccha should not collapse to mean Sun for {graha:?}"
+        );
+    }
 }
 
 fn utc_2024_jan_15() -> UtcTime {

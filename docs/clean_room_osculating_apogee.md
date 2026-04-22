@@ -36,14 +36,38 @@ The resulting vector is converted to spherical longitude and normalized to
 ayanamsha, nutation, precession model, and reference-plane semantics as
 `graha_longitudes`.
 
-For instantaneous non-bound conics, Dhruv still reports the anti-periapsis
-direction from the eccentricity vector. A zero-length eccentricity vector is
-treated as non-convergent input.
+The same state-vector recovery helper also derives a modern osculating mean
+longitude for Cheshta Bala:
+
+```text
+L_mean = longitude_of_periapsis + mean_anomaly
+L_aphelion = longitude_of_periapsis + 180°
+```
+
+`L_mean` is an instantaneous osculating mean longitude, not a traditional
+epoch-and-daily-motion table value. Cheshta Bala maps this modern mean longitude
+through the interior/exterior correction model documented in
+`docs/clean_room_shadbala.md`; it does not consume `L_aphelion` directly.
+
+Bound instantaneous conics use the anti-periapsis direction from the
+eccentricity vector. Zero-length eccentricity vectors and non-bound osculating
+states are treated as non-convergent input.
 
 ## Provenance
 
 The vector formula is the standard two-body osculating eccentricity-vector
 definition from classical orbital mechanics.
+
+The implementation follows the same clean-room concept as NAIF's public
+`oscelt_c` documentation: osculating conic elements are derived from an inertial
+state vector and a primary-body gravitational parameter. JPL SPK kernels provide
+state vectors; they do not provide these classical elements as the primary stored
+data.
+
+The interior/exterior correction-model context for Cheshta Bala is based on the
+public IITGN paper "The traditional Indian planetary model and its revision by
+Nilakantha Somayaji", which describes the different treatment of Mercury/Venus
+and Mars/Jupiter/Saturn in the traditional correction model.
 
 The solar gravitational parameter used by the implementation is:
 
