@@ -194,8 +194,21 @@ Fixed constants (BPHS):
 
 ## 6. Drik Bala (Aspectual Strength)
 
-(benefic_virupa_sum − malefic_virupa_sum) / 4.
-Uses existing virupa-based drishti system. Benefic/malefic classification from Moon-Sun elongation.
+Dhruv first computes the signed aspect balance:
+
+```text
+base_drik = (benefic_virupa_sum − malefic_virupa_sum) / 4
+```
+
+It then adds the full incoming drishti virupa from Guru and Buddh to the target
+graha:
+
+```text
+drik_bala = base_drik + guru_full_drishti + buddh_full_drishti
+```
+
+The virupa strengths use the existing graha drishti system. Benefic/malefic
+classification uses Moon-Sun elongation for Chandra and Buddh.
 
 ## 7. Total Shadbala
 

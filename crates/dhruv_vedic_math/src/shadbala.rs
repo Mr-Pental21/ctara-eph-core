@@ -823,10 +823,12 @@ pub fn all_naisargika_balas() -> [f64; 7] {
 // 2g. Drik Bala
 // ---------------------------------------------------------------------------
 
-/// Drik Bala: (benefic_virupa_sum - malefic_virupa_sum) / 4.
+/// Drik Bala: base signed aspect strength plus full Guru/Buddh drishti.
 ///
 /// For each incoming aspect, classify the aspecting graha as benefic or malefic,
-/// then sum their total virupas. The difference divided by 4 gives drik bala.
+/// then sum their total virupas. The difference divided by 4 gives the base
+/// drik bala. Add the full incoming drishti virupa of Guru and Buddh on the
+/// target graha to obtain the final drik bala.
 /// `sidereal_lons` = all 9 grahas. `moon_sun_elong` for Moon/Mercury classification.
 pub fn drik_bala(graha: Graha, sidereal_lons: &[f64; 9], moon_sun_elong: f64) -> f64 {
     if !is_sapta_graha(graha) {
@@ -835,6 +837,7 @@ pub fn drik_bala(graha: Graha, sidereal_lons: &[f64; 9], moon_sun_elong: f64) ->
     let target_lon = sidereal_lons[graha.index() as usize];
     let mut benefic_sum = 0.0;
     let mut malefic_sum = 0.0;
+    let mut guru_buddh_full_drishti = 0.0;
 
     for src in crate::graha::ALL_GRAHAS {
         if src == graha {
@@ -845,6 +848,10 @@ pub fn drik_bala(graha: Graha, sidereal_lons: &[f64; 9], moon_sun_elong: f64) ->
         let bv = base_virupa(ang);
         let sv = special_virupa(src, ang);
         let total = bv + sv;
+
+        if matches!(src, Graha::Guru | Graha::Buddh) {
+            guru_buddh_full_drishti += total;
+        }
 
         let nature = if src == Graha::Chandra || src == Graha::Buddh {
             moon_benefic_nature(moon_sun_elong)
@@ -858,7 +865,7 @@ pub fn drik_bala(graha: Graha, sidereal_lons: &[f64; 9], moon_sun_elong: f64) ->
         }
     }
 
-    (benefic_sum - malefic_sum) / 4.0
+    (benefic_sum - malefic_sum) / 4.0 + guru_buddh_full_drishti
 }
 
 /// Drik bala for all 7 sapta grahas.
@@ -1210,6 +1217,26 @@ mod tests {
     #[test]
     fn naisargika_rahu_zero() {
         assert!(naisargika_bala(Graha::Rahu).abs() < EPS);
+    }
+
+    #[test]
+    fn drik_bala_adds_full_guru_and_buddh_drishti() {
+        let mut lons = [0.0f64; 9];
+        lons[Graha::Surya.index() as usize] = 0.0;
+        lons[Graha::Chandra.index() as usize] = 10.0; // zero aspect to Surya
+        lons[Graha::Mangal.index() as usize] = 20.0; // zero aspect to Surya
+        lons[Graha::Buddh.index() as usize] = 270.0; // 90° to Surya -> 45 virupa
+        lons[Graha::Guru.index() as usize] = 180.0; // 180° to Surya -> 60 virupa
+        lons[Graha::Shukra.index() as usize] = 40.0; // zero aspect to Surya
+        lons[Graha::Shani.index() as usize] = 50.0; // zero aspect to Surya
+        lons[Graha::Rahu.index() as usize] = 60.0; // 300° to Surya -> 0 virupa
+        lons[Graha::Ketu.index() as usize] = 330.0; // 30° to Surya -> 0 virupa
+
+        let base_signed_balance = (60.0 + 45.0) / 4.0;
+        let full_guru_buddh_drishti = 60.0 + 45.0;
+        let expected = base_signed_balance + full_guru_buddh_drishti;
+
+        assert!((drik_bala(Graha::Surya, &lons, 180.0) - expected).abs() < EPS);
     }
 
     // --- Saptavargaja ---
