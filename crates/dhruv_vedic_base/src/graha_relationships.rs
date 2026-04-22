@@ -524,20 +524,61 @@ pub const fn natural_benefic_malefic(graha: Graha) -> BeneficNature {
     }
 }
 
-/// Moon's benefic nature depends on elongation from Sun.
-/// Benefic if shukla paksha (elongation 0-180 from new moon perspective,
-/// i.e., if distance from Sun > 72 degrees on either side of full moon).
-/// Simplification: benefic if elongation (0-360) makes phase_angle > 72.
+/// Chandra's dynamic benefic nature from its elongation from Surya.
+///
+/// Chandra is treated as benefic while moving from conjunction toward
+/// opposition (`0..=180`) and malefic after opposition (`>180..360`).
 pub fn moon_benefic_nature(moon_sun_elongation: f64) -> BeneficNature {
     let elong = normalize_360_inner(moon_sun_elongation);
-    // phase_angle = proximity to full moon (180 deg elongation)
-    // benefic when "bright" enough, typically > 72 deg phase
-    let phase = if elong <= 180.0 { elong } else { 360.0 - elong };
-    if phase >= 72.0 {
+    if elong <= 180.0 {
         BeneficNature::Benefic
     } else {
         BeneficNature::Malefic
     }
+}
+
+/// Buddh's dynamic benefic nature from same-rashi association.
+///
+/// Buddh becomes malefic when sharing a rashi with Surya, Mangal, Shani,
+/// Rahu, Ketu, or a dynamically malefic Chandra. If no malefic association is
+/// present, Buddh remains benefic by default; sharing a rashi with Guru,
+/// Shukra, or dynamically benefic Chandra is therefore also benefic.
+pub fn buddh_association_nature(sidereal_lons: &[f64; 9]) -> BeneficNature {
+    let Some(buddh_rashi) =
+        longitude_rashi_index(sidereal_lons[Graha::Buddh.index() as usize])
+    else {
+        return BeneficNature::Benefic;
+    };
+    let chandra_nature = moon_benefic_nature(
+        sidereal_lons[Graha::Chandra.index() as usize]
+            - sidereal_lons[Graha::Surya.index() as usize],
+    );
+
+    for graha in crate::graha::ALL_GRAHAS {
+        if graha == Graha::Buddh {
+            continue;
+        }
+        let Some(rashi) = longitude_rashi_index(sidereal_lons[graha.index() as usize]) else {
+            continue;
+        };
+        if rashi != buddh_rashi {
+            continue;
+        }
+
+        match graha {
+            Graha::Surya | Graha::Mangal | Graha::Shani | Graha::Rahu | Graha::Ketu => {
+                return BeneficNature::Malefic;
+            }
+            Graha::Chandra => match chandra_nature {
+                BeneficNature::Benefic => {}
+                BeneficNature::Malefic => return BeneficNature::Malefic,
+            },
+            Graha::Guru | Graha::Shukra => {}
+            Graha::Buddh => {}
+        }
+    }
+
+    BeneficNature::Benefic
 }
 
 /// Graha gender classification.
@@ -613,6 +654,14 @@ pub fn samvatsara_lord(samvatsara: Samvatsara) -> Graha {
 fn normalize_360_inner(deg: f64) -> f64 {
     let r = deg % 360.0;
     if r < 0.0 { r + 360.0 } else { r }
+}
+
+fn longitude_rashi_index(sidereal_lon: f64) -> Option<u8> {
+    if sidereal_lon.is_finite() {
+        Some((normalize_360_inner(sidereal_lon) / 30.0).floor() as u8)
+    } else {
+        None
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1047,14 +1096,71 @@ mod tests {
 
     #[test]
     fn moon_benefic_at_full() {
-        // Full moon: elongation ~180 → phase_angle=180 > 72 → Benefic
+        // Boundary is included in the benefic half.
         assert_eq!(moon_benefic_nature(180.0), BeneficNature::Benefic);
     }
 
     #[test]
     fn moon_malefic_near_new() {
-        // Near new moon: elongation ~10 → phase_angle=10 < 72 → Malefic
-        assert_eq!(moon_benefic_nature(10.0), BeneficNature::Malefic);
+        assert_eq!(moon_benefic_nature(180.1), BeneficNature::Malefic);
+    }
+
+    #[test]
+    fn moon_benefic_before_opposition() {
+        assert_eq!(moon_benefic_nature(10.0), BeneficNature::Benefic);
+    }
+
+    fn buddh_test_lons(buddh_lon: f64) -> [f64; 9] {
+        let mut lons = [0.0; 9];
+        lons[Graha::Surya.index() as usize] = 10.0;
+        lons[Graha::Chandra.index() as usize] = 80.0;
+        lons[Graha::Mangal.index() as usize] = 100.0;
+        lons[Graha::Buddh.index() as usize] = buddh_lon;
+        lons[Graha::Guru.index() as usize] = 130.0;
+        lons[Graha::Shukra.index() as usize] = 160.0;
+        lons[Graha::Shani.index() as usize] = 190.0;
+        lons[Graha::Rahu.index() as usize] = 220.0;
+        lons[Graha::Ketu.index() as usize] = 250.0;
+        lons
+    }
+
+    #[test]
+    fn buddh_malefic_with_same_rashi_malefic() {
+        let mut lons = buddh_test_lons(12.0);
+        lons[Graha::Surya.index() as usize] = 18.0;
+        assert_eq!(buddh_association_nature(&lons), BeneficNature::Malefic);
+    }
+
+    #[test]
+    fn buddh_benefic_with_same_rashi_guru() {
+        let mut lons = buddh_test_lons(132.0);
+        lons[Graha::Guru.index() as usize] = 138.0;
+        assert_eq!(buddh_association_nature(&lons), BeneficNature::Benefic);
+    }
+
+    #[test]
+    fn buddh_benefic_with_same_rashi_benefic_chandra() {
+        let mut lons = buddh_test_lons(82.0);
+        lons[Graha::Surya.index() as usize] = 10.0;
+        lons[Graha::Chandra.index() as usize] = 84.0;
+        assert_eq!(buddh_association_nature(&lons), BeneficNature::Benefic);
+    }
+
+    #[test]
+    fn buddh_malefic_with_same_rashi_malefic_chandra() {
+        let mut lons = buddh_test_lons(82.0);
+        lons[Graha::Surya.index() as usize] = 260.0;
+        lons[Graha::Chandra.index() as usize] = 84.0;
+        assert_eq!(buddh_association_nature(&lons), BeneficNature::Malefic);
+    }
+
+    #[test]
+    fn buddh_ignores_absent_node_longitudes() {
+        let mut lons = buddh_test_lons(12.0);
+        lons[Graha::Surya.index() as usize] = 40.0;
+        lons[Graha::Rahu.index() as usize] = f64::NAN;
+        lons[Graha::Ketu.index() as usize] = f64::NAN;
+        assert_eq!(buddh_association_nature(&lons), BeneficNature::Benefic);
     }
 
     // --- Gender ---

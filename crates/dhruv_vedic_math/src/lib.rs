@@ -84,8 +84,8 @@ pub use graha::{
 };
 pub use graha_relationships::{
     BeneficNature, Dignity, GrahaGender, NaisargikaMaitri, NodeDignityPolicy, PanchadhaMaitri,
-    TatkalikaMaitri, compound_dignity_in_rashi, debilitation_degree, dignity_in_rashi,
-    dignity_in_rashi_with_positions, exaltation_degree, graha_gender, hora_lord,
+    TatkalikaMaitri, buddh_association_nature, compound_dignity_in_rashi, debilitation_degree,
+    dignity_in_rashi, dignity_in_rashi_with_positions, exaltation_degree, graha_gender, hora_lord,
     is_own_sign_at_longitude, masa_lord, moolatrikone_range, moon_benefic_nature,
     naisargika_maitri, natural_benefic_malefic, node_dignity_in_rashi,
     node_dignity_in_rashi_with_temporal_context, own_signs, panchadha_maitri, samvatsara_lord,

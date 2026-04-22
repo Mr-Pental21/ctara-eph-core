@@ -16,9 +16,9 @@
 use crate::drishti::{base_virupa, special_virupa};
 use crate::graha::{Graha, SAPTA_GRAHAS};
 use crate::graha_relationships::{
-    BeneficNature, Dignity, GrahaGender, compound_dignity_in_rashi, graha_gender,
-    is_own_sign_at_longitude, moolatrikone_range, moon_benefic_nature, natural_benefic_malefic,
-    own_signs,
+    BeneficNature, Dignity, GrahaGender, buddh_association_nature, compound_dignity_in_rashi,
+    graha_gender, is_own_sign_at_longitude, moolatrikone_range, moon_benefic_nature,
+    natural_benefic_malefic, own_signs,
 };
 use crate::util::normalize_360;
 
@@ -381,21 +381,56 @@ pub fn all_dig_balas(sidereal_lons: &[f64; 7], max_cusp_sidereal_lons: &[f64; 7]
 // 2d. Kala Bala Sub-Components
 // ---------------------------------------------------------------------------
 
+fn dynamic_benefic_nature(
+    graha: Graha,
+    sidereal_lons: &[f64; 9],
+    moon_sun_elong: f64,
+) -> BeneficNature {
+    match graha {
+        Graha::Chandra => moon_benefic_nature(moon_sun_elong),
+        Graha::Buddh => buddh_association_nature(sidereal_lons),
+        _ => natural_benefic_malefic(graha),
+    }
+}
+
+fn sapta_to_all_sidereal_lons(sidereal_lons: &[f64; 7]) -> [f64; 9] {
+    let mut all = [f64::NAN; 9];
+    all[..7].copy_from_slice(sidereal_lons);
+    all
+}
+
 /// Nathonnatha Bala: malefics strong by day (60), benefics by night (60).
-/// Mercury's nature depends on moon_sun_elongation.
+///
+/// This low-level helper only has Moon-Sun elongation, so Buddh falls back to
+/// its default benefic nature. Full Shadbala uses
+/// `nathonnatha_bala_with_longitudes`, which applies same-rashi association.
 pub fn nathonnatha_bala(graha: Graha, is_daytime: bool, moon_sun_elong: f64) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
     }
     let nature = if graha == Graha::Chandra {
         moon_benefic_nature(moon_sun_elong)
-    } else if graha == Graha::Buddh {
-        // Mercury inherits Moon's nature for this context
-        moon_benefic_nature(moon_sun_elong)
     } else {
         natural_benefic_malefic(graha)
     };
 
+    nathonnatha_bala_for_nature(nature, is_daytime)
+}
+
+pub fn nathonnatha_bala_with_longitudes(
+    graha: Graha,
+    is_daytime: bool,
+    sidereal_lons: &[f64; 9],
+    moon_sun_elong: f64,
+) -> f64 {
+    if !is_sapta_graha(graha) {
+        return 0.0;
+    }
+    let nature = dynamic_benefic_nature(graha, sidereal_lons, moon_sun_elong);
+    nathonnatha_bala_for_nature(nature, is_daytime)
+}
+
+fn nathonnatha_bala_for_nature(nature: BeneficNature, is_daytime: bool) -> f64 {
     match (nature, is_daytime) {
         (BeneficNature::Malefic, true) | (BeneficNature::Benefic, false) => 60.0,
         _ => 0.0,
@@ -416,18 +451,33 @@ pub fn paksha_bala(graha: Graha, moon_sun_elong: f64) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
     }
-    let elong = normalize_360(moon_sun_elong);
-    let phase_angle = if elong <= 180.0 { elong } else { 360.0 - elong };
-    let benefic_score = phase_angle / 3.0; // 0 at new moon, 60 at full moon
-    let malefic_score = 60.0 - benefic_score;
 
     let nature = if graha == Graha::Chandra {
-        BeneficNature::Benefic // Moon always uses benefic formula for paksha
-    } else if graha == Graha::Buddh {
         moon_benefic_nature(moon_sun_elong)
     } else {
         natural_benefic_malefic(graha)
     };
+
+    paksha_bala_for_nature(nature, moon_sun_elong)
+}
+
+pub fn paksha_bala_with_longitudes(
+    graha: Graha,
+    sidereal_lons: &[f64; 9],
+    moon_sun_elong: f64,
+) -> f64 {
+    if !is_sapta_graha(graha) {
+        return 0.0;
+    }
+    let nature = dynamic_benefic_nature(graha, sidereal_lons, moon_sun_elong);
+    paksha_bala_for_nature(nature, moon_sun_elong)
+}
+
+fn paksha_bala_for_nature(nature: BeneficNature, moon_sun_elong: f64) -> f64 {
+    let elong = normalize_360(moon_sun_elong);
+    let phase_angle = if elong <= 180.0 { elong } else { 360.0 - elong };
+    let benefic_score = phase_angle / 3.0; // 0 at new moon, 60 at full moon
+    let malefic_score = 60.0 - benefic_score;
 
     match nature {
         BeneficNature::Benefic => benefic_score,
@@ -564,19 +614,39 @@ pub fn all_hora_balas(hora_lord: Graha) -> [f64; 7] {
 /// Ayana Bala: per-graha declination formula.
 /// Benefic: (24 + declination) / 48 * 60.
 /// Malefic: (24 - declination) / 48 * 60.
-/// Moon classification from moon_sun_elongation.
+/// Chandra classification from Moon-Sun elongation. This low-level helper only
+/// has Moon-Sun elongation, so Buddh falls back to its default benefic nature.
+/// Full Shadbala uses `ayana_bala_with_longitudes`, which applies same-rashi
+/// association for Buddh.
 pub fn ayana_bala(graha: Graha, declination_deg: f64, moon_sun_elong: f64) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
     }
-    let kranti = declination_deg.clamp(-24.0, 24.0);
 
-    let nature = if graha == Graha::Chandra || graha == Graha::Buddh {
+    let nature = if graha == Graha::Chandra {
         moon_benefic_nature(moon_sun_elong)
     } else {
         natural_benefic_malefic(graha)
     };
 
+    ayana_bala_for_nature(nature, declination_deg)
+}
+
+pub fn ayana_bala_with_longitudes(
+    graha: Graha,
+    declination_deg: f64,
+    sidereal_lons: &[f64; 9],
+    moon_sun_elong: f64,
+) -> f64 {
+    if !is_sapta_graha(graha) {
+        return 0.0;
+    }
+    let nature = dynamic_benefic_nature(graha, sidereal_lons, moon_sun_elong);
+    ayana_bala_for_nature(nature, declination_deg)
+}
+
+fn ayana_bala_for_nature(nature: BeneficNature, declination_deg: f64) -> f64 {
+    let kranti = declination_deg.clamp(-24.0, 24.0);
     let score = match nature {
         BeneficNature::Benefic => (24.0 + kranti) / 48.0 * 60.0,
         BeneficNature::Malefic => (24.0 - kranti) / 48.0 * 60.0,
@@ -672,16 +742,32 @@ pub struct KalaBalaBreakdown {
 
 /// Kala bala for a single graha.
 pub fn kala_bala(graha: Graha, inputs: &KalaBalaInputs) -> KalaBalaBreakdown {
-    let n = nathonnatha_bala(graha, inputs.is_daytime, inputs.moon_sun_elongation);
-    let p = paksha_bala(graha, inputs.moon_sun_elongation);
+    let sidereal_lons = sapta_to_all_sidereal_lons(&inputs.sidereal_lons);
+    kala_bala_with_sidereal_lons(graha, inputs, &sidereal_lons)
+}
+
+/// Kala bala for a single graha with full 9-graha longitude context.
+pub fn kala_bala_with_sidereal_lons(
+    graha: Graha,
+    inputs: &KalaBalaInputs,
+    sidereal_lons: &[f64; 9],
+) -> KalaBalaBreakdown {
+    let n = nathonnatha_bala_with_longitudes(
+        graha,
+        inputs.is_daytime,
+        sidereal_lons,
+        inputs.moon_sun_elongation,
+    );
+    let p = paksha_bala_with_longitudes(graha, sidereal_lons, inputs.moon_sun_elongation);
     let t = tribhaga_bala(graha, inputs.is_daytime, inputs.day_night_fraction);
     let ab = abda_bala(graha, inputs.year_lord);
     let ma = masa_bala(graha, inputs.month_lord);
     let va = vara_bala(graha, inputs.weekday_lord);
     let ho = hora_bala(graha, inputs.hora_lord);
-    let ay = ayana_bala(
+    let ay = ayana_bala_with_longitudes(
         graha,
         inputs.graha_declinations[graha.index().min(6) as usize],
+        sidereal_lons,
         inputs.moon_sun_elongation,
     );
     let yu = yuddha_bala(graha, &inputs.sidereal_lons, &inputs.graha_declinations);
@@ -829,7 +915,8 @@ pub fn all_naisargika_balas() -> [f64; 7] {
 /// then sum their total virupas. The difference divided by 4 gives the base
 /// drik bala. Add the full incoming drishti virupa of Guru and Buddh on the
 /// target graha to obtain the final drik bala.
-/// `sidereal_lons` = all 9 grahas. `moon_sun_elong` for Moon/Mercury classification.
+/// `sidereal_lons` = all 9 grahas. `moon_sun_elong` classifies Chandra;
+/// Buddh is classified by same-rashi association.
 pub fn drik_bala(graha: Graha, sidereal_lons: &[f64; 9], moon_sun_elong: f64) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
@@ -853,11 +940,7 @@ pub fn drik_bala(graha: Graha, sidereal_lons: &[f64; 9], moon_sun_elong: f64) ->
             guru_buddh_full_drishti += total;
         }
 
-        let nature = if src == Graha::Chandra || src == Graha::Buddh {
-            moon_benefic_nature(moon_sun_elong)
-        } else {
-            natural_benefic_malefic(src)
-        };
+        let nature = dynamic_benefic_nature(src, sidereal_lons, moon_sun_elong);
 
         match nature {
             BeneficNature::Benefic => benefic_sum += total,
@@ -936,7 +1019,7 @@ pub fn shadbala_from_inputs(graha: Graha, inputs: &ShadbalaInputs) -> ShadbalaBr
         inputs.sidereal_lons[gi],
         inputs.dig_bala_max_cusp_lons[gi],
     );
-    let kala_result = kala_bala(graha, &inputs.kala);
+    let kala_result = kala_bala_with_sidereal_lons(graha, &inputs.kala, &inputs.sidereal_lons);
     let cheshta = cheshta_bala(
         graha,
         inputs.cheshta_madhyama_lons[gi],
@@ -944,11 +1027,7 @@ pub fn shadbala_from_inputs(graha: Graha, inputs: &ShadbalaInputs) -> ShadbalaBr
         inputs.cheshta_chaloccha_lons[gi],
     );
     let nais = naisargika_bala(graha);
-    let drik = drik_bala(
-        graha,
-        &inputs.sidereal_lons,
-        inputs.kala.moon_sun_elongation,
-    );
+    let drik = drik_bala(graha, &inputs.sidereal_lons, inputs.kala.moon_sun_elongation);
 
     let total = sthana_result.total + dig + kala_result.total + cheshta + nais + drik;
     let rupas = total / 60.0;

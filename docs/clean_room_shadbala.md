@@ -207,8 +207,15 @@ graha:
 drik_bala = base_drik + guru_full_drishti + buddh_full_drishti
 ```
 
-The virupa strengths use the existing graha drishti system. Benefic/malefic
-classification uses Moon-Sun elongation for Chandra and Buddh.
+The virupa strengths use the existing graha drishti system. Dynamic
+benefic/malefic classification uses:
+
+- Chandra: benefic when `normalize_360(Chandra − Surya) <= 180`; malefic
+  when the normalized separation is greater than `180`.
+- Buddh: benefic by default, but malefic when sharing a rashi with Surya,
+  Mangal, Shani, Rahu, Ketu, or a dynamically malefic Chandra. Same-rashi
+  association with Guru, Shukra, or dynamically benefic Chandra keeps Buddh
+  benefic.
 
 ## 7. Total Shadbala
 
