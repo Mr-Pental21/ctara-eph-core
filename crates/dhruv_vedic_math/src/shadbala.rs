@@ -401,22 +401,51 @@ fn sapta_to_all_sidereal_lons(sidereal_lons: &[f64; 7]) -> [f64; 9] {
     all
 }
 
-/// Nathonnatha Bala: malefics strong by day (60), benefics by night (60).
+/// Nathonnatha Bala using a legacy day/night selector.
 ///
-/// This low-level helper only has Moon-Sun elongation, so Buddh falls back to
-/// its default benefic nature. Full Shadbala uses
-/// `nathonnatha_bala_with_longitudes`, which applies same-rashi association.
+/// Date/location Shadbala uses [`nathonnatha_bala_at_local_day_fraction`],
+/// which applies the midnight/midday ghatika ramp. This helper is retained for
+/// callers that only have a coarse half-day flag.
 pub fn nathonnatha_bala(graha: Graha, is_daytime: bool, moon_sun_elong: f64) -> f64 {
+    let _ = moon_sun_elong;
+    let local_day_fraction = if is_daytime { 0.25 } else { 0.75 };
+    nathonnatha_bala_at_local_day_fraction(graha, local_day_fraction)
+}
+
+/// Nathonnatha Bala from local mean day fraction.
+///
+/// `local_day_fraction` is measured from local midnight in `[0, 1)`. From
+/// midnight to midday, Surya/Shukra/Guru rise from 0 to 60 while
+/// Chandra/Mangal/Shani fall from 60 to 0. From midday to midnight, the
+/// mapping reverses. Buddh always receives 60.
+pub fn nathonnatha_bala_at_local_day_fraction(graha: Graha, local_day_fraction: f64) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
     }
-    let nature = if graha == Graha::Chandra {
-        moon_benefic_nature(moon_sun_elong)
-    } else {
-        natural_benefic_malefic(graha)
-    };
 
-    nathonnatha_bala_for_nature(nature, is_daytime)
+    if graha == Graha::Buddh {
+        return 60.0;
+    }
+
+    let fraction = if local_day_fraction.is_finite() {
+        local_day_fraction.rem_euclid(1.0)
+    } else {
+        0.0
+    };
+    let first_half = fraction < 0.5;
+    let g = if first_half {
+        fraction * 120.0
+    } else {
+        (fraction - 0.5) * 120.0
+    }
+    .clamp(0.0, 60.0);
+
+    let surya_shukra_guru_group = matches!(graha, Graha::Surya | Graha::Shukra | Graha::Guru);
+    if first_half == surya_shukra_guru_group {
+        g
+    } else {
+        60.0 - g
+    }
 }
 
 pub fn nathonnatha_bala_with_longitudes(
@@ -425,34 +454,19 @@ pub fn nathonnatha_bala_with_longitudes(
     sidereal_lons: &[f64; 9],
     moon_sun_elong: f64,
 ) -> f64 {
-    nathonnatha_bala_with_longitudes_and_rule(
-        graha,
-        is_daytime,
-        sidereal_lons,
-        moon_sun_elong,
-        ChandraBeneficRule::default(),
-    )
+    let _ = (sidereal_lons, moon_sun_elong);
+    nathonnatha_bala(graha, is_daytime, moon_sun_elong)
 }
 
 fn nathonnatha_bala_with_longitudes_and_rule(
     graha: Graha,
-    is_daytime: bool,
+    local_day_fraction: f64,
     sidereal_lons: &[f64; 9],
     moon_sun_elong: f64,
     chandra_rule: ChandraBeneficRule,
 ) -> f64 {
-    if !is_sapta_graha(graha) {
-        return 0.0;
-    }
-    let nature = dynamic_benefic_nature(graha, sidereal_lons, moon_sun_elong, chandra_rule);
-    nathonnatha_bala_for_nature(nature, is_daytime)
-}
-
-fn nathonnatha_bala_for_nature(nature: BeneficNature, is_daytime: bool) -> f64 {
-    match (nature, is_daytime) {
-        (BeneficNature::Malefic, true) | (BeneficNature::Benefic, false) => 60.0,
-        _ => 0.0,
-    }
+    let _ = (sidereal_lons, moon_sun_elong, chandra_rule);
+    nathonnatha_bala_at_local_day_fraction(graha, local_day_fraction)
 }
 
 /// Nathonnatha bala for all 7.
@@ -460,6 +474,15 @@ pub fn all_nathonnatha_balas(is_daytime: bool, moon_sun_elong: f64) -> [f64; 7] 
     let mut result = [0.0; 7];
     for (i, g) in SAPTA_GRAHAS.iter().enumerate() {
         result[i] = nathonnatha_bala(*g, is_daytime, moon_sun_elong);
+    }
+    result
+}
+
+/// Nathonnatha bala for all 7 from local mean day fraction.
+pub fn all_nathonnatha_balas_at_local_day_fraction(local_day_fraction: f64) -> [f64; 7] {
+    let mut result = [0.0; 7];
+    for (i, g) in SAPTA_GRAHAS.iter().enumerate() {
+        result[i] = nathonnatha_bala_at_local_day_fraction(*g, local_day_fraction);
     }
     result
 }
@@ -476,7 +499,7 @@ pub fn paksha_bala(graha: Graha, moon_sun_elong: f64) -> f64 {
         natural_benefic_malefic(graha)
     };
 
-    paksha_bala_for_nature(nature, moon_sun_elong)
+    paksha_bala_for_graha_and_nature(graha, nature, moon_sun_elong)
 }
 
 pub fn paksha_bala_with_longitudes(
@@ -502,10 +525,23 @@ fn paksha_bala_with_longitudes_and_rule(
         return 0.0;
     }
     let nature = dynamic_benefic_nature(graha, sidereal_lons, moon_sun_elong, chandra_rule);
-    paksha_bala_for_nature(nature, moon_sun_elong)
+    paksha_bala_for_graha_and_nature(graha, nature, moon_sun_elong)
 }
 
-fn paksha_bala_for_nature(nature: BeneficNature, moon_sun_elong: f64) -> f64 {
+fn paksha_bala_for_graha_and_nature(
+    graha: Graha,
+    nature: BeneficNature,
+    moon_sun_elong: f64,
+) -> f64 {
+    let score = paksha_bala_score_for_nature(nature, moon_sun_elong);
+    if graha == Graha::Chandra {
+        score * 2.0
+    } else {
+        score
+    }
+}
+
+fn paksha_bala_score_for_nature(nature: BeneficNature, moon_sun_elong: f64) -> f64 {
     let elong = normalize_360(moon_sun_elong);
     let phase_angle = if elong <= 180.0 { elong } else { 360.0 - elong };
     let benefic_score = phase_angle / 3.0; // 0 at new moon, 60 at full moon
@@ -764,6 +800,7 @@ pub fn all_yuddha_balas(sidereal_lons: &[f64; 7], declinations: &[f64; 7]) -> [f
 pub struct KalaBalaInputs {
     pub is_daytime: bool,
     pub day_night_fraction: f64,
+    pub local_day_fraction: f64,
     pub moon_sun_elongation: f64,
     pub year_lord: Graha,
     pub month_lord: Graha,
@@ -816,7 +853,7 @@ fn kala_bala_with_sidereal_lons_and_rule(
 ) -> KalaBalaBreakdown {
     let n = nathonnatha_bala_with_longitudes_and_rule(
         graha,
-        inputs.is_daytime,
+        inputs.local_day_fraction,
         sidereal_lons,
         inputs.moon_sun_elongation,
         chandra_rule,
@@ -1334,21 +1371,46 @@ mod tests {
     // --- Nathonnatha Bala ---
 
     #[test]
-    fn nathonnatha_malefic_daytime() {
-        // Mars (malefic) + daytime = 60
-        assert!((nathonnatha_bala(Graha::Mangal, true, 180.0) - 60.0).abs() < EPS);
+    fn nathonnatha_midnight_to_midday_ramp() {
+        // Four local hours after midnight = 10 ghatikas; G = 20.
+        let fraction = 4.0 / 24.0;
+        assert!(
+            (nathonnatha_bala_at_local_day_fraction(Graha::Surya, fraction) - 20.0).abs() < EPS
+        );
+        assert!((nathonnatha_bala_at_local_day_fraction(Graha::Guru, fraction) - 20.0).abs() < EPS);
+        assert!(
+            (nathonnatha_bala_at_local_day_fraction(Graha::Mangal, fraction) - 40.0).abs() < EPS
+        );
+        assert!(
+            (nathonnatha_bala_at_local_day_fraction(Graha::Shani, fraction) - 40.0).abs() < EPS
+        );
     }
 
     #[test]
-    fn nathonnatha_malefic_nighttime() {
-        // Mars + nighttime = 0
-        assert!(nathonnatha_bala(Graha::Mangal, false, 180.0).abs() < EPS);
+    fn nathonnatha_midday_to_midnight_ramp() {
+        // Four local hours after midday = 10 ghatikas; G = 20.
+        let fraction = 16.0 / 24.0;
+        assert!(
+            (nathonnatha_bala_at_local_day_fraction(Graha::Surya, fraction) - 40.0).abs() < EPS
+        );
+        assert!(
+            (nathonnatha_bala_at_local_day_fraction(Graha::Shukra, fraction) - 40.0).abs() < EPS
+        );
+        assert!(
+            (nathonnatha_bala_at_local_day_fraction(Graha::Chandra, fraction) - 20.0).abs() < EPS
+        );
+        assert!(
+            (nathonnatha_bala_at_local_day_fraction(Graha::Mangal, fraction) - 20.0).abs() < EPS
+        );
     }
 
     #[test]
-    fn nathonnatha_benefic_nighttime() {
-        // Jupiter (benefic) + nighttime = 60
-        assert!((nathonnatha_bala(Graha::Guru, false, 180.0) - 60.0).abs() < EPS);
+    fn nathonnatha_buddh_always_sixty() {
+        for fraction in [0.0, 0.25, 0.5, 0.75, 0.99] {
+            assert!(
+                (nathonnatha_bala_at_local_day_fraction(Graha::Buddh, fraction) - 60.0).abs() < EPS
+            );
+        }
     }
 
     // --- Paksha Bala ---
@@ -1369,6 +1431,13 @@ mod tests {
     fn paksha_new_moon_malefic() {
         // New moon (elong~0): malefic score = 60-0 = 60
         assert!((paksha_bala(Graha::Mangal, 0.0) - 60.0).abs() < EPS);
+    }
+
+    #[test]
+    fn paksha_chandra_is_doubled() {
+        assert!((paksha_bala(Graha::Chandra, 0.0) - 120.0).abs() < EPS);
+        assert!((paksha_bala(Graha::Chandra, 90.0) - 60.0).abs() < EPS);
+        assert!((paksha_bala(Graha::Chandra, 180.0) - 120.0).abs() < EPS);
     }
 
     // --- Ayana Bala ---

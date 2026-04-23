@@ -3310,6 +3310,7 @@ fn assemble_shadbala_inputs(
     let jd_sunset = ctx.sunset_jd(engine, eop, location, riseset_config)?;
 
     let is_daytime = ctx.jd_tdb >= jd_sunrise && ctx.jd_tdb < jd_sunset;
+    let local_day_fraction = (ctx.jd_tdb + 0.5 + location.longitude_deg / 360.0).rem_euclid(1.0);
 
     // Day/night fraction: position within the day or night portion (0-1)
     let day_night_fraction = if is_daytime {
@@ -3356,6 +3357,7 @@ fn assemble_shadbala_inputs(
         kala: KalaBalaInputs {
             is_daytime,
             day_night_fraction,
+            local_day_fraction,
             moon_sun_elongation,
             year_lord,
             month_lord,

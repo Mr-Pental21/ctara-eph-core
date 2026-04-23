@@ -125,15 +125,34 @@ alternate `Waxing180` rule treats Chandra as benefic when
 
 ### 3a. Nathonnatha Bala (Day/Night Strength)
 
-Malefics (Sun, Mars, Saturn) strong by day = 60, night = 0.
-Benefics (Moon, Mercury, Jupiter, Venus) strong by night = 60, day = 0.
-Mercury classified by Moon-Sun elongation.
+Nathonnatha uses local mean solar time derived from the chart longitude.
+Buddh always receives 60.
+
+From local midnight to local midday:
+
+```text
+G = ghatikas elapsed since local midnight * 2
+Surya, Shukra, Guru = G
+Chandra, Mangal, Shani = 60 - G
+```
+
+From local midday to local midnight:
+
+```text
+G = ghatikas elapsed since local midday * 2
+Chandra, Mangal, Shani = G
+Surya, Shukra, Guru = 60 - G
+```
+
+All scores are clamped to `0..=60`.
 
 ### 3b. Paksha Bala (Fortnight Strength)
 
 phase_angle = min(elongation, 360 − elongation). Range [0, 180].
 Benefic paksha = phase_angle / 3 (0 at new moon, 60 at full moon).
 Malefic paksha = 60 − benefic_paksha.
+Chandra's Paksha Bala is always multiplied by 2 after applying the benefic or
+malefic score.
 
 ### 3c. Tribhaga Bala (Day/Night Third Strength)
 

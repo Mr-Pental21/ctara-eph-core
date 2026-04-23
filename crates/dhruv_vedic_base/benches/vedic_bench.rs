@@ -93,6 +93,7 @@ fn shadbala_bench(c: &mut Criterion) {
     let kala = KalaBalaInputs {
         is_daytime: true,
         day_night_fraction: 0.5,
+        local_day_fraction: 0.25,
         moon_sun_elongation: 120.0,
         year_lord: Graha::Surya,
         month_lord: Graha::Mangal,
