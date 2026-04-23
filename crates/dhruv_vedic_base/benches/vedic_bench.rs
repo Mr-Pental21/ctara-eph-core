@@ -111,6 +111,7 @@ fn shadbala_bench(c: &mut Criterion) {
         cheshta_chaloccha_lons,
         kala,
         include_node_aspects_for_drik_bala: false,
+        divide_guru_buddh_drishti_by_4_for_drik_bala: true,
         varga_rashi_indices: varga_rashi,
         varga_longitudes,
     };

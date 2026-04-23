@@ -106,6 +106,8 @@ pub struct BhavaConfig {
     pub use_rashi_bhava_for_bala_avastha: bool,
     /// Include Rahu/Ketu incoming aspects in Shadbala Drik Bala.
     pub include_node_aspects_for_drik_bala: bool,
+    /// Divide Guru/Buddh incoming drishti by 4 in Shadbala Drik Bala.
+    pub divide_guru_buddh_drishti_by_4_for_drik_bala: bool,
     /// Include rashi-bhava sibling outputs on bhava-aware public result surfaces.
     pub include_rashi_bhava_results: bool,
 }
@@ -118,6 +120,7 @@ impl Default for BhavaConfig {
             reference_mode: BhavaReferenceMode::StartOfFirst,
             use_rashi_bhava_for_bala_avastha: true,
             include_node_aspects_for_drik_bala: false,
+            divide_guru_buddh_drishti_by_4_for_drik_bala: true,
             include_rashi_bhava_results: true,
         }
     }

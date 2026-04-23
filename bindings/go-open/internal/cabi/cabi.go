@@ -268,23 +268,25 @@ func cBhavaConfig(cfg BhavaConfig) C.DhruvBhavaConfig {
 		reference_plane:                    C.int32_t(cfg.ReferencePlane),
 		use_rashi_bhava_for_bala_avastha:   boolU8(cfg.UseRashiBhavaForBalaAvastha),
 		include_node_aspects_for_drik_bala: boolU8(cfg.IncludeNodeAspectsForDrikBala),
-		include_rashi_bhava_results:        boolU8(cfg.IncludeRashiBhavaResults),
+		divide_guru_buddh_drishti_by_4_for_drik_bala: boolU8(cfg.DivideGuruBuddhDrishtiBy4ForDrikBala),
+		include_rashi_bhava_results:                  boolU8(cfg.IncludeRashiBhavaResults),
 	}
 }
 
 func goBhavaConfig(cfg C.DhruvBhavaConfig) BhavaConfig {
 	return BhavaConfig{
-		System:                        int32(cfg.system),
-		StartingPoint:                 int32(cfg.starting_point),
-		CustomStartDeg:                float64(cfg.custom_start_deg),
-		ReferenceMode:                 int32(cfg.reference_mode),
-		OutputMode:                    int32(cfg.output_mode),
-		AyanamshaSystem:               int32(cfg.ayanamsha_system),
-		UseNutation:                   cfg.use_nutation != 0,
-		ReferencePlane:                int32(cfg.reference_plane),
-		UseRashiBhavaForBalaAvastha:   cfg.use_rashi_bhava_for_bala_avastha != 0,
-		IncludeNodeAspectsForDrikBala: cfg.include_node_aspects_for_drik_bala != 0,
-		IncludeRashiBhavaResults:      cfg.include_rashi_bhava_results != 0,
+		System:                               int32(cfg.system),
+		StartingPoint:                        int32(cfg.starting_point),
+		CustomStartDeg:                       float64(cfg.custom_start_deg),
+		ReferenceMode:                        int32(cfg.reference_mode),
+		OutputMode:                           int32(cfg.output_mode),
+		AyanamshaSystem:                      int32(cfg.ayanamsha_system),
+		UseNutation:                          cfg.use_nutation != 0,
+		ReferencePlane:                       int32(cfg.reference_plane),
+		UseRashiBhavaForBalaAvastha:          cfg.use_rashi_bhava_for_bala_avastha != 0,
+		IncludeNodeAspectsForDrikBala:        cfg.include_node_aspects_for_drik_bala != 0,
+		DivideGuruBuddhDrishtiBy4ForDrikBala: cfg.divide_guru_buddh_drishti_by_4_for_drik_bala != 0,
+		IncludeRashiBhavaResults:             cfg.include_rashi_bhava_results != 0,
 	}
 }
 

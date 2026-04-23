@@ -99,6 +99,9 @@ Frequently used config and result families re-exported from `dhruv_rs::*`:
 `include_node_aspects_for_drik_bala=false`. Set
 `include_node_aspects_for_drik_bala=true` when Shadbala Drik Bala should
 include Rahu/Ketu incoming aspects; standalone drishti matrices are unaffected.
+`divide_guru_buddh_drishti_by_4_for_drik_bala=true` by default; set it to
+`false` to add Guru/Buddh incoming aspects at full signed strength instead of
+through the divided Drik Bala balance.
 - `BindusConfig`
 - `DrishtiConfig`
 - `TimeUpagrahaConfig`

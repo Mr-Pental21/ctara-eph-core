@@ -277,6 +277,60 @@ fn shadbala_node_aspects_for_drik_bala_are_opt_in() {
 }
 
 #[test]
+fn shadbala_guru_buddh_drik_divisor_is_opt_out() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = utc_2024_jan_15();
+    let location = new_delhi();
+    let default_bhava = BhavaConfig::default();
+    let full_guru_buddh_bhava = BhavaConfig {
+        divide_guru_buddh_drishti_by_4_for_drik_bala: false,
+        ..BhavaConfig::default()
+    };
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+
+    let divided = shadbala_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &default_bhava,
+        &rs_config,
+        &aya_config,
+        &default_amsha_selection(),
+    )
+    .expect("default shadbala should succeed");
+    let full = shadbala_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &full_guru_buddh_bhava,
+        &rs_config,
+        &aya_config,
+        &default_amsha_selection(),
+    )
+    .expect("full Guru/Buddh Drik Bala shadbala should succeed");
+
+    let mut changed_drik = false;
+    for (base, opted_out) in divided.entries.iter().zip(full.entries.iter()) {
+        assert!((base.sthana.total - opted_out.sthana.total).abs() < 1e-9);
+        assert!((base.dig - opted_out.dig).abs() < 1e-9);
+        assert!((base.kala.total - opted_out.kala.total).abs() < 1e-9);
+        assert!((base.cheshta - opted_out.cheshta).abs() < 1e-9);
+        assert!((base.naisargika - opted_out.naisargika).abs() < 1e-9);
+        if (base.drik - opted_out.drik).abs() > 1e-9 {
+            changed_drik = true;
+        }
+    }
+    assert!(
+        changed_drik,
+        "expected Guru/Buddh full-strength opt-out to change Drik Bala"
+    );
+}
+
+#[test]
 fn shadbala_naisargika_matches_constants() {
     let Some(engine) = load_engine() else { return };
     let Some(eop) = load_eop() else { return };

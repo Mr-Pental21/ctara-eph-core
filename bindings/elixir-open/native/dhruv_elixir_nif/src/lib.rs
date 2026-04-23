@@ -354,6 +354,7 @@ struct BhavaConfigInput {
     reference_mode: Option<EnumInput>,
     use_rashi_bhava_for_bala_avastha: Option<bool>,
     include_node_aspects_for_drik_bala: Option<bool>,
+    divide_guru_buddh_drishti_by_4_for_drik_bala: Option<bool>,
     include_rashi_bhava_results: Option<bool>,
 }
 
@@ -1489,6 +1490,9 @@ fn to_bhava_config(
         }
         if let Some(value) = input.include_node_aspects_for_drik_bala {
             config.include_node_aspects_for_drik_bala = value;
+        }
+        if let Some(value) = input.divide_guru_buddh_drishti_by_4_for_drik_bala {
+            config.divide_guru_buddh_drishti_by_4_for_drik_bala = value;
         }
         if let Some(value) = input.include_rashi_bhava_results {
             config.include_rashi_bhava_results = value;

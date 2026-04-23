@@ -242,6 +242,9 @@ func TestSearchAndPanchangSmoke(t *testing.T) {
 	if bhava.IncludeNodeAspectsForDrikBala {
 		t.Fatalf("expected Rahu/Ketu Drik Bala aspects default off")
 	}
+	if !bhava.DivideGuruBuddhDrishtiBy4ForDrikBala {
+		t.Fatalf("expected Guru/Buddh Drik Bala divisor default on")
+	}
 	if !bhava.IncludeRashiBhavaResults {
 		t.Fatalf("expected rashi-bhava result default on")
 	}

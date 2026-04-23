@@ -730,6 +730,12 @@ struct BhavaBehaviorArgs {
     /// Exclude Rahu/Ketu incoming aspects from Shadbala Drik Bala
     #[arg(long)]
     exclude_node_aspects_for_drik_bala: bool,
+    /// Divide Guru/Buddh incoming aspects by 4 in Shadbala Drik Bala
+    #[arg(long, conflicts_with = "add_full_guru_buddh_drishti_for_drik_bala")]
+    divide_guru_buddh_drishti_by_4_for_drik_bala: bool,
+    /// Add full signed Guru/Buddh incoming aspects in Shadbala Drik Bala
+    #[arg(long)]
+    add_full_guru_buddh_drishti_for_drik_bala: bool,
     /// Include rashi-bhava sibling result sections/columns
     #[arg(long, conflicts_with = "no_rashi_bhava_results")]
     include_rashi_bhava_results: bool,
@@ -751,6 +757,12 @@ fn bhava_config_from_cli(args: &BhavaBehaviorArgs) -> BhavaConfig {
     }
     if args.exclude_node_aspects_for_drik_bala {
         config.include_node_aspects_for_drik_bala = false;
+    }
+    if args.add_full_guru_buddh_drishti_for_drik_bala {
+        config.divide_guru_buddh_drishti_by_4_for_drik_bala = false;
+    }
+    if args.divide_guru_buddh_drishti_by_4_for_drik_bala {
+        config.divide_guru_buddh_drishti_by_4_for_drik_bala = true;
     }
     if args.no_rashi_bhava_results {
         config.include_rashi_bhava_results = false;

@@ -217,6 +217,7 @@ pub struct BhavaConfigPatch {
     pub reference_mode: Option<EnumInput>,
     pub use_rashi_bhava_for_bala_avastha: Option<bool>,
     pub include_node_aspects_for_drik_bala: Option<bool>,
+    pub divide_guru_buddh_drishti_by_4_for_drik_bala: Option<bool>,
     pub include_rashi_bhava_results: Option<bool>,
 }
 
@@ -795,6 +796,10 @@ impl ConfigResolver {
             .include_node_aspects_for_drik_bala
             .or(op.include_node_aspects_for_drik_bala)
             .unwrap_or(false);
+        let divide_guru_buddh_drishti_by_4_for_drik_bala = explicit
+            .divide_guru_buddh_drishti_by_4_for_drik_bala
+            .or(op.divide_guru_buddh_drishti_by_4_for_drik_bala)
+            .unwrap_or(true);
         let include_rashi_bhava_results = explicit
             .include_rashi_bhava_results
             .or(op.include_rashi_bhava_results)
@@ -807,6 +812,7 @@ impl ConfigResolver {
                 reference_mode,
                 use_rashi_bhava_for_bala_avastha,
                 include_node_aspects_for_drik_bala,
+                divide_guru_buddh_drishti_by_4_for_drik_bala,
                 include_rashi_bhava_results,
             },
             source_by_field: source,

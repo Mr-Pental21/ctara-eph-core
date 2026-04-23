@@ -58,7 +58,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 59;
+pub const DHRUV_API_VERSION: u32 = 60;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -2212,6 +2212,8 @@ pub struct DhruvBhavaConfig {
     pub use_rashi_bhava_for_bala_avastha: u8,
     /// Include Rahu/Ketu incoming aspects in Shadbala Drik Bala.
     pub include_node_aspects_for_drik_bala: u8,
+    /// Divide Guru/Buddh incoming aspects by 4 in Shadbala Drik Bala.
+    pub divide_guru_buddh_drishti_by_4_for_drik_bala: u8,
     /// Include rashi-bhava sibling results where supported.
     pub include_rashi_bhava_results: u8,
 }
@@ -2272,6 +2274,9 @@ fn bhava_config_from_ffi(cfg: &DhruvBhavaConfig) -> Result<BhavaConfig, DhruvSta
         reference_mode,
         use_rashi_bhava_for_bala_avastha: cfg.use_rashi_bhava_for_bala_avastha != 0,
         include_node_aspects_for_drik_bala: cfg.include_node_aspects_for_drik_bala != 0,
+        divide_guru_buddh_drishti_by_4_for_drik_bala: cfg
+            .divide_guru_buddh_drishti_by_4_for_drik_bala
+            != 0,
         include_rashi_bhava_results: cfg.include_rashi_bhava_results != 0,
     })
 }
@@ -2420,6 +2425,7 @@ pub extern "C" fn dhruv_bhava_config_default() -> DhruvBhavaConfig {
         reference_plane: -1,
         use_rashi_bhava_for_bala_avastha: 1,
         include_node_aspects_for_drik_bala: 0,
+        divide_guru_buddh_drishti_by_4_for_drik_bala: 1,
         include_rashi_bhava_results: 1,
     }
 }
@@ -14285,6 +14291,7 @@ mod tests {
         assert!((cfg.custom_start_deg - 0.0).abs() < 1e-15);
         assert_eq!(cfg.use_rashi_bhava_for_bala_avastha, 1);
         assert_eq!(cfg.include_node_aspects_for_drik_bala, 0);
+        assert_eq!(cfg.divide_guru_buddh_drishti_by_4_for_drik_bala, 1);
         assert_eq!(cfg.include_rashi_bhava_results, 1);
     }
 

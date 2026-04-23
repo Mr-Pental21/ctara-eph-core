@@ -23,7 +23,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       59
+#define DHRUV_API_VERSION       60
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 #define DHRUV_MAX_AMSHA_VARIATIONS 16
@@ -520,6 +520,7 @@ typedef struct {
     int32_t reference_plane;
     uint8_t use_rashi_bhava_for_bala_avastha;
     uint8_t include_node_aspects_for_drik_bala;
+    uint8_t divide_guru_buddh_drishti_by_4_for_drik_bala;
     uint8_t include_rashi_bhava_results;
 } DhruvBhavaConfig;
 

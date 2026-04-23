@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 59`
+**ABI version:** `DHRUV_API_VERSION = 60`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -356,6 +356,7 @@ typedef struct {
     int32_t reference_plane;
     uint8_t use_rashi_bhava_for_bala_avastha; // default 1
     uint8_t include_node_aspects_for_drik_bala; // default 0
+    uint8_t divide_guru_buddh_drishti_by_4_for_drik_bala; // default 1
     uint8_t include_rashi_bhava_results;      // default 1
 } DhruvBhavaConfig;
 ```
@@ -366,6 +367,11 @@ Existing bhava result fields keep the configured bhava-system meaning. High-leve
 defaults to `0`, so Rahu/Ketu incoming aspects are excluded from the Shadbala
 Drik Bala balance unless explicitly enabled. Drishti matrix endpoints are
 unchanged and continue to expose node aspects.
+
+`divide_guru_buddh_drishti_by_4_for_drik_bala` also controls only Shadbala
+Drik Bala. It defaults to `1`, so Guru and Buddh incoming aspects participate
+in the divided `(benefic - malefic) / 4` balance. Set it to `0` to add their
+signed incoming aspects at full strength after the divided balance.
 
 ### DhruvBhava
 

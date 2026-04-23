@@ -330,17 +330,18 @@ type AyanamshaComputeRequest struct {
 }
 
 type BhavaConfig struct {
-	System                        int32
-	StartingPoint                 int32
-	CustomStartDeg                float64
-	ReferenceMode                 int32
-	OutputMode                    int32
-	AyanamshaSystem               int32
-	UseNutation                   bool
-	ReferencePlane                int32
-	UseRashiBhavaForBalaAvastha   bool
-	IncludeNodeAspectsForDrikBala bool
-	IncludeRashiBhavaResults      bool
+	System                               int32
+	StartingPoint                        int32
+	CustomStartDeg                       float64
+	ReferenceMode                        int32
+	OutputMode                           int32
+	AyanamshaSystem                      int32
+	UseNutation                          bool
+	ReferencePlane                       int32
+	UseRashiBhavaForBalaAvastha          bool
+	IncludeNodeAspectsForDrikBala        bool
+	DivideGuruBuddhDrishtiBy4ForDrikBala bool
+	IncludeRashiBhavaResults             bool
 }
 
 type Bhava struct {

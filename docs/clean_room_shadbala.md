@@ -110,6 +110,11 @@ incoming aspect virupas in the `(benefic - malefic) / 4` balance. This knob
 affects Shadbala Drik Bala only; standalone drishti/aspect matrices still
 report Rahu and Ketu aspects.
 
+Guru and Buddh incoming aspects are divided by 4 by default with the rest of
+the signed benefic/malefic balance. Set
+`BhavaConfig.divide_guru_buddh_drishti_by_4_for_drik_bala=false` to add their
+signed incoming aspects at full strength after the divided balance.
+
 ## 3. Kala Bala (Temporal Strength)
 
 ### 3a. Nathonnatha Bala (Day/Night Strength)
@@ -200,18 +205,18 @@ Fixed constants (BPHS):
 
 ## 6. Drik Bala (Aspectual Strength)
 
-Dhruv first computes the signed aspect balance, excluding incoming Guru and
-Buddh drishti from this divided balance. Rahu/Ketu incoming aspects are also
-excluded unless `include_node_aspects_for_drik_bala=true`:
+Dhruv computes the signed aspect balance as `(benefic - malefic) / 4`. Incoming
+Rahu/Ketu aspects are excluded unless `include_node_aspects_for_drik_bala=true`.
+Incoming Guru and Buddh aspects participate in the divided balance by default:
 
 ```text
-base_drik = (benefic_virupa_sum_without_guru_buddh
-             − malefic_virupa_sum_without_guru_buddh) / 4
+drik_bala = (benefic_virupa_sum − malefic_virupa_sum) / 4
 ```
 
-It then adds the signed full incoming drishti virupa from Guru and Buddh to the
-target graha. Guru is benefic. Buddh uses the dynamic nature rules below, so a
-malefic Buddh subtracts its full drishti:
+When `divide_guru_buddh_drishti_by_4_for_drik_bala=false`, Guru and Buddh are
+excluded from the divided balance and their signed incoming aspect virupas are
+added at full strength. Guru is benefic. Buddh uses the dynamic nature rules
+below, so a malefic Buddh subtracts:
 
 ```text
 drik_bala = base_drik + signed_guru_full_drishti + signed_buddh_full_drishti
