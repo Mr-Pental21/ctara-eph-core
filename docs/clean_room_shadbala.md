@@ -164,8 +164,8 @@ Jupiter always gets 60.
 
 | Component | Points | Lord of |
 |----------|--------|---------|
-| Abda Bala | 15 | `3 + ((Y * 3 + 1) mod 7)` with `Y = days_since_1900_01_01 + 26543` |
-| Masa Bala | 30 | `3 + ((Y * 2 + 1) mod 7)` with `Y = days_since_1900_01_01 + 26543` |
+| Abda Bala | 15 | `3 + ((((Y // 360) * 3) + 1) mod 7)` with `Y = days_since_1900_01_01 + 26543` |
+| Masa Bala | 30 | `3 + ((((Y // 30) * 2) + 1) mod 7)` with `Y = days_since_1900_01_01 + 26543` |
 | Vara Bala | 45 | Weekday (vaar lord) |
 | Hora Bala | 60 | Planetary hour (hora lord) |
 

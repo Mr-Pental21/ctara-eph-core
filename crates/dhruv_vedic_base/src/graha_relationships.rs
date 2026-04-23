@@ -692,14 +692,14 @@ pub fn kala_days_since_1900(year: i32, month: u32, day: u32) -> i64 {
 pub fn kala_abda_lord(year: i32, month: u32, day: u32) -> Graha {
     let x = kala_days_since_1900(year, month, day);
     let y = x + 26_543;
-    weekday_number_lord((3 + (y * 3 + 1).rem_euclid(7)).rem_euclid(7))
+    weekday_number_lord((3 + (((y / 360) * 3 + 1).rem_euclid(7))).rem_euclid(7))
 }
 
 /// Kala Bala Masa lord using the project day-count formula.
 pub fn kala_masa_lord(year: i32, month: u32, day: u32) -> Graha {
     let x = kala_days_since_1900(year, month, day);
     let y = x + 26_543;
-    weekday_number_lord((3 + (y * 2 + 1).rem_euclid(7)).rem_euclid(7))
+    weekday_number_lord((3 + (((y / 30) * 2 + 1).rem_euclid(7))).rem_euclid(7))
 }
 
 // ---------------------------------------------------------------------------
@@ -1350,13 +1350,13 @@ mod tests {
 
     #[test]
     fn kala_daycount_lords_wrap_weekday_numbers() {
-        assert_eq!(kala_abda_lord(1900, 1, 1), Graha::Surya);
-        assert_eq!(kala_masa_lord(1900, 1, 1), Graha::Chandra);
+        assert_eq!(kala_abda_lord(1900, 1, 1), Graha::Shukra);
+        assert_eq!(kala_masa_lord(1900, 1, 1), Graha::Surya);
     }
 
     #[test]
     fn kala_daycount_lords_for_2026_04_17() {
-        assert_eq!(kala_abda_lord(2026, 4, 17), Graha::Shukra);
-        assert_eq!(kala_masa_lord(2026, 4, 17), Graha::Mangal);
+        assert_eq!(kala_abda_lord(2026, 4, 17), Graha::Guru);
+        assert_eq!(kala_masa_lord(2026, 4, 17), Graha::Buddh);
     }
 }
