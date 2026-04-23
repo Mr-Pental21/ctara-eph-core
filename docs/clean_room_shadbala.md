@@ -194,17 +194,20 @@ Fixed constants (BPHS):
 
 ## 6. Drik Bala (Aspectual Strength)
 
-Dhruv first computes the signed aspect balance:
+Dhruv first computes the signed aspect balance, excluding incoming Guru and
+Buddh drishti from this divided balance:
 
 ```text
-base_drik = (benefic_virupa_sum − malefic_virupa_sum) / 4
+base_drik = (benefic_virupa_sum_without_guru_buddh
+             − malefic_virupa_sum_without_guru_buddh) / 4
 ```
 
-It then adds the full incoming drishti virupa from Guru and Buddh to the target
-graha:
+It then adds the signed full incoming drishti virupa from Guru and Buddh to the
+target graha. Guru is benefic. Buddh uses the dynamic nature rules below, so a
+malefic Buddh subtracts its full drishti:
 
 ```text
-drik_bala = base_drik + guru_full_drishti + buddh_full_drishti
+drik_bala = base_drik + signed_guru_full_drishti + signed_buddh_full_drishti
 ```
 
 The virupa strengths use the existing graha drishti system. Dynamic

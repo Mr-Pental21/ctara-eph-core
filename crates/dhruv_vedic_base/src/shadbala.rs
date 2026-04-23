@@ -909,12 +909,12 @@ pub fn all_naisargika_balas() -> [f64; 7] {
 // 2g. Drik Bala
 // ---------------------------------------------------------------------------
 
-/// Drik Bala: base signed aspect strength plus full Guru/Buddh drishti.
+/// Drik Bala: base signed aspect strength plus signed full Guru/Buddh drishti.
 ///
 /// For each incoming aspect, classify the aspecting graha as benefic or malefic,
-/// then sum their total virupas. The difference divided by 4 gives the base
-/// drik bala. Add the full incoming drishti virupa of Guru and Buddh on the
-/// target graha to obtain the final drik bala.
+/// then sum total virupas, excluding Guru and Buddh. The difference divided by
+/// 4 gives the base drik bala. Add the signed full incoming drishti virupa of
+/// Guru and Buddh on the target graha to obtain the final drik bala.
 /// `sidereal_lons` = all 9 grahas. `moon_sun_elong` classifies Chandra;
 /// Buddh is classified by same-rashi association.
 pub fn drik_bala(graha: Graha, sidereal_lons: &[f64; 9], moon_sun_elong: f64) -> f64 {
@@ -935,12 +935,15 @@ pub fn drik_bala(graha: Graha, sidereal_lons: &[f64; 9], moon_sun_elong: f64) ->
         let bv = base_virupa(ang);
         let sv = special_virupa(src, ang);
         let total = bv + sv;
+        let nature = dynamic_benefic_nature(src, sidereal_lons, moon_sun_elong);
 
         if matches!(src, Graha::Guru | Graha::Buddh) {
-            guru_buddh_full_drishti += total;
+            match nature {
+                BeneficNature::Benefic => guru_buddh_full_drishti += total,
+                BeneficNature::Malefic => guru_buddh_full_drishti -= total,
+            }
+            continue;
         }
-
-        let nature = dynamic_benefic_nature(src, sidereal_lons, moon_sun_elong);
 
         match nature {
             BeneficNature::Benefic => benefic_sum += total,
@@ -1311,11 +1314,30 @@ mod tests {
         lons[Graha::Rahu.index() as usize] = 60.0; // 300° to Surya -> 0 virupa
         lons[Graha::Ketu.index() as usize] = 330.0; // 30° to Surya -> 0 virupa
 
-        let base_signed_balance = (60.0 + 45.0) / 4.0;
+        let base_signed_balance = 0.0;
         let full_guru_buddh_drishti = 60.0 + 45.0;
         let expected = base_signed_balance + full_guru_buddh_drishti;
 
         assert!((drik_bala(Graha::Surya, &lons, 180.0) - expected).abs() < EPS);
+    }
+
+    #[test]
+    fn drik_bala_subtracts_malefic_buddh_full_drishti() {
+        let mut lons = [0.0f64; 9];
+        lons[Graha::Surya.index() as usize] = 0.0;
+        lons[Graha::Chandra.index() as usize] = 0.0;
+        lons[Graha::Mangal.index() as usize] = 270.0;
+        lons[Graha::Buddh.index() as usize] = 270.0; // Same rashi as Mangal.
+        lons[Graha::Guru.index() as usize] = 0.0;
+        lons[Graha::Shukra.index() as usize] = 0.0;
+        lons[Graha::Shani.index() as usize] = 0.0;
+        lons[Graha::Rahu.index() as usize] = 0.0;
+        lons[Graha::Ketu.index() as usize] = 0.0;
+
+        // Mangal contributes 60 to the /4 malefic balance.
+        // Malefic Buddh contributes its full 45 with a negative sign only at the end.
+        let expected = (0.0 - 60.0) / 4.0 - 45.0;
+        assert!((drik_bala(Graha::Surya, &lons, 0.0) - expected).abs() < EPS);
     }
 
     // --- Saptavargaja ---
