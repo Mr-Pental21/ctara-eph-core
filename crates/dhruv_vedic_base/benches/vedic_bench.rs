@@ -99,6 +99,8 @@ fn shadbala_bench(c: &mut Criterion) {
         month_lord: Graha::Mangal,
         weekday_lord: Graha::Shukra,
         hora_lord: Graha::Buddh,
+        ayana_krantis: [23.0, 5.0, -15.0, 10.0, -20.0, 8.0, -3.0],
+        ayana_obliquity_deg: dhruv_vedic_base::DEFAULT_AYANA_BALA_OBLIQUITY_DEG,
         graha_declinations: [23.0, 5.0, -15.0, 10.0, -20.0, 8.0, -3.0],
         sidereal_lons: [280.0, 120.0, 15.0, 170.0, 220.0, 350.0, 195.0],
     };

@@ -111,6 +111,8 @@ struct JyotishContext {
     graha_speeds: Option<[f64; 7]>,
     /// Ecliptic declinations (deg) for sapta grahas (indices 0-6).
     graha_declinations: Option<[f64; 7]>,
+    /// Longitude-only Kranti and obliquity for Ayana Bala.
+    ayana_krantis: Option<([f64; 7], f64)>,
 }
 
 impl JyotishContext {
@@ -136,6 +138,7 @@ impl JyotishContext {
             sunset_jd: None,
             graha_speeds: None,
             graha_declinations: None,
+            ayana_krantis: None,
         }
     }
 
@@ -273,6 +276,16 @@ impl JyotishContext {
         self.graha_declinations = Some(decls);
         Ok(decls)
     }
+
+    /// Get longitude-only Kranti values (deg) and obliquity for Ayana Bala.
+    fn ayana_krantis(&mut self, engine: &Engine) -> Result<([f64; 7], f64), SearchError> {
+        if let Some(krantis) = self.ayana_krantis {
+            return Ok(krantis);
+        }
+        let krantis = query_sapta_graha_longitude_only_krantis(engine, self.jd_tdb)?;
+        self.ayana_krantis = Some(krantis);
+        Ok(krantis)
+    }
 }
 
 /// Query ecliptic-of-date longitude speed (deg/day) for all 7 sapta grahas.
@@ -325,6 +338,27 @@ fn query_sapta_graha_declinations(engine: &Engine, jd_tdb: f64) -> Result<[f64; 
         decls[graha.index() as usize] = sin_dec.clamp(-1.0, 1.0).asin().to_degrees();
     }
     Ok(decls)
+}
+
+/// Query longitude-only Kranti (deg) for all 7 sapta grahas.
+///
+/// This is `asin(sin(eps) * sin(tropical_lon))`, intentionally ignoring
+/// ecliptic latitude for Ayana Bala.
+fn query_sapta_graha_longitude_only_krantis(
+    engine: &Engine,
+    jd_tdb: f64,
+) -> Result<([f64; 7], f64), SearchError> {
+    let t = (jd_tdb - 2_451_545.0) / 36525.0;
+    let eps = mean_obliquity_of_date_rad(t);
+    let sin_eps = eps.sin();
+    let mut krantis = [0.0f64; 7];
+    for graha in SAPTA_GRAHAS {
+        let body = graha_to_body(graha).expect("sapta graha has body");
+        let (lon_deg, _) = body_ecliptic_lon_lat(engine, body, jd_tdb)?;
+        let sin_dec = sin_eps * lon_deg.to_radians().sin();
+        krantis[graha.index() as usize] = sin_dec.clamp(-1.0, 1.0).asin().to_degrees();
+    }
+    Ok((krantis, eps.to_degrees()))
 }
 
 /// Query all 9 graha sidereal longitudes at a given TDB epoch.
@@ -1910,7 +1944,8 @@ fn assemble_shadbala_inputs(
     let (year_lord, month_lord, weekday_lord, hora_lord_graha) =
         resolve_kala_lords(engine, eop, utc, location, riseset_config, aya_config, ctx)?;
 
-    // Declinations for sapta grahas
+    // Kranti for Ayana Bala and true declinations for Yuddha Bala
+    let (ayana_krantis, ayana_obliquity_deg) = ctx.ayana_krantis(engine)?;
     let graha_declinations = ctx.graha_declinations(engine)?;
 
     Ok(ShadbalaInputs {
@@ -1928,6 +1963,8 @@ fn assemble_shadbala_inputs(
             month_lord,
             weekday_lord,
             hora_lord: hora_lord_graha,
+            ayana_krantis,
+            ayana_obliquity_deg,
             graha_declinations,
             sidereal_lons: {
                 let mut s7 = [0.0f64; 7];

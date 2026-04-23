@@ -173,12 +173,20 @@ For Abda and Masa, `days_since_1900_01_01` uses the Gregorian UTC calendar date
 of the resolved `varsha.start` and `masa.start` instants respectively. Weekday
 numbering is `1=Sunday (Surya)` through `6=Friday (Shukra)`, with `0/7=Saturday (Shani)`.
 
-### 3e. Ayana Bala (Declination Strength)
+### 3e. Ayana Bala (Kranti Strength)
 
-Per-graha declination formula (full BPHS, not simplified Sun-only).
-Benefic: `(24 + declination_deg) / 48 × 60`.
-Malefic: `(24 − declination_deg) / 48 × 60`.
-Capped to [0, 60].
+Ayana Bala uses longitude-only modern Kranti from Sayana/tropical longitude:
+
+`kranti = asin(sin(modern_obliquity) * sin(tropical_longitude))`
+
+The modern obliquity of date replaces the older fixed 24° bound:
+
+- Surya, Mangal, Guru, Shukra: `(obliquity + kranti) / (2 × obliquity) × 60`
+- Chandra, Shani: `(obliquity − kranti) / (2 × obliquity) × 60`
+- Buddh: `(obliquity + abs(kranti)) / (2 × obliquity) × 60`
+- Surya: double the final value
+
+True declination, including ecliptic latitude, remains used for Yuddha Bala.
 
 ### 3f. Yuddha Bala (Planetary War Strength)
 

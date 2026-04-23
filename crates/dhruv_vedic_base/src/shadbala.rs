@@ -680,25 +680,25 @@ pub fn all_hora_balas(hora_lord: Graha) -> [f64; 7] {
     result
 }
 
-/// Ayana Bala: per-graha declination formula.
-/// Benefic: (24 + declination) / 48 * 60.
-/// Malefic: (24 - declination) / 48 * 60.
-/// Chandra classification from Moon-Sun elongation. This low-level helper only
-/// has Moon-Sun elongation, so Buddh falls back to its default benefic nature.
-/// Full Shadbala uses `ayana_bala_with_longitudes`, which applies same-rashi
-/// association for Buddh.
+/// Default obliquity used by low-level Ayana Bala helpers that do not receive a
+/// date-specific obliquity.
+pub const DEFAULT_AYANA_BALA_OBLIQUITY_DEG: f64 = 23.439_291_111_1;
+
+/// Ayana Bala from longitude-only Kranti.
+///
+/// Date-aware Shadbala passes modern obliquity of date. This compatibility
+/// helper uses the J2000 obliquity constant because it has no date input.
 pub fn ayana_bala(graha: Graha, declination_deg: f64, moon_sun_elong: f64) -> f64 {
+    let _ = moon_sun_elong;
+    ayana_bala_with_obliquity(graha, declination_deg, DEFAULT_AYANA_BALA_OBLIQUITY_DEG)
+}
+
+pub fn ayana_bala_with_obliquity(graha: Graha, kranti_deg: f64, obliquity_deg: f64) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
     }
 
-    let nature = if graha == Graha::Chandra {
-        moon_benefic_nature(moon_sun_elong)
-    } else {
-        natural_benefic_malefic(graha)
-    };
-
-    ayana_bala_for_nature(nature, declination_deg)
+    ayana_bala_for_kranti(graha, kranti_deg, obliquity_deg)
 }
 
 pub fn ayana_bala_with_longitudes(
@@ -707,35 +707,27 @@ pub fn ayana_bala_with_longitudes(
     sidereal_lons: &[f64; 9],
     moon_sun_elong: f64,
 ) -> f64 {
-    ayana_bala_with_longitudes_and_rule(
-        graha,
-        declination_deg,
-        sidereal_lons,
-        moon_sun_elong,
-        ChandraBeneficRule::default(),
-    )
+    let _ = sidereal_lons;
+    let _ = moon_sun_elong;
+    ayana_bala_with_obliquity(graha, declination_deg, DEFAULT_AYANA_BALA_OBLIQUITY_DEG)
 }
 
-fn ayana_bala_with_longitudes_and_rule(
-    graha: Graha,
-    declination_deg: f64,
-    sidereal_lons: &[f64; 9],
-    moon_sun_elong: f64,
-    chandra_rule: ChandraBeneficRule,
-) -> f64 {
-    if !is_sapta_graha(graha) {
+fn ayana_bala_for_kranti(graha: Graha, kranti_deg: f64, obliquity_deg: f64) -> f64 {
+    if obliquity_deg <= 0.0 || !obliquity_deg.is_finite() {
         return 0.0;
     }
-    let nature = dynamic_benefic_nature(graha, sidereal_lons, moon_sun_elong, chandra_rule);
-    ayana_bala_for_nature(nature, declination_deg)
-}
-
-fn ayana_bala_for_nature(nature: BeneficNature, declination_deg: f64) -> f64 {
-    let kranti = declination_deg.clamp(-24.0, 24.0);
-    let score = match nature {
-        BeneficNature::Benefic => (24.0 + kranti) / 48.0 * 60.0,
-        BeneficNature::Malefic => (24.0 - kranti) / 48.0 * 60.0,
+    let obliquity = obliquity_deg.abs();
+    let kranti = kranti_deg.clamp(-obliquity, obliquity);
+    let numerator = match graha {
+        Graha::Surya | Graha::Mangal | Graha::Guru | Graha::Shukra => obliquity + kranti,
+        Graha::Chandra | Graha::Shani => obliquity - kranti,
+        Graha::Buddh => obliquity + kranti.abs(),
+        _ => return 0.0,
     };
+    let mut score = numerator / (2.0 * obliquity) * 60.0;
+    if graha == Graha::Surya {
+        score *= 2.0;
+    }
     score.max(0.0)
 }
 
@@ -807,6 +799,11 @@ pub struct KalaBalaInputs {
     pub month_lord: Graha,
     pub weekday_lord: Graha,
     pub hora_lord: Graha,
+    /// Longitude-only Kranti values for Ayana Bala, indexed by sapta graha.
+    pub ayana_krantis: [f64; 7],
+    /// Modern obliquity used to compute Ayana Bala Kranti.
+    pub ayana_obliquity_deg: f64,
+    /// True declinations for Yuddha Bala, indexed by sapta graha.
     pub graha_declinations: [f64; 7],
     pub sidereal_lons: [f64; 7],
 }
@@ -870,12 +867,10 @@ fn kala_bala_with_sidereal_lons_and_rule(
     let ma = masa_bala(graha, inputs.month_lord);
     let va = vara_bala(graha, inputs.weekday_lord);
     let ho = hora_bala(graha, inputs.hora_lord);
-    let ay = ayana_bala_with_longitudes_and_rule(
+    let ay = ayana_bala_with_obliquity(
         graha,
-        inputs.graha_declinations[graha.index().min(6) as usize],
-        sidereal_lons,
-        inputs.moon_sun_elongation,
-        chandra_rule,
+        inputs.ayana_krantis[graha.index().min(6) as usize],
+        inputs.ayana_obliquity_deg,
     );
     let yu = yuddha_bala(graha, &inputs.sidereal_lons, &inputs.graha_declinations);
     let total = n + p + t + ab + ma + va + ho + ay + yu;
@@ -1466,14 +1461,24 @@ mod tests {
 
     #[test]
     fn ayana_benefic_max_north() {
-        // Benefic at +24 deg declination: (24+24)/48*60 = 60
-        assert!((ayana_bala(Graha::Guru, 24.0, 180.0) - 60.0).abs() < EPS);
+        assert!((ayana_bala_with_obliquity(Graha::Guru, 23.0, 23.0) - 60.0).abs() < EPS);
     }
 
     #[test]
-    fn ayana_malefic_max_south() {
-        // Malefic at -24 deg: (24-(-24))/48*60 = 60
-        assert!((ayana_bala(Graha::Mangal, -24.0, 180.0) - 60.0).abs() < EPS);
+    fn ayana_chandra_max_south() {
+        assert!((ayana_bala_with_obliquity(Graha::Chandra, -23.0, 23.0) - 60.0).abs() < EPS);
+    }
+
+    #[test]
+    fn ayana_buddh_uses_absolute_kranti() {
+        let north = ayana_bala_with_obliquity(Graha::Buddh, 10.0, 23.0);
+        let south = ayana_bala_with_obliquity(Graha::Buddh, -10.0, 23.0);
+        assert!((north - south).abs() < EPS);
+    }
+
+    #[test]
+    fn ayana_surya_doubles_final_value() {
+        assert!((ayana_bala_with_obliquity(Graha::Surya, 0.0, 23.0) - 60.0).abs() < EPS);
     }
 
     // --- Cheshta Bala ---
