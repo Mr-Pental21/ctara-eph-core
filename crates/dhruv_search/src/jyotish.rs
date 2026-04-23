@@ -36,12 +36,10 @@ use dhruv_vedic_base::{
     graha_drishti, graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord,
     is_valid_amsha_variation, jagradadi_avastha, jd_tdb_to_centuries, lagna_longitude_rad,
     lajjitadi_avastha, lost_planetary_war, lunar_node_deg_for_epoch_on_plane,
-    masa_lord as graha_masa_lord, nakshatra_from_longitude, node_dignity_in_rashi,
-    node_dignity_in_rashi_with_temporal_context, normalize_360, nth_rashi_from, own_signs,
-    pranapada_lagna, rashi_from_longitude, rashi_lord_by_index,
-    samvatsara_lord as graha_samvatsara_lord, sayanadi_all_sub_states, sayanadi_avastha,
-    shadbala_from_inputs, sree_lagna, sun_based_upagrahas, time_upagraha_jd_with_config,
-    vaar_lord as graha_vaar_lord,
+    nakshatra_from_longitude, node_dignity_in_rashi, node_dignity_in_rashi_with_temporal_context,
+    normalize_360, nth_rashi_from, own_signs, pranapada_lagna, rashi_from_longitude,
+    rashi_lord_by_index, sayanadi_all_sub_states, sayanadi_avastha, shadbala_from_inputs,
+    sree_lagna, sun_based_upagrahas, time_upagraha_jd_with_config, vaar_lord as graha_vaar_lord,
 };
 
 use crate::conjunction::{body_ecliptic_lon_lat, body_ecliptic_state, body_lon_lat_on_plane};
@@ -59,8 +57,8 @@ use crate::jyotish_types::{
     ShadbalaEntry, ShadbalaResult, SphutalResult, VimsopakaEntry, VimsopakaResult,
 };
 use crate::panchang::{
-    hora_from_sunrises, masa_for_date_with_eop, panchang_for_date, varsha_for_date_with_eop,
-    vedic_day_sunrises,
+    hora_from_sunrises, masa_for_date_with_eop, panchang_for_date, vaar_for_date,
+    varsha_for_date_with_eop, vedic_day_sunrises,
 };
 use crate::panchang_types::{MasaInfo, VarshaInfo};
 use crate::sankranti_types::SankrantiConfig;
@@ -3483,13 +3481,13 @@ fn resolve_kala_lords(
     aya_config: &SankrantiConfig,
     ctx: &mut JyotishContext,
 ) -> Result<(Graha, Graha, Graha, Graha), SearchError> {
-    // Year lord: samvatsara → graha_samvatsara_lord
     let varsha = ctx.varsha_info(engine, eop, utc, aya_config)?;
-    let year_lord = graha_samvatsara_lord(varsha.samvatsara);
+    let year_lord =
+        graha_vaar_lord(vaar_for_date(engine, eop, &varsha.start, location, riseset_config)?.vaar);
 
-    // Month lord: masa → graha_masa_lord
     let masa = ctx.masa_info(engine, eop, utc, aya_config)?;
-    let month_lord = graha_masa_lord(masa.masa);
+    let month_lord =
+        graha_vaar_lord(vaar_for_date(engine, eop, &masa.start, location, riseset_config)?.vaar);
 
     // Weekday lord
     let (jd_sunrise, jd_next_sunrise) =

@@ -156,16 +156,16 @@ malefic score.
 
 ### 3c. Tribhaga Bala (Day/Night Third Strength)
 
-Day: 1st third = Jupiter (60), 2nd = Mercury (60), 3rd = Saturn (60).
+Day: 1st third = Mercury (60), 2nd = Sun (60), 3rd = Saturn (60).
 Night: 1st third = Moon (60), 2nd = Venus (60), 3rd = Mars (60).
-Sun always gets 60.
+Jupiter always gets 60.
 
 ### 3d. Lord Balas
 
 | Component | Points | Lord of |
 |----------|--------|---------|
-| Abda Bala | 15 | Year (samvatsara lord) |
-| Masa Bala | 30 | Month (masa lord) |
+| Abda Bala | 15 | Weekday lord of the varsha start day |
+| Masa Bala | 30 | Weekday lord of the masa start day |
 | Vara Bala | 45 | Weekday (vaar lord) |
 | Hora Bala | 60 | Planetary hour (hora lord) |
 

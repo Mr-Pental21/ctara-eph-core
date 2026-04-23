@@ -564,13 +564,13 @@ pub fn all_paksha_balas(moon_sun_elong: f64) -> [f64; 7] {
 }
 
 /// Tribhaga Bala: day/night divided into thirds, specific planets strong in each third.
-/// Sun = 60 always. fraction: 0.0-1.0 within day or night.
+/// Guru = 60 always. fraction: 0.0-1.0 within day or night.
 pub fn tribhaga_bala(graha: Graha, is_daytime: bool, fraction: f64) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
     }
-    // Sun always gets 60
-    if graha == Graha::Surya {
+    // Guru always gets 60
+    if graha == Graha::Guru {
         return 60.0;
     }
 
@@ -584,8 +584,8 @@ pub fn tribhaga_bala(graha: Graha, is_daytime: bool, fraction: f64) -> f64 {
 
     let strong_graha = if is_daytime {
         match third {
-            0 => Graha::Guru,
-            1 => Graha::Buddh,
+            0 => Graha::Buddh,
+            1 => Graha::Surya,
             _ => Graha::Shani,
         }
     } else {
@@ -1428,6 +1428,38 @@ mod tests {
         assert!((paksha_bala(Graha::Chandra, 0.0) - 120.0).abs() < EPS);
         assert!((paksha_bala(Graha::Chandra, 90.0) - 60.0).abs() < EPS);
         assert!((paksha_bala(Graha::Chandra, 180.0) - 120.0).abs() < EPS);
+    }
+
+    // --- Tribhaga Bala ---
+
+    #[test]
+    fn tribhaga_guru_always_sixty() {
+        for (is_daytime, fraction) in [
+            (true, 0.1),
+            (true, 0.5),
+            (true, 0.9),
+            (false, 0.1),
+            (false, 0.5),
+            (false, 0.9),
+        ] {
+            assert!((tribhaga_bala(Graha::Guru, is_daytime, fraction) - 60.0).abs() < EPS);
+        }
+    }
+
+    #[test]
+    fn tribhaga_daytime_lords_follow_updated_thirds() {
+        assert!((tribhaga_bala(Graha::Buddh, true, 0.2) - 60.0).abs() < EPS);
+        assert!((tribhaga_bala(Graha::Surya, true, 0.5) - 60.0).abs() < EPS);
+        assert!((tribhaga_bala(Graha::Shani, true, 0.8) - 60.0).abs() < EPS);
+        assert!(tribhaga_bala(Graha::Chandra, true, 0.2).abs() < EPS);
+    }
+
+    #[test]
+    fn tribhaga_nighttime_lords_follow_updated_thirds() {
+        assert!((tribhaga_bala(Graha::Chandra, false, 0.2) - 60.0).abs() < EPS);
+        assert!((tribhaga_bala(Graha::Shukra, false, 0.5) - 60.0).abs() < EPS);
+        assert!((tribhaga_bala(Graha::Mangal, false, 0.8) - 60.0).abs() < EPS);
+        assert!(tribhaga_bala(Graha::Surya, false, 0.5).abs() < EPS);
     }
 
     // --- Ayana Bala ---
