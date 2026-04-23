@@ -682,9 +682,51 @@ pub fn samvatsara_lord(samvatsara: Samvatsara) -> Graha {
     SAPTA_GRAHAS[(samvatsara.index() as usize) % 7]
 }
 
+/// Gregorian civil days elapsed since 1900-01-01.
+pub fn kala_days_since_1900(year: i32, month: u32, day: u32) -> i64 {
+    days_from_civil(year, month, day) - days_from_civil(1900, 1, 1)
+}
+
+/// Kala Bala Abda lord using the project day-count formula.
+pub fn kala_abda_lord(year: i32, month: u32, day: u32) -> Graha {
+    let x = kala_days_since_1900(year, month, day);
+    let y = x + 26_543;
+    weekday_number_lord((3 + (y * 3 + 1).rem_euclid(7)).rem_euclid(7))
+}
+
+/// Kala Bala Masa lord using the project day-count formula.
+pub fn kala_masa_lord(year: i32, month: u32, day: u32) -> Graha {
+    let x = kala_days_since_1900(year, month, day);
+    let y = x + 26_543;
+    weekday_number_lord((3 + (y * 2 + 1).rem_euclid(7)).rem_euclid(7))
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+fn weekday_number_lord(weekday: i64) -> Graha {
+    match weekday.rem_euclid(7) {
+        1 => Graha::Surya,
+        2 => Graha::Chandra,
+        3 => Graha::Mangal,
+        4 => Graha::Buddh,
+        5 => Graha::Guru,
+        6 => Graha::Shukra,
+        _ => Graha::Shani,
+    }
+}
+
+fn days_from_civil(year: i32, month: u32, day: u32) -> i64 {
+    let year = year as i64 - if month <= 2 { 1 } else { 0 };
+    let era = if year >= 0 { year } else { year - 399 } / 400;
+    let yoe = year - era * 400;
+    let month = month as i64;
+    let day = day as i64;
+    let doy = (153 * (month + if month > 2 { -3 } else { 9 }) + 2) / 5 + day - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    era * 146_097 + doe
+}
 
 fn normalize_360_inner(deg: f64) -> f64 {
     let r = deg % 360.0;
@@ -1296,5 +1338,24 @@ mod tests {
     fn samvatsara_lord_wraps() {
         // index 7 % 7 = 0 → Surya
         assert_eq!(samvatsara_lord(Samvatsara::Bhava), Graha::Surya);
+    }
+
+    #[test]
+    fn kala_days_since_1900_baseline() {
+        assert_eq!(kala_days_since_1900(1900, 1, 1), 0);
+        assert_eq!(kala_days_since_1900(1900, 1, 2), 1);
+        assert_eq!(kala_days_since_1900(1900, 2, 1), 31);
+    }
+
+    #[test]
+    fn kala_daycount_lords_wrap_weekday_numbers() {
+        assert_eq!(kala_abda_lord(1900, 1, 1), Graha::Surya);
+        assert_eq!(kala_masa_lord(1900, 1, 1), Graha::Chandra);
+    }
+
+    #[test]
+    fn kala_daycount_lords_for_2026_04_17() {
+        assert_eq!(kala_abda_lord(2026, 4, 17), Graha::Shukra);
+        assert_eq!(kala_masa_lord(2026, 4, 17), Graha::Mangal);
     }
 }

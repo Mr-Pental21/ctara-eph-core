@@ -164,10 +164,14 @@ Jupiter always gets 60.
 
 | Component | Points | Lord of |
 |----------|--------|---------|
-| Abda Bala | 15 | Weekday lord of the varsha start day |
-| Masa Bala | 30 | Weekday lord of the masa start day |
+| Abda Bala | 15 | `3 + ((Y * 3 + 1) mod 7)` with `Y = days_since_1900_01_01 + 26543` |
+| Masa Bala | 30 | `3 + ((Y * 2 + 1) mod 7)` with `Y = days_since_1900_01_01 + 26543` |
 | Vara Bala | 45 | Weekday (vaar lord) |
 | Hora Bala | 60 | Planetary hour (hora lord) |
+
+For Abda and Masa, `days_since_1900_01_01` uses the Gregorian UTC calendar date
+of the resolved `varsha.start` and `masa.start` instants respectively. Weekday
+numbering is `1=Sunday (Surya)` through `6=Friday (Shukra)`, with `0/7=Saturday (Shani)`.
 
 ### 3e. Ayana Bala (Declination Strength)
 
