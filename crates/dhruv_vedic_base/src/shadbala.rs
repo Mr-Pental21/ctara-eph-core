@@ -917,7 +917,12 @@ pub fn all_naisargika_balas() -> [f64; 7] {
 /// Guru and Buddh on the target graha to obtain the final drik bala.
 /// `sidereal_lons` = all 9 grahas. `moon_sun_elong` classifies Chandra;
 /// Buddh is classified by same-rashi association.
-pub fn drik_bala(graha: Graha, sidereal_lons: &[f64; 9], moon_sun_elong: f64) -> f64 {
+pub fn drik_bala_with_node_aspects(
+    graha: Graha,
+    sidereal_lons: &[f64; 9],
+    moon_sun_elong: f64,
+    include_node_aspects: bool,
+) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
     }
@@ -928,6 +933,9 @@ pub fn drik_bala(graha: Graha, sidereal_lons: &[f64; 9], moon_sun_elong: f64) ->
 
     for src in crate::graha::ALL_GRAHAS {
         if src == graha {
+            continue;
+        }
+        if !include_node_aspects && matches!(src, Graha::Rahu | Graha::Ketu) {
             continue;
         }
         let src_lon = sidereal_lons[src.index() as usize];
@@ -954,13 +962,28 @@ pub fn drik_bala(graha: Graha, sidereal_lons: &[f64; 9], moon_sun_elong: f64) ->
     (benefic_sum - malefic_sum) / 4.0 + guru_buddh_full_drishti
 }
 
+/// Drik Bala with Rahu/Ketu incoming aspects excluded.
+pub fn drik_bala(graha: Graha, sidereal_lons: &[f64; 9], moon_sun_elong: f64) -> f64 {
+    drik_bala_with_node_aspects(graha, sidereal_lons, moon_sun_elong, false)
+}
+
 /// Drik bala for all 7 sapta grahas.
-pub fn all_drik_balas(sidereal_lons: &[f64; 9], moon_sun_elong: f64) -> [f64; 7] {
+pub fn all_drik_balas_with_node_aspects(
+    sidereal_lons: &[f64; 9],
+    moon_sun_elong: f64,
+    include_node_aspects: bool,
+) -> [f64; 7] {
     let mut result = [0.0; 7];
     for (i, g) in SAPTA_GRAHAS.iter().enumerate() {
-        result[i] = drik_bala(*g, sidereal_lons, moon_sun_elong);
+        result[i] =
+            drik_bala_with_node_aspects(*g, sidereal_lons, moon_sun_elong, include_node_aspects);
     }
     result
+}
+
+/// Drik bala for all 7 sapta grahas with Rahu/Ketu incoming aspects excluded.
+pub fn all_drik_balas(sidereal_lons: &[f64; 9], moon_sun_elong: f64) -> [f64; 7] {
+    all_drik_balas_with_node_aspects(sidereal_lons, moon_sun_elong, false)
 }
 
 // ---------------------------------------------------------------------------
@@ -997,6 +1020,8 @@ pub struct ShadbalaInputs {
     pub cheshta_chaloccha_lons: [f64; 7],
     /// Kala bala inputs.
     pub kala: KalaBalaInputs,
+    /// Include Rahu/Ketu incoming aspect contributions in Drik Bala.
+    pub include_node_aspects_for_drik_bala: bool,
     /// 7 vargas x 7 grahas rashi indices (for saptavargaja bala).
     pub varga_rashi_indices: [[u8; 7]; 7],
     /// 7 vargas x 7 grahas amsha longitudes (for degree-specific saptavargaja bala).
@@ -1030,7 +1055,12 @@ pub fn shadbala_from_inputs(graha: Graha, inputs: &ShadbalaInputs) -> ShadbalaBr
         inputs.cheshta_chaloccha_lons[gi],
     );
     let nais = naisargika_bala(graha);
-    let drik = drik_bala(graha, &inputs.sidereal_lons, inputs.kala.moon_sun_elongation);
+    let drik = drik_bala_with_node_aspects(
+        graha,
+        &inputs.sidereal_lons,
+        inputs.kala.moon_sun_elongation,
+        inputs.include_node_aspects_for_drik_bala,
+    );
 
     let total = sthana_result.total + dig + kala_result.total + cheshta + nais + drik;
     let rupas = total / 60.0;
@@ -1338,6 +1368,19 @@ mod tests {
         // Malefic Buddh contributes its full 45 with a negative sign only at the end.
         let expected = (0.0 - 60.0) / 4.0 - 45.0;
         assert!((drik_bala(Graha::Surya, &lons, 0.0) - expected).abs() < EPS);
+    }
+
+    #[test]
+    fn drik_bala_excludes_node_aspects_by_default_and_can_include_them() {
+        let mut lons = [0.0f64; 9];
+        lons[Graha::Surya.index() as usize] = 0.0;
+        lons[Graha::Rahu.index() as usize] = 180.0; // Full incoming Rahu aspect to Surya.
+        lons[Graha::Ketu.index() as usize] = 0.0;
+
+        assert!(drik_bala(Graha::Surya, &lons, 180.0).abs() < EPS);
+
+        let with_nodes = drik_bala_with_node_aspects(Graha::Surya, &lons, 180.0, true);
+        assert!((with_nodes + 15.0).abs() < EPS);
     }
 
     // --- Saptavargaja ---

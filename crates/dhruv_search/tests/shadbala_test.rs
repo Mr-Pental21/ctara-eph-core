@@ -223,6 +223,60 @@ fn shadbala_all_seven_valid() {
 }
 
 #[test]
+fn shadbala_node_aspects_for_drik_bala_are_opt_in() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = utc_2024_jan_15();
+    let location = new_delhi();
+    let default_bhava = BhavaConfig::default();
+    let with_nodes_bhava = BhavaConfig {
+        include_node_aspects_for_drik_bala: true,
+        ..BhavaConfig::default()
+    };
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+
+    let without_nodes = shadbala_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &default_bhava,
+        &rs_config,
+        &aya_config,
+        &default_amsha_selection(),
+    )
+    .expect("default shadbala should succeed");
+    let with_nodes = shadbala_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &with_nodes_bhava,
+        &rs_config,
+        &aya_config,
+        &default_amsha_selection(),
+    )
+    .expect("node-aspect shadbala should succeed");
+
+    let mut changed_drik = false;
+    for (base, opted_in) in without_nodes.entries.iter().zip(with_nodes.entries.iter()) {
+        assert!((base.sthana.total - opted_in.sthana.total).abs() < 1e-9);
+        assert!((base.dig - opted_in.dig).abs() < 1e-9);
+        assert!((base.kala.total - opted_in.kala.total).abs() < 1e-9);
+        assert!((base.cheshta - opted_in.cheshta).abs() < 1e-9);
+        assert!((base.naisargika - opted_in.naisargika).abs() < 1e-9);
+        if (base.drik - opted_in.drik).abs() > 1e-9 {
+            changed_drik = true;
+        }
+    }
+    assert!(
+        changed_drik,
+        "expected Rahu/Ketu opt-in to change Drik Bala"
+    );
+}
+
+#[test]
 fn shadbala_naisargika_matches_constants() {
     let Some(engine) = load_engine() else { return };
     let Some(eop) = load_eop() else { return };

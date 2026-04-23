@@ -338,6 +338,12 @@ bool ReadBhavaConfig(napi_env env, napi_value obj, DhruvBhavaConfig* out) {
         if (!GetNamedProperty(env, obj, "useRashiBhavaForBalaAvastha", &v) || !GetBool(env, v, &b)) return false;
         out->use_rashi_bhava_for_bala_avastha = b ? 1 : 0;
     }
+    if (napi_has_named_property(env, obj, "includeNodeAspectsForDrikBala", &has) != napi_ok) return false;
+    if (has) {
+        bool b = false;
+        if (!GetNamedProperty(env, obj, "includeNodeAspectsForDrikBala", &v) || !GetBool(env, v, &b)) return false;
+        out->include_node_aspects_for_drik_bala = b ? 1 : 0;
+    }
     if (napi_has_named_property(env, obj, "includeRashiBhavaResults", &has) != napi_ok) return false;
     if (has) {
         bool b = false;
@@ -3401,6 +3407,7 @@ napi_value BhavaConfigDefault(napi_env env, napi_callback_info info) {
     SetNamed(env, out, "useNutation", MakeBool(env, cfg.use_nutation != 0));
     SetNamed(env, out, "referencePlane", MakeInt32(env, cfg.reference_plane));
     SetNamed(env, out, "useRashiBhavaForBalaAvastha", MakeBool(env, cfg.use_rashi_bhava_for_bala_avastha != 0));
+    SetNamed(env, out, "includeNodeAspectsForDrikBala", MakeBool(env, cfg.include_node_aspects_for_drik_bala != 0));
     SetNamed(env, out, "includeRashiBhavaResults", MakeBool(env, cfg.include_rashi_bhava_results != 0));
     return out;
 }

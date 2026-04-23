@@ -110,6 +110,7 @@ fn shadbala_bench(c: &mut Criterion) {
         cheshta_madhyama_lons,
         cheshta_chaloccha_lons,
         kala,
+        include_node_aspects_for_drik_bala: false,
         varga_rashi_indices: varga_rashi,
         varga_longitudes,
     };

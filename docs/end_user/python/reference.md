@@ -403,4 +403,4 @@ Accepted upagraha values:
 
 ## Rashi-Bhava Bhava Config
 
-Python `bhava_config` dictionaries may set `use_rashi_bhava_for_bala_avastha` and `include_rashi_bhava_results`; both default to `1`. Existing fields such as `bhava_cusps` and `bhava_number` remain configured-system outputs. New sibling fields such as `rashi_bhava_cusps`, `rashi_bhava_number`, and `graha_to_rashi_bhava` expose the rashi-bhava/equal-house basis.
+Python `bhava_config` dictionaries may set `use_rashi_bhava_for_bala_avastha` and `include_rashi_bhava_results`; both default to `1`. They may also set `include_node_aspects_for_drik_bala`, defaulting to `0`, to include Rahu/Ketu incoming aspects in Shadbala Drik Bala. Existing fields such as `bhava_cusps` and `bhava_number` remain configured-system outputs. New sibling fields such as `rashi_bhava_cusps`, `rashi_bhava_number`, and `graha_to_rashi_bhava` expose the rashi-bhava/equal-house basis.

@@ -104,6 +104,8 @@ pub struct BhavaConfig {
     pub reference_mode: BhavaReferenceMode,
     /// Use rashi-bhava/whole-sign style bhavas for bala and avastha calculations.
     pub use_rashi_bhava_for_bala_avastha: bool,
+    /// Include Rahu/Ketu incoming aspects in Shadbala Drik Bala.
+    pub include_node_aspects_for_drik_bala: bool,
     /// Include rashi-bhava sibling outputs on bhava-aware public result surfaces.
     pub include_rashi_bhava_results: bool,
 }
@@ -115,6 +117,7 @@ impl Default for BhavaConfig {
             starting_point: BhavaStartingPoint::Lagna,
             reference_mode: BhavaReferenceMode::StartOfFirst,
             use_rashi_bhava_for_bala_avastha: true,
+            include_node_aspects_for_drik_bala: false,
             include_rashi_bhava_results: true,
         }
     }

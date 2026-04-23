@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 58`
+**ABI version:** `DHRUV_API_VERSION = 59`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -355,11 +355,17 @@ typedef struct {
     uint8_t use_nutation;
     int32_t reference_plane;
     uint8_t use_rashi_bhava_for_bala_avastha; // default 1
+    uint8_t include_node_aspects_for_drik_bala; // default 0
     uint8_t include_rashi_bhava_results;      // default 1
 } DhruvBhavaConfig;
 ```
 
 Existing bhava result fields keep the configured bhava-system meaning. High-level jyotish result structs add rashi-bhava sibling fields where applicable, such as `rashi_bhava_number`, `rashi_bhava_cusps`, `graha_to_rashi_bhava`, and rashi-bhava amsha cusp/arudha arrays. See `docs/dual_rashi_bhava_outputs.md`.
+
+`include_node_aspects_for_drik_bala` controls only Shadbala Drik Bala. It
+defaults to `0`, so Rahu/Ketu incoming aspects are excluded from the Shadbala
+Drik Bala balance unless explicitly enabled. Drishti matrix endpoints are
+unchanged and continue to expose node aspects.
 
 ### DhruvBhava
 

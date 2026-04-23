@@ -724,6 +724,12 @@ struct BhavaBehaviorArgs {
     /// Use configured bhava-system basis for bala and avastha calculations
     #[arg(long)]
     use_configured_bhava_for_bala_avastha: bool,
+    /// Include Rahu/Ketu incoming aspects in Shadbala Drik Bala
+    #[arg(long, conflicts_with = "exclude_node_aspects_for_drik_bala")]
+    include_node_aspects_for_drik_bala: bool,
+    /// Exclude Rahu/Ketu incoming aspects from Shadbala Drik Bala
+    #[arg(long)]
+    exclude_node_aspects_for_drik_bala: bool,
     /// Include rashi-bhava sibling result sections/columns
     #[arg(long, conflicts_with = "no_rashi_bhava_results")]
     include_rashi_bhava_results: bool,
@@ -739,6 +745,12 @@ fn bhava_config_from_cli(args: &BhavaBehaviorArgs) -> BhavaConfig {
     }
     if args.use_rashi_bhava_for_bala_avastha {
         config.use_rashi_bhava_for_bala_avastha = true;
+    }
+    if args.include_node_aspects_for_drik_bala {
+        config.include_node_aspects_for_drik_bala = true;
+    }
+    if args.exclude_node_aspects_for_drik_bala {
+        config.include_node_aspects_for_drik_bala = false;
     }
     if args.no_rashi_bhava_results {
         config.include_rashi_bhava_results = false;

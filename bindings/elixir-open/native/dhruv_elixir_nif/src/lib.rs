@@ -353,6 +353,7 @@ struct BhavaConfigInput {
     system: Option<EnumInput>,
     reference_mode: Option<EnumInput>,
     use_rashi_bhava_for_bala_avastha: Option<bool>,
+    include_node_aspects_for_drik_bala: Option<bool>,
     include_rashi_bhava_results: Option<bool>,
 }
 
@@ -1485,6 +1486,9 @@ fn to_bhava_config(
         config.reference_mode = parse_bhava_reference_mode(input.reference_mode.as_ref())?;
         if let Some(value) = input.use_rashi_bhava_for_bala_avastha {
             config.use_rashi_bhava_for_bala_avastha = value;
+        }
+        if let Some(value) = input.include_node_aspects_for_drik_bala {
+            config.include_node_aspects_for_drik_bala = value;
         }
         if let Some(value) = input.include_rashi_bhava_results {
             config.include_rashi_bhava_results = value;

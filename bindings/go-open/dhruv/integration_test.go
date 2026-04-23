@@ -236,19 +236,28 @@ func TestSearchAndPanchangSmoke(t *testing.T) {
 	}
 
 	bhava := BhavaConfigDefault()
+	if !bhava.UseRashiBhavaForBalaAvastha {
+		t.Fatalf("expected rashi-bhava bala/avastha default on")
+	}
+	if bhava.IncludeNodeAspectsForDrikBala {
+		t.Fatalf("expected Rahu/Ketu Drik Bala aspects default off")
+	}
+	if !bhava.IncludeRashiBhavaResults {
+		t.Fatalf("expected rashi-bhava result default on")
+	}
 	riseset := RiseSetConfigDefault()
-    if _, err := eng.ShadbalaForDate(
-        eop,
-        utc,
-        loc,
-        bhava,
-        riseset,
-        0,
-        true,
-        AmshaSelectionConfig{},
-    ); err != nil {
-        t.Fatalf("ShadbalaForDate: %v", err)
-    }
+	if _, err := eng.ShadbalaForDate(
+		eop,
+		utc,
+		loc,
+		bhava,
+		riseset,
+		0,
+		true,
+		AmshaSelectionConfig{},
+	); err != nil {
+		t.Fatalf("ShadbalaForDate: %v", err)
+	}
 	if _, err := eng.CharakarakaForDate(eop, utc, 0, true, CharakarakaSchemeMixedParashara); err != nil {
 		t.Fatalf("CharakarakaForDate: %v", err)
 	}

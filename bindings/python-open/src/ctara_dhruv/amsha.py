@@ -52,6 +52,9 @@ def _make_bhava_config(bhava_config):
     cfg.use_rashi_bhava_for_bala_avastha = bhava_config.get(
         "use_rashi_bhava_for_bala_avastha", 1
     )
+    cfg.include_node_aspects_for_drik_bala = bhava_config.get(
+        "include_node_aspects_for_drik_bala", 0
+    )
     cfg.include_rashi_bhava_results = bhava_config.get("include_rashi_bhava_results", 1)
     return cfg
 

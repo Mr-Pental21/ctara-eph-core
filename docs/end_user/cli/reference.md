@@ -47,6 +47,13 @@ Reusable public option groups:
   - `--amsha-include-upagrahas`
   - `--amsha-include-sphutas`
   - `--amsha-include-special-lagnas`
+- Bhava/bala behavior:
+  - `--use-rashi-bhava-for-bala-avastha`
+  - `--use-configured-bhava-for-bala-avastha`
+  - `--include-node-aspects-for-drik-bala`
+  - `--exclude-node-aspects-for-drik-bala`
+  - `--include-rashi-bhava-results`
+  - `--no-rashi-bhava-results`
 
 Shared value mappings worth knowing:
 

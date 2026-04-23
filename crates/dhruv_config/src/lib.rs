@@ -215,6 +215,9 @@ pub struct BhavaConfigPatch {
     pub starting_point_body_code: Option<i32>,
     pub starting_point_custom_deg: Option<f64>,
     pub reference_mode: Option<EnumInput>,
+    pub use_rashi_bhava_for_bala_avastha: Option<bool>,
+    pub include_node_aspects_for_drik_bala: Option<bool>,
+    pub include_rashi_bhava_results: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -784,14 +787,27 @@ impl ConfigResolver {
         source.insert("system".to_string(), system_source);
         source.insert("starting_point_kind".to_string(), sp_kind_source);
         source.insert("reference_mode".to_string(), mode_source);
+        let use_rashi_bhava_for_bala_avastha = explicit
+            .use_rashi_bhava_for_bala_avastha
+            .or(op.use_rashi_bhava_for_bala_avastha)
+            .unwrap_or(true);
+        let include_node_aspects_for_drik_bala = explicit
+            .include_node_aspects_for_drik_bala
+            .or(op.include_node_aspects_for_drik_bala)
+            .unwrap_or(false);
+        let include_rashi_bhava_results = explicit
+            .include_rashi_bhava_results
+            .or(op.include_rashi_bhava_results)
+            .unwrap_or(true);
 
         Ok(EffectiveConfig {
             value: BhavaConfig {
                 system,
                 starting_point,
                 reference_mode,
-                use_rashi_bhava_for_bala_avastha: true,
-                include_rashi_bhava_results: true,
+                use_rashi_bhava_for_bala_avastha,
+                include_node_aspects_for_drik_bala,
+                include_rashi_bhava_results,
             },
             source_by_field: source,
         })

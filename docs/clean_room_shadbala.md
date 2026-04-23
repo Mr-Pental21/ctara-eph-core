@@ -104,6 +104,12 @@ Maximum strength bhava:
 
 The cusp set is chosen by `BhavaConfig.use_rashi_bhava_for_bala_avastha`: rashi-bhava/equal-house cusps by default, or configured bhava-system cusps when explicitly disabled.
 
+Drik Bala excludes Rahu/Ketu incoming aspects by default. Set
+`BhavaConfig.include_node_aspects_for_drik_bala=true` to include their signed
+incoming aspect virupas in the `(benefic - malefic) / 4` balance. This knob
+affects Shadbala Drik Bala only; standalone drishti/aspect matrices still
+report Rahu and Ketu aspects.
+
 ## 3. Kala Bala (Temporal Strength)
 
 ### 3a. Nathonnatha Bala (Day/Night Strength)
@@ -195,7 +201,8 @@ Fixed constants (BPHS):
 ## 6. Drik Bala (Aspectual Strength)
 
 Dhruv first computes the signed aspect balance, excluding incoming Guru and
-Buddh drishti from this divided balance:
+Buddh drishti from this divided balance. Rahu/Ketu incoming aspects are also
+excluded unless `include_node_aspects_for_drik_bala=true`:
 
 ```text
 base_drik = (benefic_virupa_sum_without_guru_buddh

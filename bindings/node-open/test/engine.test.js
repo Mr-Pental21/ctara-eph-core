@@ -111,6 +111,9 @@ test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
   const riseCfg = dhruv.riseSetConfigDefault();
   const sankCfg = dhruv.sankrantiConfigDefault();
   const bhavaCfg = dhruv.bhavaConfigDefault();
+  assert.equal(bhavaCfg.useRashiBhavaForBalaAvastha, true);
+  assert.equal(bhavaCfg.includeNodeAspectsForDrikBala, false);
+  assert.equal(bhavaCfg.includeRashiBhavaResults, true);
   const utc = {
     year: 2025,
     month: 1,

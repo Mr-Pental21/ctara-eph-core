@@ -383,4 +383,4 @@ For build/runtime notes, see [`bindings/go-open/README.md`](../../../bindings/go
 
 ## Rashi-Bhava Bhava Config
 
-`BhavaConfig` includes `UseRashiBhavaForBalaAvastha` and `IncludeRashiBhavaResults`, both defaulting to `true`. Existing bhava fields remain configured-system outputs; rashi-bhava sibling fields such as `RashiBhavaCusps`, `RashiBhavaNumber`, and `GrahaToRashiBhava` expose the equal-house/whole-sign companion basis.
+`BhavaConfig` includes `UseRashiBhavaForBalaAvastha` and `IncludeRashiBhavaResults`, both defaulting to `true`. It also includes `IncludeNodeAspectsForDrikBala`, defaulting to `false`, which controls whether Rahu/Ketu incoming aspects contribute to Shadbala Drik Bala. Existing bhava fields remain configured-system outputs; rashi-bhava sibling fields such as `RashiBhavaCusps`, `RashiBhavaNumber`, and `GrahaToRashiBhava` expose the equal-house/whole-sign companion basis.

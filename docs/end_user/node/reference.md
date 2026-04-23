@@ -337,4 +337,4 @@ For build/runtime notes, see [`bindings/node-open/README.md`](../../../bindings/
 
 ## Rashi-Bhava Bhava Config
 
-`bhavaConfigDefault()` includes `useRashiBhavaForBalaAvastha` and `includeRashiBhavaResults`, both defaulting to `true`. Existing fields keep configured bhava-system meaning; sibling fields such as `rashiBhavaCusps`, `rashiBhavaNumber`, and `grahaToRashiBhava` expose the rashi-bhava/equal-house basis.
+`bhavaConfigDefault()` includes `useRashiBhavaForBalaAvastha` and `includeRashiBhavaResults`, both defaulting to `true`. It also includes `includeNodeAspectsForDrikBala`, defaulting to `false`, which controls whether Rahu/Ketu incoming aspects contribute to Shadbala Drik Bala. Existing fields keep configured bhava-system meaning; sibling fields such as `rashiBhavaCusps`, `rashiBhavaNumber`, and `grahaToRashiBhava` expose the rashi-bhava/equal-house basis.

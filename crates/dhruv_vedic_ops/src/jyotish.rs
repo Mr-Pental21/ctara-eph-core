@@ -1933,6 +1933,7 @@ fn assemble_shadbala_inputs(
                 s7
             },
         },
+        include_node_aspects_for_drik_bala: bhava_config.include_node_aspects_for_drik_bala,
         varga_rashi_indices,
         varga_longitudes,
     })
