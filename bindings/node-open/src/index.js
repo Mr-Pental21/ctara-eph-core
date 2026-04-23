@@ -11,6 +11,7 @@ const dasha = require('./dasha');
 const tara = require('./tara');
 const {
   BENEFIC_NATURE,
+  CHANDRA_BENEFIC_RULE,
   DIGNITY,
   STATUS,
   EXPECTED_API_VERSION,
@@ -40,6 +41,7 @@ module.exports = {
   ...dasha,
   ...tara,
   BENEFIC_NATURE,
+  CHANDRA_BENEFIC_RULE,
   DELTA_T_MODEL,
   DIGNITY,
   STATUS,

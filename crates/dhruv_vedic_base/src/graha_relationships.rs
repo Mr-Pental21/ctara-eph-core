@@ -512,6 +512,16 @@ pub enum BeneficNature {
     Malefic,
 }
 
+/// Rule used to classify Chandra as benefic or malefic from Moon-Sun elongation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum ChandraBeneficRule {
+    /// Benefic only when at least 72 degrees away from Surya on either side.
+    #[default]
+    Brightness72,
+    /// Benefic while Chandra is within 0..=180 degrees ahead of Surya.
+    Waxing180,
+}
+
 /// Natural benefic/malefic for each graha. Moon defaults Benefic.
 pub const fn natural_benefic_malefic(graha: Graha) -> BeneficNature {
     match graha {
@@ -524,16 +534,33 @@ pub const fn natural_benefic_malefic(graha: Graha) -> BeneficNature {
     }
 }
 
-/// Chandra's dynamic benefic nature from its elongation from Surya.
-///
-/// Chandra is treated as benefic while moving from conjunction toward
-/// opposition (`0..=180`) and malefic after opposition (`>180..360`).
+/// Chandra's default dynamic benefic nature from its elongation from Surya.
 pub fn moon_benefic_nature(moon_sun_elongation: f64) -> BeneficNature {
+    moon_benefic_nature_with_rule(moon_sun_elongation, ChandraBeneficRule::default())
+}
+
+/// Chandra's dynamic benefic nature using a selected rule.
+pub fn moon_benefic_nature_with_rule(
+    moon_sun_elongation: f64,
+    rule: ChandraBeneficRule,
+) -> BeneficNature {
     let elong = normalize_360_inner(moon_sun_elongation);
-    if elong <= 180.0 {
-        BeneficNature::Benefic
-    } else {
-        BeneficNature::Malefic
+    match rule {
+        ChandraBeneficRule::Brightness72 => {
+            let phase = if elong <= 180.0 { elong } else { 360.0 - elong };
+            if phase >= 72.0 {
+                BeneficNature::Benefic
+            } else {
+                BeneficNature::Malefic
+            }
+        }
+        ChandraBeneficRule::Waxing180 => {
+            if elong <= 180.0 {
+                BeneficNature::Benefic
+            } else {
+                BeneficNature::Malefic
+            }
+        }
     }
 }
 
@@ -544,14 +571,23 @@ pub fn moon_benefic_nature(moon_sun_elongation: f64) -> BeneficNature {
 /// present, Buddh remains benefic by default; sharing a rashi with Guru,
 /// Shukra, or dynamically benefic Chandra is therefore also benefic.
 pub fn buddh_association_nature(sidereal_lons: &[f64; 9]) -> BeneficNature {
+    buddh_association_nature_with_chandra_rule(sidereal_lons, ChandraBeneficRule::default())
+}
+
+/// Buddh's dynamic benefic nature using a selected Chandra benefic rule.
+pub fn buddh_association_nature_with_chandra_rule(
+    sidereal_lons: &[f64; 9],
+    chandra_rule: ChandraBeneficRule,
+) -> BeneficNature {
     let Some(buddh_rashi) =
         longitude_rashi_index(sidereal_lons[Graha::Buddh.index() as usize])
     else {
         return BeneficNature::Benefic;
     };
-    let chandra_nature = moon_benefic_nature(
+    let chandra_nature = moon_benefic_nature_with_rule(
         sidereal_lons[Graha::Chandra.index() as usize]
             - sidereal_lons[Graha::Surya.index() as usize],
+        chandra_rule,
     );
 
     for graha in crate::graha::ALL_GRAHAS {
@@ -1096,18 +1132,31 @@ mod tests {
 
     #[test]
     fn moon_benefic_at_full() {
-        // Boundary is included in the benefic half.
         assert_eq!(moon_benefic_nature(180.0), BeneficNature::Benefic);
     }
 
     #[test]
     fn moon_malefic_near_new() {
-        assert_eq!(moon_benefic_nature(180.1), BeneficNature::Malefic);
+        assert_eq!(moon_benefic_nature(10.0), BeneficNature::Malefic);
+        assert_eq!(moon_benefic_nature(350.0), BeneficNature::Malefic);
     }
 
     #[test]
-    fn moon_benefic_before_opposition() {
-        assert_eq!(moon_benefic_nature(10.0), BeneficNature::Benefic);
+    fn moon_benefic_after_brightness_threshold() {
+        assert_eq!(moon_benefic_nature(72.0), BeneficNature::Benefic);
+        assert_eq!(moon_benefic_nature(288.0), BeneficNature::Benefic);
+    }
+
+    #[test]
+    fn moon_waxing_180_rule_matches_prior_behavior() {
+        assert_eq!(
+            moon_benefic_nature_with_rule(10.0, ChandraBeneficRule::Waxing180),
+            BeneficNature::Benefic
+        );
+        assert_eq!(
+            moon_benefic_nature_with_rule(180.1, ChandraBeneficRule::Waxing180),
+            BeneficNature::Malefic
+        );
     }
 
     fn buddh_test_lons(buddh_lon: f64) -> [f64; 9] {
@@ -1149,7 +1198,7 @@ mod tests {
     #[test]
     fn buddh_malefic_with_same_rashi_malefic_chandra() {
         let mut lons = buddh_test_lons(82.0);
-        lons[Graha::Surya.index() as usize] = 260.0;
+        lons[Graha::Surya.index() as usize] = 20.0;
         lons[Graha::Chandra.index() as usize] = 84.0;
         assert_eq!(buddh_association_nature(&lons), BeneficNature::Malefic);
     }

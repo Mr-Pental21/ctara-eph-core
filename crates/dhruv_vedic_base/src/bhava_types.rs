@@ -4,6 +4,7 @@
 //! used by the bhava computation module.
 
 use dhruv_core::Body;
+use dhruv_vedic_math::ChandraBeneficRule;
 
 /// The 10 supported house division systems.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -108,6 +109,8 @@ pub struct BhavaConfig {
     pub include_node_aspects_for_drik_bala: bool,
     /// Divide Guru/Buddh incoming drishti by 4 in Shadbala Drik Bala.
     pub divide_guru_buddh_drishti_by_4_for_drik_bala: bool,
+    /// Rule for Chandra benefic/malefic classification in Shadbala.
+    pub chandra_benefic_rule: ChandraBeneficRule,
     /// Include rashi-bhava sibling outputs on bhava-aware public result surfaces.
     pub include_rashi_bhava_results: bool,
 }
@@ -121,6 +124,7 @@ impl Default for BhavaConfig {
             use_rashi_bhava_for_bala_avastha: true,
             include_node_aspects_for_drik_bala: false,
             divide_guru_buddh_drishti_by_4_for_drik_bala: true,
+            chandra_benefic_rule: ChandraBeneficRule::default(),
             include_rashi_bhava_results: true,
         }
     }
@@ -170,6 +174,7 @@ mod tests {
         assert_eq!(c.system, BhavaSystem::Equal);
         assert_eq!(c.starting_point, BhavaStartingPoint::Lagna);
         assert_eq!(c.reference_mode, BhavaReferenceMode::StartOfFirst);
+        assert_eq!(c.chandra_benefic_rule, ChandraBeneficRule::Brightness72);
     }
 
     #[test]

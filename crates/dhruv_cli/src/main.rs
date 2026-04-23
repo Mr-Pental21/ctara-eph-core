@@ -26,7 +26,6 @@ use dhruv_time::{
     TimeConversionOptions, TimeConversionPolicy, TimeWarning, UtcTime, calendar_to_jd,
     jd_to_calendar, jd_to_tdb_seconds, tdb_seconds_to_jd,
 };
-use dhruv_vedic_base::BhavaConfig;
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig, RiseSetResult};
 use dhruv_vedic_base::{
     ALL_GRAHAS, AyanamshaSystem, Graha, GulikaMaandiPlanet, LunarNode, NodeDignityPolicy, NodeMode,
@@ -35,6 +34,7 @@ use dhruv_vedic_base::{
     nakshatra_from_longitude, nakshatra_from_tropical, nakshatra28_from_longitude,
     nakshatra28_from_tropical, rashi_from_longitude, rashi_from_tropical,
 };
+use dhruv_vedic_base::{BhavaConfig, ChandraBeneficRule};
 use dhruv_vedic_ops::{
     NodeBackend, NodeOperation, PANCHANG_INCLUDE_ALL, PANCHANG_INCLUDE_ALL_CALENDAR,
     PANCHANG_INCLUDE_ALL_CORE, PANCHANG_INCLUDE_AYANA, PANCHANG_INCLUDE_GHATIKA,
@@ -736,6 +736,9 @@ struct BhavaBehaviorArgs {
     /// Add full signed Guru/Buddh incoming aspects in Shadbala Drik Bala
     #[arg(long)]
     add_full_guru_buddh_drishti_for_drik_bala: bool,
+    /// Chandra benefic/malefic rule for Shadbala nature calculations
+    #[arg(long, value_enum)]
+    chandra_benefic_rule: Option<ChandraBeneficRuleArg>,
     /// Include rashi-bhava sibling result sections/columns
     #[arg(long, conflicts_with = "no_rashi_bhava_results")]
     include_rashi_bhava_results: bool,
@@ -764,6 +767,9 @@ fn bhava_config_from_cli(args: &BhavaBehaviorArgs) -> BhavaConfig {
     if args.divide_guru_buddh_drishti_by_4_for_drik_bala {
         config.divide_guru_buddh_drishti_by_4_for_drik_bala = true;
     }
+    if let Some(rule) = args.chandra_benefic_rule {
+        config.chandra_benefic_rule = rule.into();
+    }
     if args.no_rashi_bhava_results {
         config.include_rashi_bhava_results = false;
     }
@@ -771,6 +777,25 @@ fn bhava_config_from_cli(args: &BhavaBehaviorArgs) -> BhavaConfig {
         config.include_rashi_bhava_results = true;
     }
     config
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum ChandraBeneficRuleArg {
+    /// Benefic only when at least 72 degrees away from Surya
+    #[value(name = "brightness-72", alias = "brightness72")]
+    Brightness72,
+    /// Benefic while Chandra is 0..=180 degrees ahead of Surya
+    #[value(name = "waxing-180", alias = "waxing180")]
+    Waxing180,
+}
+
+impl From<ChandraBeneficRuleArg> for ChandraBeneficRule {
+    fn from(value: ChandraBeneficRuleArg) -> Self {
+        match value {
+            ChandraBeneficRuleArg::Brightness72 => Self::Brightness72,
+            ChandraBeneficRuleArg::Waxing180 => Self::Waxing180,
+        }
+    }
 }
 
 fn rashi_bhava_result_from_lagna(lagna_deg: f64) -> dhruv_vedic_base::BhavaResult {

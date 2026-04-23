@@ -23,7 +23,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       60
+#define DHRUV_API_VERSION       61
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 #define DHRUV_MAX_AMSHA_VARIATIONS 16
@@ -521,6 +521,7 @@ typedef struct {
     uint8_t use_rashi_bhava_for_bala_avastha;
     uint8_t include_node_aspects_for_drik_bala;
     uint8_t divide_guru_buddh_drishti_by_4_for_drik_bala;
+    int32_t chandra_benefic_rule;
     uint8_t include_rashi_bhava_results;
 } DhruvBhavaConfig;
 
@@ -2059,6 +2060,8 @@ int32_t dhruv_samvatsara_lord(uint32_t samvatsara_index);
 
 #define DHRUV_BENEFIC_NATURE_BENEFIC 0
 #define DHRUV_BENEFIC_NATURE_MALEFIC 1
+#define DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72 0
+#define DHRUV_CHANDRA_BENEFIC_RULE_WAXING_180 1
 
 #define DHRUV_GRAHA_GENDER_MALE 0
 #define DHRUV_GRAHA_GENDER_FEMALE 1

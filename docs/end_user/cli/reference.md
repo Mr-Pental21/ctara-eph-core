@@ -54,6 +54,7 @@ Reusable public option groups:
   - `--exclude-node-aspects-for-drik-bala`
   - `--divide-guru-buddh-drishti-by-4-for-drik-bala`
   - `--add-full-guru-buddh-drishti-for-drik-bala`
+  - `--chandra-benefic-rule brightness-72|waxing-180`
   - `--include-rashi-bhava-results`
   - `--no-rashi-bhava-results`
 

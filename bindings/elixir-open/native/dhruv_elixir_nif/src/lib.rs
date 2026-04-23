@@ -60,9 +60,9 @@ use dhruv_vedic_base::drishti::{
 };
 use dhruv_vedic_base::ghatika::ghatika_from_elapsed;
 use dhruv_vedic_base::graha_relationships::{
-    BeneficNature, NaisargikaMaitri, TatkalikaMaitri, debilitation_degree, dignity_in_rashi,
-    dignity_in_rashi_with_positions, exaltation_degree, graha_gender, hora_lord, masa_lord,
-    moolatrikone_range, moon_benefic_nature, naisargika_maitri, natural_benefic_malefic,
+    BeneficNature, ChandraBeneficRule, NaisargikaMaitri, TatkalikaMaitri, debilitation_degree,
+    dignity_in_rashi, dignity_in_rashi_with_positions, exaltation_degree, graha_gender, hora_lord,
+    masa_lord, moolatrikone_range, moon_benefic_nature, naisargika_maitri, natural_benefic_malefic,
     node_dignity_in_rashi, panchadha_maitri, samvatsara_lord, tatkalika_maitri,
 };
 use dhruv_vedic_base::riseset::{approximate_local_noon_jd, compute_all_events, compute_rise_set};
@@ -355,6 +355,7 @@ struct BhavaConfigInput {
     use_rashi_bhava_for_bala_avastha: Option<bool>,
     include_node_aspects_for_drik_bala: Option<bool>,
     divide_guru_buddh_drishti_by_4_for_drik_bala: Option<bool>,
+    chandra_benefic_rule: Option<EnumInput>,
     include_rashi_bhava_results: Option<bool>,
 }
 
@@ -546,6 +547,10 @@ const CHARAKARAKA_SCHEME_VARIANTS: [CharakarakaScheme; 4] = [
 const NODE_DIGNITY_POLICY_VARIANTS: [NodeDignityPolicy; 2] = [
     NodeDignityPolicy::SignLordBased,
     NodeDignityPolicy::AlwaysSama,
+];
+const CHANDRA_BENEFIC_RULE_VARIANTS: [ChandraBeneficRule; 2] = [
+    ChandraBeneficRule::Brightness72,
+    ChandraBeneficRule::Waxing180,
 ];
 const TIME_UPAGRAHA_POINT_VARIANTS: [TimeUpagrahaPoint; 3] = [
     TimeUpagrahaPoint::Start,
@@ -1072,6 +1077,27 @@ fn parse_node_dignity_policy(input: Option<&EnumInput>) -> Result<NodeDignityPol
     }
 }
 
+fn parse_chandra_benefic_rule(input: &EnumInput) -> Result<ChandraBeneficRule, Value> {
+    match input {
+        EnumInput::Int(value) => CHANDRA_BENEFIC_RULE_VARIANTS
+            .get(*value as usize)
+            .copied()
+            .ok_or_else(|| error_payload("invalid_request", "unknown chandra benefic rule")),
+        EnumInput::Str(value) => {
+            let normalized = value.trim().to_ascii_lowercase().replace('_', "-");
+            match normalized.as_str() {
+                "brightness-72" | "brightness72" | "phase-72" | "old-72" => {
+                    Ok(ChandraBeneficRule::Brightness72)
+                }
+                "waxing-180" | "waxing180" | "current-180" => Ok(ChandraBeneficRule::Waxing180),
+                _ => parse_named(value, &CHANDRA_BENEFIC_RULE_VARIANTS).ok_or_else(|| {
+                    error_payload("invalid_request", "unknown chandra benefic rule")
+                }),
+            }
+        }
+    }
+}
+
 fn parse_time_upagraha_point(
     input: Option<&EnumInput>,
     default: TimeUpagrahaPoint,
@@ -1493,6 +1519,9 @@ fn to_bhava_config(
         }
         if let Some(value) = input.divide_guru_buddh_drishti_by_4_for_drik_bala {
             config.divide_guru_buddh_drishti_by_4_for_drik_bala = value;
+        }
+        if let Some(value) = input.chandra_benefic_rule.as_ref() {
+            config.chandra_benefic_rule = parse_chandra_benefic_rule(value)?;
         }
         if let Some(value) = input.include_rashi_bhava_results {
             config.include_rashi_bhava_results = value;

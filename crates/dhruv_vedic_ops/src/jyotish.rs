@@ -1936,6 +1936,7 @@ fn assemble_shadbala_inputs(
         include_node_aspects_for_drik_bala: bhava_config.include_node_aspects_for_drik_bala,
         divide_guru_buddh_drishti_by_4_for_drik_bala: bhava_config
             .divide_guru_buddh_drishti_by_4_for_drik_bala,
+        chandra_benefic_rule: bhava_config.chandra_benefic_rule,
         varga_rashi_indices,
         varga_longitudes,
     })

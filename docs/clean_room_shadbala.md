@@ -115,6 +115,12 @@ the signed benefic/malefic balance. Set
 `BhavaConfig.divide_guru_buddh_drishti_by_4_for_drik_bala=false` to add their
 signed incoming aspects at full strength after the divided balance.
 
+Chandra's dynamic benefic/malefic classification uses
+`BhavaConfig.chandra_benefic_rule`. The default `Brightness72` rule treats
+Chandra as benefic only when `min(elongation, 360 - elongation) >= 72`. The
+alternate `Waxing180` rule treats Chandra as benefic when
+`normalize_360(Chandra - Surya) <= 180`.
+
 ## 3. Kala Bala (Temporal Strength)
 
 ### 3a. Nathonnatha Bala (Day/Night Strength)
@@ -225,8 +231,9 @@ drik_bala = base_drik + signed_guru_full_drishti + signed_buddh_full_drishti
 The virupa strengths use the existing graha drishti system. Dynamic
 benefic/malefic classification uses:
 
-- Chandra: benefic when `normalize_360(Chandra − Surya) <= 180`; malefic
-  when the normalized separation is greater than `180`.
+- Chandra: by default, benefic when `min(elongation, 360 - elongation) >= 72`;
+  with `chandra_benefic_rule=Waxing180`, benefic when
+  `normalize_360(Chandra - Surya) <= 180`.
 - Buddh: benefic by default, but malefic when sharing a rashi with Surya,
   Mangal, Shani, Rahu, Ketu, or a dynamically malefic Chandra. Same-rashi
   association with Guru, Shukra, or dynamically benefic Chandra keeps Buddh

@@ -16,9 +16,10 @@
 use crate::drishti::{base_virupa, special_virupa};
 use crate::graha::{Graha, SAPTA_GRAHAS};
 use crate::graha_relationships::{
-    BeneficNature, Dignity, GrahaGender, buddh_association_nature, compound_dignity_in_rashi,
-    graha_gender, is_own_sign_at_longitude, moolatrikone_range, moon_benefic_nature,
-    natural_benefic_malefic, own_signs,
+    BeneficNature, ChandraBeneficRule, Dignity, GrahaGender,
+    buddh_association_nature_with_chandra_rule, compound_dignity_in_rashi, graha_gender,
+    is_own_sign_at_longitude, moolatrikone_range, moon_benefic_nature,
+    moon_benefic_nature_with_rule, natural_benefic_malefic, own_signs,
 };
 use crate::util::normalize_360;
 
@@ -385,10 +386,11 @@ fn dynamic_benefic_nature(
     graha: Graha,
     sidereal_lons: &[f64; 9],
     moon_sun_elong: f64,
+    chandra_rule: ChandraBeneficRule,
 ) -> BeneficNature {
     match graha {
-        Graha::Chandra => moon_benefic_nature(moon_sun_elong),
-        Graha::Buddh => buddh_association_nature(sidereal_lons),
+        Graha::Chandra => moon_benefic_nature_with_rule(moon_sun_elong, chandra_rule),
+        Graha::Buddh => buddh_association_nature_with_chandra_rule(sidereal_lons, chandra_rule),
         _ => natural_benefic_malefic(graha),
     }
 }
@@ -423,10 +425,26 @@ pub fn nathonnatha_bala_with_longitudes(
     sidereal_lons: &[f64; 9],
     moon_sun_elong: f64,
 ) -> f64 {
+    nathonnatha_bala_with_longitudes_and_rule(
+        graha,
+        is_daytime,
+        sidereal_lons,
+        moon_sun_elong,
+        ChandraBeneficRule::default(),
+    )
+}
+
+fn nathonnatha_bala_with_longitudes_and_rule(
+    graha: Graha,
+    is_daytime: bool,
+    sidereal_lons: &[f64; 9],
+    moon_sun_elong: f64,
+    chandra_rule: ChandraBeneficRule,
+) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
     }
-    let nature = dynamic_benefic_nature(graha, sidereal_lons, moon_sun_elong);
+    let nature = dynamic_benefic_nature(graha, sidereal_lons, moon_sun_elong, chandra_rule);
     nathonnatha_bala_for_nature(nature, is_daytime)
 }
 
@@ -466,10 +484,24 @@ pub fn paksha_bala_with_longitudes(
     sidereal_lons: &[f64; 9],
     moon_sun_elong: f64,
 ) -> f64 {
+    paksha_bala_with_longitudes_and_rule(
+        graha,
+        sidereal_lons,
+        moon_sun_elong,
+        ChandraBeneficRule::default(),
+    )
+}
+
+fn paksha_bala_with_longitudes_and_rule(
+    graha: Graha,
+    sidereal_lons: &[f64; 9],
+    moon_sun_elong: f64,
+    chandra_rule: ChandraBeneficRule,
+) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
     }
-    let nature = dynamic_benefic_nature(graha, sidereal_lons, moon_sun_elong);
+    let nature = dynamic_benefic_nature(graha, sidereal_lons, moon_sun_elong, chandra_rule);
     paksha_bala_for_nature(nature, moon_sun_elong)
 }
 
@@ -638,10 +670,26 @@ pub fn ayana_bala_with_longitudes(
     sidereal_lons: &[f64; 9],
     moon_sun_elong: f64,
 ) -> f64 {
+    ayana_bala_with_longitudes_and_rule(
+        graha,
+        declination_deg,
+        sidereal_lons,
+        moon_sun_elong,
+        ChandraBeneficRule::default(),
+    )
+}
+
+fn ayana_bala_with_longitudes_and_rule(
+    graha: Graha,
+    declination_deg: f64,
+    sidereal_lons: &[f64; 9],
+    moon_sun_elong: f64,
+    chandra_rule: ChandraBeneficRule,
+) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
     }
-    let nature = dynamic_benefic_nature(graha, sidereal_lons, moon_sun_elong);
+    let nature = dynamic_benefic_nature(graha, sidereal_lons, moon_sun_elong, chandra_rule);
     ayana_bala_for_nature(nature, declination_deg)
 }
 
@@ -752,23 +800,44 @@ pub fn kala_bala_with_sidereal_lons(
     inputs: &KalaBalaInputs,
     sidereal_lons: &[f64; 9],
 ) -> KalaBalaBreakdown {
-    let n = nathonnatha_bala_with_longitudes(
+    kala_bala_with_sidereal_lons_and_rule(
+        graha,
+        inputs,
+        sidereal_lons,
+        ChandraBeneficRule::default(),
+    )
+}
+
+fn kala_bala_with_sidereal_lons_and_rule(
+    graha: Graha,
+    inputs: &KalaBalaInputs,
+    sidereal_lons: &[f64; 9],
+    chandra_rule: ChandraBeneficRule,
+) -> KalaBalaBreakdown {
+    let n = nathonnatha_bala_with_longitudes_and_rule(
         graha,
         inputs.is_daytime,
         sidereal_lons,
         inputs.moon_sun_elongation,
+        chandra_rule,
     );
-    let p = paksha_bala_with_longitudes(graha, sidereal_lons, inputs.moon_sun_elongation);
+    let p = paksha_bala_with_longitudes_and_rule(
+        graha,
+        sidereal_lons,
+        inputs.moon_sun_elongation,
+        chandra_rule,
+    );
     let t = tribhaga_bala(graha, inputs.is_daytime, inputs.day_night_fraction);
     let ab = abda_bala(graha, inputs.year_lord);
     let ma = masa_bala(graha, inputs.month_lord);
     let va = vara_bala(graha, inputs.weekday_lord);
     let ho = hora_bala(graha, inputs.hora_lord);
-    let ay = ayana_bala_with_longitudes(
+    let ay = ayana_bala_with_longitudes_and_rule(
         graha,
         inputs.graha_declinations[graha.index().min(6) as usize],
         sidereal_lons,
         inputs.moon_sun_elongation,
+        chandra_rule,
     );
     let yu = yuddha_bala(graha, &inputs.sidereal_lons, &inputs.graha_declinations);
     let total = n + p + t + ab + ma + va + ho + ay + yu;
@@ -923,6 +992,7 @@ pub fn drik_bala_with_node_aspects(
     moon_sun_elong: f64,
     include_node_aspects: bool,
     divide_guru_buddh_drishti_by_4: bool,
+    chandra_rule: ChandraBeneficRule,
 ) -> f64 {
     if !is_sapta_graha(graha) {
         return 0.0;
@@ -944,7 +1014,7 @@ pub fn drik_bala_with_node_aspects(
         let bv = base_virupa(ang);
         let sv = special_virupa(src, ang);
         let total = bv + sv;
-        let nature = dynamic_benefic_nature(src, sidereal_lons, moon_sun_elong);
+        let nature = dynamic_benefic_nature(src, sidereal_lons, moon_sun_elong, chandra_rule);
 
         if matches!(src, Graha::Guru | Graha::Buddh) && !divide_guru_buddh_drishti_by_4 {
             match nature {
@@ -965,7 +1035,14 @@ pub fn drik_bala_with_node_aspects(
 
 /// Drik Bala with Rahu/Ketu incoming aspects excluded.
 pub fn drik_bala(graha: Graha, sidereal_lons: &[f64; 9], moon_sun_elong: f64) -> f64 {
-    drik_bala_with_node_aspects(graha, sidereal_lons, moon_sun_elong, false, true)
+    drik_bala_with_node_aspects(
+        graha,
+        sidereal_lons,
+        moon_sun_elong,
+        false,
+        true,
+        ChandraBeneficRule::default(),
+    )
 }
 
 /// Drik bala for all 7 sapta grahas.
@@ -974,6 +1051,7 @@ pub fn all_drik_balas_with_node_aspects(
     moon_sun_elong: f64,
     include_node_aspects: bool,
     divide_guru_buddh_drishti_by_4: bool,
+    chandra_rule: ChandraBeneficRule,
 ) -> [f64; 7] {
     let mut result = [0.0; 7];
     for (i, g) in SAPTA_GRAHAS.iter().enumerate() {
@@ -983,6 +1061,7 @@ pub fn all_drik_balas_with_node_aspects(
             moon_sun_elong,
             include_node_aspects,
             divide_guru_buddh_drishti_by_4,
+            chandra_rule,
         );
     }
     result
@@ -990,7 +1069,13 @@ pub fn all_drik_balas_with_node_aspects(
 
 /// Drik bala for all 7 sapta grahas with Rahu/Ketu incoming aspects excluded.
 pub fn all_drik_balas(sidereal_lons: &[f64; 9], moon_sun_elong: f64) -> [f64; 7] {
-    all_drik_balas_with_node_aspects(sidereal_lons, moon_sun_elong, false, true)
+    all_drik_balas_with_node_aspects(
+        sidereal_lons,
+        moon_sun_elong,
+        false,
+        true,
+        ChandraBeneficRule::default(),
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -1031,6 +1116,8 @@ pub struct ShadbalaInputs {
     pub include_node_aspects_for_drik_bala: bool,
     /// Divide Guru/Buddh incoming drishti by 4 in Drik Bala.
     pub divide_guru_buddh_drishti_by_4_for_drik_bala: bool,
+    /// Rule for Chandra benefic/malefic classification in nature-dependent bala.
+    pub chandra_benefic_rule: ChandraBeneficRule,
     /// 7 vargas x 7 grahas rashi indices (for saptavargaja bala).
     pub varga_rashi_indices: [[u8; 7]; 7],
     /// 7 vargas x 7 grahas amsha longitudes (for degree-specific saptavargaja bala).
@@ -1056,7 +1143,12 @@ pub fn shadbala_from_inputs(graha: Graha, inputs: &ShadbalaInputs) -> ShadbalaBr
         inputs.sidereal_lons[gi],
         inputs.dig_bala_max_cusp_lons[gi],
     );
-    let kala_result = kala_bala_with_sidereal_lons(graha, &inputs.kala, &inputs.sidereal_lons);
+    let kala_result = kala_bala_with_sidereal_lons_and_rule(
+        graha,
+        &inputs.kala,
+        &inputs.sidereal_lons,
+        inputs.chandra_benefic_rule,
+    );
     let cheshta = cheshta_bala(
         graha,
         inputs.cheshta_madhyama_lons[gi],
@@ -1070,6 +1162,7 @@ pub fn shadbala_from_inputs(graha: Graha, inputs: &ShadbalaInputs) -> ShadbalaBr
         inputs.kala.moon_sun_elongation,
         inputs.include_node_aspects_for_drik_bala,
         inputs.divide_guru_buddh_drishti_by_4_for_drik_bala,
+        inputs.chandra_benefic_rule,
     );
 
     let total = sthana_result.total + dig + kala_result.total + cheshta + nais + drik;
@@ -1358,7 +1451,14 @@ mod tests {
 
         assert!((drik_bala(Graha::Surya, &lons, 180.0) - expected).abs() < EPS);
 
-        let full = drik_bala_with_node_aspects(Graha::Surya, &lons, 180.0, false, false);
+        let full = drik_bala_with_node_aspects(
+            Graha::Surya,
+            &lons,
+            180.0,
+            false,
+            false,
+            ChandraBeneficRule::default(),
+        );
         assert!((full - 105.0).abs() < EPS);
     }
 
@@ -1379,7 +1479,14 @@ mod tests {
         let expected = (0.0 - 105.0) / 4.0;
         assert!((drik_bala(Graha::Surya, &lons, 0.0) - expected).abs() < EPS);
 
-        let full_buddh = drik_bala_with_node_aspects(Graha::Surya, &lons, 0.0, false, false);
+        let full_buddh = drik_bala_with_node_aspects(
+            Graha::Surya,
+            &lons,
+            0.0,
+            false,
+            false,
+            ChandraBeneficRule::default(),
+        );
         assert!((full_buddh - ((0.0 - 60.0) / 4.0 - 45.0)).abs() < EPS);
     }
 
@@ -1392,7 +1499,14 @@ mod tests {
 
         assert!(drik_bala(Graha::Surya, &lons, 180.0).abs() < EPS);
 
-        let with_nodes = drik_bala_with_node_aspects(Graha::Surya, &lons, 180.0, true, true);
+        let with_nodes = drik_bala_with_node_aspects(
+            Graha::Surya,
+            &lons,
+            180.0,
+            true,
+            true,
+            ChandraBeneficRule::default(),
+        );
         assert!((with_nodes + 15.0).abs() < EPS);
     }
 

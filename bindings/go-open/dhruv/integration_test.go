@@ -245,6 +245,9 @@ func TestSearchAndPanchangSmoke(t *testing.T) {
 	if !bhava.DivideGuruBuddhDrishtiBy4ForDrikBala {
 		t.Fatalf("expected Guru/Buddh Drik Bala divisor default on")
 	}
+	if bhava.ChandraBeneficRule != ChandraBeneficRuleBrightness72 {
+		t.Fatalf("expected Chandra benefic rule default brightness-72")
+	}
 	if !bhava.IncludeRashiBhavaResults {
 		t.Fatalf("expected rashi-bhava result default on")
 	}

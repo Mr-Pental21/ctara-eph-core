@@ -78,6 +78,11 @@ const (
 )
 
 const (
+	ChandraBeneficRuleBrightness72 int32 = 0
+	ChandraBeneficRuleWaxing180    int32 = 1
+)
+
+const (
 	GrahaGenderMale   int32 = 0
 	GrahaGenderFemale int32 = 1
 	GrahaGenderNeuter int32 = 2
@@ -341,6 +346,7 @@ type BhavaConfig struct {
 	UseRashiBhavaForBalaAvastha          bool
 	IncludeNodeAspectsForDrikBala        bool
 	DivideGuruBuddhDrishtiBy4ForDrikBala bool
+	ChandraBeneficRule                   int32
 	IncludeRashiBhavaResults             bool
 }
 

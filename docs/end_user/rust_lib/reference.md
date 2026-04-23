@@ -101,7 +101,11 @@ Frequently used config and result families re-exported from `dhruv_rs::*`:
 include Rahu/Ketu incoming aspects; standalone drishti matrices are unaffected.
 `divide_guru_buddh_drishti_by_4_for_drik_bala=true` by default; set it to
 `false` to add Guru/Buddh incoming aspects at full signed strength instead of
-through the divided Drik Bala balance.
+through the divided Drik Bala balance. `chandra_benefic_rule` defaults to
+`ChandraBeneficRule::Brightness72`, where Chandra is benefic when its smaller
+angular distance from Surya is at least 72 degrees. Set it to
+`ChandraBeneficRule::Waxing180` for the prior waxing-arc rule where Chandra is
+benefic when `normalize_360(Chandra - Surya) <= 180`.
 - `BindusConfig`
 - `DrishtiConfig`
 - `TimeUpagrahaConfig`

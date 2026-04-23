@@ -350,6 +350,8 @@ bool ReadBhavaConfig(napi_env env, napi_value obj, DhruvBhavaConfig* out) {
         if (!GetNamedProperty(env, obj, "divideGuruBuddhDrishtiBy4ForDrikBala", &v) || !GetBool(env, v, &b)) return false;
         out->divide_guru_buddh_drishti_by_4_for_drik_bala = b ? 1 : 0;
     }
+    if (napi_has_named_property(env, obj, "chandraBeneficRule", &has) != napi_ok) return false;
+    if (has && (!GetNamedProperty(env, obj, "chandraBeneficRule", &v) || !GetInt32(env, v, &out->chandra_benefic_rule))) return false;
     if (napi_has_named_property(env, obj, "includeRashiBhavaResults", &has) != napi_ok) return false;
     if (has) {
         bool b = false;
@@ -3415,6 +3417,7 @@ napi_value BhavaConfigDefault(napi_env env, napi_callback_info info) {
     SetNamed(env, out, "useRashiBhavaForBalaAvastha", MakeBool(env, cfg.use_rashi_bhava_for_bala_avastha != 0));
     SetNamed(env, out, "includeNodeAspectsForDrikBala", MakeBool(env, cfg.include_node_aspects_for_drik_bala != 0));
     SetNamed(env, out, "divideGuruBuddhDrishtiBy4ForDrikBala", MakeBool(env, cfg.divide_guru_buddh_drishti_by_4_for_drik_bala != 0));
+    SetNamed(env, out, "chandraBeneficRule", MakeInt32(env, cfg.chandra_benefic_rule));
     SetNamed(env, out, "includeRashiBhavaResults", MakeBool(env, cfg.include_rashi_bhava_results != 0));
     return out;
 }

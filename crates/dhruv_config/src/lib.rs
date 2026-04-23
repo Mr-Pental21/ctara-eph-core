@@ -22,8 +22,8 @@ use dhruv_time::UtcTime;
 use dhruv_vedic_base::bhava_types::ALL_BHAVA_SYSTEMS;
 use dhruv_vedic_base::dasha::MAX_DASHA_SYSTEMS;
 use dhruv_vedic_base::{
-    AyanamshaSystem, BhavaConfig, BhavaReferenceMode, BhavaStartingPoint, NodeDignityPolicy,
-    RiseSetConfig, SunLimb,
+    AyanamshaSystem, BhavaConfig, BhavaReferenceMode, BhavaStartingPoint, ChandraBeneficRule,
+    NodeDignityPolicy, RiseSetConfig, SunLimb,
 };
 use serde::Deserialize;
 
@@ -218,6 +218,7 @@ pub struct BhavaConfigPatch {
     pub use_rashi_bhava_for_bala_avastha: Option<bool>,
     pub include_node_aspects_for_drik_bala: Option<bool>,
     pub divide_guru_buddh_drishti_by_4_for_drik_bala: Option<bool>,
+    pub chandra_benefic_rule: Option<EnumInput>,
     pub include_rashi_bhava_results: Option<bool>,
 }
 
@@ -800,6 +801,12 @@ impl ConfigResolver {
             .divide_guru_buddh_drishti_by_4_for_drik_bala
             .or(op.divide_guru_buddh_drishti_by_4_for_drik_bala)
             .unwrap_or(true);
+        let chandra_rule_input = explicit
+            .chandra_benefic_rule
+            .or_else(|| op.chandra_benefic_rule.clone())
+            .unwrap_or(EnumInput::Str("brightness-72".to_string()));
+        let chandra_benefic_rule =
+            parse_chandra_benefic_rule(&chandra_rule_input, "bhava.chandra_benefic_rule")?;
         let include_rashi_bhava_results = explicit
             .include_rashi_bhava_results
             .or(op.include_rashi_bhava_results)
@@ -813,6 +820,7 @@ impl ConfigResolver {
                 use_rashi_bhava_for_bala_avastha,
                 include_node_aspects_for_drik_bala,
                 divide_guru_buddh_drishti_by_4_for_drik_bala,
+                chandra_benefic_rule,
                 include_rashi_bhava_results,
             },
             source_by_field: source,
@@ -1498,6 +1506,22 @@ fn parse_bhava_reference_mode(
     match input.as_lower().replace('_', "-").as_str() {
         "0" | "start-of-first" => Ok(BhavaReferenceMode::StartOfFirst),
         "1" | "middle-of-first" => Ok(BhavaReferenceMode::MiddleOfFirst),
+        other => Err(ConfigError::InvalidEnumValue {
+            field,
+            value: other.to_string(),
+        }),
+    }
+}
+
+fn parse_chandra_benefic_rule(
+    input: &EnumInput,
+    field: &'static str,
+) -> Result<ChandraBeneficRule, ConfigError> {
+    match input.as_lower().replace('_', "-").as_str() {
+        "0" | "brightness-72" | "brightness72" | "phase-72" | "old-72" => {
+            Ok(ChandraBeneficRule::Brightness72)
+        }
+        "1" | "waxing-180" | "waxing180" | "current-180" => Ok(ChandraBeneficRule::Waxing180),
         other => Err(ConfigError::InvalidEnumValue {
             field,
             value: other.to_string(),

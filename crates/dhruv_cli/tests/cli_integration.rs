@@ -136,6 +136,32 @@ fn cli_bala_commands_accept_amsha_selection() {
     assert!(shadbala_override_stdout.contains("Shadbala for"));
     assert_ne!(shadbala_default_stdout, shadbala_override_stdout);
 
+    let mut shadbala_chandra_rule_args = command_args("shadbala");
+    shadbala_chandra_rule_args.extend([
+        "--chandra-benefic-rule".to_string(),
+        "waxing-180".to_string(),
+    ]);
+    let shadbala_chandra_rule_refs: Vec<&str> = shadbala_chandra_rule_args
+        .iter()
+        .map(String::as_str)
+        .collect();
+    let shadbala_chandra_rule = run_cli(&shadbala_chandra_rule_refs);
+    assert_success(&shadbala_chandra_rule, "shadbala chandra benefic rule");
+    assert!(String::from_utf8_lossy(&shadbala_chandra_rule.stdout).contains("Shadbala for"));
+
+    let mut shadbala_invalid_chandra_rule_args = command_args("shadbala");
+    shadbala_invalid_chandra_rule_args.extend([
+        "--chandra-benefic-rule".to_string(),
+        "not-a-rule".to_string(),
+    ]);
+    let shadbala_invalid_chandra_rule_refs: Vec<&str> = shadbala_invalid_chandra_rule_args
+        .iter()
+        .map(String::as_str)
+        .collect();
+    let shadbala_invalid_chandra_rule = run_cli(&shadbala_invalid_chandra_rule_refs);
+    assert!(!shadbala_invalid_chandra_rule.status.success());
+    assert!(String::from_utf8_lossy(&shadbala_invalid_chandra_rule.stderr).contains("waxing-180"));
+
     let vimsopaka_default_args = command_args("vimsopaka");
     let vimsopaka_default_refs: Vec<&str> =
         vimsopaka_default_args.iter().map(String::as_str).collect();

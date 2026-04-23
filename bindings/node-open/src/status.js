@@ -1,6 +1,6 @@
 'use strict';
 
-const EXPECTED_API_VERSION = 60;
+const EXPECTED_API_VERSION = 61;
 
 const STATUS = {
   OK: 0,
@@ -118,6 +118,11 @@ const BENEFIC_NATURE = {
   MALEFIC: 1,
 };
 
+const CHANDRA_BENEFIC_RULE = {
+  BRIGHTNESS_72: 0,
+  WAXING_180: 1,
+};
+
 const GRAHA_GENDER = {
   MALE: 0,
   FEMALE: 1,
@@ -131,6 +136,7 @@ function statusName(code) {
 module.exports = {
   EXPECTED_API_VERSION,
   BENEFIC_NATURE,
+  CHANDRA_BENEFIC_RULE,
   DELTA_T_MODEL,
   DIGNITY,
   FUTURE_DELTA_T_TRANSITION,

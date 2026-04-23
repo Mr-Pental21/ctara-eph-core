@@ -12,7 +12,7 @@ use dhruv_search::{
     vimsopaka_for_date, vimsopaka_for_graha,
 };
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
-use dhruv_vedic_base::{BhavaConfig, Graha, NodeDignityPolicy, cheshta_bala};
+use dhruv_vedic_base::{BhavaConfig, ChandraBeneficRule, Graha, NodeDignityPolicy, cheshta_bala};
 
 use dhruv_time::{EopKernel, UtcTime};
 
@@ -327,6 +327,68 @@ fn shadbala_guru_buddh_drik_divisor_is_opt_out() {
     assert!(
         changed_drik,
         "expected Guru/Buddh full-strength opt-out to change Drik Bala"
+    );
+}
+
+#[test]
+fn shadbala_chandra_benefic_rule_is_configurable() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = UtcTime {
+        year: 2026,
+        month: 4,
+        day: 17,
+        hour: 13,
+        minute: 25,
+        second: 39.0,
+    };
+    let location = new_delhi();
+    let brightness_bhava = BhavaConfig::default();
+    let waxing_bhava = BhavaConfig {
+        chandra_benefic_rule: ChandraBeneficRule::Waxing180,
+        ..BhavaConfig::default()
+    };
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+
+    let brightness = shadbala_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &brightness_bhava,
+        &rs_config,
+        &aya_config,
+        &default_amsha_selection(),
+    )
+    .expect("default shadbala should succeed");
+    let waxing = shadbala_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &waxing_bhava,
+        &rs_config,
+        &aya_config,
+        &default_amsha_selection(),
+    )
+    .expect("waxing-rule shadbala should succeed");
+
+    let mut changed_kala_or_drik = false;
+    for (base, opted_in) in brightness.entries.iter().zip(waxing.entries.iter()) {
+        assert!((base.sthana.total - opted_in.sthana.total).abs() < 1e-9);
+        assert!((base.dig - opted_in.dig).abs() < 1e-9);
+        assert!((base.cheshta - opted_in.cheshta).abs() < 1e-9);
+        assert!((base.naisargika - opted_in.naisargika).abs() < 1e-9);
+        if (base.kala.total - opted_in.kala.total).abs() > 1e-9
+            || (base.drik - opted_in.drik).abs() > 1e-9
+        {
+            changed_kala_or_drik = true;
+        }
+    }
+    assert!(
+        changed_kala_or_drik,
+        "expected Chandra rule to change nature-dependent bala"
     );
 }
 

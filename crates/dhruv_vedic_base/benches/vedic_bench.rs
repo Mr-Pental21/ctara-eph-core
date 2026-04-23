@@ -112,6 +112,7 @@ fn shadbala_bench(c: &mut Criterion) {
         kala,
         include_node_aspects_for_drik_bala: false,
         divide_guru_buddh_drishti_by_4_for_drik_bala: true,
+        chandra_benefic_rule: dhruv_vedic_base::ChandraBeneficRule::default(),
         varga_rashi_indices: varga_rashi,
         varga_longitudes,
     };

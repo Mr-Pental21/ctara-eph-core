@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 60`
+**ABI version:** `DHRUV_API_VERSION = 61`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -357,6 +357,7 @@ typedef struct {
     uint8_t use_rashi_bhava_for_bala_avastha; // default 1
     uint8_t include_node_aspects_for_drik_bala; // default 0
     uint8_t divide_guru_buddh_drishti_by_4_for_drik_bala; // default 1
+    int32_t chandra_benefic_rule; // default 0 = DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72
     uint8_t include_rashi_bhava_results;      // default 1
 } DhruvBhavaConfig;
 ```
@@ -372,6 +373,12 @@ unchanged and continue to expose node aspects.
 Drik Bala. It defaults to `1`, so Guru and Buddh incoming aspects participate
 in the divided `(benefic - malefic) / 4` balance. Set it to `0` to add their
 signed incoming aspects at full strength after the divided balance.
+
+`chandra_benefic_rule` controls Chandra's dynamic benefic/malefic
+classification for Shadbala nature-dependent calculations. Code `0`
+(`DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72`) is the default 72-degree
+brightness rule; code `1` (`DHRUV_CHANDRA_BENEFIC_RULE_WAXING_180`) uses the
+0..=180-degree waxing arc rule.
 
 ### DhruvBhava
 

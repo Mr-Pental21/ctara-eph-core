@@ -58,7 +58,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 60;
+pub const DHRUV_API_VERSION: u32 = 61;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -147,6 +147,8 @@ pub const DHRUV_NODE_DIGNITY_ALWAYS_SAMA: i32 = 1;
 
 pub const DHRUV_BENEFIC_NATURE_BENEFIC: i32 = 0;
 pub const DHRUV_BENEFIC_NATURE_MALEFIC: i32 = 1;
+pub const DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72: i32 = 0;
+pub const DHRUV_CHANDRA_BENEFIC_RULE_WAXING_180: i32 = 1;
 
 pub const DHRUV_GRAHA_GENDER_MALE: i32 = 0;
 pub const DHRUV_GRAHA_GENDER_FEMALE: i32 = 1;
@@ -2214,6 +2216,8 @@ pub struct DhruvBhavaConfig {
     pub include_node_aspects_for_drik_bala: u8,
     /// Divide Guru/Buddh incoming aspects by 4 in Shadbala Drik Bala.
     pub divide_guru_buddh_drishti_by_4_for_drik_bala: u8,
+    /// Chandra benefic rule: 0=72-degree brightness, 1=0..180 waxing arc.
+    pub chandra_benefic_rule: i32,
     /// Include rashi-bhava sibling results where supported.
     pub include_rashi_bhava_results: u8,
 }
@@ -2267,6 +2271,13 @@ fn bhava_config_from_ffi(cfg: &DhruvBhavaConfig) -> Result<BhavaConfig, DhruvSta
         DHRUV_BHAVA_REF_MIDDLE => BhavaReferenceMode::MiddleOfFirst,
         _ => return Err(DhruvStatus::InvalidQuery),
     };
+    let chandra_benefic_rule = match cfg.chandra_benefic_rule {
+        DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72 => {
+            dhruv_vedic_base::ChandraBeneficRule::Brightness72
+        }
+        DHRUV_CHANDRA_BENEFIC_RULE_WAXING_180 => dhruv_vedic_base::ChandraBeneficRule::Waxing180,
+        _ => return Err(DhruvStatus::InvalidQuery),
+    };
 
     Ok(BhavaConfig {
         system,
@@ -2277,6 +2288,7 @@ fn bhava_config_from_ffi(cfg: &DhruvBhavaConfig) -> Result<BhavaConfig, DhruvSta
         divide_guru_buddh_drishti_by_4_for_drik_bala: cfg
             .divide_guru_buddh_drishti_by_4_for_drik_bala
             != 0,
+        chandra_benefic_rule,
         include_rashi_bhava_results: cfg.include_rashi_bhava_results != 0,
     })
 }
@@ -2426,6 +2438,7 @@ pub extern "C" fn dhruv_bhava_config_default() -> DhruvBhavaConfig {
         use_rashi_bhava_for_bala_avastha: 1,
         include_node_aspects_for_drik_bala: 0,
         divide_guru_buddh_drishti_by_4_for_drik_bala: 1,
+        chandra_benefic_rule: DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72,
         include_rashi_bhava_results: 1,
     }
 }
@@ -14292,6 +14305,10 @@ mod tests {
         assert_eq!(cfg.use_rashi_bhava_for_bala_avastha, 1);
         assert_eq!(cfg.include_node_aspects_for_drik_bala, 0);
         assert_eq!(cfg.divide_guru_buddh_drishti_by_4_for_drik_bala, 1);
+        assert_eq!(
+            cfg.chandra_benefic_rule,
+            DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72
+        );
         assert_eq!(cfg.include_rashi_bhava_results, 1);
     }
 
@@ -14356,6 +14373,16 @@ mod tests {
             starting_point: -99,
             custom_start_deg: 0.0,
             reference_mode: DHRUV_BHAVA_REF_START,
+            ..dhruv_bhava_config_default()
+        };
+        let result = bhava_config_from_ffi(&cfg);
+        assert_eq!(result, Err(DhruvStatus::InvalidQuery));
+    }
+
+    #[test]
+    fn ffi_bhava_config_invalid_chandra_benefic_rule() {
+        let cfg = DhruvBhavaConfig {
+            chandra_benefic_rule: 99,
             ..dhruv_bhava_config_default()
         };
         let result = bhava_config_from_ffi(&cfg);
