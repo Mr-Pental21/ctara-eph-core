@@ -53,7 +53,7 @@ state and the full Deeptadi state list.
 | 1        | Exalted                    | Deepta     |
 | 2        | OwnSign/Moolatrikone       | Swastha    |
 | 3        | Conjunct Surya             | Kopa       |
-| 4        | Conjunct a malefic graha   | Vikala     |
+| 4        | Conjunct a malefic graha except Surya | Vikala |
 | 5        | Inauspicious sign          | Khala      |
 | 6        | Extreme friend sign        | Pramudita  |
 | 7        | Friend sign                | Shanta     |
@@ -62,6 +62,8 @@ state and the full Deeptadi state list.
 
 The primary order above is used only when an older single-value surface needs
 one Deeptadi state. The full Deeptadi state set is the authoritative result.
+Surya conjunction contributes Kopa, so Surya is not also reused as the generic
+malefic-conjunction trigger for Vikala.
 
 **Inauspicious signs:** Mesha, Vrishabha, Karka, Dhanu, Makara.
 

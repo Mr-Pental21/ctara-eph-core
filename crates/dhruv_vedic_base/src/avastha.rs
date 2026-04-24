@@ -597,7 +597,11 @@ pub fn deeptadi_avasthas(
     if same_rashi_grahas.contains(&Graha::Surya) {
         states.insert(DeeptadiAvastha::Kopa);
     }
-    if same_rashi_grahas.iter().copied().any(is_malefic) {
+    if same_rashi_grahas
+        .iter()
+        .copied()
+        .any(is_deeptadi_malefic_conjunction)
+    {
         states.insert(DeeptadiAvastha::Vikala);
     }
     if is_inauspicious_deeptadi_rashi(rashi_index) {
@@ -740,6 +744,12 @@ pub fn navamsa_number(sidereal_lon: f64) -> u8 {
 /// Check if a graha is a natural malefic.
 fn is_malefic(graha: Graha) -> bool {
     natural_benefic_malefic(graha) == BeneficNature::Malefic
+}
+
+/// Deeptadi gives Surya conjunction its own Kopa state, so Surya is not reused
+/// as the generic malefic-conjunction trigger.
+fn is_deeptadi_malefic_conjunction(graha: Graha) -> bool {
+    graha != Graha::Surya && is_malefic(graha)
 }
 
 /// Grahas sharing the same rashi as the given graha (excluding itself).
@@ -1038,6 +1048,13 @@ mod tests {
         assert!(states.contains(DeeptadiAvastha::Kopa));
         assert!(states.contains(DeeptadiAvastha::Vikala));
         assert!(states.contains(DeeptadiAvastha::Khala));
+    }
+
+    #[test]
+    fn deeptadi_surya_conjunction_is_kopa_not_vikala() {
+        let states = deeptadi_avasthas(Dignity::Mitra, 11, &[Graha::Surya]);
+        assert!(states.contains(DeeptadiAvastha::Kopa));
+        assert!(!states.contains(DeeptadiAvastha::Vikala));
     }
 
     #[test]
