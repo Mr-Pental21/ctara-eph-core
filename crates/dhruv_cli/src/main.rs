@@ -26,6 +26,7 @@ use dhruv_time::{
     TimeConversionOptions, TimeConversionPolicy, TimeWarning, UtcTime, calendar_to_jd,
     jd_to_calendar, jd_to_tdb_seconds, tdb_seconds_to_jd,
 };
+use dhruv_vedic_base::bhava_types::SayanadiGhatikaRounding;
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig, RiseSetResult};
 use dhruv_vedic_base::{
     ALL_GRAHAS, AyanamshaSystem, Graha, GulikaMaandiPlanet, LunarNode, NodeDignityPolicy, NodeMode,
@@ -739,6 +740,9 @@ struct BhavaBehaviorArgs {
     /// Chandra benefic/malefic rule for Shadbala nature calculations
     #[arg(long, value_enum)]
     chandra_benefic_rule: Option<ChandraBeneficRuleArg>,
+    /// Birth ghatika rounding for Sayanadi Avastha
+    #[arg(long, value_enum)]
+    sayanadi_ghatika_rounding: Option<SayanadiGhatikaRoundingArg>,
     /// Include rashi-bhava sibling result sections/columns
     #[arg(long, conflicts_with = "no_rashi_bhava_results")]
     include_rashi_bhava_results: bool,
@@ -770,6 +774,9 @@ fn bhava_config_from_cli(args: &BhavaBehaviorArgs) -> BhavaConfig {
     if let Some(rule) = args.chandra_benefic_rule {
         config.chandra_benefic_rule = rule.into();
     }
+    if let Some(rounding) = args.sayanadi_ghatika_rounding {
+        config.sayanadi_ghatika_rounding = rounding.into();
+    }
     if args.no_rashi_bhava_results {
         config.include_rashi_bhava_results = false;
     }
@@ -794,6 +801,24 @@ impl From<ChandraBeneficRuleArg> for ChandraBeneficRule {
         match value {
             ChandraBeneficRuleArg::Brightness72 => Self::Brightness72,
             ChandraBeneficRuleArg::Waxing180 => Self::Waxing180,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum SayanadiGhatikaRoundingArg {
+    /// Use completed ghatikas since sunrise
+    Floor,
+    /// Count any partial current ghatika
+    #[value(alias = "ceiling")]
+    Ceil,
+}
+
+impl From<SayanadiGhatikaRoundingArg> for SayanadiGhatikaRounding {
+    fn from(value: SayanadiGhatikaRoundingArg) -> Self {
+        match value {
+            SayanadiGhatikaRoundingArg::Floor => Self::Floor,
+            SayanadiGhatikaRoundingArg::Ceil => Self::Ceil,
         }
     }
 }
@@ -8410,7 +8435,7 @@ fn main() {
             let engine = load_engine(&args.bsp, &args.lsk);
             let eop_kernel = load_eop(&args.eop);
             let location = GeoLocation::new(args.lat, args.lon, args.alt);
-            let bhava_config = BhavaConfig::default();
+            let bhava_config = bhava_config_from_cli(&args.bhava_behavior);
             let rs_config = RiseSetConfig::default();
             let aya_config = SankrantiConfig::new(system, args.nutation);
             let policy = parse_node_policy(&args.node_policy);

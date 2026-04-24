@@ -46,6 +46,7 @@ use dhruv_time::{
     tdb_seconds_to_jd,
 };
 use dhruv_vedic_base::bhava_types::ALL_BHAVA_SYSTEMS;
+use dhruv_vedic_base::bhava_types::SayanadiGhatikaRounding;
 use dhruv_vedic_base::combustion::{
     all_combustion_status as all_combustion_status_fn,
     combustion_threshold as combustion_threshold_fn, is_combust as is_combust_fn,
@@ -356,6 +357,7 @@ struct BhavaConfigInput {
     include_node_aspects_for_drik_bala: Option<bool>,
     divide_guru_buddh_drishti_by_4_for_drik_bala: Option<bool>,
     chandra_benefic_rule: Option<EnumInput>,
+    sayanadi_ghatika_rounding: Option<EnumInput>,
     include_rashi_bhava_results: Option<bool>,
 }
 
@@ -551,6 +553,10 @@ const NODE_DIGNITY_POLICY_VARIANTS: [NodeDignityPolicy; 2] = [
 const CHANDRA_BENEFIC_RULE_VARIANTS: [ChandraBeneficRule; 2] = [
     ChandraBeneficRule::Brightness72,
     ChandraBeneficRule::Waxing180,
+];
+const SAYANADI_GHATIKA_ROUNDING_VARIANTS: [SayanadiGhatikaRounding; 2] = [
+    SayanadiGhatikaRounding::Floor,
+    SayanadiGhatikaRounding::Ceil,
 ];
 const TIME_UPAGRAHA_POINT_VARIANTS: [TimeUpagrahaPoint; 3] = [
     TimeUpagrahaPoint::Start,
@@ -1098,6 +1104,27 @@ fn parse_chandra_benefic_rule(input: &EnumInput) -> Result<ChandraBeneficRule, V
     }
 }
 
+fn parse_sayanadi_ghatika_rounding(input: &EnumInput) -> Result<SayanadiGhatikaRounding, Value> {
+    match input {
+        EnumInput::Int(value) => SAYANADI_GHATIKA_ROUNDING_VARIANTS
+            .get(*value as usize)
+            .copied()
+            .ok_or_else(|| error_payload("invalid_request", "unknown sayanadi ghatika rounding")),
+        EnumInput::Str(value) => {
+            let normalized = value.trim().to_ascii_lowercase().replace('_', "-");
+            match normalized.as_str() {
+                "floor" | "completed" | "completed-ghatika" => Ok(SayanadiGhatikaRounding::Floor),
+                "ceil" | "ceiling" | "current" | "current-ghatika" => {
+                    Ok(SayanadiGhatikaRounding::Ceil)
+                }
+                _ => parse_named(value, &SAYANADI_GHATIKA_ROUNDING_VARIANTS).ok_or_else(|| {
+                    error_payload("invalid_request", "unknown sayanadi ghatika rounding")
+                }),
+            }
+        }
+    }
+}
+
 fn parse_time_upagraha_point(
     input: Option<&EnumInput>,
     default: TimeUpagrahaPoint,
@@ -1522,6 +1549,9 @@ fn to_bhava_config(
         }
         if let Some(value) = input.chandra_benefic_rule.as_ref() {
             config.chandra_benefic_rule = parse_chandra_benefic_rule(value)?;
+        }
+        if let Some(value) = input.sayanadi_ghatika_rounding.as_ref() {
+            config.sayanadi_ghatika_rounding = parse_sayanadi_ghatika_rounding(value)?;
         }
         if let Some(value) = input.include_rashi_bhava_results {
             config.include_rashi_bhava_results = value;

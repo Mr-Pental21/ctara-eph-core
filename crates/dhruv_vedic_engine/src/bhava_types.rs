@@ -94,6 +94,26 @@ pub enum BhavaReferenceMode {
     MiddleOfFirst,
 }
 
+/// Rounding mode for Sayanadi birth ghatikas.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum SayanadiGhatikaRounding {
+    /// Use completed ghatikas since sunrise.
+    #[default]
+    Floor,
+    /// Count any partial current ghatika.
+    Ceil,
+}
+
+impl SayanadiGhatikaRounding {
+    pub fn round(self, value: f64) -> u16 {
+        let rounded = match self {
+            Self::Floor => value.floor(),
+            Self::Ceil => value.ceil(),
+        };
+        rounded.clamp(0.0, u16::MAX as f64) as u16
+    }
+}
+
 /// Configuration for bhava computation.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BhavaConfig {
@@ -111,6 +131,8 @@ pub struct BhavaConfig {
     pub divide_guru_buddh_drishti_by_4_for_drik_bala: bool,
     /// Rule for Chandra benefic/malefic classification in Shadbala.
     pub chandra_benefic_rule: ChandraBeneficRule,
+    /// Rounding mode for birth ghatikas in Sayanadi Avastha.
+    pub sayanadi_ghatika_rounding: SayanadiGhatikaRounding,
     /// Include rashi-bhava sibling outputs on bhava-aware public result surfaces.
     pub include_rashi_bhava_results: bool,
 }
@@ -125,6 +147,7 @@ impl Default for BhavaConfig {
             include_node_aspects_for_drik_bala: false,
             divide_guru_buddh_drishti_by_4_for_drik_bala: true,
             chandra_benefic_rule: ChandraBeneficRule::default(),
+            sayanadi_ghatika_rounding: SayanadiGhatikaRounding::default(),
             include_rashi_bhava_results: true,
         }
     }

@@ -128,7 +128,8 @@ Where:
 - `planet_number` = Sun=1, Moon=2, ... Ketu=9
 - `navamsa` = navamsa number (1-9) from sidereal longitude
 - `janma_nk` = Moon's nakshatra index at birth
-- `ghatikas` = ceiling of ghatikas since sunrise (u16)
+- `ghatikas` = configured rounded ghatikas since sunrise (u16); default is floor,
+  with ceil available through BhavaConfig.
 - `lagna_rashi` = lagna rashi number (1-12)
 
 **12 Avasthas:** Nidra(0), Sayana(1), Upavesha(2), Netrapani(3), Prakasha(4),
@@ -176,5 +177,6 @@ This affects Jagradadi, Deeptadi, and Lajjitadi avasthas for Rahu/Ketu.
 - All avastha functions are pure math — no engine queries
 - Orchestration layer (`assemble_avastha_inputs`) gathers all inputs from
   engine queries and JyotishContext cache
-- `birth_ghatikas` uses explicit `ceil()` for deterministic rounding
+- `birth_ghatikas` uses BhavaConfig `sayanadi_ghatika_rounding`; default is `floor`,
+  optional `ceil` counts the current partial ghatika.
 - Navamsa number: `((sidereal_lon / (360/108)) % 9).floor() + 1`

@@ -58,7 +58,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 64;
+pub const DHRUV_API_VERSION: u32 = 65;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -149,6 +149,8 @@ pub const DHRUV_BENEFIC_NATURE_BENEFIC: i32 = 0;
 pub const DHRUV_BENEFIC_NATURE_MALEFIC: i32 = 1;
 pub const DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72: i32 = 0;
 pub const DHRUV_CHANDRA_BENEFIC_RULE_WAXING_180: i32 = 1;
+pub const DHRUV_SAYANADI_GHATIKA_ROUNDING_FLOOR: i32 = 0;
+pub const DHRUV_SAYANADI_GHATIKA_ROUNDING_CEIL: i32 = 1;
 
 pub const DHRUV_GRAHA_GENDER_MALE: i32 = 0;
 pub const DHRUV_GRAHA_GENDER_FEMALE: i32 = 1;
@@ -2218,6 +2220,8 @@ pub struct DhruvBhavaConfig {
     pub divide_guru_buddh_drishti_by_4_for_drik_bala: u8,
     /// Chandra benefic rule: 0=72-degree brightness, 1=0..180 waxing arc.
     pub chandra_benefic_rule: i32,
+    /// Sayanadi birth ghatika rounding: 0=floor, 1=ceil.
+    pub sayanadi_ghatika_rounding: i32,
     /// Include rashi-bhava sibling results where supported.
     pub include_rashi_bhava_results: u8,
 }
@@ -2278,6 +2282,15 @@ fn bhava_config_from_ffi(cfg: &DhruvBhavaConfig) -> Result<BhavaConfig, DhruvSta
         DHRUV_CHANDRA_BENEFIC_RULE_WAXING_180 => dhruv_vedic_base::ChandraBeneficRule::Waxing180,
         _ => return Err(DhruvStatus::InvalidQuery),
     };
+    let sayanadi_ghatika_rounding = match cfg.sayanadi_ghatika_rounding {
+        DHRUV_SAYANADI_GHATIKA_ROUNDING_FLOOR => {
+            dhruv_vedic_base::bhava_types::SayanadiGhatikaRounding::Floor
+        }
+        DHRUV_SAYANADI_GHATIKA_ROUNDING_CEIL => {
+            dhruv_vedic_base::bhava_types::SayanadiGhatikaRounding::Ceil
+        }
+        _ => return Err(DhruvStatus::InvalidQuery),
+    };
 
     Ok(BhavaConfig {
         system,
@@ -2289,6 +2302,7 @@ fn bhava_config_from_ffi(cfg: &DhruvBhavaConfig) -> Result<BhavaConfig, DhruvSta
             .divide_guru_buddh_drishti_by_4_for_drik_bala
             != 0,
         chandra_benefic_rule,
+        sayanadi_ghatika_rounding,
         include_rashi_bhava_results: cfg.include_rashi_bhava_results != 0,
     })
 }
@@ -2439,6 +2453,7 @@ pub extern "C" fn dhruv_bhava_config_default() -> DhruvBhavaConfig {
         include_node_aspects_for_drik_bala: 0,
         divide_guru_buddh_drishti_by_4_for_drik_bala: 1,
         chandra_benefic_rule: DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72,
+        sayanadi_ghatika_rounding: DHRUV_SAYANADI_GHATIKA_ROUNDING_FLOOR,
         include_rashi_bhava_results: 1,
     }
 }
@@ -14337,6 +14352,10 @@ mod tests {
             cfg.chandra_benefic_rule,
             DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72
         );
+        assert_eq!(
+            cfg.sayanadi_ghatika_rounding,
+            DHRUV_SAYANADI_GHATIKA_ROUNDING_FLOOR
+        );
         assert_eq!(cfg.include_rashi_bhava_results, 1);
     }
 
@@ -14411,6 +14430,16 @@ mod tests {
     fn ffi_bhava_config_invalid_chandra_benefic_rule() {
         let cfg = DhruvBhavaConfig {
             chandra_benefic_rule: 99,
+            ..dhruv_bhava_config_default()
+        };
+        let result = bhava_config_from_ffi(&cfg);
+        assert_eq!(result, Err(DhruvStatus::InvalidQuery));
+    }
+
+    #[test]
+    fn ffi_bhava_config_invalid_sayanadi_ghatika_rounding() {
+        let cfg = DhruvBhavaConfig {
+            sayanadi_ghatika_rounding: 99,
             ..dhruv_bhava_config_default()
         };
         let result = bhava_config_from_ffi(&cfg);

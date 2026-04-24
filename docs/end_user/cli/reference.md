@@ -55,6 +55,7 @@ Reusable public option groups:
   - `--divide-guru-buddh-drishti-by-4-for-drik-bala`
   - `--add-full-guru-buddh-drishti-for-drik-bala`
   - `--chandra-benefic-rule brightness-72|waxing-180`
+  - `--sayanadi-ghatika-rounding floor|ceil`
   - `--include-rashi-bhava-results`
   - `--no-rashi-bhava-results`
 
@@ -151,7 +152,8 @@ amshas.
 
 `avastha` and `kundali --include-avastha` print every Deeptadi and Lajjitadi
 state that applies to each graha, comma-separated. Lajjitadi prints `None` when
-no condition applies.
+no condition applies. Sayanadi birth ghatikas use floor rounding by default;
+pass `--sayanadi-ghatika-rounding ceil` to count the current partial ghatika.
 
 `osculating-apogee` returns moving heliocentric osculating apogee longitudes for
 `Mangal,Buddh,Guru,Shukra,Shani`:

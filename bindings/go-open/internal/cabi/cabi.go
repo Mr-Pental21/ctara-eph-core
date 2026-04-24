@@ -302,6 +302,7 @@ func cBhavaConfig(cfg BhavaConfig) C.DhruvBhavaConfig {
 		include_node_aspects_for_drik_bala: boolU8(cfg.IncludeNodeAspectsForDrikBala),
 		divide_guru_buddh_drishti_by_4_for_drik_bala: boolU8(cfg.DivideGuruBuddhDrishtiBy4ForDrikBala),
 		chandra_benefic_rule:                         C.int32_t(cfg.ChandraBeneficRule),
+		sayanadi_ghatika_rounding:                    C.int32_t(cfg.SayanadiGhatikaRounding),
 		include_rashi_bhava_results:                  boolU8(cfg.IncludeRashiBhavaResults),
 	}
 }
@@ -320,6 +321,7 @@ func goBhavaConfig(cfg C.DhruvBhavaConfig) BhavaConfig {
 		IncludeNodeAspectsForDrikBala:        cfg.include_node_aspects_for_drik_bala != 0,
 		DivideGuruBuddhDrishtiBy4ForDrikBala: cfg.divide_guru_buddh_drishti_by_4_for_drik_bala != 0,
 		ChandraBeneficRule:                   int32(cfg.chandra_benefic_rule),
+		SayanadiGhatikaRounding:              int32(cfg.sayanadi_ghatika_rounding),
 		IncludeRashiBhavaResults:             cfg.include_rashi_bhava_results != 0,
 	}
 }

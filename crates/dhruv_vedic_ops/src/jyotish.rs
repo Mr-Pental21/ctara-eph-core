@@ -2212,7 +2212,7 @@ fn assemble_avastha_inputs(
     let (jd_sunrise, jd_next_sunrise) =
         ctx.sunrise_pair(engine, eop, utc, location, riseset_config)?;
     let ghatikas_f = ghatikas_since_sunrise(ctx.jd_tdb, jd_sunrise, jd_next_sunrise);
-    let birth_ghatikas = ghatikas_f.ceil() as u16;
+    let birth_ghatikas = bhava_config.sayanadi_ghatika_rounding.round(ghatikas_f);
 
     // 13. Lagna rashi number (1-12)
     let lagna_sid = ctx.lagna_sid(engine, eop, location)?;

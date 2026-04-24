@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 64`
+**ABI version:** `DHRUV_API_VERSION = 65`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -2183,9 +2183,12 @@ no proper motion). Equivalent to requesting ecliptic output for
 
 ## Changelog
 
+**v65**: `DhruvBhavaConfig` adds `sayanadi_ghatika_rounding`
+(`0=floor`, `1=ceil`) for Sayanadi birth-ghatika rounding. The default is
+floor.
+
 **v64**: Sayanadi avastha codes now follow the formula mapping
-`1=Sayana` through `11=Kautuka`, with `0=Nidra`; birth ghatikas for Sayanadi
-date/location inputs are rounded up with `ceil()`.
+`1=Sayana` through `11=Kautuka`, with `0=Nidra`.
 
 **v63**: `DhruvGrahaAvasthas` now exposes every applicable Lajjitadi state via
 `lajjitadi_valid`, `lajjitadi_mask`, `lajjitadi_count`, and

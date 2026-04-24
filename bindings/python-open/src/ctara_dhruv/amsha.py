@@ -59,6 +59,7 @@ def _make_bhava_config(bhava_config):
         "divide_guru_buddh_drishti_by_4_for_drik_bala", 1
     )
     cfg.chandra_benefic_rule = bhava_config.get("chandra_benefic_rule", 0)
+    cfg.sayanadi_ghatika_rounding = bhava_config.get("sayanadi_ghatika_rounding", 0)
     cfg.include_rashi_bhava_results = bhava_config.get("include_rashi_bhava_results", 1)
     return cfg
 

@@ -19,7 +19,7 @@ use dhruv_search::{
 };
 use dhruv_tara::{TaraAccuracy, TaraConfig};
 use dhruv_time::UtcTime;
-use dhruv_vedic_base::bhava_types::ALL_BHAVA_SYSTEMS;
+use dhruv_vedic_base::bhava_types::{ALL_BHAVA_SYSTEMS, SayanadiGhatikaRounding};
 use dhruv_vedic_base::dasha::MAX_DASHA_SYSTEMS;
 use dhruv_vedic_base::{
     AyanamshaSystem, BhavaConfig, BhavaReferenceMode, BhavaStartingPoint, ChandraBeneficRule,
@@ -219,6 +219,7 @@ pub struct BhavaConfigPatch {
     pub include_node_aspects_for_drik_bala: Option<bool>,
     pub divide_guru_buddh_drishti_by_4_for_drik_bala: Option<bool>,
     pub chandra_benefic_rule: Option<EnumInput>,
+    pub sayanadi_ghatika_rounding: Option<EnumInput>,
     pub include_rashi_bhava_results: Option<bool>,
 }
 
@@ -807,6 +808,14 @@ impl ConfigResolver {
             .unwrap_or(EnumInput::Str("brightness-72".to_string()));
         let chandra_benefic_rule =
             parse_chandra_benefic_rule(&chandra_rule_input, "bhava.chandra_benefic_rule")?;
+        let sayanadi_rounding_input = explicit
+            .sayanadi_ghatika_rounding
+            .or_else(|| op.sayanadi_ghatika_rounding.clone())
+            .unwrap_or(EnumInput::Str("floor".to_string()));
+        let sayanadi_ghatika_rounding = parse_sayanadi_ghatika_rounding(
+            &sayanadi_rounding_input,
+            "bhava.sayanadi_ghatika_rounding",
+        )?;
         let include_rashi_bhava_results = explicit
             .include_rashi_bhava_results
             .or(op.include_rashi_bhava_results)
@@ -821,6 +830,7 @@ impl ConfigResolver {
                 include_node_aspects_for_drik_bala,
                 divide_guru_buddh_drishti_by_4_for_drik_bala,
                 chandra_benefic_rule,
+                sayanadi_ghatika_rounding,
                 include_rashi_bhava_results,
             },
             source_by_field: source,
@@ -1529,6 +1539,22 @@ fn parse_chandra_benefic_rule(
     }
 }
 
+fn parse_sayanadi_ghatika_rounding(
+    input: &EnumInput,
+    field: &'static str,
+) -> Result<SayanadiGhatikaRounding, ConfigError> {
+    match input.as_lower().replace('_', "-").as_str() {
+        "0" | "floor" | "completed" | "completed-ghatika" => Ok(SayanadiGhatikaRounding::Floor),
+        "1" | "ceil" | "ceiling" | "current" | "current-ghatika" => {
+            Ok(SayanadiGhatikaRounding::Ceil)
+        }
+        other => Err(ConfigError::InvalidEnumValue {
+            field,
+            value: other.to_string(),
+        }),
+    }
+}
+
 fn parse_tara_accuracy(
     input: &EnumInput,
     field: &'static str,
@@ -1898,6 +1924,37 @@ max_iterations = 55
         let eff = resolver.resolve_sankranti(None).unwrap();
         assert!(eff.value.use_nutation);
         assert_eq!(eff.value.max_iterations, 55);
+    }
+
+    #[test]
+    fn resolve_bhava_sayanadi_rounding_defaults_floor_and_accepts_ceil() {
+        let file: DhruvConfigFile = toml::from_str(
+            r#"
+version = 1
+"#,
+        )
+        .unwrap();
+        let resolver = ConfigResolver::new(file, DefaultsMode::Recommended);
+        let eff = resolver.resolve_bhava(None).unwrap();
+        assert_eq!(
+            eff.value.sayanadi_ghatika_rounding,
+            SayanadiGhatikaRounding::Floor
+        );
+
+        let file: DhruvConfigFile = toml::from_str(
+            r#"
+version = 1
+[operations.bhava]
+sayanadi_ghatika_rounding = "ceil"
+"#,
+        )
+        .unwrap();
+        let resolver = ConfigResolver::new(file, DefaultsMode::Recommended);
+        let eff = resolver.resolve_bhava(None).unwrap();
+        assert_eq!(
+            eff.value.sayanadi_ghatika_rounding,
+            SayanadiGhatikaRounding::Ceil
+        );
     }
 
     #[test]

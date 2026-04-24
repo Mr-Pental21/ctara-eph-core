@@ -2,7 +2,7 @@ package dhruv
 
 import "ctara-dhruv-core/bindings/go-open/internal/cabi"
 
-const ExpectedAPIVersion = 64
+const ExpectedAPIVersion = 65
 
 const (
 	PathCapacity          = cabi.PathCapacity
@@ -79,6 +79,8 @@ const (
 	BeneficNatureMalefic           = cabi.BeneficNatureMalefic
 	ChandraBeneficRuleBrightness72 = cabi.ChandraBeneficRuleBrightness72
 	ChandraBeneficRuleWaxing180    = cabi.ChandraBeneficRuleWaxing180
+	SayanadiGhatikaRoundingFloor   = cabi.SayanadiGhatikaRoundingFloor
+	SayanadiGhatikaRoundingCeil    = cabi.SayanadiGhatikaRoundingCeil
 )
 
 const (

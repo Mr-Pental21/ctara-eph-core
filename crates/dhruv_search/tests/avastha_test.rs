@@ -10,6 +10,7 @@ use dhruv_search::{
     AmshaSelectionConfig, FullKundaliConfig, GrahaPositionsConfig, avastha_for_date,
     avastha_for_graha,
 };
+use dhruv_vedic_base::bhava_types::SayanadiGhatikaRounding;
 use dhruv_vedic_base::riseset_types::{GeoLocation, RiseSetConfig};
 use dhruv_vedic_base::{BhavaConfig, Graha, NodeDignityPolicy};
 
@@ -112,6 +113,56 @@ fn avastha_all_nine_valid() {
             );
         }
     }
+}
+
+#[test]
+fn avastha_sayanadi_ghatika_rounding_defaults_floor_and_ceil_is_opt_in() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = utc_2024_jan_15();
+    let location = new_delhi();
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+
+    let floor_config = BhavaConfig::default();
+    assert_eq!(
+        floor_config.sayanadi_ghatika_rounding,
+        SayanadiGhatikaRounding::Floor
+    );
+    let mut ceil_config = floor_config;
+    ceil_config.sayanadi_ghatika_rounding = SayanadiGhatikaRounding::Ceil;
+
+    let floor = avastha_for_date(
+        &engine,
+        &eop,
+        &location,
+        &utc,
+        &floor_config,
+        &rs_config,
+        &aya_config,
+        NodeDignityPolicy::SignLordBased,
+        &default_amsha_selection(),
+    )
+    .expect("floor avastha should succeed");
+    let ceil = avastha_for_date(
+        &engine,
+        &eop,
+        &location,
+        &utc,
+        &ceil_config,
+        &rs_config,
+        &aya_config,
+        NodeDignityPolicy::SignLordBased,
+        &default_amsha_selection(),
+    )
+    .expect("ceil avastha should succeed");
+
+    assert_ne!(
+        floor.entries[Graha::Surya.index() as usize]
+            .sayanadi
+            .avastha,
+        ceil.entries[Graha::Surya.index() as usize].sayanadi.avastha
+    );
 }
 
 #[test]
