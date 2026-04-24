@@ -45,21 +45,28 @@ Three states based on dignity (relationship with sign):
 
 Nine states determined by priority-ordered conditions:
 
-| Priority | Condition           | State    |
-|----------|---------------------|----------|
-| 1        | Exalted             | Deepta   |
-| 2        | Lost planetary war  | Peedita  |
-| 3        | Combust             | Deena    |
-| 4        | Debilitated         | Vikala   |
-| 5        | Retrograde          | Shakta   |
-| 6        | OwnSign/Moolat      | Swastha  |
-| 7        | Friend sign         | Mudita   |
-| 8        | Enemy sign          | Khala    |
-| 9        | Default             | Shanta   |
+| Priority | Condition                  | State      |
+|----------|----------------------------|------------|
+| 1        | Exalted                    | Deepta     |
+| 2        | OwnSign/Moolatrikone       | Swastha    |
+| 3        | Conjunct Surya             | Kopa       |
+| 4        | Conjunct a malefic graha   | Vikala     |
+| 5        | Inauspicious sign          | Khala      |
+| 6        | Extreme friend sign        | Pramudita  |
+| 7        | Friend sign                | Shanta     |
+| 8        | Neutral sign               | Deena      |
+| 9        | Enemy/debilitation sign    | Dukhita    |
 
-**Strength factors:** Deepta=1.0, Swastha=0.9, Shakta=0.8, Mudita=0.75,
-Shanta=0.6, Khala=0.4, Kshobhita=0.35, Peedita=0.3, Kshudhita=0.25,
-Deena=0.2, Vikala=0.1.
+The supplied reference lists the dignity and conjunction conditions together.
+The implementation checks exaltation and own sign first, then Sun/malefic
+conjunction and inauspicious signs, then ordinary friendship/neutral/enemy
+dignity. This keeps conjunction-based states reachable.
+
+**Inauspicious signs:** Mesha, Vrishabha, Karka, Dhanu, Makara.
+
+**Strength factors:** Deepta=1.0, Swastha=0.9, Pramudita=0.8,
+Shanta=0.75, Deena=0.6, Dukhita=0.4, Khala=0.3, Kopa=0.2,
+Vikala=0.1.
 
 ### Combustion Thresholds (BPHS)
 

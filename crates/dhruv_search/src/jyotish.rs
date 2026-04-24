@@ -3632,9 +3632,8 @@ fn graha_avasthas_from_inputs(inputs: &AvasthaInputs, graha: Graha) -> GrahaAvas
         jagradadi: jagradadi_avastha(inputs.dignities[index]),
         deeptadi: deeptadi_avastha(
             inputs.dignities[index],
-            inputs.is_combust[index],
-            inputs.is_retrograde[index],
-            inputs.lost_war[index],
+            inputs.rashi_indices[index],
+            &same_rashi,
         ),
         lajjitadi: lajjitadi_avastha(
             graha,

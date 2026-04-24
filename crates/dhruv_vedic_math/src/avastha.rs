@@ -102,13 +102,13 @@ impl JagradadiAvastha {
 pub enum DeeptadiAvastha {
     Deepta,
     Swastha,
-    Mudita,
+    Pramudita,
     Shanta,
-    Shakta,
-    Peedita,
     Deena,
+    Dukhita,
     Vikala,
     Khala,
+    Kopa,
 }
 
 impl DeeptadiAvastha {
@@ -116,13 +116,13 @@ impl DeeptadiAvastha {
         match self {
             Self::Deepta => 0,
             Self::Swastha => 1,
-            Self::Mudita => 2,
+            Self::Pramudita => 2,
             Self::Shanta => 3,
-            Self::Shakta => 4,
-            Self::Peedita => 5,
-            Self::Deena => 6,
-            Self::Vikala => 7,
-            Self::Khala => 8,
+            Self::Deena => 4,
+            Self::Dukhita => 5,
+            Self::Vikala => 6,
+            Self::Khala => 7,
+            Self::Kopa => 8,
         }
     }
 
@@ -130,13 +130,13 @@ impl DeeptadiAvastha {
         match self {
             Self::Deepta => "Deepta",
             Self::Swastha => "Swastha",
-            Self::Mudita => "Mudita",
+            Self::Pramudita => "Pramudita",
             Self::Shanta => "Shanta",
-            Self::Shakta => "Shakta",
-            Self::Peedita => "Peedita",
             Self::Deena => "Deena",
+            Self::Dukhita => "Dukhita",
             Self::Vikala => "Vikala",
             Self::Khala => "Khala",
+            Self::Kopa => "Kopa",
         }
     }
 
@@ -144,13 +144,13 @@ impl DeeptadiAvastha {
         match self {
             Self::Deepta => 1.0,
             Self::Swastha => 0.9,
-            Self::Mudita => 0.75,
-            Self::Shanta => 0.6,
-            Self::Shakta => 0.8,
-            Self::Peedita => 0.3,
-            Self::Deena => 0.2,
+            Self::Pramudita => 0.8,
+            Self::Shanta => 0.75,
+            Self::Deena => 0.6,
+            Self::Dukhita => 0.4,
             Self::Vikala => 0.1,
-            Self::Khala => 0.4,
+            Self::Khala => 0.3,
+            Self::Kopa => 0.2,
         }
     }
 }
@@ -486,35 +486,49 @@ pub fn jagradadi_avastha(dignity: Dignity) -> JagradadiAvastha {
 
 /// Deeptadi Avastha — priority-ordered conditions.
 ///
-/// Priority: Exalted→Peedita(war)→Deena(combust)→Vikala(debil)→
-/// Shakta(retro)→Swastha(own)→Mudita(friend)→Khala(enemy)→Shanta(default).
+/// Priority: exalted → own → Sun conjunction → malefic conjunction →
+/// inauspicious sign → extreme friend → friend → neutral → enemy.
 pub fn deeptadi_avastha(
     dignity: Dignity,
-    is_combust: bool,
-    is_retrograde: bool,
-    lost_planetary_war: bool,
+    rashi_index: u8,
+    same_rashi_grahas: &[Graha],
 ) -> DeeptadiAvastha {
     if dignity == Dignity::Exalted {
         return DeeptadiAvastha::Deepta;
     }
-    if lost_planetary_war {
-        return DeeptadiAvastha::Peedita;
+    if matches!(dignity, Dignity::Moolatrikone | Dignity::OwnSign) {
+        return DeeptadiAvastha::Swastha;
     }
-    if is_combust {
-        return DeeptadiAvastha::Deena;
+    if same_rashi_grahas.contains(&Graha::Surya) {
+        return DeeptadiAvastha::Kopa;
     }
-    if dignity == Dignity::Debilitated {
+    if same_rashi_grahas.iter().copied().any(is_malefic) {
         return DeeptadiAvastha::Vikala;
     }
-    if is_retrograde {
-        return DeeptadiAvastha::Shakta;
+    if is_inauspicious_deeptadi_rashi(rashi_index) {
+        return DeeptadiAvastha::Khala;
     }
-    match dignity {
-        Dignity::Moolatrikone | Dignity::OwnSign => DeeptadiAvastha::Swastha,
-        Dignity::AdhiMitra | Dignity::Mitra => DeeptadiAvastha::Mudita,
-        Dignity::Shatru | Dignity::AdhiShatru => DeeptadiAvastha::Khala,
-        _ => DeeptadiAvastha::Shanta,
+    if dignity == Dignity::AdhiMitra {
+        return DeeptadiAvastha::Pramudita;
     }
+    if dignity == Dignity::Mitra {
+        return DeeptadiAvastha::Shanta;
+    }
+    if dignity == Dignity::Sama {
+        return DeeptadiAvastha::Deena;
+    }
+    if matches!(
+        dignity,
+        Dignity::Shatru | Dignity::AdhiShatru | Dignity::Debilitated
+    ) {
+        return DeeptadiAvastha::Dukhita;
+    }
+    DeeptadiAvastha::Deena
+}
+
+/// Inauspicious signs rising with back first: Mesha, Vrishabha, Karka, Dhanu, Makara.
+pub const fn is_inauspicious_deeptadi_rashi(rashi_index: u8) -> bool {
+    matches!(rashi_index % 12, 0 | 1 | 3 | 8 | 9)
 }
 
 /// Lajjitadi Avastha — conjunctions, aspects, and bhava-based.
@@ -725,14 +739,13 @@ pub fn all_jagradadi_avasthas(dignities: &[Dignity; 9]) -> [JagradadiAvastha; 9]
 /// Compute Deeptadi avastha for all 9 grahas.
 pub fn all_deeptadi_avasthas(
     dignities: &[Dignity; 9],
-    combustion: &[bool; 9],
-    retrograde: &[bool; 9],
-    lost_war: &[bool; 9],
+    rashi_indices: &[u8; 9],
 ) -> [DeeptadiAvastha; 9] {
-    let mut result = [DeeptadiAvastha::Shanta; 9];
+    let mut result = [DeeptadiAvastha::Deena; 9];
     for g in ALL_GRAHAS {
         let i = g.index() as usize;
-        result[i] = deeptadi_avastha(dignities[i], combustion[i], retrograde[i], lost_war[i]);
+        let same = same_rashi_grahas(i, rashi_indices);
+        result[i] = deeptadi_avastha(dignities[i], rashi_indices[i], &same);
     }
     result
 }
@@ -789,12 +802,7 @@ pub fn all_sayanadi_avasthas(inputs: &SayanadiInputs) -> [SayanadiResult; 9] {
 pub fn all_avasthas(inputs: &AvasthaInputs) -> AllGrahaAvasthas {
     let baladi = all_baladi_avasthas(&inputs.sidereal_lons, &inputs.rashi_indices);
     let jagradadi = all_jagradadi_avasthas(&inputs.dignities);
-    let deeptadi = all_deeptadi_avasthas(
-        &inputs.dignities,
-        &inputs.is_combust,
-        &inputs.is_retrograde,
-        &inputs.lost_war,
-    );
+    let deeptadi = all_deeptadi_avasthas(&inputs.dignities, &inputs.rashi_indices);
     let lajjitadi = all_lajjitadi_avasthas(&inputs.lajjitadi);
     let sayanadi = all_sayanadi_avasthas(&inputs.sayanadi);
 
@@ -908,75 +916,82 @@ mod tests {
     // --- Deeptadi ---
 
     #[test]
-    fn deeptadi_exalted_beats_all() {
-        // Exalted + combust + retrograde + war → still Deepta
+    fn deeptadi_exalted_beats_conjunctions() {
         assert_eq!(
-            deeptadi_avastha(Dignity::Exalted, true, true, true),
+            deeptadi_avastha(Dignity::Exalted, 0, &[Graha::Surya, Graha::Mangal]),
             DeeptadiAvastha::Deepta,
-        );
-    }
-
-    #[test]
-    fn deeptadi_war_beats_combust() {
-        assert_eq!(
-            deeptadi_avastha(Dignity::Sama, true, false, true),
-            DeeptadiAvastha::Peedita,
-        );
-    }
-
-    #[test]
-    fn deeptadi_combust_beats_debilitated() {
-        assert_eq!(
-            deeptadi_avastha(Dignity::Debilitated, true, false, false),
-            DeeptadiAvastha::Deena,
-        );
-    }
-
-    #[test]
-    fn deeptadi_debilitated() {
-        assert_eq!(
-            deeptadi_avastha(Dignity::Debilitated, false, false, false),
-            DeeptadiAvastha::Vikala,
-        );
-    }
-
-    #[test]
-    fn deeptadi_retrograde() {
-        assert_eq!(
-            deeptadi_avastha(Dignity::Sama, false, true, false),
-            DeeptadiAvastha::Shakta,
         );
     }
 
     #[test]
     fn deeptadi_own_sign() {
         assert_eq!(
-            deeptadi_avastha(Dignity::OwnSign, false, false, false),
+            deeptadi_avastha(Dignity::OwnSign, 10, &[Graha::Surya]),
             DeeptadiAvastha::Swastha,
+        );
+    }
+
+    #[test]
+    fn deeptadi_sun_conjunction() {
+        assert_eq!(
+            deeptadi_avastha(Dignity::Mitra, 11, &[Graha::Surya]),
+            DeeptadiAvastha::Kopa,
+        );
+    }
+
+    #[test]
+    fn deeptadi_malefic_conjunction() {
+        assert_eq!(
+            deeptadi_avastha(Dignity::Mitra, 11, &[Graha::Mangal]),
+            DeeptadiAvastha::Vikala,
+        );
+    }
+
+    #[test]
+    fn deeptadi_inauspicious_sign() {
+        assert_eq!(
+            deeptadi_avastha(Dignity::Mitra, 0, &[]),
+            DeeptadiAvastha::Khala,
+        );
+    }
+
+    #[test]
+    fn deeptadi_extreme_friend() {
+        assert_eq!(
+            deeptadi_avastha(Dignity::AdhiMitra, 11, &[]),
+            DeeptadiAvastha::Pramudita,
         );
     }
 
     #[test]
     fn deeptadi_friend() {
         assert_eq!(
-            deeptadi_avastha(Dignity::Mitra, false, false, false),
-            DeeptadiAvastha::Mudita,
+            deeptadi_avastha(Dignity::Mitra, 11, &[]),
+            DeeptadiAvastha::Shanta,
+        );
+    }
+
+    #[test]
+    fn deeptadi_neutral() {
+        assert_eq!(
+            deeptadi_avastha(Dignity::Sama, 11, &[]),
+            DeeptadiAvastha::Deena,
         );
     }
 
     #[test]
     fn deeptadi_enemy() {
         assert_eq!(
-            deeptadi_avastha(Dignity::Shatru, false, false, false),
-            DeeptadiAvastha::Khala,
+            deeptadi_avastha(Dignity::Shatru, 11, &[]),
+            DeeptadiAvastha::Dukhita,
         );
     }
 
     #[test]
-    fn deeptadi_neutral_default() {
+    fn deeptadi_debilitated_counts_as_suffering() {
         assert_eq!(
-            deeptadi_avastha(Dignity::Sama, false, false, false),
-            DeeptadiAvastha::Shanta,
+            deeptadi_avastha(Dignity::Debilitated, 11, &[]),
+            DeeptadiAvastha::Dukhita,
         );
     }
 
@@ -1160,13 +1175,13 @@ mod tests {
         let all_deeptadi = [
             DeeptadiAvastha::Deepta,
             DeeptadiAvastha::Swastha,
-            DeeptadiAvastha::Mudita,
+            DeeptadiAvastha::Pramudita,
             DeeptadiAvastha::Shanta,
-            DeeptadiAvastha::Shakta,
-            DeeptadiAvastha::Peedita,
             DeeptadiAvastha::Deena,
+            DeeptadiAvastha::Dukhita,
             DeeptadiAvastha::Vikala,
             DeeptadiAvastha::Khala,
+            DeeptadiAvastha::Kopa,
         ];
         for a in all_deeptadi {
             let f = a.strength_factor();
