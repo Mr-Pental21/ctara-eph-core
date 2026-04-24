@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 61`
+**ABI version:** `DHRUV_API_VERSION = 64`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -2182,6 +2182,10 @@ no proper motion). Equivalent to requesting ecliptic output for
 ---
 
 ## Changelog
+
+**v64**: Sayanadi avastha codes now follow the formula mapping
+`1=Sayana` through `11=Kautuka`, with `0=Nidra`; birth ghatikas for Sayanadi
+date/location inputs are rounded up with `ceil()`.
 
 **v63**: `DhruvGrahaAvasthas` now exposes every applicable Lajjitadi state via
 `lajjitadi_valid`, `lajjitadi_mask`, `lajjitadi_count`, and

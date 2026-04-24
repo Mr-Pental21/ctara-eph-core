@@ -1112,7 +1112,7 @@ class BalaBundleResult:
 class SayanadiResult:
     """Sayanadi avastha for a single graha.
 
-    ``avastha``: SayanadiAvastha index (0-11).
+    ``avastha``: SayanadiAvastha code (1=Sayana..11=Kautuka, 0=Nidra).
     ``sub_states``: 5 sub-state indices (Ka/Cha/Ta-retroflex/Ta-dental/Pa).
     """
 

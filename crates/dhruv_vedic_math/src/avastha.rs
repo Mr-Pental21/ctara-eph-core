@@ -363,36 +363,47 @@ pub enum SayanadiAvastha {
     Nidra,
 }
 
-const ALL_SAYANADI: [SayanadiAvastha; 12] = [
-    SayanadiAvastha::Sayana,
-    SayanadiAvastha::Upavesha,
-    SayanadiAvastha::Netrapani,
-    SayanadiAvastha::Prakasha,
-    SayanadiAvastha::Gamana,
-    SayanadiAvastha::Agamana,
-    SayanadiAvastha::Sabha,
-    SayanadiAvastha::Agama,
-    SayanadiAvastha::Bhojana,
-    SayanadiAvastha::NrityaLipsa,
-    SayanadiAvastha::Kautuka,
-    SayanadiAvastha::Nidra,
-];
-
 impl SayanadiAvastha {
+    /// Public/formula code: Sayana=1, ..., Kautuka=11, Nidra=0.
     pub const fn index(self) -> u8 {
         match self {
-            Self::Sayana => 0,
-            Self::Upavesha => 1,
-            Self::Netrapani => 2,
-            Self::Prakasha => 3,
-            Self::Gamana => 4,
-            Self::Agamana => 5,
-            Self::Sabha => 6,
-            Self::Agama => 7,
-            Self::Bhojana => 8,
-            Self::NrityaLipsa => 9,
-            Self::Kautuka => 10,
-            Self::Nidra => 11,
+            Self::Sayana => 1,
+            Self::Upavesha => 2,
+            Self::Netrapani => 3,
+            Self::Prakasha => 4,
+            Self::Gamana => 5,
+            Self::Agamana => 6,
+            Self::Sabha => 7,
+            Self::Agama => 8,
+            Self::Bhojana => 9,
+            Self::NrityaLipsa => 10,
+            Self::Kautuka => 11,
+            Self::Nidra => 0,
+        }
+    }
+
+    /// One-based avastha number used by formulas: Sayana=1, ..., Nidra=12.
+    pub const fn formula_number(self) -> u8 {
+        match self {
+            Self::Nidra => 12,
+            _ => self.index(),
+        }
+    }
+
+    pub const fn from_formula_code(code: u8) -> Self {
+        match code % 12 {
+            1 => Self::Sayana,
+            2 => Self::Upavesha,
+            3 => Self::Netrapani,
+            4 => Self::Prakasha,
+            5 => Self::Gamana,
+            6 => Self::Agamana,
+            7 => Self::Sabha,
+            8 => Self::Agama,
+            9 => Self::Bhojana,
+            10 => Self::NrityaLipsa,
+            11 => Self::Kautuka,
+            _ => Self::Nidra,
         }
     }
 
@@ -795,6 +806,7 @@ pub fn lajjitadi_avastha(
 /// Sayanadi Avastha — BPHS Ch.45 formula.
 ///
 /// Formula: `((nk+1) * planet_number * navamsa + (janma_nk+1) + ghatikas + lagna_rashi) % 12`
+/// where result code 1=Sayana, ..., 11=Kautuka, and 0=Nidra.
 /// Planet numbers: Sun=1..Ketu=9.
 pub fn sayanadi_avastha(
     graha: Graha,
@@ -812,19 +824,19 @@ pub fn sayanadi_avastha(
     let lagna = lagna_rashi_number as u32;
 
     let value = ((nk + 1) * planet_number * nav + (janma_nk + 1) + ghatikas + lagna) % 12;
-    ALL_SAYANADI[value as usize]
+    SayanadiAvastha::from_formula_code(value as u8)
 }
 
 /// Sayanadi sub-state for a single name-group anka.
 ///
-/// Formula: `R = ((avastha_index+1)^2 + name_anka) % 12`
+/// Formula: `R = (avastha_number^2 + name_anka) % 12`
 /// Then: `(R + planet_constant) % 3` → 1=Drishti, 2=Chestha, 0=Vicheshta.
 pub fn sayanadi_sub_state(
     avastha: SayanadiAvastha,
     graha: Graha,
     name_anka: u8,
 ) -> SayanadiSubState {
-    let ai = avastha.index() as u32 + 1;
+    let ai = avastha.formula_number() as u32;
     let r = (ai * ai + name_anka as u32) % 12;
     let pc = SAYANADI_PLANET_CONSTANTS[graha.index() as usize] as u32;
     let remainder = (r + pc) % 3;
@@ -1389,7 +1401,7 @@ mod tests {
         // Sun (planet_number=1), nakshatra=0, navamsa=1, janma_nk=0, ghatikas=0, lagna=1
         // ((0+1)*1*1 + (0+1) + 0 + 1) % 12 = (1 + 1 + 0 + 1) % 12 = 3
         let result = sayanadi_avastha(Graha::Surya, 0, 1, 0, 0, 1);
-        assert_eq!(result, SayanadiAvastha::Prakasha); // index 3
+        assert_eq!(result, SayanadiAvastha::Netrapani); // code 3
     }
 
     #[test]
@@ -1409,8 +1421,8 @@ mod tests {
 
     #[test]
     fn sayanadi_sub_state_formula() {
-        // Sayana (index 0), Sun (constant=5), Ka-varga anka=1
-        // R = ((0+1)^2 + 1) % 12 = (1 + 1) % 12 = 2
+        // Sayana (number=1), Sun (constant=5), Ka-varga anka=1
+        // R = (1^2 + 1) % 12 = 2
         // (2 + 5) % 3 = 7 % 3 = 1 → Drishti
         let ss = sayanadi_sub_state(SayanadiAvastha::Sayana, Graha::Surya, 1);
         assert_eq!(ss, SayanadiSubState::Drishti);
@@ -1600,15 +1612,12 @@ mod tests {
         assert_eq!(result.entries[0].lajjitadi, Some(LajjitadiAvastha::Garvita));
     }
 
-    // --- birth_ghatikas floor behavior ---
+    // --- birth_ghatikas integer behavior ---
 
     #[test]
-    fn sayanadi_ghatikas_floor_boundary() {
-        // 15.0 ghatikas floored = 15
+    fn sayanadi_ghatikas_integer_boundary() {
         let a1 = sayanadi_avastha(Graha::Surya, 5, 3, 10, 15, 1);
-        // 14.999 floored = 14
         let a2 = sayanadi_avastha(Graha::Surya, 5, 3, 10, 14, 1);
-        // They may or may not differ, but the floor behavior is deterministic
         // The formula uses integer ghatikas directly — test that it doesn't panic
         let _ = (a1, a2);
     }

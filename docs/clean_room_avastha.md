@@ -128,11 +128,11 @@ Where:
 - `planet_number` = Sun=1, Moon=2, ... Ketu=9
 - `navamsa` = navamsa number (1-9) from sidereal longitude
 - `janma_nk` = Moon's nakshatra index at birth
-- `ghatikas` = floor of ghatikas since sunrise (u16)
+- `ghatikas` = ceiling of ghatikas since sunrise (u16)
 - `lagna_rashi` = lagna rashi number (1-12)
 
-**12 Avasthas:** Sayana(0), Upavesha(1), Netrapani(2), Prakasha(3), Gamana(4),
-Agamana(5), Sabha(6), Agama(7), Bhojana(8), NrityaLipsa(9), Kautuka(10), Nidra(11).
+**12 Avasthas:** Nidra(0), Sayana(1), Upavesha(2), Netrapani(3), Prakasha(4),
+Gamana(5), Agamana(6), Sabha(7), Agama(8), Bhojana(9), NrityaLipsa(10), Kautuka(11).
 
 ### Sayanadi Sub-States
 
@@ -140,7 +140,7 @@ Each avastha has 3 possible sub-states (Drishti, Chestha, Vicheshta) computed
 for 5 BPHS name-group variants:
 
 ```
-R = ((avastha_index + 1)^2 + name_anka) % 12
+R = (avastha_number^2 + name_anka) % 12
 sub_state = (R + planet_constant) % 3
 ```
 
@@ -176,5 +176,5 @@ This affects Jagradadi, Deeptadi, and Lajjitadi avasthas for Rahu/Ketu.
 - All avastha functions are pure math — no engine queries
 - Orchestration layer (`assemble_avastha_inputs`) gathers all inputs from
   engine queries and JyotishContext cache
-- `birth_ghatikas` uses explicit `floor()` for deterministic rounding
+- `birth_ghatikas` uses explicit `ceil()` for deterministic rounding
 - Navamsa number: `((sidereal_lon / (360/108)) % 9).floor() + 1`

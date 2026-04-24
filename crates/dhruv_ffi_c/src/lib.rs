@@ -58,7 +58,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 63;
+pub const DHRUV_API_VERSION: u32 = 64;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -10829,7 +10829,7 @@ pub struct DhruvBalaBundleResult {
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct DhruvSayanadiResult {
-    /// SayanadiAvastha index (0-11).
+    /// SayanadiAvastha code (1=Sayana..11=Kautuka, 0=Nidra).
     pub avastha: u8,
     /// SayanadiSubState index per name-group (Ka/Cha/Ta-retroflex/Ta-dental/Pa).
     pub sub_states: [u8; 5],

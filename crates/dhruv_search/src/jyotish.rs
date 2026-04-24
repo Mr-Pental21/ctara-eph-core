@@ -3771,11 +3771,11 @@ fn assemble_avastha_inputs(
     // 11. Janma nakshatra = Moon's nakshatra index
     let janma_nakshatra = nakshatra_indices[Graha::Chandra.index() as usize];
 
-    // 12. Birth ghatikas (explicit floor)
+    // 12. Birth ghatikas (explicit ceiling)
     let (jd_sunrise, jd_next_sunrise) =
         ctx.sunrise_pair(engine, eop, utc, location, riseset_config)?;
     let ghatikas_f = ghatikas_since_sunrise(ctx.jd_tdb, jd_sunrise, jd_next_sunrise);
-    let birth_ghatikas = ghatikas_f.floor() as u16;
+    let birth_ghatikas = ghatikas_f.ceil() as u16;
 
     // 13. Lagna rashi number (1-12)
     let lagna_sid = ctx.lagna_sid(engine, eop, location)?;

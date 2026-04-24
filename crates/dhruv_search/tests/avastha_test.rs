@@ -99,7 +99,7 @@ fn avastha_all_nine_valid() {
                 "lajjitadi strength for graha {i}: {lf}"
             );
         }
-        // Sayanadi: index 0-11
+        // Sayanadi: code 0-11 (0=Nidra, 1=Sayana, ..., 11=Kautuka)
         assert!(
             entry.sayanadi.avastha.index() < 12,
             "sayanadi index for graha {i}"
