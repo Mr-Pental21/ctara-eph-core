@@ -2183,6 +2183,11 @@ no proper motion). Equivalent to requesting ecliptic output for
 
 ## Changelog
 
+**v63**: `DhruvGrahaAvasthas` now exposes every applicable Lajjitadi state via
+`lajjitadi_valid`, `lajjitadi_mask`, `lajjitadi_count`, and
+`lajjitadi_states[6]`. The existing `lajjitadi` field remains the primary
+compatibility state when valid, or `255` when no Lajjitadi condition applies.
+
 **v62**: `DhruvGrahaAvasthas` now exposes every applicable Deeptadi state via
 `deeptadi_mask`, `deeptadi_count`, and `deeptadi_states[9]`. The existing
 `deeptadi` field remains the primary compatibility state.

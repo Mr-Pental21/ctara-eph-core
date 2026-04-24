@@ -240,6 +240,10 @@ fn single_item_endpoints_match_full_results() {
     );
     assert_eq!(avastha_single.lajjitadi, full_avastha.lajjitadi);
     assert_eq!(
+        avastha_single.lajjitadi_states.mask(),
+        full_avastha.lajjitadi_states.mask()
+    );
+    assert_eq!(
         avastha_single.sayanadi.avastha,
         full_avastha.sayanadi.avastha
     );

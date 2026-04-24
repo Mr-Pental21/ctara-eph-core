@@ -1060,14 +1060,18 @@ type SayanadiResult struct {
 }
 
 type GrahaAvasthas struct {
-	Baladi         uint8
-	Jagradadi      uint8
-	Deeptadi       uint8
-	DeeptadiMask   uint16
-	DeeptadiCount  uint8
-	DeeptadiStates [9]uint8
-	Lajjitadi      uint8
-	Sayanadi       SayanadiResult
+	Baladi          uint8
+	Jagradadi       uint8
+	Deeptadi        uint8
+	DeeptadiMask    uint16
+	DeeptadiCount   uint8
+	DeeptadiStates  [9]uint8
+	Lajjitadi       uint8
+	LajjitadiValid  bool
+	LajjitadiMask   uint16
+	LajjitadiCount  uint8
+	LajjitadiStates [6]uint8
+	Sayanadi        SayanadiResult
 }
 
 type AllGrahaAvasthas struct {

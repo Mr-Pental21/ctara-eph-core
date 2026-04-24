@@ -219,7 +219,8 @@ names, labels, and defaults for each amsha.
 
 Avastha result maps expose `:deeptadi` as the primary compatibility value and
 `:deeptadi_states` / `:deeptadi_mask` as the full set of Deeptadi states that
-apply to the graha.
+apply to the graha. They also expose `:lajjitadi`, `:lajjitadi_states`, and
+`:lajjitadi_mask`; `:lajjitadi` is `nil` when no Lajjitadi condition applies.
 
 `bhava_config` maps may include `:chandra_benefic_rule`. The default is the
 72-degree brightness rule (`:brightness_72`, `"brightness-72"`, or `0`), where

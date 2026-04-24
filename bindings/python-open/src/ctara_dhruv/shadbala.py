@@ -518,7 +518,9 @@ def avastha(
             deeptadi=a.deeptadi,
             deeptadi_states=[a.deeptadi_states[j] for j in range(a.deeptadi_count)],
             deeptadi_mask=a.deeptadi_mask,
-            lajjitadi=a.lajjitadi,
+            lajjitadi=a.lajjitadi if a.lajjitadi_valid else None,
+            lajjitadi_states=[a.lajjitadi_states[j] for j in range(a.lajjitadi_count)],
+            lajjitadi_mask=a.lajjitadi_mask,
             sayanadi=sayanadi,
         ))
     return AllGrahaAvasthas(entries=entries)

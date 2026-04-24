@@ -1408,7 +1408,20 @@ napi_value WriteAllGrahaAvasthas(napi_env env, const DhruvAllGrahaAvasthas& a) {
             napi_set_element(env, deeptadiStates, j, MakeUint32(env, e.deeptadi_states[j]));
         }
         SetNamed(env, eo, "deeptadiStates", deeptadiStates);
-        SetNamed(env, eo, "lajjitadi", MakeUint32(env, e.lajjitadi));
+        if (e.lajjitadi_valid != 0) {
+            SetNamed(env, eo, "lajjitadi", MakeUint32(env, e.lajjitadi));
+        } else {
+            napi_value nullv;
+            napi_get_null(env, &nullv);
+            SetNamed(env, eo, "lajjitadi", nullv);
+        }
+        SetNamed(env, eo, "lajjitadiMask", MakeUint32(env, e.lajjitadi_mask));
+        napi_value lajjitadiStates;
+        napi_create_array_with_length(env, e.lajjitadi_count, &lajjitadiStates);
+        for (uint32_t j = 0; j < e.lajjitadi_count && j < 6; ++j) {
+            napi_set_element(env, lajjitadiStates, j, MakeUint32(env, e.lajjitadi_states[j]));
+        }
+        SetNamed(env, eo, "lajjitadiStates", lajjitadiStates);
 
         napi_value sayanadi;
         napi_create_object(env, &sayanadi);

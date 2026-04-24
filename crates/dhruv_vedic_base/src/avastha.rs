@@ -280,6 +280,72 @@ impl LajjitadiAvastha {
     }
 }
 
+pub const LAJJITADI_STATE_COUNT: usize = 6;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LajjitadiAvasthaSet {
+    mask: u16,
+}
+
+impl LajjitadiAvasthaSet {
+    pub const EMPTY: Self = Self { mask: 0 };
+
+    pub const fn mask(self) -> u16 {
+        self.mask
+    }
+
+    pub const fn contains(self, avastha: LajjitadiAvastha) -> bool {
+        (self.mask & (1u16 << avastha.index())) != 0
+    }
+
+    pub fn insert(&mut self, avastha: LajjitadiAvastha) {
+        self.mask |= 1u16 << avastha.index();
+    }
+
+    pub fn count(self) -> usize {
+        self.mask.count_ones() as usize
+    }
+
+    pub fn primary(self) -> Option<LajjitadiAvastha> {
+        LAJJITADI_PRIORITY
+            .into_iter()
+            .find(|avastha| self.contains(*avastha))
+    }
+
+    pub fn as_indices(self) -> [u8; LAJJITADI_STATE_COUNT] {
+        let mut out = [0u8; LAJJITADI_STATE_COUNT];
+        let mut len = 0;
+        for avastha in LAJJITADI_PRIORITY {
+            if self.contains(avastha) {
+                out[len] = avastha.index();
+                len += 1;
+            }
+        }
+        out
+    }
+
+    pub fn as_names(self) -> [&'static str; LAJJITADI_STATE_COUNT] {
+        let mut out = [""; LAJJITADI_STATE_COUNT];
+        let mut len = 0;
+        for avastha in LAJJITADI_PRIORITY {
+            if self.contains(avastha) {
+                out[len] = avastha.name();
+                len += 1;
+            }
+        }
+        out
+    }
+}
+
+pub const LAJJITADI_PRIORITY: [LajjitadiAvastha; LAJJITADI_STATE_COUNT] = [
+    LajjitadiAvastha::Lajjita,
+    LajjitadiAvastha::Garvita,
+    LajjitadiAvastha::Kshudhita,
+    LajjitadiAvastha::Trushita,
+    LajjitadiAvastha::Kshobhita,
+    LajjitadiAvastha::Mudita,
+];
+
 /// Sayanadi Avastha — 12 posture-based states from BPHS Ch.45 formula.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SayanadiAvastha {
@@ -486,7 +552,10 @@ pub struct GrahaAvasthas {
     pub deeptadi: DeeptadiAvastha,
     /// All Deeptadi states whose conditions are satisfied.
     pub deeptadi_states: DeeptadiAvasthaSet,
-    pub lajjitadi: LajjitadiAvastha,
+    /// Primary Lajjitadi state for compatibility, or `None` when no condition applies.
+    pub lajjitadi: Option<LajjitadiAvastha>,
+    /// All Lajjitadi states whose conditions are satisfied.
+    pub lajjitadi_states: LajjitadiAvasthaSet,
     pub sayanadi: SayanadiResult,
 }
 
@@ -625,9 +694,85 @@ pub const fn is_inauspicious_deeptadi_rashi(rashi_index: u8) -> bool {
     matches!(rashi_index % 12, 0 | 1 | 3 | 8 | 9)
 }
 
-/// Lajjitadi Avastha — conjunctions, aspects, and bhava-based.
-///
-/// Priority: Lajjita → Garvita → Kshudhita → Trushita → Kshobhita → Mudita(default).
+/// Lajjitadi Avasthas — independently applicable mood conditions.
+pub fn lajjitadi_avasthas(
+    graha: Graha,
+    bhava_number: u8,
+    rashi_index: u8,
+    dignity: Dignity,
+    same_rashi_grahas: &[Graha],
+    aspecting_grahas: &[Graha],
+) -> LajjitadiAvasthaSet {
+    let mut states = LajjitadiAvasthaSet::EMPTY;
+
+    // Lajjita: in 5th house and conjunct Rahu/Ketu/Mangal/Shani.
+    if bhava_number == 5
+        && same_rashi_grahas
+            .iter()
+            .copied()
+            .any(is_lajjita_conjunction)
+    {
+        states.insert(LajjitadiAvastha::Lajjita);
+    }
+
+    // Garvita: exalted or moolatrikone
+    if dignity == Dignity::Exalted || dignity == Dignity::Moolatrikone {
+        states.insert(LajjitadiAvastha::Garvita);
+    }
+
+    let conjunct_natural_enemy = same_rashi_grahas
+        .iter()
+        .copied()
+        .any(|other| is_natural_enemy(graha, other));
+    let aspected_by_natural_enemy = aspecting_grahas
+        .iter()
+        .copied()
+        .any(|other| is_natural_enemy(graha, other));
+    let aspected_by_natural_friend = aspecting_grahas
+        .iter()
+        .copied()
+        .any(|other| is_natural_friend(graha, other));
+    let aspected_by_benefic = aspecting_grahas
+        .iter()
+        .any(|asp| natural_benefic_malefic(*asp) == BeneficNature::Benefic);
+    let aspected_by_malefic = aspecting_grahas.iter().any(|g| is_malefic(*g));
+
+    // Kshudhita: natural enemy sign, natural enemy conjunction, or Shani conjunction plus natural enemy aspect.
+    if matches!(
+        dignity,
+        Dignity::Shatru | Dignity::AdhiShatru | Dignity::Debilitated
+    ) || conjunct_natural_enemy
+        || (same_rashi_grahas.contains(&Graha::Shani) && aspected_by_natural_enemy)
+    {
+        states.insert(LajjitadiAvastha::Kshudhita);
+    }
+
+    // Trushita: in water sign + aspected by enemy + NOT aspected by any benefic
+    if WATER_RASHIS.contains(&rashi_index) && aspected_by_natural_enemy && !aspected_by_benefic {
+        states.insert(LajjitadiAvastha::Trushita);
+    }
+
+    // Kshobhita: conjunct Sun + aspected by a malefic + aspected by natural enemy.
+    let conjunct_sun = same_rashi_grahas.contains(&Graha::Surya);
+    if conjunct_sun && aspected_by_malefic && aspected_by_natural_enemy {
+        states.insert(LajjitadiAvastha::Kshobhita);
+    }
+
+    // Mudita: natural friend sign, natural friend conjunction, or Guru conjunction plus natural friend aspect.
+    if matches!(dignity, Dignity::Mitra | Dignity::AdhiMitra)
+        || same_rashi_grahas
+            .iter()
+            .copied()
+            .any(|other| is_natural_friend(graha, other))
+        || (same_rashi_grahas.contains(&Graha::Guru) && aspected_by_natural_friend)
+    {
+        states.insert(LajjitadiAvastha::Mudita);
+    }
+
+    states
+}
+
+/// Primary Lajjitadi Avastha for legacy single-state callers.
 pub fn lajjitadi_avastha(
     graha: Graha,
     bhava_number: u8,
@@ -635,44 +780,16 @@ pub fn lajjitadi_avastha(
     dignity: Dignity,
     same_rashi_grahas: &[Graha],
     aspecting_grahas: &[Graha],
-) -> LajjitadiAvastha {
-    // Lajjita: in 5th house AND conjunct a malefic
-    if bhava_number == 5 && same_rashi_grahas.iter().any(|g| is_malefic(*g)) {
-        return LajjitadiAvastha::Lajjita;
-    }
-
-    // Garvita: exalted or moolatrikone
-    if dignity == Dignity::Exalted || dignity == Dignity::Moolatrikone {
-        return LajjitadiAvastha::Garvita;
-    }
-
-    // Kshudhita: in enemy sign (Shatru or AdhiShatru dignity)
-    if dignity == Dignity::Shatru || dignity == Dignity::AdhiShatru {
-        return LajjitadiAvastha::Kshudhita;
-    }
-
-    // Trushita: in water sign + aspected by enemy + NOT aspected by any benefic
-    if WATER_RASHIS.contains(&rashi_index) {
-        let aspected_by_enemy = aspecting_grahas.iter().any(|asp| {
-            let maitri = naisargika_maitri(graha, *asp);
-            maitri == NaisargikaMaitri::Enemy
-        });
-        let aspected_by_benefic = aspecting_grahas
-            .iter()
-            .any(|asp| natural_benefic_malefic(*asp) == BeneficNature::Benefic);
-        if aspected_by_enemy && !aspected_by_benefic {
-            return LajjitadiAvastha::Trushita;
-        }
-    }
-
-    // Kshobhita: conjunct Sun + aspected by a malefic
-    let conjunct_sun = same_rashi_grahas.contains(&Graha::Surya);
-    let aspected_by_malefic = aspecting_grahas.iter().any(|g| is_malefic(*g));
-    if conjunct_sun && aspected_by_malefic {
-        return LajjitadiAvastha::Kshobhita;
-    }
-
-    LajjitadiAvastha::Mudita
+) -> Option<LajjitadiAvastha> {
+    lajjitadi_avasthas(
+        graha,
+        bhava_number,
+        rashi_index,
+        dignity,
+        same_rashi_grahas,
+        aspecting_grahas,
+    )
+    .primary()
 }
 
 /// Sayanadi Avastha — BPHS Ch.45 formula.
@@ -752,6 +869,21 @@ fn is_deeptadi_malefic_conjunction(graha: Graha) -> bool {
     graha != Graha::Surya && is_malefic(graha)
 }
 
+fn is_lajjita_conjunction(graha: Graha) -> bool {
+    matches!(
+        graha,
+        Graha::Rahu | Graha::Ketu | Graha::Mangal | Graha::Shani
+    )
+}
+
+fn is_natural_enemy(graha: Graha, other: Graha) -> bool {
+    naisargika_maitri(graha, other) == NaisargikaMaitri::Enemy
+}
+
+fn is_natural_friend(graha: Graha, other: Graha) -> bool {
+    naisargika_maitri(graha, other) == NaisargikaMaitri::Friend
+}
+
 /// Grahas sharing the same rashi as the given graha (excluding itself).
 fn same_rashi_grahas(graha_index: usize, rashi_indices: &[u8; 9]) -> Vec<Graha> {
     let target_rashi = rashi_indices[graha_index];
@@ -765,12 +897,12 @@ fn same_rashi_grahas(graha_index: usize, rashi_indices: &[u8; 9]) -> Vec<Graha> 
     result
 }
 
-/// Grahas aspecting the target with total_virupa >= 45.0 from the drishti matrix.
+/// Grahas aspecting the target with total_virupa > 45.0 from the drishti matrix.
 fn aspecting_grahas(target_index: usize, drishti_matrix: &GrahaDrishtiMatrix) -> Vec<Graha> {
     let mut result = Vec::new();
     for g in ALL_GRAHAS {
         let src = g.index() as usize;
-        if src != target_index && drishti_matrix.entries[src][target_index].total_virupa >= 45.0 {
+        if src != target_index && drishti_matrix.entries[src][target_index].total_virupa > 45.0 {
             result.push(g);
         }
     }
@@ -865,13 +997,22 @@ pub fn all_deeptadi_avastha_sets(
 }
 
 /// Compute Lajjitadi avastha for all 9 grahas.
-pub fn all_lajjitadi_avasthas(inputs: &LajjitadiInputs) -> [LajjitadiAvastha; 9] {
-    let mut result = [LajjitadiAvastha::Mudita; 9];
+pub fn all_lajjitadi_avasthas(inputs: &LajjitadiInputs) -> [Option<LajjitadiAvastha>; 9] {
+    let states = all_lajjitadi_avastha_sets(inputs);
+    let mut result = [None; 9];
+    for (i, state_set) in states.iter().enumerate() {
+        result[i] = state_set.primary();
+    }
+    result
+}
+
+pub fn all_lajjitadi_avastha_sets(inputs: &LajjitadiInputs) -> [LajjitadiAvasthaSet; 9] {
+    let mut result = [LajjitadiAvasthaSet::EMPTY; 9];
     for g in ALL_GRAHAS {
         let i = g.index() as usize;
         let same = same_rashi_grahas(i, &inputs.rashi_indices);
         let aspects = aspecting_grahas(i, &inputs.drishti_matrix);
-        result[i] = lajjitadi_avastha(
+        result[i] = lajjitadi_avasthas(
             g,
             inputs.bhava_numbers[i],
             inputs.rashi_indices[i],
@@ -917,7 +1058,7 @@ pub fn all_avasthas(inputs: &AvasthaInputs) -> AllGrahaAvasthas {
     let baladi = all_baladi_avasthas(&inputs.sidereal_lons, &inputs.rashi_indices);
     let jagradadi = all_jagradadi_avasthas(&inputs.dignities);
     let deeptadi_states = all_deeptadi_avastha_sets(&inputs.dignities, &inputs.rashi_indices);
-    let lajjitadi = all_lajjitadi_avasthas(&inputs.lajjitadi);
+    let lajjitadi_states = all_lajjitadi_avastha_sets(&inputs.lajjitadi);
     let sayanadi = all_sayanadi_avasthas(&inputs.sayanadi);
 
     let mut entries = [GrahaAvasthas {
@@ -925,7 +1066,8 @@ pub fn all_avasthas(inputs: &AvasthaInputs) -> AllGrahaAvasthas {
         jagradadi: JagradadiAvastha::Sushupta,
         deeptadi: DeeptadiAvastha::Shanta,
         deeptadi_states: DeeptadiAvasthaSet::EMPTY,
-        lajjitadi: LajjitadiAvastha::Mudita,
+        lajjitadi: None,
+        lajjitadi_states: LajjitadiAvasthaSet::EMPTY,
         sayanadi: SayanadiResult {
             avastha: SayanadiAvastha::Sayana,
             sub_states: [SayanadiSubState::Vicheshta; 5],
@@ -938,7 +1080,8 @@ pub fn all_avasthas(inputs: &AvasthaInputs) -> AllGrahaAvasthas {
             jagradadi: jagradadi[i],
             deeptadi: deeptadi_states[i].primary(),
             deeptadi_states: deeptadi_states[i],
-            lajjitadi: lajjitadi[i],
+            lajjitadi: lajjitadi_states[i].primary(),
+            lajjitadi_states: lajjitadi_states[i],
             sayanadi: sayanadi[i],
         };
     }
@@ -1142,7 +1285,7 @@ mod tests {
                 &[Graha::Shani], // malefic conjunct
                 &[],
             ),
-            LajjitadiAvastha::Lajjita,
+            Some(LajjitadiAvastha::Lajjita),
         );
     }
 
@@ -1150,7 +1293,7 @@ mod tests {
     fn lajjitadi_exalted() {
         assert_eq!(
             lajjitadi_avastha(Graha::Guru, 1, 0, Dignity::Exalted, &[], &[],),
-            LajjitadiAvastha::Garvita,
+            Some(LajjitadiAvastha::Garvita),
         );
     }
 
@@ -1158,15 +1301,38 @@ mod tests {
     fn lajjitadi_enemy_sign() {
         assert_eq!(
             lajjitadi_avastha(Graha::Guru, 1, 0, Dignity::Shatru, &[], &[],),
-            LajjitadiAvastha::Kshudhita,
+            Some(LajjitadiAvastha::Kshudhita),
         );
     }
 
     #[test]
-    fn lajjitadi_default_mudita() {
+    fn lajjitadi_no_default_when_no_condition_matches() {
         assert_eq!(
             lajjitadi_avastha(Graha::Guru, 1, 0, Dignity::Sama, &[], &[],),
-            LajjitadiAvastha::Mudita,
+            None,
+        );
+    }
+
+    #[test]
+    fn lajjitadi_collects_multiple_applicable_states() {
+        let states = lajjitadi_avasthas(
+            Graha::Guru,
+            5,
+            11,
+            Dignity::Mitra,
+            &[Graha::Shani, Graha::Shukra],
+            &[Graha::Buddh],
+        );
+        assert!(states.contains(LajjitadiAvastha::Lajjita));
+        assert!(states.contains(LajjitadiAvastha::Kshudhita));
+        assert!(states.contains(LajjitadiAvastha::Mudita));
+    }
+
+    #[test]
+    fn lajjitadi_friend_sign_is_mudita() {
+        assert_eq!(
+            lajjitadi_avastha(Graha::Guru, 1, 0, Dignity::Mitra, &[], &[],),
+            Some(LajjitadiAvastha::Mudita),
         );
     }
 
@@ -1183,7 +1349,7 @@ mod tests {
                 &[Graha::Shukra], // Venus is enemy of Sun, and Venus is benefic...
             ),
             // Venus is a natural benefic, so aspected_by_benefic = true → NOT Trushita
-            LajjitadiAvastha::Mudita,
+            None,
         );
         // Now with only Saturn (malefic enemy of Sun)
         assert_eq!(
@@ -1195,8 +1361,10 @@ mod tests {
                 &[],
                 &[Graha::Shani], // Saturn is enemy of Sun, malefic
             ),
-            LajjitadiAvastha::Trushita,
+            Some(LajjitadiAvastha::Trushita),
         );
+        let states = lajjitadi_avasthas(Graha::Surya, 1, 3, Dignity::Sama, &[], &[Graha::Shani]);
+        assert!(states.contains(LajjitadiAvastha::Trushita));
     }
 
     #[test]
@@ -1207,10 +1375,10 @@ mod tests {
                 1,
                 0,
                 Dignity::Sama,
-                &[Graha::Surya],  // conjunct Sun
-                &[Graha::Mangal], // aspected by malefic
+                &[Graha::Surya],                 // conjunct Sun
+                &[Graha::Mangal, Graha::Shukra], // malefic aspect + natural enemy aspect
             ),
-            LajjitadiAvastha::Kshobhita,
+            Some(LajjitadiAvastha::Kshobhita),
         );
     }
 
@@ -1429,7 +1597,7 @@ mod tests {
         // Sun is exalted → Jagrat, Deepta, Garvita
         assert_eq!(result.entries[0].jagradadi, JagradadiAvastha::Jagrat);
         assert_eq!(result.entries[0].deeptadi, DeeptadiAvastha::Deepta);
-        assert_eq!(result.entries[0].lajjitadi, LajjitadiAvastha::Garvita);
+        assert_eq!(result.entries[0].lajjitadi, Some(LajjitadiAvastha::Garvita));
     }
 
     // --- birth_ghatikas floor behavior ---

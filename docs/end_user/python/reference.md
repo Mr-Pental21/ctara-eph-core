@@ -276,7 +276,8 @@ variation codes, names, labels, and defaults for each amsha.
 
 Avastha entries expose `deeptadi` as the primary compatibility index and
 `deeptadi_states` / `deeptadi_mask` as the full set of Deeptadi states that
-apply to the graha.
+apply to the graha. They also expose `lajjitadi`, `lajjitadi_states`, and
+`lajjitadi_mask`; `lajjitadi is None` when no Lajjitadi condition applies.
 
 `amsha`:
 

@@ -1129,7 +1129,9 @@ class GrahaAvasthas:
     ``deeptadi``: primary DeeptadiAvastha index (0-8).
     ``deeptadi_states``: all applicable DeeptadiAvastha indices.
     ``deeptadi_mask``: bit mask of all applicable DeeptadiAvastha indices.
-    ``lajjitadi``: LajjitadiAvastha index (0-5).
+    ``lajjitadi``: primary LajjitadiAvastha index (0-5), or ``None``.
+    ``lajjitadi_states``: all applicable LajjitadiAvastha indices.
+    ``lajjitadi_mask``: bit mask of all applicable LajjitadiAvastha indices.
     """
 
     baladi: int
@@ -1137,7 +1139,9 @@ class GrahaAvasthas:
     deeptadi: int
     deeptadi_states: list[int]
     deeptadi_mask: int
-    lajjitadi: int
+    lajjitadi: int | None
+    lajjitadi_states: list[int]
+    lajjitadi_mask: int
     sayanadi: SayanadiResult
 
 

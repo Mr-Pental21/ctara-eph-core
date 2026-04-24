@@ -141,6 +141,9 @@ resolved amsha union used by the call.
 `GrahaAvasthas.deeptadi` is the primary compatibility Deeptadi state.
 `GrahaAvasthas.deeptadi_states` is the authoritative full set of Deeptadi
 states satisfied by that graha.
+`GrahaAvasthas.lajjitadi` is `None` when no Lajjitadi condition applies;
+`GrahaAvasthas.lajjitadi_states` is the authoritative full set of Lajjitadi
+states satisfied by that graha.
 
 Rahu owns Kumbha and Ketu owns Vrischika for node dignity in the default
 sign-lord-based policy. Chara-style dasha period selection uses dual lordship

@@ -41,7 +41,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       62
+#define DHRUV_API_VERSION       63
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 #define DHRUV_MAX_AMSHA_VARIATIONS 16
@@ -1347,6 +1347,10 @@ typedef struct {
     uint8_t             deeptadi_count;
     uint8_t             deeptadi_states[9];
     uint8_t             lajjitadi;
+    uint8_t             lajjitadi_valid;
+    uint16_t            lajjitadi_mask;
+    uint8_t             lajjitadi_count;
+    uint8_t             lajjitadi_states[6];
     DhruvSayanadiResult sayanadi;
 } DhruvGrahaAvasthas;
 

@@ -8478,7 +8478,7 @@ fn main() {
                         entry.baladi.name(),
                         entry.jagradadi.name(),
                         format_deeptadi_states(entry),
-                        entry.lajjitadi.name(),
+                        format_lajjitadi_states(entry),
                         entry.sayanadi.avastha.name(),
                     );
                 }
@@ -9797,6 +9797,15 @@ fn format_deeptadi_states(entry: &dhruv_vedic_base::GrahaAvasthas) -> String {
     names[..count].join(",")
 }
 
+fn format_lajjitadi_states(entry: &dhruv_vedic_base::GrahaAvasthas) -> String {
+    let names = entry.lajjitadi_states.as_names();
+    let count = entry.lajjitadi_states.count();
+    if count == 0 {
+        return "None".to_string();
+    }
+    names[..count].join(",")
+}
+
 fn print_graha_avastha(entry: &dhruv_vedic_base::GrahaAvasthas) {
     println!(
         "  Baladi:     {} (strength {:.2})",
@@ -9814,11 +9823,16 @@ fn print_graha_avastha(entry: &dhruv_vedic_base::GrahaAvasthas) {
         entry.deeptadi.name(),
         entry.deeptadi.strength_factor()
     );
-    println!(
-        "  Lajjitadi:  {} (strength {:.2})",
-        entry.lajjitadi.name(),
-        entry.lajjitadi.strength_factor()
-    );
+    if let Some(primary) = entry.lajjitadi {
+        println!(
+            "  Lajjitadi:  {} (primary {}, strength {:.2})",
+            format_lajjitadi_states(entry),
+            primary.name(),
+            primary.strength_factor()
+        );
+    } else {
+        println!("  Lajjitadi:  None");
+    }
     println!("  Sayanadi:   {}", entry.sayanadi.avastha.name());
     let group_names = ["Ka", "Cha", "Ta(r)", "Ta(d)", "Pa"];
     for (i, ss) in entry.sayanadi.sub_states.iter().enumerate() {
@@ -10589,7 +10603,7 @@ fn print_kundali(
                 e.baladi.name(),
                 e.jagradadi.name(),
                 format_deeptadi_states(e),
-                e.lajjitadi.name(),
+                format_lajjitadi_states(e),
                 e.sayanadi.avastha.name(),
             )?;
         }

@@ -91,14 +91,22 @@ func goGrahaAvasthas(e C.DhruvGrahaAvasthas) GrahaAvasthas {
 	for j := 0; j < 9; j++ {
 		deeptadiStates[j] = uint8(e.deeptadi_states[j])
 	}
+	var lajjitadiStates [6]uint8
+	for j := 0; j < 6; j++ {
+		lajjitadiStates[j] = uint8(e.lajjitadi_states[j])
+	}
 	return GrahaAvasthas{
-		Baladi:         uint8(e.baladi),
-		Jagradadi:      uint8(e.jagradadi),
-		Deeptadi:       uint8(e.deeptadi),
-		DeeptadiMask:   uint16(e.deeptadi_mask),
-		DeeptadiCount:  uint8(e.deeptadi_count),
-		DeeptadiStates: deeptadiStates,
-		Lajjitadi:      uint8(e.lajjitadi),
+		Baladi:          uint8(e.baladi),
+		Jagradadi:       uint8(e.jagradadi),
+		Deeptadi:        uint8(e.deeptadi),
+		DeeptadiMask:    uint16(e.deeptadi_mask),
+		DeeptadiCount:   uint8(e.deeptadi_count),
+		DeeptadiStates:  deeptadiStates,
+		Lajjitadi:       uint8(e.lajjitadi),
+		LajjitadiValid:  e.lajjitadi_valid != 0,
+		LajjitadiMask:   uint16(e.lajjitadi_mask),
+		LajjitadiCount:  uint8(e.lajjitadi_count),
+		LajjitadiStates: lajjitadiStates,
 		Sayanadi: SayanadiResult{
 			Avastha:   uint8(e.sayanadi.avastha),
 			SubStates: sub,

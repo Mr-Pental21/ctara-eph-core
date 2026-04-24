@@ -92,20 +92,23 @@ declination loses. Only Mars, Mercury, Jupiter, Venus, Saturn participate.
 
 ## 4. Lajjitadi Avastha (Emotional-Based)
 
-Six states determined by house placement, conjunctions, and aspects:
+Six states determined by independently applicable house placement,
+conjunction, dignity, and aspect conditions. A graha may have multiple
+Lajjitadi states, or no Lajjitadi state when no condition applies.
 
-| Priority | Condition                                         | State     |
-|----------|---------------------------------------------------|-----------|
-| 1        | In 5th house + conjunct a malefic                 | Lajjita   |
-| 2        | Exalted or Moolatrikone                           | Garvita   |
-| 3        | In enemy sign (Shatru/AdhiShatru/Debilitated)     | Kshudhita |
-| 4        | In water sign + enemy aspect - no benefic          | Trushita  |
-| 5        | Conjunct Sun + aspected by malefic                | Kshobhita |
-| 6        | Default                                           | Mudita    |
+| Primary order | Condition                                      | State     |
+|---------------|------------------------------------------------|-----------|
+| 1             | 5th bhava + conjunct Rahu/Ketu/Mangal/Shani    | Lajjita   |
+| 2             | Exalted or Moolatrikone                        | Garvita   |
+| 3             | Natural enemy sign/conjunction, or conjunct Shani and aspected by natural enemy | Kshudhita |
+| 4             | Water sign + natural enemy aspect + no benefic aspect | Trushita  |
+| 5             | Conjunct Surya + malefic aspect + natural enemy aspect | Kshobhita |
+| 6             | Natural friend sign/conjunction, or conjunct Guru and aspected by natural friend | Mudita    |
 
 **Definitions:**
-- Malefic: via `natural_benefic_malefic()` (Mars, Saturn, Rahu, Ketu, plus waning Moon)
-- Aspected by: grahas with `total_virupa >= 45.0` from drishti matrix
+- Malefic: via `natural_benefic_malefic()`.
+- Natural friend/enemy: via `naisargika_maitri(graha, other)`.
+- Aspected by: grahas with `total_virupa > 45.0` from drishti matrix.
 - Water signs: Karka (3), Vrischika (7), Meena (11)
 - Same rashi = conjunction
 

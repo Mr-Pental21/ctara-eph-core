@@ -92,11 +92,13 @@ fn avastha_all_nine_valid() {
             df >= 0.0 && df <= 1.0,
             "deeptadi strength for graha {i}: {df}"
         );
-        let lf = entry.lajjitadi.strength_factor();
-        assert!(
-            lf >= 0.0 && lf <= 1.0,
-            "lajjitadi strength for graha {i}: {lf}"
-        );
+        if let Some(lajjitadi) = entry.lajjitadi {
+            let lf = lajjitadi.strength_factor();
+            assert!(
+                lf >= 0.0 && lf <= 1.0,
+                "lajjitadi strength for graha {i}: {lf}"
+            );
+        }
         // Sayanadi: index 0-11
         assert!(
             entry.sayanadi.avastha.index() < 12,
@@ -171,10 +173,11 @@ fn avastha_single_graha_matches_all() {
             all.entries[i].deeptadi_states.mask(),
             "deeptadi state-set mismatch for graha {i}"
         );
+        assert_eq!(single.lajjitadi, all.entries[i].lajjitadi);
         assert_eq!(
-            single.lajjitadi.index(),
-            all.entries[i].lajjitadi.index(),
-            "lajjitadi mismatch for graha {i}"
+            single.lajjitadi_states.mask(),
+            all.entries[i].lajjitadi_states.mask(),
+            "lajjitadi state-set mismatch for graha {i}"
         );
         assert_eq!(
             single.sayanadi.avastha.index(),
@@ -282,7 +285,8 @@ fn avastha_accepts_explicit_default_amsha_selection() {
         assert_eq!(lhs.jagradadi.index(), rhs.jagradadi.index());
         assert_eq!(lhs.deeptadi.index(), rhs.deeptadi.index());
         assert_eq!(lhs.deeptadi_states.mask(), rhs.deeptadi_states.mask());
-        assert_eq!(lhs.lajjitadi.index(), rhs.lajjitadi.index());
+        assert_eq!(lhs.lajjitadi, rhs.lajjitadi);
+        assert_eq!(lhs.lajjitadi_states.mask(), rhs.lajjitadi_states.mask());
         assert_eq!(lhs.sayanadi.avastha.index(), rhs.sayanadi.avastha.index());
     }
 }

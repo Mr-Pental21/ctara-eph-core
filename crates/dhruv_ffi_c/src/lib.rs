@@ -58,7 +58,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 62;
+pub const DHRUV_API_VERSION: u32 = 63;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -10851,8 +10851,16 @@ pub struct DhruvGrahaAvasthas {
     pub deeptadi_count: u8,
     /// Applicable DeeptadiAvastha indices in stable priority order.
     pub deeptadi_states: [u8; 9],
-    /// LajjitadiAvastha index (0-5).
+    /// Primary LajjitadiAvastha index (0-5), or 255 when no condition applies.
     pub lajjitadi: u8,
+    /// 1 when `lajjitadi` contains a primary state, 0 when no condition applies.
+    pub lajjitadi_valid: u8,
+    /// Bit mask of every applicable LajjitadiAvastha.
+    pub lajjitadi_mask: u16,
+    /// Number of populated entries in `lajjitadi_states`.
+    pub lajjitadi_count: u8,
+    /// Applicable LajjitadiAvastha indices in stable priority order.
+    pub lajjitadi_states: [u8; 6],
     /// Sayanadi result with primary + 5 sub-states.
     pub sayanadi: DhruvSayanadiResult,
 }
@@ -11309,7 +11317,11 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
                         deeptadi_mask: e.deeptadi_states.mask(),
                         deeptadi_count: e.deeptadi_states.count() as u8,
                         deeptadi_states: e.deeptadi_states.as_indices(),
-                        lajjitadi: e.lajjitadi.index(),
+                        lajjitadi: e.lajjitadi.map_or(u8::MAX, |a| a.index()),
+                        lajjitadi_valid: u8::from(e.lajjitadi.is_some()),
+                        lajjitadi_mask: e.lajjitadi_states.mask(),
+                        lajjitadi_count: e.lajjitadi_states.count() as u8,
+                        lajjitadi_states: e.lajjitadi_states.as_indices(),
                         sayanadi: DhruvSayanadiResult {
                             avastha: e.sayanadi.avastha.index(),
                             sub_states: [
@@ -12128,7 +12140,11 @@ pub unsafe extern "C" fn dhruv_avastha_for_date(
                     deeptadi_mask: e.deeptadi_states.mask(),
                     deeptadi_count: e.deeptadi_states.count() as u8,
                     deeptadi_states: e.deeptadi_states.as_indices(),
-                    lajjitadi: e.lajjitadi.index(),
+                    lajjitadi: e.lajjitadi.map_or(u8::MAX, |a| a.index()),
+                    lajjitadi_valid: u8::from(e.lajjitadi.is_some()),
+                    lajjitadi_mask: e.lajjitadi_states.mask(),
+                    lajjitadi_count: e.lajjitadi_states.count() as u8,
+                    lajjitadi_states: e.lajjitadi_states.as_indices(),
                     sayanadi: DhruvSayanadiResult {
                         avastha: e.sayanadi.avastha.index(),
                         sub_states: [

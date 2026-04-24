@@ -35,7 +35,7 @@ use dhruv_vedic_base::{
     default_amsha_variation, dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise,
     graha_drishti, graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord,
     is_valid_amsha_variation, jagradadi_avastha, jd_tdb_to_centuries, kala_abda_lord,
-    kala_masa_lord, lagna_longitude_rad, lajjitadi_avastha, lost_planetary_war,
+    kala_masa_lord, lagna_longitude_rad, lajjitadi_avasthas, lost_planetary_war,
     lunar_node_deg_for_epoch_on_plane, nakshatra_from_longitude, node_dignity_in_rashi,
     node_dignity_in_rashi_with_temporal_context, normalize_360, nth_rashi_from, own_signs,
     pranapada_lagna, rashi_from_longitude, rashi_lord_by_index, sayanadi_all_sub_states,
@@ -3616,7 +3616,7 @@ fn graha_avasthas_from_inputs(inputs: &AvasthaInputs, graha: Graha) -> GrahaAvas
         .filter(|other| {
             let other_index = other.index() as usize;
             other_index != index
-                && inputs.lajjitadi.drishti_matrix.entries[other_index][index].total_virupa >= 45.0
+                && inputs.lajjitadi.drishti_matrix.entries[other_index][index].total_virupa > 45.0
         })
         .collect::<Vec<_>>();
     let sayanadi = sayanadi_avastha(
@@ -3632,19 +3632,21 @@ fn graha_avasthas_from_inputs(inputs: &AvasthaInputs, graha: Graha) -> GrahaAvas
         inputs.rashi_indices[index],
         &same_rashi,
     );
+    let lajjitadi_states = lajjitadi_avasthas(
+        graha,
+        inputs.bhava_numbers[index],
+        inputs.rashi_indices[index],
+        inputs.dignities[index],
+        &same_rashi,
+        &aspecting,
+    );
     GrahaAvasthas {
         baladi: baladi_avastha(inputs.sidereal_lons[index], inputs.rashi_indices[index]),
         jagradadi: jagradadi_avastha(inputs.dignities[index]),
         deeptadi: deeptadi_states.primary(),
         deeptadi_states,
-        lajjitadi: lajjitadi_avastha(
-            graha,
-            inputs.bhava_numbers[index],
-            inputs.rashi_indices[index],
-            inputs.dignities[index],
-            &same_rashi,
-            &aspecting,
-        ),
+        lajjitadi: lajjitadi_states.primary(),
+        lajjitadi_states,
         sayanadi: SayanadiResult {
             avastha: sayanadi,
             sub_states: sayanadi_all_sub_states(sayanadi, graha),
