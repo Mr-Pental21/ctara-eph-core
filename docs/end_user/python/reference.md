@@ -274,6 +274,10 @@ The standalone bala helpers accept an `amsha_selection` argument. Embedded
 call. Use `amsha_variations` and `amsha_variations_many` to discover valid
 variation codes, names, labels, and defaults for each amsha.
 
+Avastha entries expose `deeptadi` as the primary compatibility index and
+`deeptadi_states` / `deeptadi_mask` as the full set of Deeptadi states that
+apply to the graha.
+
 `amsha`:
 
 - `amsha_longitude`

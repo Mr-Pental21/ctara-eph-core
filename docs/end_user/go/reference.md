@@ -373,6 +373,10 @@ Search:
 accept `AmshaSelection`. Embedded `FullKundaliResult.Amshas` returns the
 resolved amsha union used by the call.
 
+Avastha entries expose `Deeptadi` as the primary compatibility index and
+`DeeptadiStates` / `DeeptadiMask` as the full set of Deeptadi states that apply
+to the graha.
+
 `DashaSelectionConfig` supports per-system hierarchy depth through `MaxLevels`
 and optional full-kundali snapshots through `SnapshotTime`, typically with
 `TimeKind = DashaTimeUTC` plus `UTC`.

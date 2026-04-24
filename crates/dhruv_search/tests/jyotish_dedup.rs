@@ -234,6 +234,10 @@ fn single_item_endpoints_match_full_results() {
     assert_eq!(avastha_single.baladi, full_avastha.baladi);
     assert_eq!(avastha_single.jagradadi, full_avastha.jagradadi);
     assert_eq!(avastha_single.deeptadi, full_avastha.deeptadi);
+    assert_eq!(
+        avastha_single.deeptadi_states.mask(),
+        full_avastha.deeptadi_states.mask()
+    );
     assert_eq!(avastha_single.lajjitadi, full_avastha.lajjitadi);
     assert_eq!(
         avastha_single.sayanadi.avastha,

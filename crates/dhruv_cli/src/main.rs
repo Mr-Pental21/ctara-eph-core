@@ -8467,17 +8467,17 @@ fn main() {
                     args.date, args.lat, args.lon
                 );
                 println!(
-                    "{:<8} {:>10} {:>10} {:>10} {:>10} {:>12}",
+                    "{:<8} {:>10} {:>10} {:>30} {:>10} {:>12}",
                     "Graha", "Baladi", "Jagradadi", "Deeptadi", "Lajjitadi", "Sayanadi"
                 );
-                println!("{}", "-".repeat(68));
+                println!("{}", "-".repeat(88));
                 for (i, entry) in result.entries.iter().enumerate() {
                     println!(
-                        "{:<8} {:>10} {:>10} {:>10} {:>10} {:>12}",
+                        "{:<8} {:>10} {:>10} {:>30} {:>10} {:>12}",
                         graha_names[i],
                         entry.baladi.name(),
                         entry.jagradadi.name(),
-                        entry.deeptadi.name(),
+                        format_deeptadi_states(entry),
                         entry.lajjitadi.name(),
                         entry.sayanadi.avastha.name(),
                     );
@@ -9788,6 +9788,15 @@ fn print_bhavabala_entry(entry: &dhruv_search::BhavaBalaEntry) {
     );
 }
 
+fn format_deeptadi_states(entry: &dhruv_vedic_base::GrahaAvasthas) -> String {
+    let names = entry.deeptadi_states.as_names();
+    let count = entry.deeptadi_states.count();
+    if count == 0 {
+        return entry.deeptadi.name().to_string();
+    }
+    names[..count].join(",")
+}
+
 fn print_graha_avastha(entry: &dhruv_vedic_base::GrahaAvasthas) {
     println!(
         "  Baladi:     {} (strength {:.2})",
@@ -9800,7 +9809,8 @@ fn print_graha_avastha(entry: &dhruv_vedic_base::GrahaAvasthas) {
         entry.jagradadi.strength_factor()
     );
     println!(
-        "  Deeptadi:   {} (strength {:.2})",
+        "  Deeptadi:   {} (primary {}, strength {:.2})",
+        format_deeptadi_states(entry),
         entry.deeptadi.name(),
         entry.deeptadi.strength_factor()
     );
@@ -10567,18 +10577,18 @@ fn print_kundali(
         writeln!(w, "Graha Avasthas:")?;
         writeln!(
             w,
-            "  {:<8} {:<12} {:<12} {:<12} {:<12} {:<12}",
+            "  {:<8} {:<12} {:<12} {:<30} {:<12} {:<12}",
             "Graha", "Baladi", "Jagradadi", "Deeptadi", "Lajjitadi", "Sayanadi"
         )?;
-        writeln!(w, "  {}", "-".repeat(72))?;
+        writeln!(w, "  {}", "-".repeat(90))?;
         for (i, e) in av.entries.iter().enumerate() {
             writeln!(
                 w,
-                "  {:<8} {:<12} {:<12} {:<12} {:<12} {:<12}",
+                "  {:<8} {:<12} {:<12} {:<30} {:<12} {:<12}",
                 graha_names[i],
                 e.baladi.name(),
                 e.jagradadi.name(),
-                e.deeptadi.name(),
+                format_deeptadi_states(e),
                 e.lajjitadi.name(),
                 e.sayanadi.avastha.name(),
             )?;

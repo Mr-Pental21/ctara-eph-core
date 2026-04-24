@@ -149,6 +149,9 @@ For `shadbala`, `vimsopaka`, `balas`, `avastha`, and `kundali`, use
 resolved union of explicit selections and internally required bala/avastha
 amshas.
 
+`avastha` and `kundali --include-avastha` print every Deeptadi state that
+applies to each graha, comma-separated.
+
 `osculating-apogee` returns moving heliocentric osculating apogee longitudes for
 `Mangal,Buddh,Guru,Shukra,Shani`:
 

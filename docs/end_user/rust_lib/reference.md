@@ -138,6 +138,10 @@ The standalone shadbala, vimsopaka, balas, and avastha surfaces now share
 `AmshaSelectionConfig`, and embedded `full_kundali(...).amshas` returns the
 resolved amsha union used by the call.
 
+`GrahaAvasthas.deeptadi` is the primary compatibility Deeptadi state.
+`GrahaAvasthas.deeptadi_states` is the authoritative full set of Deeptadi
+states satisfied by that graha.
+
 Rahu owns Kumbha and Ketu owns Vrischika for node dignity in the default
 sign-lord-based policy. Chara-style dasha period selection uses dual lordship
 for Kumbha (`Shani`/`Rahu`) and Vrischika (`Mangal`/`Ketu`); ordinary primary

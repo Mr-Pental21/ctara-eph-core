@@ -82,6 +82,30 @@ func goOptionalUTC(valid bool, utc C.DhruvUtcTime) *UtcTime {
 	return &value
 }
 
+func goGrahaAvasthas(e C.DhruvGrahaAvasthas) GrahaAvasthas {
+	var sub [5]uint8
+	for j := 0; j < 5; j++ {
+		sub[j] = uint8(e.sayanadi.sub_states[j])
+	}
+	var deeptadiStates [9]uint8
+	for j := 0; j < 9; j++ {
+		deeptadiStates[j] = uint8(e.deeptadi_states[j])
+	}
+	return GrahaAvasthas{
+		Baladi:         uint8(e.baladi),
+		Jagradadi:      uint8(e.jagradadi),
+		Deeptadi:       uint8(e.deeptadi),
+		DeeptadiMask:   uint16(e.deeptadi_mask),
+		DeeptadiCount:  uint8(e.deeptadi_count),
+		DeeptadiStates: deeptadiStates,
+		Lajjitadi:      uint8(e.lajjitadi),
+		Sayanadi: SayanadiResult{
+			Avastha:   uint8(e.sayanadi.avastha),
+			SubStates: sub,
+		},
+	}
+}
+
 func isZeroUTC(utc UtcTime) bool {
 	return utc.Year == 0 &&
 		utc.Month == 0 &&
@@ -2063,21 +2087,7 @@ func AvasthaForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoLoca
 	))
 	var res AllGrahaAvasthas
 	for i := 0; i < GrahaCount; i++ {
-		e := out.entries[i]
-		var sub [5]uint8
-		for j := 0; j < 5; j++ {
-			sub[j] = uint8(e.sayanadi.sub_states[j])
-		}
-		res.Entries[i] = GrahaAvasthas{
-			Baladi:    uint8(e.baladi),
-			Jagradadi: uint8(e.jagradadi),
-			Deeptadi:  uint8(e.deeptadi),
-			Lajjitadi: uint8(e.lajjitadi),
-			Sayanadi: SayanadiResult{
-				Avastha:   uint8(e.sayanadi.avastha),
-				SubStates: sub,
-			},
-		}
+		res.Entries[i] = goGrahaAvasthas(out.entries[i])
 	}
 	return res, st
 }
@@ -2421,11 +2431,7 @@ func FullKundaliForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc Geo
 	if out.avastha_valid != 0 {
 		var v AllGrahaAvasthas
 		for i := 0; i < GrahaCount; i++ {
-			e := out.avastha.entries[i]
-			v.Entries[i] = GrahaAvasthas{
-				Baladi: uint8(e.baladi), Jagradadi: uint8(e.jagradadi), Deeptadi: uint8(e.deeptadi), Lajjitadi: uint8(e.lajjitadi),
-				Sayanadi: SayanadiResult{Avastha: uint8(e.sayanadi.avastha), SubStates: [5]uint8{uint8(e.sayanadi.sub_states[0]), uint8(e.sayanadi.sub_states[1]), uint8(e.sayanadi.sub_states[2]), uint8(e.sayanadi.sub_states[3]), uint8(e.sayanadi.sub_states[4])}},
-			}
+			v.Entries[i] = goGrahaAvasthas(out.avastha.entries[i])
 		}
 		res.Avastha = &v
 	}

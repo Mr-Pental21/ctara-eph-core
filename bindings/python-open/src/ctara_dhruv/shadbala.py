@@ -516,6 +516,8 @@ def avastha(
             baladi=a.baladi,
             jagradadi=a.jagradadi,
             deeptadi=a.deeptadi,
+            deeptadi_states=[a.deeptadi_states[j] for j in range(a.deeptadi_count)],
+            deeptadi_mask=a.deeptadi_mask,
             lajjitadi=a.lajjitadi,
             sayanadi=sayanadi,
         ))

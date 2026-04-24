@@ -167,6 +167,11 @@ fn avastha_single_graha_matches_all() {
             "deeptadi mismatch for graha {i}"
         );
         assert_eq!(
+            single.deeptadi_states.mask(),
+            all.entries[i].deeptadi_states.mask(),
+            "deeptadi state-set mismatch for graha {i}"
+        );
+        assert_eq!(
             single.lajjitadi.index(),
             all.entries[i].lajjitadi.index(),
             "lajjitadi mismatch for graha {i}"
@@ -276,6 +281,7 @@ fn avastha_accepts_explicit_default_amsha_selection() {
         assert_eq!(lhs.baladi.index(), rhs.baladi.index());
         assert_eq!(lhs.jagradadi.index(), rhs.jagradadi.index());
         assert_eq!(lhs.deeptadi.index(), rhs.deeptadi.index());
+        assert_eq!(lhs.deeptadi_states.mask(), rhs.deeptadi_states.mask());
         assert_eq!(lhs.lajjitadi.index(), rhs.lajjitadi.index());
         assert_eq!(lhs.sayanadi.avastha.index(), rhs.sayanadi.avastha.index());
     }

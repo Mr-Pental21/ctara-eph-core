@@ -155,6 +155,85 @@ impl DeeptadiAvastha {
     }
 }
 
+pub const DEEPTADI_STATE_COUNT: usize = 9;
+
+/// All Deeptadi states applicable to one graha.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DeeptadiAvasthaSet {
+    mask: u16,
+}
+
+impl DeeptadiAvasthaSet {
+    pub const EMPTY: Self = Self { mask: 0 };
+
+    pub const fn from_mask(mask: u16) -> Self {
+        Self {
+            mask: mask & ((1u16 << DEEPTADI_STATE_COUNT) - 1),
+        }
+    }
+
+    pub const fn mask(self) -> u16 {
+        self.mask
+    }
+
+    pub const fn contains(self, avastha: DeeptadiAvastha) -> bool {
+        (self.mask & (1u16 << avastha.index())) != 0
+    }
+
+    pub fn insert(&mut self, avastha: DeeptadiAvastha) {
+        self.mask |= 1u16 << avastha.index();
+    }
+
+    pub fn count(self) -> usize {
+        self.mask.count_ones() as usize
+    }
+
+    pub fn primary(self) -> DeeptadiAvastha {
+        for avastha in DEEPTADI_PRIORITY {
+            if self.contains(avastha) {
+                return avastha;
+            }
+        }
+        DeeptadiAvastha::Deena
+    }
+
+    pub fn as_indices(self) -> [u8; DEEPTADI_STATE_COUNT] {
+        let mut out = [0u8; DEEPTADI_STATE_COUNT];
+        let mut len = 0;
+        for avastha in DEEPTADI_PRIORITY {
+            if self.contains(avastha) {
+                out[len] = avastha.index();
+                len += 1;
+            }
+        }
+        out
+    }
+
+    pub fn as_names(self) -> [&'static str; DEEPTADI_STATE_COUNT] {
+        let mut out = [""; DEEPTADI_STATE_COUNT];
+        let mut len = 0;
+        for avastha in DEEPTADI_PRIORITY {
+            if self.contains(avastha) {
+                out[len] = avastha.name();
+                len += 1;
+            }
+        }
+        out
+    }
+}
+
+pub const DEEPTADI_PRIORITY: [DeeptadiAvastha; DEEPTADI_STATE_COUNT] = [
+    DeeptadiAvastha::Deepta,
+    DeeptadiAvastha::Swastha,
+    DeeptadiAvastha::Kopa,
+    DeeptadiAvastha::Vikala,
+    DeeptadiAvastha::Khala,
+    DeeptadiAvastha::Pramudita,
+    DeeptadiAvastha::Shanta,
+    DeeptadiAvastha::Deena,
+    DeeptadiAvastha::Dukhita,
+];
+
 /// Lajjitadi Avastha — mood-based state from conjunctions and aspects.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LajjitadiAvastha {
@@ -403,7 +482,10 @@ pub struct SayanadiResult {
 pub struct GrahaAvasthas {
     pub baladi: BaladiAvastha,
     pub jagradadi: JagradadiAvastha,
+    /// Primary Deeptadi state for compatibility.
     pub deeptadi: DeeptadiAvastha,
+    /// All Deeptadi states whose conditions are satisfied.
+    pub deeptadi_states: DeeptadiAvasthaSet,
     pub lajjitadi: LajjitadiAvastha,
     pub sayanadi: SayanadiResult,
 }
@@ -484,46 +566,54 @@ pub fn jagradadi_avastha(dignity: Dignity) -> JagradadiAvastha {
     }
 }
 
-/// Deeptadi Avastha — priority-ordered conditions.
+/// Deeptadi Avasthas — all applicable conditions.
 ///
-/// Priority: exalted → own → Sun conjunction → malefic conjunction →
-/// inauspicious sign → extreme friend → friend → neutral → enemy.
+/// A graha may simultaneously satisfy dignity, conjunction, and sign-shape
+/// conditions, so this returns a set. Use `primary()` for legacy single-state
+/// surfaces.
+pub fn deeptadi_avasthas(
+    dignity: Dignity,
+    rashi_index: u8,
+    same_rashi_grahas: &[Graha],
+) -> DeeptadiAvasthaSet {
+    let mut states = DeeptadiAvasthaSet::EMPTY;
+
+    if dignity == Dignity::Exalted {
+        states.insert(DeeptadiAvastha::Deepta);
+    } else if matches!(dignity, Dignity::Moolatrikone | Dignity::OwnSign) {
+        states.insert(DeeptadiAvastha::Swastha);
+    } else {
+        match dignity {
+            Dignity::AdhiMitra => states.insert(DeeptadiAvastha::Pramudita),
+            Dignity::Mitra => states.insert(DeeptadiAvastha::Shanta),
+            Dignity::Sama => states.insert(DeeptadiAvastha::Deena),
+            Dignity::Shatru | Dignity::AdhiShatru | Dignity::Debilitated => {
+                states.insert(DeeptadiAvastha::Dukhita)
+            }
+            Dignity::Exalted | Dignity::Moolatrikone | Dignity::OwnSign => {}
+        }
+    };
+
+    if same_rashi_grahas.contains(&Graha::Surya) {
+        states.insert(DeeptadiAvastha::Kopa);
+    }
+    if same_rashi_grahas.iter().copied().any(is_malefic) {
+        states.insert(DeeptadiAvastha::Vikala);
+    }
+    if is_inauspicious_deeptadi_rashi(rashi_index) {
+        states.insert(DeeptadiAvastha::Khala);
+    }
+
+    states
+}
+
+/// Primary Deeptadi Avastha for legacy single-state callers.
 pub fn deeptadi_avastha(
     dignity: Dignity,
     rashi_index: u8,
     same_rashi_grahas: &[Graha],
 ) -> DeeptadiAvastha {
-    if dignity == Dignity::Exalted {
-        return DeeptadiAvastha::Deepta;
-    }
-    if matches!(dignity, Dignity::Moolatrikone | Dignity::OwnSign) {
-        return DeeptadiAvastha::Swastha;
-    }
-    if same_rashi_grahas.contains(&Graha::Surya) {
-        return DeeptadiAvastha::Kopa;
-    }
-    if same_rashi_grahas.iter().copied().any(is_malefic) {
-        return DeeptadiAvastha::Vikala;
-    }
-    if is_inauspicious_deeptadi_rashi(rashi_index) {
-        return DeeptadiAvastha::Khala;
-    }
-    if dignity == Dignity::AdhiMitra {
-        return DeeptadiAvastha::Pramudita;
-    }
-    if dignity == Dignity::Mitra {
-        return DeeptadiAvastha::Shanta;
-    }
-    if dignity == Dignity::Sama {
-        return DeeptadiAvastha::Deena;
-    }
-    if matches!(
-        dignity,
-        Dignity::Shatru | Dignity::AdhiShatru | Dignity::Debilitated
-    ) {
-        return DeeptadiAvastha::Dukhita;
-    }
-    DeeptadiAvastha::Deena
+    deeptadi_avasthas(dignity, rashi_index, same_rashi_grahas).primary()
 }
 
 /// Inauspicious signs rising with back first: Mesha, Vrishabha, Karka, Dhanu, Makara.
@@ -750,6 +840,20 @@ pub fn all_deeptadi_avasthas(
     result
 }
 
+/// Compute all applicable Deeptadi avasthas for all 9 grahas.
+pub fn all_deeptadi_avastha_sets(
+    dignities: &[Dignity; 9],
+    rashi_indices: &[u8; 9],
+) -> [DeeptadiAvasthaSet; 9] {
+    let mut result = [DeeptadiAvasthaSet::EMPTY; 9];
+    for g in ALL_GRAHAS {
+        let i = g.index() as usize;
+        let same = same_rashi_grahas(i, rashi_indices);
+        result[i] = deeptadi_avasthas(dignities[i], rashi_indices[i], &same);
+    }
+    result
+}
+
 /// Compute Lajjitadi avastha for all 9 grahas.
 pub fn all_lajjitadi_avasthas(inputs: &LajjitadiInputs) -> [LajjitadiAvastha; 9] {
     let mut result = [LajjitadiAvastha::Mudita; 9];
@@ -802,7 +906,7 @@ pub fn all_sayanadi_avasthas(inputs: &SayanadiInputs) -> [SayanadiResult; 9] {
 pub fn all_avasthas(inputs: &AvasthaInputs) -> AllGrahaAvasthas {
     let baladi = all_baladi_avasthas(&inputs.sidereal_lons, &inputs.rashi_indices);
     let jagradadi = all_jagradadi_avasthas(&inputs.dignities);
-    let deeptadi = all_deeptadi_avasthas(&inputs.dignities, &inputs.rashi_indices);
+    let deeptadi_states = all_deeptadi_avastha_sets(&inputs.dignities, &inputs.rashi_indices);
     let lajjitadi = all_lajjitadi_avasthas(&inputs.lajjitadi);
     let sayanadi = all_sayanadi_avasthas(&inputs.sayanadi);
 
@@ -810,6 +914,7 @@ pub fn all_avasthas(inputs: &AvasthaInputs) -> AllGrahaAvasthas {
         baladi: BaladiAvastha::Bala,
         jagradadi: JagradadiAvastha::Sushupta,
         deeptadi: DeeptadiAvastha::Shanta,
+        deeptadi_states: DeeptadiAvasthaSet::EMPTY,
         lajjitadi: LajjitadiAvastha::Mudita,
         sayanadi: SayanadiResult {
             avastha: SayanadiAvastha::Sayana,
@@ -821,7 +926,8 @@ pub fn all_avasthas(inputs: &AvasthaInputs) -> AllGrahaAvasthas {
         entries[i] = GrahaAvasthas {
             baladi: baladi[i],
             jagradadi: jagradadi[i],
-            deeptadi: deeptadi[i],
+            deeptadi: deeptadi_states[i].primary(),
+            deeptadi_states: deeptadi_states[i],
             lajjitadi: lajjitadi[i],
             sayanadi: sayanadi[i],
         };
@@ -921,6 +1027,17 @@ mod tests {
             deeptadi_avastha(Dignity::Exalted, 0, &[Graha::Surya, Graha::Mangal]),
             DeeptadiAvastha::Deepta,
         );
+    }
+
+    #[test]
+    fn deeptadi_collects_multiple_applicable_states() {
+        let states = deeptadi_avasthas(Dignity::Exalted, 0, &[Graha::Surya, Graha::Mangal]);
+        assert_eq!(states.primary(), DeeptadiAvastha::Deepta);
+        assert_eq!(states.count(), 4);
+        assert!(states.contains(DeeptadiAvastha::Deepta));
+        assert!(states.contains(DeeptadiAvastha::Kopa));
+        assert!(states.contains(DeeptadiAvastha::Vikala));
+        assert!(states.contains(DeeptadiAvastha::Khala));
     }
 
     #[test]

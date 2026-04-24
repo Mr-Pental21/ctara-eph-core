@@ -259,6 +259,10 @@ Embedded `fullKundaliForDate(...).amshas` returns the resolved amsha union used
 internally by the call. Use `amshaVariations` and `amshaVariationsMany` to
 discover valid per-amsha variation codes and names.
 
+Avastha entries expose `deeptadi` as the primary compatibility index and
+`deeptadiStates` / `deeptadiMask` as the full set of Deeptadi states that apply
+to the graha.
+
 `dasha.js` exports:
 
 - `DashaHierarchy`

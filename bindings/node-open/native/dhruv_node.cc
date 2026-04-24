@@ -1401,6 +1401,13 @@ napi_value WriteAllGrahaAvasthas(napi_env env, const DhruvAllGrahaAvasthas& a) {
         SetNamed(env, eo, "baladi", MakeUint32(env, e.baladi));
         SetNamed(env, eo, "jagradadi", MakeUint32(env, e.jagradadi));
         SetNamed(env, eo, "deeptadi", MakeUint32(env, e.deeptadi));
+        SetNamed(env, eo, "deeptadiMask", MakeUint32(env, e.deeptadi_mask));
+        napi_value deeptadiStates;
+        napi_create_array_with_length(env, e.deeptadi_count, &deeptadiStates);
+        for (uint32_t j = 0; j < e.deeptadi_count && j < 9; ++j) {
+            napi_set_element(env, deeptadiStates, j, MakeUint32(env, e.deeptadi_states[j]));
+        }
+        SetNamed(env, eo, "deeptadiStates", deeptadiStates);
         SetNamed(env, eo, "lajjitadi", MakeUint32(env, e.lajjitadi));
 
         napi_value sayanadi;

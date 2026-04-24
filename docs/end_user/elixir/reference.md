@@ -217,6 +217,10 @@ return the resolved amsha union used by the call. Use
 `CtaraDhruv.Math.amsha_variations_many/1` to discover valid variation codes,
 names, labels, and defaults for each amsha.
 
+Avastha result maps expose `:deeptadi` as the primary compatibility value and
+`:deeptadi_states` / `:deeptadi_mask` as the full set of Deeptadi states that
+apply to the graha.
+
 `bhava_config` maps may include `:chandra_benefic_rule`. The default is the
 72-degree brightness rule (`:brightness_72`, `"brightness-72"`, or `0`), where
 Chandra is benefic when its smaller angular distance from Surya is at least

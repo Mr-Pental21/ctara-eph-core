@@ -2183,6 +2183,10 @@ no proper motion). Equivalent to requesting ecliptic output for
 
 ## Changelog
 
+**v62**: `DhruvGrahaAvasthas` now exposes every applicable Deeptadi state via
+`deeptadi_mask`, `deeptadi_count`, and `deeptadi_states[9]`. The existing
+`deeptadi` field remains the primary compatibility state.
+
 **v55**: Standalone `dhruv_shadbala_for_date`, `dhruv_vimsopaka_for_date`,
 `dhruv_balas_for_date`, and `dhruv_avastha_for_date` now accept
 `const DhruvAmshaSelectionConfig *amsha_selection`. Embedded

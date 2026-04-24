@@ -557,6 +557,8 @@ def _extract_graha_avastha(a):
         baladi=a.baladi,
         jagradadi=a.jagradadi,
         deeptadi=a.deeptadi,
+        deeptadi_states=[a.deeptadi_states[i] for i in range(a.deeptadi_count)],
+        deeptadi_mask=a.deeptadi_mask,
         lajjitadi=a.lajjitadi,
         sayanadi=_extract_sayanadi(a.sayanadi),
     )

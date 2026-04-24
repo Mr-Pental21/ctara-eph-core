@@ -2806,17 +2806,25 @@ fn vimsopaka_json(result: dhruv_search::VimsopakaResult) -> Value {
 
 fn avastha_json(result: dhruv_vedic_base::AllGrahaAvasthas) -> Value {
     json!({
-        "entries": result.entries.into_iter().enumerate().map(|(idx, entry)| json!({
-            "graha": debug_name(ALL_GRAHAS[idx]),
-            "baladi": debug_name(entry.baladi),
-            "jagradadi": debug_name(entry.jagradadi),
-            "deeptadi": debug_name(entry.deeptadi),
-            "lajjitadi": debug_name(entry.lajjitadi),
-            "sayanadi": {
-                "avastha": debug_name(entry.sayanadi.avastha),
-                "sub_states": entry.sayanadi.sub_states.iter().map(|sub_state| debug_name(*sub_state)).collect::<Vec<_>>()
-            }
-        })).collect::<Vec<_>>()
+        "entries": result.entries.into_iter().enumerate().map(|(idx, entry)| {
+            let deeptadi_states = {
+                let names = entry.deeptadi_states.as_names();
+                names[..entry.deeptadi_states.count()].to_vec()
+            };
+            json!({
+                "graha": debug_name(ALL_GRAHAS[idx]),
+                "baladi": debug_name(entry.baladi),
+                "jagradadi": debug_name(entry.jagradadi),
+                "deeptadi": debug_name(entry.deeptadi),
+                "deeptadi_states": deeptadi_states,
+                "deeptadi_mask": entry.deeptadi_states.mask(),
+                "lajjitadi": debug_name(entry.lajjitadi),
+                "sayanadi": {
+                    "avastha": debug_name(entry.sayanadi.avastha),
+                    "sub_states": entry.sayanadi.sub_states.iter().map(|sub_state| debug_name(*sub_state)).collect::<Vec<_>>()
+                }
+            })
+        }).collect::<Vec<_>>()
     })
 }
 

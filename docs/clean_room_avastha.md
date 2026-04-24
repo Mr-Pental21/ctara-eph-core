@@ -43,9 +43,12 @@ Three states based on dignity (relationship with sign):
 
 ## 3. Deeptadi Avastha (Condition-Based)
 
-Nine states determined by priority-ordered conditions:
+Nine states determined by independently applicable conditions. A graha can
+carry multiple Deeptadi states at the same time when multiple conditions are
+true. Public result surfaces therefore expose both a primary compatibility
+state and the full Deeptadi state list.
 
-| Priority | Condition                  | State      |
+| Primary order | Condition                  | State      |
 |----------|----------------------------|------------|
 | 1        | Exalted                    | Deepta     |
 | 2        | OwnSign/Moolatrikone       | Swastha    |
@@ -57,10 +60,8 @@ Nine states determined by priority-ordered conditions:
 | 8        | Neutral sign               | Deena      |
 | 9        | Enemy/debilitation sign    | Dukhita    |
 
-The supplied reference lists the dignity and conjunction conditions together.
-The implementation checks exaltation and own sign first, then Sun/malefic
-conjunction and inauspicious signs, then ordinary friendship/neutral/enemy
-dignity. This keeps conjunction-based states reachable.
+The primary order above is used only when an older single-value surface needs
+one Deeptadi state. The full Deeptadi state set is the authoritative result.
 
 **Inauspicious signs:** Mesha, Vrishabha, Karka, Dhanu, Makara.
 

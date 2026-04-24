@@ -77,6 +77,9 @@ class TestAvastha:
             assert 0 <= entry.baladi <= 4
             assert 0 <= entry.jagradadi <= 2
             assert 0 <= entry.deeptadi <= 8
+            assert entry.deeptadi_states
+            assert entry.deeptadi_states[0] == entry.deeptadi
+            assert entry.deeptadi_mask != 0
             assert 0 <= entry.lajjitadi <= 5
             assert 0 <= entry.sayanadi.avastha <= 11
             assert len(entry.sayanadi.sub_states) == 5

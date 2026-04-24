@@ -58,7 +58,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 61;
+pub const DHRUV_API_VERSION: u32 = 62;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -10843,8 +10843,14 @@ pub struct DhruvGrahaAvasthas {
     pub baladi: u8,
     /// JagradadiAvastha index (0-2).
     pub jagradadi: u8,
-    /// DeeptadiAvastha index (0-8).
+    /// Primary DeeptadiAvastha index (0-8).
     pub deeptadi: u8,
+    /// Bit mask of every applicable DeeptadiAvastha.
+    pub deeptadi_mask: u16,
+    /// Number of populated entries in `deeptadi_states`.
+    pub deeptadi_count: u8,
+    /// Applicable DeeptadiAvastha indices in stable priority order.
+    pub deeptadi_states: [u8; 9],
     /// LajjitadiAvastha index (0-5).
     pub lajjitadi: u8,
     /// Sayanadi result with primary + 5 sub-states.
@@ -11300,6 +11306,9 @@ pub unsafe extern "C" fn dhruv_full_kundali_for_date(
                         baladi: e.baladi.index(),
                         jagradadi: e.jagradadi.index(),
                         deeptadi: e.deeptadi.index(),
+                        deeptadi_mask: e.deeptadi_states.mask(),
+                        deeptadi_count: e.deeptadi_states.count() as u8,
+                        deeptadi_states: e.deeptadi_states.as_indices(),
                         lajjitadi: e.lajjitadi.index(),
                         sayanadi: DhruvSayanadiResult {
                             avastha: e.sayanadi.avastha.index(),
@@ -12116,6 +12125,9 @@ pub unsafe extern "C" fn dhruv_avastha_for_date(
                     baladi: e.baladi.index(),
                     jagradadi: e.jagradadi.index(),
                     deeptadi: e.deeptadi.index(),
+                    deeptadi_mask: e.deeptadi_states.mask(),
+                    deeptadi_count: e.deeptadi_states.count() as u8,
+                    deeptadi_states: e.deeptadi_states.as_indices(),
                     lajjitadi: e.lajjitadi.index(),
                     sayanadi: DhruvSayanadiResult {
                         avastha: e.sayanadi.avastha.index(),

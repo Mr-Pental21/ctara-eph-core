@@ -2704,6 +2704,10 @@ fn ffi_bala_entrypoints_accept_amsha_selection() {
         assert!(entry.baladi <= 4);
         assert!(entry.jagradadi <= 2);
         assert!(entry.deeptadi <= 8);
+        assert!(entry.deeptadi_count >= 1);
+        assert!(entry.deeptadi_count <= 9);
+        assert_eq!(entry.deeptadi_states[0], entry.deeptadi);
+        assert_ne!(entry.deeptadi_mask, 0);
         assert!(entry.lajjitadi <= 5);
         assert!(entry.sayanadi.avastha <= 11);
     }

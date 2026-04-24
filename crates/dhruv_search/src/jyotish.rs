@@ -31,7 +31,7 @@ use dhruv_vedic_base::{
     SayanadiInputs, SayanadiResult, ShadbalaInputs, TimeUpagrahaConfig, all_avasthas,
     all_combustion_status, all_shadbalas_from_inputs, all_sphutas, amsha_longitude, baladi_avastha,
     bhava_bala_entry, bhrigu_bindu, calculate_ashtakavarga, calculate_bhava_bala,
-    charakarakas_from_longitudes, compound_dignity_in_rashi, compute_bhavas, deeptadi_avastha,
+    charakarakas_from_longitudes, compound_dignity_in_rashi, compute_bhavas, deeptadi_avasthas,
     default_amsha_variation, dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise,
     graha_drishti, graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord,
     is_valid_amsha_variation, jagradadi_avastha, jd_tdb_to_centuries, kala_abda_lord,
@@ -3627,14 +3627,16 @@ fn graha_avasthas_from_inputs(inputs: &AvasthaInputs, graha: Graha) -> GrahaAvas
         inputs.sayanadi.birth_ghatikas,
         inputs.sayanadi.lagna_rashi_number,
     );
+    let deeptadi_states = deeptadi_avasthas(
+        inputs.dignities[index],
+        inputs.rashi_indices[index],
+        &same_rashi,
+    );
     GrahaAvasthas {
         baladi: baladi_avastha(inputs.sidereal_lons[index], inputs.rashi_indices[index]),
         jagradadi: jagradadi_avastha(inputs.dignities[index]),
-        deeptadi: deeptadi_avastha(
-            inputs.dignities[index],
-            inputs.rashi_indices[index],
-            &same_rashi,
-        ),
+        deeptadi: deeptadi_states.primary(),
+        deeptadi_states,
         lajjitadi: lajjitadi_avastha(
             graha,
             inputs.bhava_numbers[index],
