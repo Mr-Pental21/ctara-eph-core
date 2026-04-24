@@ -80,7 +80,7 @@ pub use error::VedicError;
 pub use ghatika::{GHATIKA_COUNT, GHATIKA_MINUTES, GhatikaPosition, ghatika_from_elapsed};
 pub use graha::{
     ALL_GRAHAS, GRAHA_KAKSHA_VALUES, Graha, SAPTA_GRAHAS, nth_rashi_from, rashi_lord,
-    rashi_lord_by_index,
+    rashi_lord_by_index, rashi_lords, rashi_lords_by_index,
 };
 pub use graha_relationships::{
     BeneficNature, ChandraBeneficRule, Dignity, GrahaGender, NaisargikaMaitri, NodeDignityPolicy,

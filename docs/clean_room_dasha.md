@@ -249,6 +249,25 @@ For even signs: count_reverse(rashi, lord_rashi) - 1
 If result = 0: period = 12 years (lord in own sign)
 ```
 
+Vrischika and Kumbha use dual lordship for Chara-style period selection:
+
+- Vrischika: Mangal and Ketu
+- Kumbha: Shani and Rahu
+
+The ordinary primary lord helpers remain visible-lord based. Chara Dasha uses a
+separate effective-lord resolver:
+
+- If both dual lords are conjunct in the owned sign, the period is 12 years.
+- If one dual lord is in the owned sign and the other is elsewhere, count to the
+  one elsewhere.
+- If both are elsewhere, select the stronger lord.
+- Strength compares conjunction count first, excluding the candidate itself.
+- If tied, sign modality strength is dual > fixed > movable.
+- If tied, the lord giving more dasha years is selected.
+- If exactly one lord is in its exaltation sign, the exalted lord is selected.
+- The selected lord adds one year when exalted and loses one year when
+  debilitated. Rahu and Ketu have no exaltation/debilitation adjustment here.
+
 - **Starting rashi**: Lagna rashi
 - **Direction**: Odd lagna → forward, even lagna → reverse
 - **Sub-period**: EqualFromSame (12 equal sub-periods starting from the parent rashi)

@@ -140,7 +140,8 @@ The node's dignity in a rashi is determined by the relationship between the
 node itself and the target rashi's lord, using the project Rahu/Ketu natural
 friendship table. For Vimsopaka, the temporal component also uses the node's
 current varga rashi against the target lord's current varga rashi; dispositors
-are not used for either component.
+are not used for either component. Rahu in Kumbha and Ketu in Vrischika are
+treated as own-sign before sign-lord friendship is evaluated.
 
 ### AlwaysSama
 

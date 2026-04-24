@@ -284,6 +284,10 @@ Returned dasha period objects include `entityName`, the exact canonical
 Sanskrit entity name, plus `startUtc` / `endUtc` alongside `startJd` /
 `endJd`. Dasha snapshots expose `queryUtc` alongside `queryJd`.
 
+Chara-style dasha periods use dual lordship for Kumbha (`Shani`/`Rahu`) and
+Vrischika (`Mangal`/`Ketu`). Rahu owns Kumbha and Ketu owns Vrischika for the
+default sign-lord-based node dignity policy.
+
 `tara.js` exports:
 
 - `TaraCatalog`

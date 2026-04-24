@@ -236,6 +236,10 @@ and cartesian-vs-spherical output selection instead of separate `QueryUTC` or
 Go dasha period results expose structured `StartUTC` / `EndUTC` alongside
 `StartJD` / `EndJD`. Dasha snapshots expose `QueryUTC` alongside `QueryJD`.
 
+Chara-style dasha periods use dual lordship for Kumbha (`Shani`/`Rahu`) and
+Vrischika (`Mangal`/`Ketu`). Rahu owns Kumbha and Ketu owns Vrischika for the
+default sign-lord-based node dignity policy.
+
 Go high-level search/event results follow the same rule: conjunction, grahan,
 stationary, and max-speed results expose structured UTC alongside their
 existing JD/TDB fields, while sankranti and lunar-phase results remain UTC-first.

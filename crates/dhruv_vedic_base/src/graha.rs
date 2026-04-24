@@ -112,9 +112,9 @@ impl Graha {
     }
 }
 
-/// Get the planetary lord of a rashi.
+/// Get the primary planetary lord of a rashi.
 ///
-/// Standard Vedic lordship assignment (BPHS, universal convention):
+/// Standard visible-lord assignment:
 /// - Mesha/Vrischika → Mangal (Mars)
 /// - Vrishabha/Tula → Shukra (Venus)
 /// - Mithuna/Kanya → Buddh (Mercury)
@@ -122,6 +122,9 @@ impl Graha {
 /// - Simha → Surya (Sun)
 /// - Dhanu/Meena → Guru (Jupiter)
 /// - Makara/Kumbha → Shani (Saturn)
+///
+/// Some dasha systems use dual lordship for Vrischika and Kumbha. Use
+/// `rashi_lords` when that distinction matters.
 pub const fn rashi_lord(rashi: Rashi) -> Graha {
     match rashi {
         Rashi::Mesha => Graha::Mangal,
@@ -139,7 +142,28 @@ pub const fn rashi_lord(rashi: Rashi) -> Graha {
     }
 }
 
-/// Get the lord of a rashi by 0-based index.
+/// Get all lords of a rashi, including dual node lordships used by Chara-style dashas.
+///
+/// Vrischika returns Mangal and Ketu; Kumbha returns Shani and Rahu. Other signs
+/// return their single primary lord.
+pub fn rashi_lords(rashi: Rashi) -> &'static [Graha] {
+    match rashi {
+        Rashi::Mesha => &[Graha::Mangal],
+        Rashi::Vrishabha => &[Graha::Shukra],
+        Rashi::Mithuna => &[Graha::Buddh],
+        Rashi::Karka => &[Graha::Chandra],
+        Rashi::Simha => &[Graha::Surya],
+        Rashi::Kanya => &[Graha::Buddh],
+        Rashi::Tula => &[Graha::Shukra],
+        Rashi::Vrischika => &[Graha::Mangal, Graha::Ketu],
+        Rashi::Dhanu => &[Graha::Guru],
+        Rashi::Makara => &[Graha::Shani],
+        Rashi::Kumbha => &[Graha::Shani, Graha::Rahu],
+        Rashi::Meena => &[Graha::Guru],
+    }
+}
+
+/// Get the primary lord of a rashi by 0-based index.
 ///
 /// Returns None if index >= 12.
 pub fn rashi_lord_by_index(rashi_index: u8) -> Option<Graha> {
@@ -147,6 +171,16 @@ pub fn rashi_lord_by_index(rashi_index: u8) -> Option<Graha> {
         return None;
     }
     Some(rashi_lord(crate::rashi::ALL_RASHIS[rashi_index as usize]))
+}
+
+/// Get all lords of a rashi by 0-based index.
+///
+/// Returns None if index >= 12.
+pub fn rashi_lords_by_index(rashi_index: u8) -> Option<&'static [Graha]> {
+    if rashi_index >= 12 {
+        return None;
+    }
+    Some(rashi_lords(crate::rashi::ALL_RASHIS[rashi_index as usize]))
 }
 
 /// Compute the n-th rashi from a given rashi (0-based indices, 1-based offset).
@@ -219,7 +253,7 @@ mod tests {
 
     #[test]
     fn rashi_lordship_dual_ruled() {
-        // Mars rules both Mesha and Vrischika
+        // Primary visible lordship remains stable.
         assert_eq!(rashi_lord(Rashi::Mesha), Graha::Mangal);
         assert_eq!(rashi_lord(Rashi::Vrischika), Graha::Mangal);
         // Venus rules both Vrishabha and Tula
@@ -237,6 +271,13 @@ mod tests {
     }
 
     #[test]
+    fn rashi_lordship_all_lords_includes_nodes_for_dual_signs() {
+        assert_eq!(rashi_lords(Rashi::Vrischika), &[Graha::Mangal, Graha::Ketu]);
+        assert_eq!(rashi_lords(Rashi::Kumbha), &[Graha::Shani, Graha::Rahu]);
+        assert_eq!(rashi_lords(Rashi::Mesha), &[Graha::Mangal]);
+    }
+
+    #[test]
     fn rashi_lord_by_index_valid() {
         assert_eq!(rashi_lord_by_index(0), Some(Graha::Mangal));
         assert_eq!(rashi_lord_by_index(4), Some(Graha::Surya));
@@ -247,6 +288,13 @@ mod tests {
     fn rashi_lord_by_index_invalid() {
         assert_eq!(rashi_lord_by_index(12), None);
         assert_eq!(rashi_lord_by_index(255), None);
+    }
+
+    #[test]
+    fn rashi_lords_by_index_valid_and_invalid() {
+        assert_eq!(rashi_lords_by_index(7), Some(&[Graha::Mangal, Graha::Ketu][..]));
+        assert_eq!(rashi_lords_by_index(10), Some(&[Graha::Shani, Graha::Rahu][..]));
+        assert_eq!(rashi_lords_by_index(12), None);
     }
 
     #[test]

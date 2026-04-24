@@ -3,7 +3,7 @@
 //! Period = distance from rashi to its lord (in signs).
 //! Odd signs count forward, even signs count reverse.
 //! If distance = 0 (lord in own sign), period = 12 years.
-//! Special handling for Scorpio co-lordship (Mars/Ketu).
+//! Special handling for Vrischika and Kumbha dual lordships.
 //!
 //! Starting rashi: lagna rashi. Direction: odd=forward, even=reverse.
 //! Sub-period method: EqualFromSame (÷12).
@@ -17,6 +17,8 @@ use super::types::{
 };
 use super::variation::{DashaVariationConfig, SubPeriodMethod};
 use crate::error::VedicError;
+use crate::graha::Graha;
+use crate::graha_relationships::{debilitation_degree, exaltation_degree};
 
 /// Default sub-period method for Chara dasha.
 pub const CHARA_DEFAULT_METHOD: SubPeriodMethod = SubPeriodMethod::EqualFromSame;
@@ -37,30 +39,179 @@ fn chara_total_years(inputs: &RashiDashaInputs) -> f64 {
 /// For even signs: count signs reverse from rashi to lord's rashi, minus 1.
 /// If result is 0, period = 12 years.
 ///
-/// Scorpio special: Mars is the lord. If Ketu is in Scorpio, use Ketu's position instead.
 pub fn chara_period_years(rashi_index: u8, inputs: &RashiDashaInputs) -> f64 {
     let r = rashi_index % 12;
-    let lord_rashi = effective_lord_rashi(r, inputs);
+    let resolved = effective_chara_lord(r, inputs);
 
+    if resolved.force_twelve_years {
+        return 12.0;
+    }
+
+    let period = base_chara_period_years(r, resolved.lord_rashi);
+    apply_year_adjustment(period, resolved.year_adjustment)
+}
+
+fn base_chara_period_years(rashi_index: u8, lord_rashi: u8) -> f64 {
+    let r = rashi_index % 12;
+    let lord_rashi = lord_rashi % 12;
     let distance = if is_odd_sign(r) {
         super::rashi_util::count_signs_forward(r, lord_rashi)
     } else {
         super::rashi_util::count_signs_reverse(r, lord_rashi)
     };
-
     let period = distance - 1;
     if period == 0 { 12.0 } else { period as f64 }
 }
 
-/// Get the effective lord's rashi, handling Scorpio's dual lordship.
-///
-/// For Scorpio (index 7): use Mars normally, but if Ketu is in Scorpio, use Ketu's rashi.
-/// For Aquarius (index 10): use Saturn normally, but if Rahu is in Aquarius, use Rahu's rashi.
-fn effective_lord_rashi(rashi_index: u8, inputs: &RashiDashaInputs) -> u8 {
-    // For Scorpio (7) and Aquarius (10), standard lordship applies (Mars/Saturn).
-    // Co-lordship with Ketu/Rahu is a variant some texts use but the standard
-    // BPHS Chara dasha uses the primary lord only.
-    inputs.lord_rashi(rashi_index)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct EffectiveCharaLord {
+    lord_rashi: u8,
+    force_twelve_years: bool,
+    year_adjustment: i8,
+}
+
+fn effective_chara_lord(rashi_index: u8, inputs: &RashiDashaInputs) -> EffectiveCharaLord {
+    let r = rashi_index % 12;
+    match r {
+        7 => effective_dual_lord(r, Graha::Mangal, Graha::Ketu, inputs),
+        10 => effective_dual_lord(r, Graha::Shani, Graha::Rahu, inputs),
+        _ => {
+            let lord = primary_lord_for_chara(r);
+            EffectiveCharaLord {
+                lord_rashi: inputs.graha_rashi(lord),
+                force_twelve_years: false,
+                year_adjustment: year_adjustment(lord, inputs),
+            }
+        }
+    }
+}
+
+fn effective_dual_lord(
+    target_rashi: u8,
+    primary_lord: Graha,
+    node_lord: Graha,
+    inputs: &RashiDashaInputs,
+) -> EffectiveCharaLord {
+    let primary_rashi = inputs.graha_rashi(primary_lord);
+    let node_rashi = inputs.graha_rashi(node_lord);
+    let primary_in_target_own = primary_rashi == target_rashi;
+    let node_in_target_own = node_rashi == target_rashi;
+
+    if primary_in_target_own && node_in_target_own {
+        return EffectiveCharaLord {
+            lord_rashi: target_rashi,
+            force_twelve_years: true,
+            year_adjustment: 0,
+        };
+    }
+
+    let selected = if primary_in_target_own != node_in_target_own {
+        if primary_in_target_own { node_lord } else { primary_lord }
+    } else {
+        stronger_dual_lord(target_rashi, primary_lord, node_lord, inputs)
+    };
+
+    EffectiveCharaLord {
+        lord_rashi: inputs.graha_rashi(selected),
+        force_twelve_years: false,
+        year_adjustment: year_adjustment(selected, inputs),
+    }
+}
+
+fn stronger_dual_lord(
+    target_rashi: u8,
+    first: Graha,
+    second: Graha,
+    inputs: &RashiDashaInputs,
+) -> Graha {
+    let first_rashi = inputs.graha_rashi(first);
+    let second_rashi = inputs.graha_rashi(second);
+
+    let first_conj = conjunction_count(first, inputs);
+    let second_conj = conjunction_count(second, inputs);
+    let mut selected = if first_conj != second_conj {
+        if first_conj > second_conj { first } else { second }
+    } else {
+        let first_modality = modality_strength(first_rashi);
+        let second_modality = modality_strength(second_rashi);
+        if first_modality != second_modality {
+            if first_modality > second_modality { first } else { second }
+        } else {
+            let first_years = base_chara_period_years(target_rashi, first_rashi);
+            let second_years = base_chara_period_years(target_rashi, second_rashi);
+            if (first_years - second_years).abs() > 1e-10 {
+                if first_years > second_years { first } else { second }
+            } else {
+                first
+            }
+        }
+    };
+
+    let first_exalted = is_in_exaltation_sign(first, inputs);
+    let second_exalted = is_in_exaltation_sign(second, inputs);
+    if first_exalted != second_exalted {
+        selected = if first_exalted { first } else { second };
+    }
+
+    selected
+}
+
+fn primary_lord_for_chara(rashi_index: u8) -> Graha {
+    match rashi_index % 12 {
+        0 | 7 => Graha::Mangal,
+        1 | 6 => Graha::Shukra,
+        2 | 5 => Graha::Buddh,
+        3 => Graha::Chandra,
+        4 => Graha::Surya,
+        8 | 11 => Graha::Guru,
+        9 | 10 => Graha::Shani,
+        _ => Graha::Surya,
+    }
+}
+
+fn conjunction_count(graha: Graha, inputs: &RashiDashaInputs) -> u8 {
+    let graha_rashi = inputs.graha_rashi(graha);
+    let mut count = 0u8;
+    for other in crate::graha::ALL_GRAHAS {
+        if other != graha && inputs.graha_rashi(other) == graha_rashi {
+            count += 1;
+        }
+    }
+    count
+}
+
+fn modality_strength(rashi_index: u8) -> u8 {
+    match rashi_index % 3 {
+        0 => 0, // movable
+        1 => 1, // fixed
+        _ => 2, // dual
+    }
+}
+
+fn year_adjustment(graha: Graha, inputs: &RashiDashaInputs) -> i8 {
+    if is_in_exaltation_sign(graha, inputs) {
+        1
+    } else if is_in_debilitation_sign(graha, inputs) {
+        -1
+    } else {
+        0
+    }
+}
+
+fn is_in_exaltation_sign(graha: Graha, inputs: &RashiDashaInputs) -> bool {
+    exaltation_degree(graha)
+        .map(|deg| inputs.graha_rashi(graha) == ((deg / 30.0).floor() as u8 % 12))
+        .unwrap_or(false)
+}
+
+fn is_in_debilitation_sign(graha: Graha, inputs: &RashiDashaInputs) -> bool {
+    debilitation_degree(graha)
+        .map(|deg| inputs.graha_rashi(graha) == ((deg / 30.0).floor() as u8 % 12))
+        .unwrap_or(false)
+}
+
+fn apply_year_adjustment(period: f64, adjustment: i8) -> f64 {
+    (period + adjustment as f64).max(0.0)
 }
 
 /// Generate level-0 (mahadasha) periods for Chara dasha.
@@ -167,6 +318,14 @@ mod tests {
         RashiDashaInputs::new(lons, 15.0) // Lagna in Mesha
     }
 
+    fn make_inputs_from_rashis(overrides: &[(Graha, u8)]) -> RashiDashaInputs {
+        let mut lons = [0.0, 31.0, 62.0, 93.0, 124.0, 155.0, 186.0, 217.0, 248.0];
+        for &(graha, rashi) in overrides {
+            lons[graha.index() as usize] = rashi as f64 * 30.0 + 1.0;
+        }
+        RashiDashaInputs::new(lons, 15.0)
+    }
+
     #[test]
     fn chara_period_lord_in_own_sign() {
         // If lord is in its own sign, distance=1, period=1-1=0 → 12 years
@@ -193,6 +352,55 @@ mod tests {
         // Reverse count from 1 to 10: 1→0→11→10 = 4. Period = 4-1 = 3 years.
         let inputs = make_test_inputs();
         assert!((chara_period_years(1, &inputs) - 3.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn chara_dual_lords_conjunct_in_owned_sign_force_twelve_years() {
+        let inputs = make_inputs_from_rashis(&[(Graha::Shani, 10), (Graha::Rahu, 10)]);
+        assert!((chara_period_years(10, &inputs) - 12.0).abs() < 1e-10);
+
+        let inputs = make_inputs_from_rashis(&[(Graha::Mangal, 7), (Graha::Ketu, 7)]);
+        assert!((chara_period_years(7, &inputs) - 12.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn chara_dual_lords_one_in_own_sign_counts_to_other_lord() {
+        let inputs = make_inputs_from_rashis(&[(Graha::Rahu, 10), (Graha::Shani, 2)]);
+        assert!((chara_period_years(10, &inputs) - 4.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn chara_dual_lords_choose_more_conjoined_lord() {
+        let inputs = make_inputs_from_rashis(&[
+            (Graha::Shani, 3),
+            (Graha::Rahu, 4),
+            (Graha::Surya, 3),
+        ]);
+        assert!((chara_period_years(10, &inputs) - 5.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn chara_dual_lords_modality_tiebreak_uses_dual_over_fixed() {
+        let inputs = make_inputs_from_rashis(&[(Graha::Shani, 1), (Graha::Rahu, 2)]);
+        assert!((chara_period_years(10, &inputs) - 4.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn chara_dual_lords_same_modality_tiebreak_uses_higher_years() {
+        let inputs = make_inputs_from_rashis(&[(Graha::Shani, 1), (Graha::Rahu, 4)]);
+        assert!((chara_period_years(10, &inputs) - 6.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn chara_dual_lords_exaltation_overrides_higher_years_and_adds_one() {
+        let inputs = make_inputs_from_rashis(&[(Graha::Shani, 6), (Graha::Rahu, 1)]);
+        assert!((chara_period_years(10, &inputs) - 9.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn chara_period_debilitated_lord_loses_one_year() {
+        let inputs = make_inputs_from_rashis(&[(Graha::Mangal, 3)]);
+        assert!((chara_period_years(0, &inputs) - 2.0).abs() < 1e-10);
     }
 
     #[test]

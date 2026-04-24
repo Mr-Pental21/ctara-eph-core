@@ -244,6 +244,10 @@ The `dasha` command now uses one surface for both invocation styles:
   `--moon-sid-lon`, `--graha-sidereal-lons`, `--lagna-sidereal-lon`,
   `--sunrise-jd`, and `--sunset-jd`
 
+Chara-style dasha periods use dual lordship for Kumbha (`Shani`/`Rahu`) and
+Vrischika (`Mangal`/`Ketu`). Rahu owns Kumbha and Ketu owns Vrischika for the
+default sign-lord-based node dignity policy.
+
 ## Important Config Behavior
 
 Time-based upagraha options affect:

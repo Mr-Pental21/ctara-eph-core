@@ -175,6 +175,10 @@ on the main operations instead of splitting out separate UTC-specific APIs.
 Returned dasha entity maps include `:name` with the exact canonical Sanskrit
 entity name.
 
+Chara-style dasha periods use dual lordship for Kumbha (`Shani`/`Rahu`) and
+Vrischika (`Mangal`/`Ketu`). Rahu owns Kumbha and Ketu owns Vrischika for the
+default sign-lord-based node dignity policy.
+
 `CtaraDhruv.Tara`:
 
 - `compute/2`

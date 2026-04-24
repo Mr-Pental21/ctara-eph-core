@@ -303,6 +303,10 @@ entity name, plus structured `start_utc` / `end_utc` alongside `start_jd` /
 Python dasha calls can use either UTC/location birth context or `birth_jd` plus
 precomputed `inputs` on the same main functions.
 
+Chara-style dasha periods use dual lordship for Kumbha (`Shani`/`Rahu`) and
+Vrischika (`Mangal`/`Ketu`). Rahu owns Kumbha and Ketu owns Vrischika for the
+default sign-lord-based node dignity policy.
+
 `search`:
 
 - `conjunction_config_default`

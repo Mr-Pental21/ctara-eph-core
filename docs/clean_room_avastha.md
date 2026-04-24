@@ -152,7 +152,8 @@ Rahu and Ketu dignity is computed via `node_dignity_in_rashi()` with configurabl
 `NodeDignityPolicy`:
 - **SignLordBased** (default): compound dignity based on the node's direct
   naisargika maitri with the target sign lord, plus node-to-lord temporary
-  relationship
+  relationship. Rahu in Kumbha and Ketu in Vrischika are treated as own-sign
+  before sign-lord friendship is evaluated.
 - **AlwaysSama**: always returns `Dignity::Sama` for nodes
 
 This affects Jagradadi, Deeptadi, and Lajjitadi avasthas for Rahu/Ketu.

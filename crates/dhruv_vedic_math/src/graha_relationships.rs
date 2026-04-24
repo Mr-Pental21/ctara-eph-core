@@ -71,10 +71,10 @@ pub const fn moolatrikone_range(graha: Graha) -> Option<(u8, f64, f64)> {
 // 1a cont. Own Signs
 // ---------------------------------------------------------------------------
 
-/// Own-sign rashis for sapta grahas. Returns empty slice for Rahu/Ketu.
+/// Own-sign rashis.
 ///
 /// Sun [4], Moon [3], Mars [0,7], Mercury [2,5],
-/// Jupiter [8,11], Venus [1,6], Saturn [9,10].
+/// Jupiter [8,11], Venus [1,6], Saturn [9,10], Rahu [10], Ketu [7].
 pub fn own_signs(graha: Graha) -> &'static [u8] {
     match graha {
         Graha::Surya => &[4],     // Simha
@@ -84,7 +84,8 @@ pub fn own_signs(graha: Graha) -> &'static [u8] {
         Graha::Guru => &[8, 11],  // Dhanu, Meena
         Graha::Shukra => &[1, 6], // Vrishabha, Tula
         Graha::Shani => &[9, 10], // Makara, Kumbha
-        Graha::Rahu | Graha::Ketu => &[],
+        Graha::Rahu => &[10],     // Kumbha
+        Graha::Ketu => &[7],      // Vrischika
     }
 }
 
@@ -477,6 +478,10 @@ pub fn node_dignity_in_rashi_with_temporal_context(
     match policy {
         NodeDignityPolicy::AlwaysSama => Dignity::Sama,
         NodeDignityPolicy::SignLordBased => {
+            if own_signs(graha).contains(&rashi_index) {
+                return Dignity::OwnSign;
+            }
+
             // Target rashi lord
             let target_lord = match rashi_lord_by_index(rashi_index) {
                 Some(lord) => lord,
@@ -817,8 +822,9 @@ mod tests {
     }
 
     #[test]
-    fn own_signs_empty_for_rahu() {
-        assert!(own_signs(Graha::Rahu).is_empty());
+    fn own_signs_nodes() {
+        assert_eq!(own_signs(Graha::Rahu), &[10]);
+        assert_eq!(own_signs(Graha::Ketu), &[7]);
     }
 
     #[test]
@@ -1115,6 +1121,36 @@ mod tests {
         let indices: [u8; 9] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
         let d = node_dignity_in_rashi(Graha::Rahu, 3, &indices, NodeDignityPolicy::AlwaysSama);
         assert_eq!(d, Dignity::Sama);
+    }
+
+    #[test]
+    fn node_dignity_always_sama_policy_keeps_node_own_signs_neutral() {
+        let mut indices = [0u8; 9];
+        indices[Graha::Rahu.index() as usize] = 10;
+        indices[Graha::Ketu.index() as usize] = 7;
+        assert_eq!(
+            node_dignity_in_rashi(Graha::Rahu, 10, &indices, NodeDignityPolicy::AlwaysSama),
+            Dignity::Sama
+        );
+        assert_eq!(
+            node_dignity_in_rashi(Graha::Ketu, 7, &indices, NodeDignityPolicy::AlwaysSama),
+            Dignity::Sama
+        );
+    }
+
+    #[test]
+    fn node_dignity_sign_lord_based_recognizes_node_own_signs() {
+        let mut indices = [0u8; 9];
+        indices[Graha::Rahu.index() as usize] = 10;
+        indices[Graha::Ketu.index() as usize] = 7;
+        assert_eq!(
+            node_dignity_in_rashi(Graha::Rahu, 10, &indices, NodeDignityPolicy::SignLordBased),
+            Dignity::OwnSign
+        );
+        assert_eq!(
+            node_dignity_in_rashi(Graha::Ketu, 7, &indices, NodeDignityPolicy::SignLordBased),
+            Dignity::OwnSign
+        );
     }
 
     #[test]
