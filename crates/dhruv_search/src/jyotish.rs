@@ -3465,6 +3465,7 @@ fn assemble_bhavabala_inputs(
         graha_bhava_numbers: bhava_basis.bhava_numbers,
         house_lord_strengths,
         aspect_virupas,
+        include_node_aspects: bhava_config.include_node_aspects_for_drik_bala,
         birth_period,
     })
 }

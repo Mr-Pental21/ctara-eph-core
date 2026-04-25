@@ -725,10 +725,10 @@ struct BhavaBehaviorArgs {
     /// Use configured bhava-system basis for bala and avastha calculations
     #[arg(long)]
     use_configured_bhava_for_bala_avastha: bool,
-    /// Include Rahu/Ketu incoming aspects in Shadbala Drik Bala
+    /// Include Rahu/Ketu incoming aspects in Shadbala Drik Bala and Bhava Bala Drishti Bala
     #[arg(long, conflicts_with = "exclude_node_aspects_for_drik_bala")]
     include_node_aspects_for_drik_bala: bool,
-    /// Exclude Rahu/Ketu incoming aspects from Shadbala Drik Bala
+    /// Exclude Rahu/Ketu incoming aspects from Shadbala Drik Bala and Bhava Bala Drishti Bala
     #[arg(long)]
     exclude_node_aspects_for_drik_bala: bool,
     /// Divide Guru/Buddh incoming aspects by 4 in Shadbala Drik Bala

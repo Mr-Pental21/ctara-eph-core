@@ -40,6 +40,32 @@ func TestABIVersion(t *testing.T) {
 	}
 }
 
+func TestCalculateBhavaBalaNodeAspectFlag(t *testing.T) {
+	var inputs BhavaBalaInputs
+	inputs.AscendantSiderealLon = 0
+	inputs.MeridianSiderealLon = 90
+	inputs.BirthPeriod = 0
+	inputs.AspectVirupas[4][0] = 40 // Guru full positive.
+	inputs.AspectVirupas[7][0] = 20 // Rahu quarter-negative only when included.
+
+	withoutNodes, err := CalculateBhavaBala(inputs)
+	if err != nil {
+		t.Fatalf("CalculateBhavaBala without nodes: %v", err)
+	}
+	inputs.IncludeNodeAspects = true
+	withNodes, err := CalculateBhavaBala(inputs)
+	if err != nil {
+		t.Fatalf("CalculateBhavaBala with nodes: %v", err)
+	}
+
+	if math.Abs(withoutNodes.Entries[0].Drishti-40.0) > 1e-9 {
+		t.Fatalf("unexpected no-node drishti: %v", withoutNodes.Entries[0].Drishti)
+	}
+	if math.Abs(withNodes.Entries[0].Drishti-35.0) > 1e-9 {
+		t.Fatalf("unexpected with-node drishti: %v", withNodes.Entries[0].Drishti)
+	}
+}
+
 func TestKshetraSphutaMatchesAllSphutas(t *testing.T) {
 	inputs := SphutalInputs{
 		Sun: 10, Moon: 20, Mars: 30, Jupiter: 40, Venus: 50,

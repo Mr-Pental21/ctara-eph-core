@@ -1038,6 +1038,7 @@ type BhavaBalaInputs struct {
 	GrahaBhavaNumbers    [GrahaCount]uint8
 	HouseLordStrengths   [12]float64
 	AspectVirupas        [GrahaCount][12]float64
+	IncludeNodeAspects   bool
 	BirthPeriod          uint32
 }
 

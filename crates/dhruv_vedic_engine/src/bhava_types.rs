@@ -125,7 +125,7 @@ pub struct BhavaConfig {
     pub reference_mode: BhavaReferenceMode,
     /// Use rashi-bhava/whole-sign style bhavas for bala and avastha calculations.
     pub use_rashi_bhava_for_bala_avastha: bool,
-    /// Include Rahu/Ketu incoming aspects in Shadbala Drik Bala.
+    /// Include Rahu/Ketu incoming aspects in Shadbala Drik Bala and Bhava Bala Drishti.
     pub include_node_aspects_for_drik_bala: bool,
     /// Divide Guru/Buddh incoming drishti by 4 in Shadbala Drik Bala.
     pub divide_guru_buddh_drishti_by_4_for_drik_bala: bool,

@@ -788,6 +788,13 @@ bool ReadBhavaBalaInputs(napi_env env, napi_value obj, DhruvBhavaBalaInputs* out
         if (napi_get_element(env, v, i, &row) != napi_ok) return false;
         if (!ReadDoubleArrayFixed(env, row, out->aspect_virupas[i], 12)) return false;
     }
+    bool include_node_aspects = false;
+    bool has_include_node_aspects = false;
+    if (napi_has_named_property(env, obj, "includeNodeAspects", &has_include_node_aspects) != napi_ok) return false;
+    if (has_include_node_aspects) {
+        if (!GetNamedProperty(env, obj, "includeNodeAspects", &v) || !GetBool(env, v, &include_node_aspects)) return false;
+    }
+    out->include_node_aspects = include_node_aspects ? 1 : 0;
     if (!GetNamedProperty(env, obj, "birthPeriod", &v) || !GetUint32(env, v, &u32)) return false;
     out->birth_period = u32;
     return true;

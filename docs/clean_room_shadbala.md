@@ -107,8 +107,8 @@ The cusp set is chosen by `BhavaConfig.use_rashi_bhava_for_bala_avastha`: rashi-
 Drik Bala excludes Rahu/Ketu incoming aspects by default. Set
 `BhavaConfig.include_node_aspects_for_drik_bala=true` to include their signed
 incoming aspect virupas in the `(benefic - malefic) / 4` balance. This knob
-affects Shadbala Drik Bala only; standalone drishti/aspect matrices still
-report Rahu and Ketu aspects.
+affects Shadbala Drik Bala and Bhava Bala Drishti Bala; standalone
+drishti/aspect matrices still report Rahu and Ketu aspects.
 
 Guru and Buddh incoming aspects are divided by 4 by default with the rest of
 the signed benefic/malefic balance. Set
@@ -243,7 +243,8 @@ Fixed constants (BPHS):
 ## 6. Drik Bala (Aspectual Strength)
 
 Dhruv computes the signed aspect balance as `(benefic - malefic) / 4`. Incoming
-Rahu/Ketu aspects are excluded unless `include_node_aspects_for_drik_bala=true`.
+Rahu/Ketu aspects are excluded from bala calculations unless
+`include_node_aspects_for_drik_bala=true`.
 Incoming Guru and Buddh aspects participate in the divided balance by default:
 
 ```text

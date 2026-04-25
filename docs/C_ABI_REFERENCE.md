@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 65`
+**ABI version:** `DHRUV_API_VERSION = 66`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -364,10 +364,10 @@ typedef struct {
 
 Existing bhava result fields keep the configured bhava-system meaning. High-level jyotish result structs add rashi-bhava sibling fields where applicable, such as `rashi_bhava_number`, `rashi_bhava_cusps`, `graha_to_rashi_bhava`, and rashi-bhava amsha cusp/arudha arrays. See `docs/dual_rashi_bhava_outputs.md`.
 
-`include_node_aspects_for_drik_bala` controls only Shadbala Drik Bala. It
-defaults to `0`, so Rahu/Ketu incoming aspects are excluded from the Shadbala
-Drik Bala balance unless explicitly enabled. Drishti matrix endpoints are
-unchanged and continue to expose node aspects.
+`include_node_aspects_for_drik_bala` controls bala-only node aspect policy. It
+defaults to `0`, so Rahu/Ketu incoming aspects are excluded from Shadbala Drik
+Bala and Bhava Bala Drishti Bala unless explicitly enabled. Drishti matrix
+endpoints are unchanged and continue to expose node aspects.
 
 `divide_guru_buddh_drishti_by_4_for_drik_bala` also controls only Shadbala
 Drik Bala. It defaults to `1`, so Guru and Buddh incoming aspects participate
@@ -2182,6 +2182,10 @@ no proper motion). Equivalent to requesting ecliptic output for
 ---
 
 ## Changelog
+
+**v66**: `DhruvBhavaBalaInputs` adds `include_node_aspects`, aligning
+low-level Bhava Bala Drishti with the high-level
+`include_node_aspects_for_drik_bala` policy.
 
 **v65**: `DhruvBhavaConfig` adds `sayanadi_ghatika_rounding`
 (`0=floor`, `1=ceil`) for Sayanadi birth-ghatika rounding. The default is

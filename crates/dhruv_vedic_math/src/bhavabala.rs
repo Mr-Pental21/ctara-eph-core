@@ -37,6 +37,8 @@ pub struct BhavaBalaInputs {
     pub house_lord_strengths: [f64; 12],
     /// Total drishti virupas from each graha to each bhava cusp.
     pub aspect_virupas: [[f64; 12]; 9],
+    /// Whether Rahu/Ketu aspects should be included as malefic Bhava Drishti contributors.
+    pub include_node_aspects: bool,
     /// Birth-period bucket for the sign-type bonus.
     pub birth_period: BhavaBalaBirthPeriod,
 }
@@ -152,9 +154,12 @@ pub fn bhava_occupation_bonus(bhava_number: u8, graha_bhava_numbers: &[u8; 9]) -
 }
 
 /// Compute Bhava Drishti Bala from total drishti virupas for one bhava cusp.
-pub fn bhava_drishti_bala(aspect_virupas_for_bhava: &[f64; 9]) -> f64 {
+pub fn bhava_drishti_bala(aspect_virupas_for_bhava: &[f64; 9], include_node_aspects: bool) -> f64 {
     let mut total = 0.0;
     for graha in ALL_GRAHAS {
+        if !include_node_aspects && matches!(graha, Graha::Rahu | Graha::Ketu) {
+            continue;
+        }
         let virupas = aspect_virupas_for_bhava[graha.index() as usize];
         total += match graha {
             Graha::Buddh | Graha::Guru => virupas,
@@ -184,10 +189,10 @@ pub fn bhava_bala_entry(inputs: &BhavaBalaInputs, index: usize) -> BhavaBalaEntr
         inputs.ascendant_sidereal_lon,
         inputs.meridian_sidereal_lon,
     );
-    let drishti = bhava_drishti_bala(&aspect_virupas_for_bhava);
+    let drishti = bhava_drishti_bala(&aspect_virupas_for_bhava, inputs.include_node_aspects);
     let occupation_bonus = bhava_occupation_bonus(bhava_number, &inputs.graha_bhava_numbers);
     let rising_bonus = bhava_rising_bonus(cusp_sidereal_lon, inputs.birth_period);
-    let total_virupas = bhavadhipati + dig + drishti + occupation_bonus + rising_bonus;
+    let total_virupas = bhavadhipati + dig + drishti;
 
     BhavaBalaEntry {
         bhava_number,
@@ -286,12 +291,26 @@ mod tests {
         virupas[Graha::Chandra.index() as usize] = 16.0;
         virupas[Graha::Surya.index() as usize] = 12.0;
         virupas[Graha::Rahu.index() as usize] = 8.0;
-        let result = bhava_drishti_bala(&virupas);
+        let result = bhava_drishti_bala(&virupas, true);
         assert!((result - (40.0 + 20.0 + 4.0 - 3.0 - 2.0)).abs() < EPS);
     }
 
     #[test]
-    fn calculate_bhava_bala_combines_all_components() {
+    fn drishti_bala_excludes_nodes_by_default_policy() {
+        let mut virupas = [0.0; 9];
+        virupas[Graha::Guru.index() as usize] = 40.0;
+        virupas[Graha::Rahu.index() as usize] = 20.0;
+        virupas[Graha::Ketu.index() as usize] = 12.0;
+
+        let without_nodes = bhava_drishti_bala(&virupas, false);
+        let with_nodes = bhava_drishti_bala(&virupas, true);
+
+        assert!((without_nodes - 40.0).abs() < EPS);
+        assert!((with_nodes - (40.0 - 5.0 - 3.0)).abs() < EPS);
+    }
+
+    #[test]
+    fn calculate_bhava_bala_total_uses_lord_dig_and_drishti_only() {
         let mut aspect_virupas = [[0.0; 12]; 9];
         aspect_virupas[Graha::Guru.index() as usize][0] = 30.0;
         aspect_virupas[Graha::Surya.index() as usize][0] = 20.0;
@@ -309,6 +328,7 @@ mod tests {
             graha_bhava_numbers,
             house_lord_strengths,
             aspect_virupas,
+            include_node_aspects: false,
             birth_period: BhavaBalaBirthPeriod::Day,
         });
 
@@ -320,7 +340,9 @@ mod tests {
         assert!((entry.drishti - 25.0).abs() < EPS);
         assert!((entry.occupation_bonus - 60.0).abs() < EPS);
         assert!((entry.rising_bonus - 15.0).abs() < EPS);
-        assert!(entry.total_virupas > 400.0);
+        assert!(
+            (entry.total_virupas - (entry.bhavadhipati + entry.dig + entry.drishti)).abs() < EPS
+        );
         assert!((entry.total_rupas * 60.0 - entry.total_virupas).abs() < EPS);
     }
 }

@@ -14,6 +14,27 @@ test('api version matches expected ABI', () => {
   assert.doesNotThrow(() => dhruv.verifyAbi());
 });
 
+test('calculateBhavaBala opts into node aspects explicitly', () => {
+  const aspectVirupas = Array.from({ length: 9 }, () => Array(12).fill(0));
+  aspectVirupas[4][0] = 40; // Guru full positive.
+  aspectVirupas[7][0] = 20; // Rahu quarter-negative only when included.
+  const base = {
+    cuspSiderealLons: Array(12).fill(0),
+    ascendantSiderealLon: 0,
+    meridianSiderealLon: 90,
+    grahaBhavaNumbers: Array(9).fill(0),
+    houseLordStrengths: Array(12).fill(0),
+    aspectVirupas,
+    birthPeriod: 0,
+  };
+
+  const withoutNodes = dhruv.calculateBhavaBala(base);
+  const withNodes = dhruv.calculateBhavaBala({ ...base, includeNodeAspects: true });
+
+  assert.equal(withoutNodes.entries[0].drishti, 40);
+  assert.equal(withNodes.entries[0].drishti, 35);
+});
+
 test('amsha variation helpers expose per-amsha catalogs', () => {
   const d2 = dhruv.amshaVariations(2);
   assert.equal(d2.amshaCode, 2);

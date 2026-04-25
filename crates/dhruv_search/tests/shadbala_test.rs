@@ -732,6 +732,60 @@ fn bhavabala_all_twelve_valid() {
 }
 
 #[test]
+fn bhavabala_node_aspects_share_shadbala_drik_config() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = utc_2024_jan_15();
+    let location = new_delhi();
+    let default_bhava = BhavaConfig::default();
+    let with_nodes_bhava = BhavaConfig {
+        include_node_aspects_for_drik_bala: true,
+        ..BhavaConfig::default()
+    };
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+
+    let without_nodes = bhavabala_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &default_bhava,
+        &rs_config,
+        &aya_config,
+    )
+    .expect("default bhavabala should succeed");
+    let with_nodes = bhavabala_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &with_nodes_bhava,
+        &rs_config,
+        &aya_config,
+    )
+    .expect("node-aspect bhavabala should succeed");
+
+    assert!(
+        without_nodes
+            .entries
+            .iter()
+            .zip(with_nodes.entries.iter())
+            .any(|(base, opted_in)| (base.drishti - opted_in.drishti).abs() > 1e-9),
+        "expected Rahu/Ketu opt-in to change Bhava Bala Drishti"
+    );
+    for (base, opted_in) in without_nodes.entries.iter().zip(with_nodes.entries.iter()) {
+        assert!((base.dig - opted_in.dig).abs() < 1e-9);
+        assert!((base.total_virupas - (base.bhavadhipati + base.dig + base.drishti)).abs() < 1e-9);
+        assert!(
+            (opted_in.total_virupas - (opted_in.bhavadhipati + opted_in.dig + opted_in.drishti))
+                .abs()
+                < 1e-9
+        );
+    }
+}
+
+#[test]
 fn bhavabala_single_bhava_matches_all() {
     let Some(engine) = load_engine() else { return };
     let Some(eop) = load_eop() else { return };
@@ -793,6 +847,65 @@ fn bala_bundle_includes_all_requested_surfaces() {
     assert_eq!(result.vimsopaka.entries.len(), 9);
     assert_eq!(result.bhavabala.entries.len(), 12);
     assert!(result.ashtakavarga.sav.total_points.iter().any(|&v| v > 0));
+}
+
+#[test]
+fn bala_bundle_uses_same_node_aspect_config_for_shadbala_and_bhavabala() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = utc_2024_jan_15();
+    let location = new_delhi();
+    let default_bhava = BhavaConfig::default();
+    let with_nodes_bhava = BhavaConfig {
+        include_node_aspects_for_drik_bala: true,
+        ..BhavaConfig::default()
+    };
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+
+    let without_nodes = balas_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &default_bhava,
+        &rs_config,
+        &aya_config,
+        NodeDignityPolicy::default(),
+        &default_amsha_selection(),
+    )
+    .expect("default bundled balas should succeed");
+    let with_nodes = balas_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &with_nodes_bhava,
+        &rs_config,
+        &aya_config,
+        NodeDignityPolicy::default(),
+        &default_amsha_selection(),
+    )
+    .expect("node-aspect bundled balas should succeed");
+
+    assert!(
+        without_nodes
+            .shadbala
+            .entries
+            .iter()
+            .zip(with_nodes.shadbala.entries.iter())
+            .any(|(base, opted_in)| (base.drik - opted_in.drik).abs() > 1e-9),
+        "expected shared config to affect Shadbala Drik Bala"
+    );
+    assert!(
+        without_nodes
+            .bhavabala
+            .entries
+            .iter()
+            .zip(with_nodes.bhavabala.entries.iter())
+            .any(|(base, opted_in)| (base.drishti - opted_in.drishti).abs() > 1e-9),
+        "expected shared config to affect Bhava Bala Drishti"
+    );
 }
 
 #[test]
@@ -947,5 +1060,70 @@ fn full_kundali_with_bhavabala() {
             .entries
             .len(),
         12
+    );
+}
+
+#[test]
+fn full_kundali_uses_same_node_aspect_config_for_shadbala_and_bhavabala() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = utc_2024_jan_15();
+    let location = new_delhi();
+    let default_bhava = BhavaConfig::default();
+    let with_nodes_bhava = BhavaConfig {
+        include_node_aspects_for_drik_bala: true,
+        ..BhavaConfig::default()
+    };
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+    let config = FullKundaliConfig {
+        include_shadbala: true,
+        include_bhavabala: true,
+        ..FullKundaliConfig::default()
+    };
+
+    let without_nodes = dhruv_search::full_kundali_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &default_bhava,
+        &rs_config,
+        &aya_config,
+        &config,
+    )
+    .expect("default full kundali should succeed");
+    let with_nodes = dhruv_search::full_kundali_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &with_nodes_bhava,
+        &rs_config,
+        &aya_config,
+        &config,
+    )
+    .expect("node-aspect full kundali should succeed");
+
+    let base_shadbala = without_nodes.shadbala.expect("shadbala present");
+    let node_shadbala = with_nodes.shadbala.expect("shadbala present");
+    let base_bhavabala = without_nodes.bhavabala.expect("bhavabala present");
+    let node_bhavabala = with_nodes.bhavabala.expect("bhavabala present");
+
+    assert!(
+        base_shadbala
+            .entries
+            .iter()
+            .zip(node_shadbala.entries.iter())
+            .any(|(base, opted_in)| (base.drik - opted_in.drik).abs() > 1e-9),
+        "expected shared config to affect full-kundali Shadbala Drik Bala"
+    );
+    assert!(
+        base_bhavabala
+            .entries
+            .iter()
+            .zip(node_bhavabala.entries.iter())
+            .any(|(base, opted_in)| (base.drishti - opted_in.drishti).abs() > 1e-9),
+        "expected shared config to affect full-kundali Bhava Bala Drishti"
     );
 }

@@ -296,6 +296,7 @@ def calculate_bhavabala(inputs):
     for gi, row in enumerate(inputs["aspect_virupas"]):
         for bi, value in enumerate(row):
             cin.aspect_virupas[gi][bi] = value
+    cin.include_node_aspects = inputs.get("include_node_aspects", 0)
     cin.birth_period = inputs["birth_period"]
 
     out = ffi.new("DhruvBhavaBalaResult *")

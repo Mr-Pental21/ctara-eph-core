@@ -1998,6 +1998,7 @@ func CalculateBhavaBala(inputs BhavaBalaInputs) (BhavaBalaResult, Status) {
 	cin := C.DhruvBhavaBalaInputs{
 		ascendant_sidereal_lon: C.double(inputs.AscendantSiderealLon),
 		meridian_sidereal_lon:  C.double(inputs.MeridianSiderealLon),
+		include_node_aspects:   boolU8(inputs.IncludeNodeAspects),
 		birth_period:           C.uint32_t(inputs.BirthPeriod),
 	}
 	for i := 0; i < 12; i++ {

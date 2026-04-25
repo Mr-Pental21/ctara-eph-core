@@ -23,7 +23,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       65
+#define DHRUV_API_VERSION       66
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 #define DHRUV_MAX_AMSHA_VARIATIONS 16
@@ -1293,6 +1293,7 @@ typedef struct {
     uint8_t  graha_bhava_numbers[9];
     double   house_lord_strengths[12];
     double   aspect_virupas[9][12];
+    uint8_t  include_node_aspects;
     uint32_t birth_period;
 } DhruvBhavaBalaInputs;
 

@@ -4,6 +4,30 @@ import pytest
 from conftest import skip_no_kernels, skip_no_eop
 
 
+def test_calculate_bhavabala_node_aspect_flag():
+    """Low-level Bhava Bala inputs should opt into Rahu/Ketu drishti explicitly."""
+    from ctara_dhruv.shadbala import calculate_bhavabala
+
+    aspect_virupas = [[0.0 for _ in range(12)] for _ in range(9)]
+    aspect_virupas[4][0] = 40.0  # Guru full positive.
+    aspect_virupas[7][0] = 20.0  # Rahu quarter-negative only when included.
+    base = {
+        "cusp_sidereal_lons": [0.0 for _ in range(12)],
+        "ascendant_sidereal_lon": 0.0,
+        "meridian_sidereal_lon": 90.0,
+        "graha_bhava_numbers": [0 for _ in range(9)],
+        "house_lord_strengths": [0.0 for _ in range(12)],
+        "aspect_virupas": aspect_virupas,
+        "birth_period": 0,
+    }
+
+    without_nodes = calculate_bhavabala(base)
+    with_nodes = calculate_bhavabala({**base, "include_node_aspects": 1})
+
+    assert without_nodes.entries[0].drishti == 40.0
+    assert with_nodes.entries[0].drishti == 35.0
+
+
 @skip_no_kernels
 @skip_no_eop
 class TestShadbala:
