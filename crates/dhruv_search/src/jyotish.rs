@@ -64,7 +64,7 @@ use crate::panchang::{
 use crate::panchang_types::{MasaInfo, VarshaInfo};
 use crate::sankranti_types::SankrantiConfig;
 
-const BHAVABALA_TWILIGHT_HALF_DAYS: f64 = 5.0 / 60.0;
+const BHAVABALA_TWILIGHT_HALF_DAYS: f64 = 2.5 / 60.0;
 /// IAU 2015 nominal solar gravitational parameter, km^3/s^2.
 ///
 /// Provenance is recorded in `docs/clean_room_osculating_apogee.md`.
@@ -3466,6 +3466,7 @@ fn assemble_bhavabala_inputs(
         house_lord_strengths,
         aspect_virupas,
         include_node_aspects: bhava_config.include_node_aspects_for_drik_bala,
+        include_special_rules: bhava_config.include_special_bhavabala_rules,
         birth_period,
     })
 }
@@ -4484,6 +4485,38 @@ mod tests {
         assert_eq!(graha_to_body(Graha::Shani), Some(Body::Saturn));
         assert_eq!(graha_to_body(Graha::Rahu), None);
         assert_eq!(graha_to_body(Graha::Ketu), None);
+    }
+
+    #[test]
+    fn bhavabala_birth_period_uses_two_point_five_ghati_sandhya_windows() {
+        let sunrise = 100.25;
+        let sunset = 100.75;
+        let half_window = 2.5 / 60.0;
+
+        assert_eq!(
+            classify_bhavabala_birth_period(sunrise - half_window, sunrise, sunset),
+            BhavaBalaBirthPeriod::Twilight
+        );
+        assert_eq!(
+            classify_bhavabala_birth_period(sunrise + half_window - 1e-9, sunrise, sunset),
+            BhavaBalaBirthPeriod::Twilight
+        );
+        assert_eq!(
+            classify_bhavabala_birth_period(sunrise + half_window, sunrise, sunset),
+            BhavaBalaBirthPeriod::Day
+        );
+        assert_eq!(
+            classify_bhavabala_birth_period(sunset - half_window - 1e-9, sunrise, sunset),
+            BhavaBalaBirthPeriod::Day
+        );
+        assert_eq!(
+            classify_bhavabala_birth_period(sunset - half_window, sunrise, sunset),
+            BhavaBalaBirthPeriod::Twilight
+        );
+        assert_eq!(
+            classify_bhavabala_birth_period(sunset + half_window, sunrise, sunset),
+            BhavaBalaBirthPeriod::Night
+        );
     }
 
     #[test]

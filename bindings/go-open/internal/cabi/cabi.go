@@ -300,6 +300,7 @@ func cBhavaConfig(cfg BhavaConfig) C.DhruvBhavaConfig {
 		reference_plane:                    C.int32_t(cfg.ReferencePlane),
 		use_rashi_bhava_for_bala_avastha:   boolU8(cfg.UseRashiBhavaForBalaAvastha),
 		include_node_aspects_for_drik_bala: boolU8(cfg.IncludeNodeAspectsForDrikBala),
+		include_special_bhavabala_rules:    boolU8(cfg.IncludeSpecialBhavaBalaRules),
 		divide_guru_buddh_drishti_by_4_for_drik_bala: boolU8(cfg.DivideGuruBuddhDrishtiBy4ForDrikBala),
 		chandra_benefic_rule:                         C.int32_t(cfg.ChandraBeneficRule),
 		sayanadi_ghatika_rounding:                    C.int32_t(cfg.SayanadiGhatikaRounding),
@@ -319,6 +320,7 @@ func goBhavaConfig(cfg C.DhruvBhavaConfig) BhavaConfig {
 		ReferencePlane:                       int32(cfg.reference_plane),
 		UseRashiBhavaForBalaAvastha:          cfg.use_rashi_bhava_for_bala_avastha != 0,
 		IncludeNodeAspectsForDrikBala:        cfg.include_node_aspects_for_drik_bala != 0,
+		IncludeSpecialBhavaBalaRules:         cfg.include_special_bhavabala_rules != 0,
 		DivideGuruBuddhDrishtiBy4ForDrikBala: cfg.divide_guru_buddh_drishti_by_4_for_drik_bala != 0,
 		ChandraBeneficRule:                   int32(cfg.chandra_benefic_rule),
 		SayanadiGhatikaRounding:              int32(cfg.sayanadi_ghatika_rounding),
@@ -1999,6 +2001,7 @@ func CalculateBhavaBala(inputs BhavaBalaInputs) (BhavaBalaResult, Status) {
 		ascendant_sidereal_lon: C.double(inputs.AscendantSiderealLon),
 		meridian_sidereal_lon:  C.double(inputs.MeridianSiderealLon),
 		include_node_aspects:   boolU8(inputs.IncludeNodeAspects),
+		include_special_rules:  boolU8(inputs.IncludeSpecialRules),
 		birth_period:           C.uint32_t(inputs.BirthPeriod),
 	}
 	for i := 0; i < 12; i++ {

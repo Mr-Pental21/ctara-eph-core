@@ -217,6 +217,7 @@ pub struct BhavaConfigPatch {
     pub reference_mode: Option<EnumInput>,
     pub use_rashi_bhava_for_bala_avastha: Option<bool>,
     pub include_node_aspects_for_drik_bala: Option<bool>,
+    pub include_special_bhavabala_rules: Option<bool>,
     pub divide_guru_buddh_drishti_by_4_for_drik_bala: Option<bool>,
     pub chandra_benefic_rule: Option<EnumInput>,
     pub sayanadi_ghatika_rounding: Option<EnumInput>,
@@ -798,6 +799,10 @@ impl ConfigResolver {
             .include_node_aspects_for_drik_bala
             .or(op.include_node_aspects_for_drik_bala)
             .unwrap_or(false);
+        let include_special_bhavabala_rules = explicit
+            .include_special_bhavabala_rules
+            .or(op.include_special_bhavabala_rules)
+            .unwrap_or(true);
         let divide_guru_buddh_drishti_by_4_for_drik_bala = explicit
             .divide_guru_buddh_drishti_by_4_for_drik_bala
             .or(op.divide_guru_buddh_drishti_by_4_for_drik_bala)
@@ -828,6 +833,7 @@ impl ConfigResolver {
                 reference_mode,
                 use_rashi_bhava_for_bala_avastha,
                 include_node_aspects_for_drik_bala,
+                include_special_bhavabala_rules,
                 divide_guru_buddh_drishti_by_4_for_drik_bala,
                 chandra_benefic_rule,
                 sayanadi_ghatika_rounding,
@@ -1955,6 +1961,31 @@ sayanadi_ghatika_rounding = "ceil"
             eff.value.sayanadi_ghatika_rounding,
             SayanadiGhatikaRounding::Ceil
         );
+    }
+
+    #[test]
+    fn resolve_bhava_special_rules_default_true_and_explicit_false() {
+        let file: DhruvConfigFile = toml::from_str(
+            r#"
+version = 1
+"#,
+        )
+        .unwrap();
+        let resolver = ConfigResolver::new(file, DefaultsMode::Recommended);
+        let eff = resolver.resolve_bhava(None).unwrap();
+        assert!(eff.value.include_special_bhavabala_rules);
+
+        let file: DhruvConfigFile = toml::from_str(
+            r#"
+version = 1
+[operations.bhava]
+include_special_bhavabala_rules = false
+"#,
+        )
+        .unwrap();
+        let resolver = ConfigResolver::new(file, DefaultsMode::Recommended);
+        let eff = resolver.resolve_bhava(None).unwrap();
+        assert!(!eff.value.include_special_bhavabala_rules);
     }
 
     #[test]

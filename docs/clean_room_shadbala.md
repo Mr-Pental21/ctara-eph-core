@@ -104,6 +104,16 @@ Maximum strength bhava:
 
 The cusp set is chosen by `BhavaConfig.use_rashi_bhava_for_bala_avastha`: rashi-bhava/equal-house cusps by default, or configured bhava-system cusps when explicitly disabled.
 
+Bhava Bala totals include occupation and rising special-rule components by
+default. Set `BhavaConfig.include_special_bhavabala_rules=false` to keep those
+fields visible while excluding them from the total.
+
+Bhava Bala rising-rule birth periods use Sandhya windows of 2.5 ghatis before
+and after sunrise and sunset, for 10 total Sandhya ghatis per day. Day is
+sunrise+2.5 ghatis through sunset-2.5 ghatis; night is sunset+2.5 ghatis
+through next-sunrise-2.5 ghatis. The twilight rising sign group is Meena
+only.
+
 Drik Bala excludes Rahu/Ketu incoming aspects by default. Set
 `BhavaConfig.include_node_aspects_for_drik_bala=true` to include their signed
 incoming aspect virupas in the `(benefic - malefic) / 4` balance. This knob

@@ -106,6 +106,7 @@ def _make_bhava_config(bhava_config):
     cfg.include_node_aspects_for_drik_bala = bhava_config.get(
         "include_node_aspects_for_drik_bala", 0
     )
+    cfg.include_special_bhavabala_rules = bhava_config.get("include_special_bhavabala_rules", 1)
     cfg.divide_guru_buddh_drishti_by_4_for_drik_bala = bhava_config.get(
         "divide_guru_buddh_drishti_by_4_for_drik_bala", 1
     )

@@ -39,6 +39,8 @@ pub struct BhavaBalaInputs {
     pub aspect_virupas: [[f64; 12]; 9],
     /// Whether Rahu/Ketu aspects should be included as malefic Bhava Drishti contributors.
     pub include_node_aspects: bool,
+    /// Whether occupation and rising special rules should contribute to total Bhava Bala.
+    pub include_special_rules: bool,
     /// Birth-period bucket for the sign-type bonus.
     pub birth_period: BhavaBalaBirthPeriod,
 }
@@ -83,7 +85,7 @@ const fn is_prishtodaya(rashi_index: u8) -> bool {
 }
 
 const fn is_dual_rashi(rashi_index: u8) -> bool {
-    matches!(rashi_index, 2 | 5 | 8 | 11)
+    matches!(rashi_index, 11)
 }
 
 /// Resolve the BPHS anchor bucket for a sidereal bhava cusp.
@@ -192,7 +194,12 @@ pub fn bhava_bala_entry(inputs: &BhavaBalaInputs, index: usize) -> BhavaBalaEntr
     let drishti = bhava_drishti_bala(&aspect_virupas_for_bhava, inputs.include_node_aspects);
     let occupation_bonus = bhava_occupation_bonus(bhava_number, &inputs.graha_bhava_numbers);
     let rising_bonus = bhava_rising_bonus(cusp_sidereal_lon, inputs.birth_period);
-    let total_virupas = bhavadhipati + dig + drishti;
+    let special = if inputs.include_special_rules {
+        occupation_bonus + rising_bonus
+    } else {
+        0.0
+    };
+    let total_virupas = bhavadhipati + dig + drishti + special;
 
     BhavaBalaEntry {
         bhava_number,
@@ -267,7 +274,7 @@ mod tests {
     #[test]
     fn rising_bonus_matches_birth_period_rule() {
         assert!((bhava_rising_bonus(65.0, BhavaBalaBirthPeriod::Day) - 15.0).abs() < EPS); // Mithuna
-        assert!((bhava_rising_bonus(65.0, BhavaBalaBirthPeriod::Twilight) - 15.0).abs() < EPS);
+        assert!(bhava_rising_bonus(65.0, BhavaBalaBirthPeriod::Twilight).abs() < EPS);
         assert!(bhava_rising_bonus(65.0, BhavaBalaBirthPeriod::Night).abs() < EPS);
         assert!((bhava_rising_bonus(250.0, BhavaBalaBirthPeriod::Night) - 15.0).abs() < EPS); // Dhanu
         assert!((bhava_rising_bonus(340.0, BhavaBalaBirthPeriod::Twilight) - 15.0).abs() < EPS); // Meena
@@ -310,7 +317,7 @@ mod tests {
     }
 
     #[test]
-    fn calculate_bhava_bala_total_uses_lord_dig_and_drishti_only() {
+    fn calculate_bhava_bala_total_includes_special_rules_when_enabled() {
         let mut aspect_virupas = [[0.0; 12]; 9];
         aspect_virupas[Graha::Guru.index() as usize][0] = 30.0;
         aspect_virupas[Graha::Surya.index() as usize][0] = 20.0;
@@ -329,6 +336,7 @@ mod tests {
             house_lord_strengths,
             aspect_virupas,
             include_node_aspects: false,
+            include_special_rules: true,
             birth_period: BhavaBalaBirthPeriod::Day,
         });
 
@@ -341,8 +349,43 @@ mod tests {
         assert!((entry.occupation_bonus - 60.0).abs() < EPS);
         assert!((entry.rising_bonus - 15.0).abs() < EPS);
         assert!(
-            (entry.total_virupas - (entry.bhavadhipati + entry.dig + entry.drishti)).abs() < EPS
+            (entry.total_virupas
+                - (entry.bhavadhipati
+                    + entry.dig
+                    + entry.drishti
+                    + entry.occupation_bonus
+                    + entry.rising_bonus))
+                .abs()
+                < EPS
         );
         assert!((entry.total_rupas * 60.0 - entry.total_virupas).abs() < EPS);
+    }
+
+    #[test]
+    fn calculate_bhava_bala_can_exclude_special_rules_from_total() {
+        let mut graha_bhava_numbers = [0u8; 9];
+        graha_bhava_numbers[Graha::Guru.index() as usize] = 1;
+
+        let mut house_lord_strengths = [0.0; 12];
+        house_lord_strengths[0] = 300.0;
+
+        let result = calculate_bhava_bala(&BhavaBalaInputs {
+            cusp_sidereal_lons: [65.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            ascendant_sidereal_lon: 15.0,
+            meridian_sidereal_lon: 105.0,
+            graha_bhava_numbers,
+            house_lord_strengths,
+            aspect_virupas: [[0.0; 12]; 9],
+            include_node_aspects: false,
+            include_special_rules: false,
+            birth_period: BhavaBalaBirthPeriod::Day,
+        });
+
+        let entry = result.entries[0];
+        assert!((entry.occupation_bonus - 60.0).abs() < EPS);
+        assert!((entry.rising_bonus - 15.0).abs() < EPS);
+        assert!(
+            (entry.total_virupas - (entry.bhavadhipati + entry.dig + entry.drishti)).abs() < EPS
+        );
     }
 }

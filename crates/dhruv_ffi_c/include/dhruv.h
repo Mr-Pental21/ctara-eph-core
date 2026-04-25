@@ -23,7 +23,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       66
+#define DHRUV_API_VERSION       67
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 #define DHRUV_MAX_AMSHA_VARIATIONS 16
@@ -520,6 +520,7 @@ typedef struct {
     int32_t reference_plane;
     uint8_t use_rashi_bhava_for_bala_avastha;
     uint8_t include_node_aspects_for_drik_bala;
+    uint8_t include_special_bhavabala_rules;
     uint8_t divide_guru_buddh_drishti_by_4_for_drik_bala;
     int32_t chandra_benefic_rule;
     int32_t sayanadi_ghatika_rounding;
@@ -1294,6 +1295,7 @@ typedef struct {
     double   house_lord_strengths[12];
     double   aspect_virupas[9][12];
     uint8_t  include_node_aspects;
+    uint8_t  include_special_rules;
     uint32_t birth_period;
 } DhruvBhavaBalaInputs;
 

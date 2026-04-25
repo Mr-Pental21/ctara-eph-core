@@ -95,7 +95,7 @@ Frequently used config and result families re-exported from `dhruv_rs::*`:
 - `GrahaPositionsConfig`
 
 `BhavaConfig` defaults `use_rashi_bhava_for_bala_avastha=true`,
-`include_rashi_bhava_results=true`, and
+`include_rashi_bhava_results=true`, `include_special_bhavabala_rules=true`, and
 `include_node_aspects_for_drik_bala=false`. Set
 `include_node_aspects_for_drik_bala=true` when Shadbala Drik Bala and
 Bhava Bala Drishti Bala should include Rahu/Ketu incoming aspects;

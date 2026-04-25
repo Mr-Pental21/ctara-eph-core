@@ -14,7 +14,6 @@ Supporting conceptual cross-checks:
 
 - Standard traditional sign classifications:
   - Shirshodaya / Prishtodaya / Ubhayodaya
-  - dual/common sign grouping
 
 No code-level reference to any copyleft or source-available implementation.
 
@@ -90,15 +89,20 @@ Multiple occupying grahas stack additively.
 Per BPHS Chapter 27:
 
 - add `15` virupas for Shirshodaya signs in day births
-- add `15` virupas for dual/common signs in twilight births
+- add `15` virupas for Ubhayodaya signs in twilight births
 - add `15` virupas for Prishtodaya signs in night births
 
 Sign grouping used:
 
 - Shirshodaya: Gemini, Leo, Virgo, Libra, Scorpio, Aquarius
 - Prishtodaya: Aries, Taurus, Cancer, Sagittarius, Capricorn
-- Ubhayodaya: Pisces
-- dual/common: Gemini, Virgo, Sagittarius, Pisces
+- Ubhayodaya: Pisces only
+
+Birth-period classification uses Sandhya windows of `2.5` ghatis before and
+after both sunrise and sunset. This gives `5` ghatis around sunrise plus `5`
+ghatis around sunset, i.e. `10` total ghatis of Sandhya per civil day. Day is
+from sunrise + `2.5` ghatis until sunset - `2.5` ghatis; night is from sunset +
+`2.5` ghatis until next sunrise - `2.5` ghatis.
 
 ## Implementation Notes
 
@@ -112,6 +116,9 @@ Sign grouping used:
   - graha-to-bhava drishti virupas
   - graha bhava occupancy
   - day/twilight/night birth period classification
+- `BhavaConfig.include_special_bhavabala_rules` defaults to true. When false,
+  occupation and rising-rule values are still returned but excluded from
+  `total_virupas`.
 
 ## Explicitly Excluded Sources
 

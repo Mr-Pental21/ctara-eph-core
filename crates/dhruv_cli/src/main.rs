@@ -731,6 +731,12 @@ struct BhavaBehaviorArgs {
     /// Exclude Rahu/Ketu incoming aspects from Shadbala Drik Bala and Bhava Bala Drishti Bala
     #[arg(long)]
     exclude_node_aspects_for_drik_bala: bool,
+    /// Include occupation and rising special rules in Bhava Bala totals
+    #[arg(long, conflicts_with = "exclude_special_bhavabala_rules")]
+    include_special_bhavabala_rules: bool,
+    /// Exclude occupation and rising special rules from Bhava Bala totals
+    #[arg(long)]
+    exclude_special_bhavabala_rules: bool,
     /// Divide Guru/Buddh incoming aspects by 4 in Shadbala Drik Bala
     #[arg(long, conflicts_with = "add_full_guru_buddh_drishti_for_drik_bala")]
     divide_guru_buddh_drishti_by_4_for_drik_bala: bool,
@@ -764,6 +770,12 @@ fn bhava_config_from_cli(args: &BhavaBehaviorArgs) -> BhavaConfig {
     }
     if args.exclude_node_aspects_for_drik_bala {
         config.include_node_aspects_for_drik_bala = false;
+    }
+    if args.include_special_bhavabala_rules {
+        config.include_special_bhavabala_rules = true;
+    }
+    if args.exclude_special_bhavabala_rules {
+        config.include_special_bhavabala_rules = false;
     }
     if args.add_full_guru_buddh_drishti_for_drik_bala {
         config.divide_guru_buddh_drishti_by_4_for_drik_bala = false;
@@ -10812,6 +10824,34 @@ mod tests {
 
     fn default_charakaraka_scheme() -> dhruv_vedic_base::CharakarakaScheme {
         dhruv_vedic_base::CharakarakaScheme::default()
+    }
+
+    fn default_bhava_behavior_args() -> BhavaBehaviorArgs {
+        BhavaBehaviorArgs {
+            use_rashi_bhava_for_bala_avastha: false,
+            use_configured_bhava_for_bala_avastha: false,
+            include_node_aspects_for_drik_bala: false,
+            exclude_node_aspects_for_drik_bala: false,
+            include_special_bhavabala_rules: false,
+            exclude_special_bhavabala_rules: false,
+            divide_guru_buddh_drishti_by_4_for_drik_bala: false,
+            add_full_guru_buddh_drishti_for_drik_bala: false,
+            chandra_benefic_rule: None,
+            sayanadi_ghatika_rounding: None,
+            include_rashi_bhava_results: false,
+            no_rashi_bhava_results: false,
+        }
+    }
+
+    #[test]
+    fn test_bhava_config_from_cli_special_bhavabala_default_and_opt_out() {
+        let default_cfg = bhava_config_from_cli(&default_bhava_behavior_args());
+        assert!(default_cfg.include_special_bhavabala_rules);
+
+        let mut args = default_bhava_behavior_args();
+        args.exclude_special_bhavabala_rules = true;
+        let opt_out_cfg = bhava_config_from_cli(&args);
+        assert!(!opt_out_cfg.include_special_bhavabala_rules);
     }
 
     #[test]

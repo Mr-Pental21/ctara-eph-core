@@ -127,6 +127,8 @@ pub struct BhavaConfig {
     pub use_rashi_bhava_for_bala_avastha: bool,
     /// Include Rahu/Ketu incoming aspects in Shadbala Drik Bala and Bhava Bala Drishti.
     pub include_node_aspects_for_drik_bala: bool,
+    /// Include Bhava Bala occupation and rising special rules in total strength.
+    pub include_special_bhavabala_rules: bool,
     /// Divide Guru/Buddh incoming drishti by 4 in Shadbala Drik Bala.
     pub divide_guru_buddh_drishti_by_4_for_drik_bala: bool,
     /// Rule for Chandra benefic/malefic classification in Shadbala.
@@ -145,6 +147,7 @@ impl Default for BhavaConfig {
             reference_mode: BhavaReferenceMode::StartOfFirst,
             use_rashi_bhava_for_bala_avastha: true,
             include_node_aspects_for_drik_bala: false,
+            include_special_bhavabala_rules: true,
             divide_guru_buddh_drishti_by_4_for_drik_bala: true,
             chandra_benefic_rule: ChandraBeneficRule::default(),
             sayanadi_ghatika_rounding: SayanadiGhatikaRounding::default(),

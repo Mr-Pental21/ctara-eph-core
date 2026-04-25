@@ -344,6 +344,12 @@ bool ReadBhavaConfig(napi_env env, napi_value obj, DhruvBhavaConfig* out) {
         if (!GetNamedProperty(env, obj, "includeNodeAspectsForDrikBala", &v) || !GetBool(env, v, &b)) return false;
         out->include_node_aspects_for_drik_bala = b ? 1 : 0;
     }
+    if (napi_has_named_property(env, obj, "includeSpecialBhavaBalaRules", &has) != napi_ok) return false;
+    if (has) {
+        bool b = false;
+        if (!GetNamedProperty(env, obj, "includeSpecialBhavaBalaRules", &v) || !GetBool(env, v, &b)) return false;
+        out->include_special_bhavabala_rules = b ? 1 : 0;
+    }
     if (napi_has_named_property(env, obj, "divideGuruBuddhDrishtiBy4ForDrikBala", &has) != napi_ok) return false;
     if (has) {
         bool b = false;
@@ -795,6 +801,13 @@ bool ReadBhavaBalaInputs(napi_env env, napi_value obj, DhruvBhavaBalaInputs* out
         if (!GetNamedProperty(env, obj, "includeNodeAspects", &v) || !GetBool(env, v, &include_node_aspects)) return false;
     }
     out->include_node_aspects = include_node_aspects ? 1 : 0;
+    bool include_special_rules = false;
+    bool has_include_special_rules = false;
+    if (napi_has_named_property(env, obj, "includeSpecialRules", &has_include_special_rules) != napi_ok) return false;
+    if (has_include_special_rules) {
+        if (!GetNamedProperty(env, obj, "includeSpecialRules", &v) || !GetBool(env, v, &include_special_rules)) return false;
+    }
+    out->include_special_rules = include_special_rules ? 1 : 0;
     if (!GetNamedProperty(env, obj, "birthPeriod", &v) || !GetUint32(env, v, &u32)) return false;
     out->birth_period = u32;
     return true;
@@ -3445,6 +3458,7 @@ napi_value BhavaConfigDefault(napi_env env, napi_callback_info info) {
     SetNamed(env, out, "referencePlane", MakeInt32(env, cfg.reference_plane));
     SetNamed(env, out, "useRashiBhavaForBalaAvastha", MakeBool(env, cfg.use_rashi_bhava_for_bala_avastha != 0));
     SetNamed(env, out, "includeNodeAspectsForDrikBala", MakeBool(env, cfg.include_node_aspects_for_drik_bala != 0));
+    SetNamed(env, out, "includeSpecialBhavaBalaRules", MakeBool(env, cfg.include_special_bhavabala_rules != 0));
     SetNamed(env, out, "divideGuruBuddhDrishtiBy4ForDrikBala", MakeBool(env, cfg.divide_guru_buddh_drishti_by_4_for_drik_bala != 0));
     SetNamed(env, out, "chandraBeneficRule", MakeInt32(env, cfg.chandra_benefic_rule));
     SetNamed(env, out, "sayanadiGhatikaRounding", MakeInt32(env, cfg.sayanadi_ghatika_rounding));

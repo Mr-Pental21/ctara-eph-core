@@ -355,6 +355,7 @@ struct BhavaConfigInput {
     reference_mode: Option<EnumInput>,
     use_rashi_bhava_for_bala_avastha: Option<bool>,
     include_node_aspects_for_drik_bala: Option<bool>,
+    include_special_bhavabala_rules: Option<bool>,
     divide_guru_buddh_drishti_by_4_for_drik_bala: Option<bool>,
     chandra_benefic_rule: Option<EnumInput>,
     sayanadi_ghatika_rounding: Option<EnumInput>,
@@ -1543,6 +1544,9 @@ fn to_bhava_config(
         }
         if let Some(value) = input.include_node_aspects_for_drik_bala {
             config.include_node_aspects_for_drik_bala = value;
+        }
+        if let Some(value) = input.include_special_bhavabala_rules {
+            config.include_special_bhavabala_rules = value;
         }
         if let Some(value) = input.divide_guru_buddh_drishti_by_4_for_drik_bala {
             config.divide_guru_buddh_drishti_by_4_for_drik_bala = value;
@@ -5210,6 +5214,27 @@ mod tests {
         let dummy = dummy_state();
         assert!(matches!(dummy.time_policy, TimeConversionPolicy::StrictLsk));
         assert!(dummy.tara_catalog.len() > 0);
+    }
+
+    #[test]
+    fn bhava_config_parses_special_bhavabala_rules() {
+        let state = dummy_state();
+        let default_config = to_bhava_config(&state, None).unwrap();
+        assert!(default_config.include_special_bhavabala_rules);
+
+        let input = BhavaConfigInput {
+            system: None,
+            reference_mode: None,
+            use_rashi_bhava_for_bala_avastha: None,
+            include_node_aspects_for_drik_bala: None,
+            include_special_bhavabala_rules: Some(false),
+            divide_guru_buddh_drishti_by_4_for_drik_bala: None,
+            chandra_benefic_rule: None,
+            sayanadi_ghatika_rounding: None,
+            include_rashi_bhava_results: None,
+        };
+        let config = to_bhava_config(&state, Some(&input)).unwrap();
+        assert!(!config.include_special_bhavabala_rules);
     }
 
     #[test]

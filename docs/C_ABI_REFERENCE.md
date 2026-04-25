@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 66`
+**ABI version:** `DHRUV_API_VERSION = 67`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -356,8 +356,10 @@ typedef struct {
     int32_t reference_plane;
     uint8_t use_rashi_bhava_for_bala_avastha; // default 1
     uint8_t include_node_aspects_for_drik_bala; // default 0
+    uint8_t include_special_bhavabala_rules; // default 1
     uint8_t divide_guru_buddh_drishti_by_4_for_drik_bala; // default 1
     int32_t chandra_benefic_rule; // default 0 = DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72
+    int32_t sayanadi_ghatika_rounding; // default 0 = floor
     uint8_t include_rashi_bhava_results;      // default 1
 } DhruvBhavaConfig;
 ```
@@ -2182,6 +2184,10 @@ no proper motion). Equivalent to requesting ecliptic output for
 ---
 
 ## Changelog
+
+**v67**: `DhruvBhavaConfig` adds `include_special_bhavabala_rules`
+(default `1`) and `DhruvBhavaBalaInputs` adds `include_special_rules` for
+including occupation/rising special rules in Bhava Bala totals.
 
 **v66**: `DhruvBhavaBalaInputs` adds `include_node_aspects`, aligning
 low-level Bhava Bala Drishti with the high-level

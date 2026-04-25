@@ -65,6 +65,7 @@ def _make_bhava_config(bhava_config):
     cfg.include_node_aspects_for_drik_bala = bhava_config.get(
         "include_node_aspects_for_drik_bala", 0
     )
+    cfg.include_special_bhavabala_rules = bhava_config.get("include_special_bhavabala_rules", 1)
     cfg.divide_guru_buddh_drishti_by_4_for_drik_bala = bhava_config.get(
         "divide_guru_buddh_drishti_by_4_for_drik_bala", 1
     )
@@ -297,6 +298,7 @@ def calculate_bhavabala(inputs):
         for bi, value in enumerate(row):
             cin.aspect_virupas[gi][bi] = value
     cin.include_node_aspects = inputs.get("include_node_aspects", 0)
+    cin.include_special_rules = inputs.get("include_special_rules", 0)
     cin.birth_period = inputs["birth_period"]
 
     out = ffi.new("DhruvBhavaBalaResult *")

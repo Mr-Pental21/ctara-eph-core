@@ -350,6 +350,7 @@ type BhavaConfig struct {
 	ReferencePlane                       int32
 	UseRashiBhavaForBalaAvastha          bool
 	IncludeNodeAspectsForDrikBala        bool
+	IncludeSpecialBhavaBalaRules         bool
 	DivideGuruBuddhDrishtiBy4ForDrikBala bool
 	ChandraBeneficRule                   int32
 	SayanadiGhatikaRounding              int32
@@ -1039,6 +1040,7 @@ type BhavaBalaInputs struct {
 	HouseLordStrengths   [12]float64
 	AspectVirupas        [GrahaCount][12]float64
 	IncludeNodeAspects   bool
+	IncludeSpecialRules  bool
 	BirthPeriod          uint32
 }
 

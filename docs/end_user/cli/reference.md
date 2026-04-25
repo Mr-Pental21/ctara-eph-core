@@ -52,6 +52,8 @@ Reusable public option groups:
   - `--use-configured-bhava-for-bala-avastha`
   - `--include-node-aspects-for-drik-bala`
   - `--exclude-node-aspects-for-drik-bala`
+  - `--include-special-bhavabala-rules`
+  - `--exclude-special-bhavabala-rules`
   - `--divide-guru-buddh-drishti-by-4-for-drik-bala`
   - `--add-full-guru-buddh-drishti-for-drik-bala`
   - `--chandra-benefic-rule brightness-72|waxing-180`

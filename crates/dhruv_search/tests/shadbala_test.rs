@@ -776,9 +776,90 @@ fn bhavabala_node_aspects_share_shadbala_drik_config() {
     );
     for (base, opted_in) in without_nodes.entries.iter().zip(with_nodes.entries.iter()) {
         assert!((base.dig - opted_in.dig).abs() < 1e-9);
-        assert!((base.total_virupas - (base.bhavadhipati + base.dig + base.drishti)).abs() < 1e-9);
         assert!(
-            (opted_in.total_virupas - (opted_in.bhavadhipati + opted_in.dig + opted_in.drishti))
+            (base.total_virupas
+                - (base.bhavadhipati
+                    + base.dig
+                    + base.drishti
+                    + base.occupation_bonus
+                    + base.rising_bonus))
+                .abs()
+                < 1e-9
+        );
+        assert!(
+            (opted_in.total_virupas
+                - (opted_in.bhavadhipati
+                    + opted_in.dig
+                    + opted_in.drishti
+                    + opted_in.occupation_bonus
+                    + opted_in.rising_bonus))
+                .abs()
+                < 1e-9
+        );
+    }
+}
+
+#[test]
+fn bhavabala_special_rules_are_included_by_default_and_configurable() {
+    let Some(engine) = load_engine() else { return };
+    let Some(eop) = load_eop() else { return };
+    let utc = utc_2024_jan_15();
+    let location = new_delhi();
+    let default_bhava = BhavaConfig::default();
+    let without_special = BhavaConfig {
+        include_special_bhavabala_rules: false,
+        ..BhavaConfig::default()
+    };
+    let rs_config = RiseSetConfig::default();
+    let aya_config = default_aya_config();
+
+    let with_special = bhavabala_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &default_bhava,
+        &rs_config,
+        &aya_config,
+    )
+    .expect("default bhavabala should succeed");
+    let without_special = bhavabala_for_date(
+        &engine,
+        &eop,
+        &utc,
+        &location,
+        &without_special,
+        &rs_config,
+        &aya_config,
+    )
+    .expect("special-rule opt-out bhavabala should succeed");
+
+    assert!(
+        with_special
+            .entries
+            .iter()
+            .zip(without_special.entries.iter())
+            .any(|(with, without)| (with.total_virupas - without.total_virupas).abs() > 1e-9),
+        "expected special rules to affect at least one Bhava Bala total"
+    );
+    for (with, without) in with_special
+        .entries
+        .iter()
+        .zip(without_special.entries.iter())
+    {
+        assert!((with.occupation_bonus - without.occupation_bonus).abs() < 1e-9);
+        assert!((with.rising_bonus - without.rising_bonus).abs() < 1e-9);
+        assert!(
+            (without.total_virupas - (without.bhavadhipati + without.dig + without.drishti)).abs()
+                < 1e-9
+        );
+        assert!(
+            (with.total_virupas
+                - (with.bhavadhipati
+                    + with.dig
+                    + with.drishti
+                    + with.occupation_bonus
+                    + with.rising_bonus))
                 .abs()
                 < 1e-9
         );

@@ -35,6 +35,25 @@ test('calculateBhavaBala opts into node aspects explicitly', () => {
   assert.equal(withNodes.entries[0].drishti, 35);
 });
 
+test('calculateBhavaBala includes special rules only when requested', () => {
+  const base = {
+    cuspSiderealLons: [65, ...Array(11).fill(0)],
+    ascendantSiderealLon: 15,
+    meridianSiderealLon: 105,
+    grahaBhavaNumbers: [0, 0, 0, 0, 1, 0, 0, 0, 0],
+    houseLordStrengths: [300, ...Array(11).fill(0)],
+    aspectVirupas: Array.from({ length: 9 }, () => Array(12).fill(0)),
+    birthPeriod: 0,
+  };
+
+  const withoutSpecial = dhruv.calculateBhavaBala(base);
+  const withSpecial = dhruv.calculateBhavaBala({ ...base, includeSpecialRules: true });
+
+  assert.equal(withSpecial.entries[0].occupationBonus, 60);
+  assert.equal(withSpecial.entries[0].risingBonus, 15);
+  assert.equal(withSpecial.entries[0].totalVirupas - withoutSpecial.entries[0].totalVirupas, 75);
+});
+
 test('amsha variation helpers expose per-amsha catalogs', () => {
   const d2 = dhruv.amshaVariations(2);
   assert.equal(d2.amshaCode, 2);
@@ -134,6 +153,7 @@ test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
   const bhavaCfg = dhruv.bhavaConfigDefault();
   assert.equal(bhavaCfg.useRashiBhavaForBalaAvastha, true);
   assert.equal(bhavaCfg.includeNodeAspectsForDrikBala, false);
+  assert.equal(bhavaCfg.includeSpecialBhavaBalaRules, true);
   assert.equal(bhavaCfg.divideGuruBuddhDrishtiBy4ForDrikBala, true);
   assert.equal(bhavaCfg.chandraBeneficRule, 0);
   assert.equal(bhavaCfg.includeRashiBhavaResults, true);

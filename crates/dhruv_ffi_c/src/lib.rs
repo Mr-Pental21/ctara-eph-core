@@ -58,7 +58,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 66;
+pub const DHRUV_API_VERSION: u32 = 67;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -2216,6 +2216,8 @@ pub struct DhruvBhavaConfig {
     pub use_rashi_bhava_for_bala_avastha: u8,
     /// Include Rahu/Ketu incoming aspects in Shadbala Drik Bala and Bhava Bala Drishti.
     pub include_node_aspects_for_drik_bala: u8,
+    /// Include Bhava Bala occupation and rising special rules in total strength.
+    pub include_special_bhavabala_rules: u8,
     /// Divide Guru/Buddh incoming aspects by 4 in Shadbala Drik Bala.
     pub divide_guru_buddh_drishti_by_4_for_drik_bala: u8,
     /// Chandra benefic rule: 0=72-degree brightness, 1=0..180 waxing arc.
@@ -2298,6 +2300,7 @@ fn bhava_config_from_ffi(cfg: &DhruvBhavaConfig) -> Result<BhavaConfig, DhruvSta
         reference_mode,
         use_rashi_bhava_for_bala_avastha: cfg.use_rashi_bhava_for_bala_avastha != 0,
         include_node_aspects_for_drik_bala: cfg.include_node_aspects_for_drik_bala != 0,
+        include_special_bhavabala_rules: cfg.include_special_bhavabala_rules != 0,
         divide_guru_buddh_drishti_by_4_for_drik_bala: cfg
             .divide_guru_buddh_drishti_by_4_for_drik_bala
             != 0,
@@ -2451,6 +2454,7 @@ pub extern "C" fn dhruv_bhava_config_default() -> DhruvBhavaConfig {
         reference_plane: -1,
         use_rashi_bhava_for_bala_avastha: 1,
         include_node_aspects_for_drik_bala: 0,
+        include_special_bhavabala_rules: 1,
         divide_guru_buddh_drishti_by_4_for_drik_bala: 1,
         chandra_benefic_rule: DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72,
         sayanadi_ghatika_rounding: DHRUV_SAYANADI_GHATIKA_ROUNDING_FLOOR,
@@ -10806,6 +10810,8 @@ pub struct DhruvBhavaBalaInputs {
     pub aspect_virupas: [[f64; 12]; 9],
     /// Nonzero includes Rahu/Ketu aspects as malefic Bhava Drishti contributors.
     pub include_node_aspects: u8,
+    /// Nonzero includes occupation/rising special rules in total Bhava Bala.
+    pub include_special_rules: u8,
     /// Birth-period code: 0=Day, 1=Twilight, 2=Night.
     pub birth_period: u32,
 }
@@ -11849,6 +11855,7 @@ pub unsafe extern "C" fn dhruv_calculate_bhavabala(
         house_lord_strengths: inputs.house_lord_strengths,
         aspect_virupas: inputs.aspect_virupas,
         include_node_aspects: inputs.include_node_aspects != 0,
+        include_special_rules: inputs.include_special_rules != 0,
         birth_period,
     };
 
@@ -14350,6 +14357,7 @@ mod tests {
         assert!((cfg.custom_start_deg - 0.0).abs() < 1e-15);
         assert_eq!(cfg.use_rashi_bhava_for_bala_avastha, 1);
         assert_eq!(cfg.include_node_aspects_for_drik_bala, 0);
+        assert_eq!(cfg.include_special_bhavabala_rules, 1);
         assert_eq!(cfg.divide_guru_buddh_drishti_by_4_for_drik_bala, 1);
         assert_eq!(
             cfg.chandra_benefic_rule,
@@ -14372,6 +14380,7 @@ mod tests {
             house_lord_strengths: [0.0; 12],
             aspect_virupas: [[0.0; 12]; 9],
             include_node_aspects: 0,
+            include_special_rules: 0,
             birth_period: 0,
         };
         inputs.aspect_virupas[dhruv_vedic_base::Graha::Guru.index() as usize][0] = 40.0;
@@ -14390,6 +14399,44 @@ mod tests {
 
         assert!((without_nodes.entries[0].drishti - 40.0).abs() < 1e-9);
         assert!((with_nodes.entries[0].drishti - 35.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn ffi_calculate_bhavabala_special_rules_are_explicit() {
+        let mut inputs = DhruvBhavaBalaInputs {
+            cusp_sidereal_lons: [65.0; 12],
+            ascendant_sidereal_lon: 15.0,
+            meridian_sidereal_lon: 105.0,
+            graha_bhava_numbers: [0; 9],
+            house_lord_strengths: [0.0; 12],
+            aspect_virupas: [[0.0; 12]; 9],
+            include_node_aspects: 0,
+            include_special_rules: 0,
+            birth_period: 0,
+        };
+        inputs.graha_bhava_numbers[dhruv_vedic_base::Graha::Guru.index() as usize] = 1;
+        inputs.house_lord_strengths[0] = 300.0;
+
+        let mut without_special = unsafe { std::mem::zeroed::<DhruvBhavaBalaResult>() };
+        // SAFETY: Inputs and output point to initialized stack values.
+        let status = unsafe { dhruv_calculate_bhavabala(&inputs, &mut without_special) };
+        assert_eq!(status, DhruvStatus::Ok);
+
+        inputs.include_special_rules = 1;
+        let mut with_special = unsafe { std::mem::zeroed::<DhruvBhavaBalaResult>() };
+        // SAFETY: Inputs and output point to initialized stack values.
+        let status = unsafe { dhruv_calculate_bhavabala(&inputs, &mut with_special) };
+        assert_eq!(status, DhruvStatus::Ok);
+
+        assert!((with_special.entries[0].occupation_bonus - 60.0).abs() < 1e-9);
+        assert!((with_special.entries[0].rising_bonus - 15.0).abs() < 1e-9);
+        assert!(
+            (with_special.entries[0].total_virupas
+                - without_special.entries[0].total_virupas
+                - 75.0)
+                .abs()
+                < 1e-9
+        );
     }
 
     #[test]

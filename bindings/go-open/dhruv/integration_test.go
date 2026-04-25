@@ -66,6 +66,36 @@ func TestCalculateBhavaBalaNodeAspectFlag(t *testing.T) {
 	}
 }
 
+func TestCalculateBhavaBalaSpecialRulesFlag(t *testing.T) {
+	var inputs BhavaBalaInputs
+	inputs.CuspSiderealLons[0] = 65
+	inputs.AscendantSiderealLon = 15
+	inputs.MeridianSiderealLon = 105
+	inputs.BirthPeriod = 0
+	inputs.GrahaBhavaNumbers[4] = 1
+	inputs.HouseLordStrengths[0] = 300
+
+	withoutSpecial, err := CalculateBhavaBala(inputs)
+	if err != nil {
+		t.Fatalf("CalculateBhavaBala without special rules: %v", err)
+	}
+	inputs.IncludeSpecialRules = true
+	withSpecial, err := CalculateBhavaBala(inputs)
+	if err != nil {
+		t.Fatalf("CalculateBhavaBala with special rules: %v", err)
+	}
+
+	if math.Abs(withSpecial.Entries[0].OccupationBonus-60.0) > 1e-9 {
+		t.Fatalf("unexpected occupation bonus: %v", withSpecial.Entries[0].OccupationBonus)
+	}
+	if math.Abs(withSpecial.Entries[0].RisingBonus-15.0) > 1e-9 {
+		t.Fatalf("unexpected rising bonus: %v", withSpecial.Entries[0].RisingBonus)
+	}
+	if math.Abs((withSpecial.Entries[0].TotalVirupas-withoutSpecial.Entries[0].TotalVirupas)-75.0) > 1e-9 {
+		t.Fatalf("unexpected special total delta: with=%v without=%v", withSpecial.Entries[0].TotalVirupas, withoutSpecial.Entries[0].TotalVirupas)
+	}
+}
+
 func TestKshetraSphutaMatchesAllSphutas(t *testing.T) {
 	inputs := SphutalInputs{
 		Sun: 10, Moon: 20, Mars: 30, Jupiter: 40, Venus: 50,

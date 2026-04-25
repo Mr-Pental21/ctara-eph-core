@@ -28,6 +28,28 @@ def test_calculate_bhavabala_node_aspect_flag():
     assert with_nodes.entries[0].drishti == 35.0
 
 
+def test_calculate_bhavabala_special_rules_flag():
+    """Low-level Bhava Bala inputs should include special rules only when requested."""
+    from ctara_dhruv.shadbala import calculate_bhavabala
+
+    base = {
+        "cusp_sidereal_lons": [65.0] + [0.0 for _ in range(11)],
+        "ascendant_sidereal_lon": 15.0,
+        "meridian_sidereal_lon": 105.0,
+        "graha_bhava_numbers": [0, 0, 0, 0, 1, 0, 0, 0, 0],
+        "house_lord_strengths": [300.0] + [0.0 for _ in range(11)],
+        "aspect_virupas": [[0.0 for _ in range(12)] for _ in range(9)],
+        "birth_period": 0,
+    }
+
+    without_special = calculate_bhavabala(base)
+    with_special = calculate_bhavabala({**base, "include_special_rules": 1})
+
+    assert with_special.entries[0].occupation_bonus == 60.0
+    assert with_special.entries[0].rising_bonus == 15.0
+    assert with_special.entries[0].total_virupas - without_special.entries[0].total_virupas == 75.0
+
+
 @skip_no_kernels
 @skip_no_eop
 class TestShadbala:
