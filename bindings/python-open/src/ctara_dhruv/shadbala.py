@@ -292,6 +292,8 @@ def calculate_bhavabala(inputs):
     cin.meridian_sidereal_lon = inputs["meridian_sidereal_lon"]
     for i, value in enumerate(inputs["graha_bhava_numbers"]):
         cin.graha_bhava_numbers[i] = value
+    for i, value in enumerate(inputs.get("graha_sidereal_lons", [0.0 for _ in range(9)])):
+        cin.graha_sidereal_lons[i] = value
     for i, value in enumerate(inputs["house_lord_strengths"]):
         cin.house_lord_strengths[i] = value
     for gi, row in enumerate(inputs["aspect_virupas"]):
@@ -299,6 +301,7 @@ def calculate_bhavabala(inputs):
             cin.aspect_virupas[gi][bi] = value
     cin.include_node_aspects = inputs.get("include_node_aspects", 0)
     cin.include_special_rules = inputs.get("include_special_rules", 0)
+    cin.chandra_benefic_rule = inputs.get("chandra_benefic_rule", 0)
     cin.birth_period = inputs["birth_period"]
 
     out = ffi.new("DhruvBhavaBalaResult *")

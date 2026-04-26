@@ -11,7 +11,7 @@ Dhruv exposes two bhava bases on high-level jyotish surfaces:
 - `include_special_bhavabala_rules` defaults to `true`. When true, Bhava Bala totals include the separately exposed occupation and rising special-rule values. When false, those values are still returned but excluded from totals.
 - `include_node_aspects_for_drik_bala` defaults to `false`. When true, Shadbala Drik Bala and Bhava Bala Drishti Bala include Rahu/Ketu incoming aspect contributions. Standalone drishti matrices are unaffected and always report node aspects.
 - `divide_guru_buddh_drishti_by_4_for_drik_bala` defaults to `true`. When true, Guru/Buddh incoming aspects participate in the divided Drik Bala balance. When false, their signed incoming aspects are added at full strength after the divided balance.
-- `chandra_benefic_rule` defaults to `brightness-72`. Use `waxing-180` to classify Chandra as benefic across the 0..=180 degree waxing arc instead.
+- `chandra_benefic_rule` defaults to `brightness-72`. Use `waxing-180` to classify Chandra as benefic across the 0..=180 degree waxing arc instead. The same rule applies to Shadbala Drik Bala, Bhava Bala Drishti Bala, and Buddh's association-based nature in those calculations.
 - `include_rashi_bhava_results` defaults to `true`. When true, high-level result surfaces and public bhava computation results include rashi-bhava sibling fields where that surface exposes bhava-derived results. When false, those sibling fields are suppressed.
 
 Rashi-bhava cusps are synthetic: bhava 1 is the lagna rashi at the lagna degree, and each following bhava advances one rashi while preserving the same degree/minute/second within the sign. The synthetic 10th cusp is used as the meridian equivalent for bhavabala when the rashi-bhava basis is selected.

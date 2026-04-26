@@ -1,7 +1,10 @@
 //! Bhava Bala (house strength) formulas from BPHS Chapter 27.
 
 use crate::graha::{ALL_GRAHAS, Graha, rashi_lord_by_index};
-use crate::graha_relationships::BeneficNature;
+use crate::graha_relationships::{
+    BeneficNature, ChandraBeneficRule, buddh_association_nature_with_chandra_rule,
+    moon_benefic_nature_with_rule, natural_benefic_malefic,
+};
 use crate::rashi::rashi_from_longitude;
 use crate::util::normalize_360;
 
@@ -33,6 +36,8 @@ pub struct BhavaBalaInputs {
     pub meridian_sidereal_lon: f64,
     /// Bhava number (1-12, or 0 if unknown) for each graha in ALL_GRAHAS order.
     pub graha_bhava_numbers: [u8; 9],
+    /// Sidereal graha longitudes in ALL_GRAHAS order for dynamic benefic/malefic rules.
+    pub graha_sidereal_lons: [f64; 9],
     /// House-lord Shadbala totals in virupas for each bhava.
     pub house_lord_strengths: [f64; 12],
     /// Total drishti virupas from each graha to each bhava cusp.
@@ -41,6 +46,8 @@ pub struct BhavaBalaInputs {
     pub include_node_aspects: bool,
     /// Whether occupation and rising special rules should contribute to total Bhava Bala.
     pub include_special_rules: bool,
+    /// Chandra benefic/malefic rule used by Chandra and Buddh association checks.
+    pub chandra_benefic_rule: ChandraBeneficRule,
     /// Birth-period bucket for the sign-type bonus.
     pub birth_period: BhavaBalaBirthPeriod,
 }
@@ -66,15 +73,6 @@ pub struct BhavaBalaEntry {
 pub struct BhavaBalaResult {
     pub entries: [BhavaBalaEntry; 12],
 }
-
-const BENEFIC_GRAHAS: [Graha; 2] = [Graha::Chandra, Graha::Shukra];
-const MALEFIC_GRAHAS: [Graha; 5] = [
-    Graha::Surya,
-    Graha::Mangal,
-    Graha::Shani,
-    Graha::Rahu,
-    Graha::Ketu,
-];
 
 const fn is_shirshodaya(rashi_index: u8) -> bool {
     matches!(rashi_index, 2 | 4 | 5 | 6 | 7 | 10)
@@ -156,18 +154,25 @@ pub fn bhava_occupation_bonus(bhava_number: u8, graha_bhava_numbers: &[u8; 9]) -
 }
 
 /// Compute Bhava Drishti Bala from total drishti virupas for one bhava cusp.
-pub fn bhava_drishti_bala(aspect_virupas_for_bhava: &[f64; 9], include_node_aspects: bool) -> f64 {
+pub fn bhava_drishti_bala(
+    aspect_virupas_for_bhava: &[f64; 9],
+    include_node_aspects: bool,
+    graha_sidereal_lons: &[f64; 9],
+    chandra_benefic_rule: ChandraBeneficRule,
+) -> f64 {
     let mut total = 0.0;
     for graha in ALL_GRAHAS {
         if !include_node_aspects && matches!(graha, Graha::Rahu | Graha::Ketu) {
             continue;
         }
         let virupas = aspect_virupas_for_bhava[graha.index() as usize];
+        let signed = match bhava_drishti_nature(graha, graha_sidereal_lons, chandra_benefic_rule) {
+            BeneficNature::Benefic => virupas,
+            BeneficNature::Malefic => -virupas,
+        };
         total += match graha {
-            Graha::Buddh | Graha::Guru => virupas,
-            _ if BENEFIC_GRAHAS.contains(&graha) => virupas / 4.0,
-            _ if MALEFIC_GRAHAS.contains(&graha) => -virupas / 4.0,
-            _ => 0.0,
+            Graha::Buddh | Graha::Guru => signed,
+            _ => signed / 4.0,
         };
     }
     total
@@ -191,7 +196,12 @@ pub fn bhava_bala_entry(inputs: &BhavaBalaInputs, index: usize) -> BhavaBalaEntr
         inputs.ascendant_sidereal_lon,
         inputs.meridian_sidereal_lon,
     );
-    let drishti = bhava_drishti_bala(&aspect_virupas_for_bhava, inputs.include_node_aspects);
+    let drishti = bhava_drishti_bala(
+        &aspect_virupas_for_bhava,
+        inputs.include_node_aspects,
+        &inputs.graha_sidereal_lons,
+        inputs.chandra_benefic_rule,
+    );
     let occupation_bonus = bhava_occupation_bonus(bhava_number, &inputs.graha_bhava_numbers);
     let rising_bonus = bhava_rising_bonus(cusp_sidereal_lon, inputs.birth_period);
     let special = if inputs.include_special_rules {
@@ -237,14 +247,22 @@ pub fn calculate_bhava_bala(inputs: &BhavaBalaInputs) -> BhavaBalaResult {
     BhavaBalaResult { entries }
 }
 
-/// Natural benefic/malefic classification used by Bhava Drishti Bala.
-pub const fn bhava_drishti_nature(graha: Graha) -> Option<BeneficNature> {
+/// Dynamic benefic/malefic classification used by Bhava Drishti Bala.
+pub fn bhava_drishti_nature(
+    graha: Graha,
+    graha_sidereal_lons: &[f64; 9],
+    chandra_benefic_rule: ChandraBeneficRule,
+) -> BeneficNature {
     match graha {
-        Graha::Buddh | Graha::Guru => None,
-        Graha::Chandra | Graha::Shukra => Some(BeneficNature::Benefic),
-        Graha::Surya | Graha::Mangal | Graha::Shani | Graha::Rahu | Graha::Ketu => {
-            Some(BeneficNature::Malefic)
+        Graha::Chandra => {
+            let moon = graha_sidereal_lons[Graha::Chandra.index() as usize];
+            let sun = graha_sidereal_lons[Graha::Surya.index() as usize];
+            moon_benefic_nature_with_rule(normalize_360(moon - sun), chandra_benefic_rule)
         }
+        Graha::Buddh => {
+            buddh_association_nature_with_chandra_rule(graha_sidereal_lons, chandra_benefic_rule)
+        }
+        _ => natural_benefic_malefic(graha),
     }
 }
 
@@ -253,6 +271,13 @@ mod tests {
     use super::*;
 
     const EPS: f64 = 1e-9;
+
+    fn default_dynamic_lons() -> [f64; 9] {
+        let mut lons = [0.0; 9];
+        lons[Graha::Chandra.index() as usize] = 180.0;
+        lons[Graha::Buddh.index() as usize] = 60.0;
+        lons
+    }
 
     #[test]
     fn dig_anchor_groups_match_bphs_rules() {
@@ -298,8 +323,40 @@ mod tests {
         virupas[Graha::Chandra.index() as usize] = 16.0;
         virupas[Graha::Surya.index() as usize] = 12.0;
         virupas[Graha::Rahu.index() as usize] = 8.0;
-        let result = bhava_drishti_bala(&virupas, true);
+        let lons = default_dynamic_lons();
+        let result = bhava_drishti_bala(&virupas, true, &lons, ChandraBeneficRule::Brightness72);
         assert!((result - (40.0 + 20.0 + 4.0 - 3.0 - 2.0)).abs() < EPS);
+    }
+
+    #[test]
+    fn drishti_bala_uses_dynamic_chandra_and_buddh_nature() {
+        let mut virupas = [0.0; 9];
+        virupas[Graha::Guru.index() as usize] = 40.0;
+        virupas[Graha::Buddh.index() as usize] = 30.0;
+        virupas[Graha::Chandra.index() as usize] = 20.0;
+
+        let mut malefic_lons = [0.0; 9];
+        malefic_lons[Graha::Chandra.index() as usize] = 10.0;
+        malefic_lons[Graha::Mangal.index() as usize] = 60.0;
+        malefic_lons[Graha::Buddh.index() as usize] = 60.0;
+        let malefic = bhava_drishti_bala(
+            &virupas,
+            false,
+            &malefic_lons,
+            ChandraBeneficRule::Brightness72,
+        );
+        assert!((malefic - (40.0 - 30.0 - 5.0)).abs() < EPS);
+
+        let mut benefic_lons = malefic_lons;
+        benefic_lons[Graha::Chandra.index() as usize] = 180.0;
+        benefic_lons[Graha::Buddh.index() as usize] = 90.0;
+        let benefic = bhava_drishti_bala(
+            &virupas,
+            false,
+            &benefic_lons,
+            ChandraBeneficRule::Waxing180,
+        );
+        assert!((benefic - (40.0 + 30.0 + 5.0)).abs() < EPS);
     }
 
     #[test]
@@ -309,8 +366,11 @@ mod tests {
         virupas[Graha::Rahu.index() as usize] = 20.0;
         virupas[Graha::Ketu.index() as usize] = 12.0;
 
-        let without_nodes = bhava_drishti_bala(&virupas, false);
-        let with_nodes = bhava_drishti_bala(&virupas, true);
+        let lons = default_dynamic_lons();
+        let without_nodes =
+            bhava_drishti_bala(&virupas, false, &lons, ChandraBeneficRule::Brightness72);
+        let with_nodes =
+            bhava_drishti_bala(&virupas, true, &lons, ChandraBeneficRule::Brightness72);
 
         assert!((without_nodes - 40.0).abs() < EPS);
         assert!((with_nodes - (40.0 - 5.0 - 3.0)).abs() < EPS);
@@ -333,10 +393,12 @@ mod tests {
             ascendant_sidereal_lon: 15.0,
             meridian_sidereal_lon: 105.0,
             graha_bhava_numbers,
+            graha_sidereal_lons: default_dynamic_lons(),
             house_lord_strengths,
             aspect_virupas,
             include_node_aspects: false,
             include_special_rules: true,
+            chandra_benefic_rule: ChandraBeneficRule::Brightness72,
             birth_period: BhavaBalaBirthPeriod::Day,
         });
 
@@ -374,10 +436,12 @@ mod tests {
             ascendant_sidereal_lon: 15.0,
             meridian_sidereal_lon: 105.0,
             graha_bhava_numbers,
+            graha_sidereal_lons: default_dynamic_lons(),
             house_lord_strengths,
             aspect_virupas: [[0.0; 12]; 9],
             include_node_aspects: false,
             include_special_rules: false,
+            chandra_benefic_rule: ChandraBeneficRule::Brightness72,
             birth_period: BhavaBalaBirthPeriod::Day,
         });
 

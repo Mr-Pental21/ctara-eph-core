@@ -31,16 +31,16 @@ use dhruv_vedic_base::{
     SayanadiInputs, SayanadiResult, ShadbalaInputs, TimeUpagrahaConfig, all_avasthas,
     all_combustion_status, all_shadbalas_from_inputs, all_sphutas, amsha_longitude, baladi_avastha,
     bhava_bala_entry, bhrigu_bindu, calculate_ashtakavarga, calculate_bhava_bala,
-    charakarakas_from_longitudes, compound_dignity_in_rashi, compute_bhavas, deeptadi_avasthas,
-    default_amsha_variation, dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise,
-    graha_drishti, graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord,
-    is_valid_amsha_variation, jagradadi_avastha, jd_tdb_to_centuries, kala_abda_lord,
-    kala_masa_lord, lagna_longitude_rad, lajjitadi_avasthas, lost_planetary_war,
-    lunar_node_deg_for_epoch_on_plane, nakshatra_from_longitude, node_dignity_in_rashi,
-    node_dignity_in_rashi_with_temporal_context, normalize_360, nth_rashi_from, own_signs,
-    pranapada_lagna, rashi_from_longitude, rashi_lord_by_index, sayanadi_all_sub_states,
-    sayanadi_avastha, shadbala_from_inputs, sree_lagna, sun_based_upagrahas,
-    time_upagraha_jd_with_config, vaar_lord as graha_vaar_lord,
+    charakarakas_from_longitudes, compound_dignity_in_rashi, compute_bhavas,
+    deeptadi_avasthas_with_dynamic_nature, default_amsha_variation,
+    dignity_in_rashi_with_positions, ghati_lagna, ghatikas_since_sunrise, graha_drishti,
+    graha_drishti_matrix, hora_lagna, hora_lord as graha_hora_lord, is_valid_amsha_variation,
+    jagradadi_avastha, jd_tdb_to_centuries, kala_abda_lord, kala_masa_lord, lagna_longitude_rad,
+    lajjitadi_avasthas_with_dynamic_nature, lost_planetary_war, lunar_node_deg_for_epoch_on_plane,
+    nakshatra_from_longitude, node_dignity_in_rashi, node_dignity_in_rashi_with_temporal_context,
+    normalize_360, nth_rashi_from, own_signs, pranapada_lagna, rashi_from_longitude,
+    rashi_lord_by_index, sayanadi_all_sub_states, sayanadi_avastha, shadbala_from_inputs,
+    sree_lagna, sun_based_upagrahas, time_upagraha_jd_with_config, vaar_lord as graha_vaar_lord,
 };
 
 use crate::conjunction::{body_ecliptic_lon_lat, body_ecliptic_state, body_lon_lat_on_plane};
@@ -3463,10 +3463,12 @@ fn assemble_bhavabala_inputs(
         ascendant_sidereal_lon: bhava_basis.ascendant_sidereal_lon,
         meridian_sidereal_lon: bhava_basis.meridian_sidereal_lon,
         graha_bhava_numbers: bhava_basis.bhava_numbers,
+        graha_sidereal_lons: graha_lons.longitudes,
         house_lord_strengths,
         aspect_virupas,
         include_node_aspects: bhava_config.include_node_aspects_for_drik_bala,
         include_special_rules: bhava_config.include_special_bhavabala_rules,
+        chandra_benefic_rule: bhava_config.chandra_benefic_rule,
         birth_period,
     })
 }
@@ -3629,18 +3631,22 @@ fn graha_avasthas_from_inputs(inputs: &AvasthaInputs, graha: Graha) -> GrahaAvas
         inputs.sayanadi.birth_ghatikas,
         inputs.sayanadi.lagna_rashi_number,
     );
-    let deeptadi_states = deeptadi_avasthas(
+    let deeptadi_states = deeptadi_avasthas_with_dynamic_nature(
         inputs.dignities[index],
         inputs.rashi_indices[index],
         &same_rashi,
+        &inputs.sidereal_lons,
+        inputs.chandra_benefic_rule,
     );
-    let lajjitadi_states = lajjitadi_avasthas(
+    let lajjitadi_states = lajjitadi_avasthas_with_dynamic_nature(
         graha,
         inputs.bhava_numbers[index],
         inputs.rashi_indices[index],
         inputs.dignities[index],
         &same_rashi,
         &aspecting,
+        &inputs.sidereal_lons,
+        inputs.chandra_benefic_rule,
     );
     GrahaAvasthas {
         baladi: baladi_avastha(inputs.sidereal_lons[index], inputs.rashi_indices[index]),
@@ -3791,11 +3797,14 @@ fn assemble_avastha_inputs(
         is_combust,
         is_retrograde,
         lost_war,
+        chandra_benefic_rule: bhava_config.chandra_benefic_rule,
         lajjitadi: LajjitadiInputs {
+            sidereal_lons,
             rashi_indices,
             bhava_numbers,
             dignities,
             drishti_matrix,
+            chandra_benefic_rule: bhava_config.chandra_benefic_rule,
         },
         sayanadi: SayanadiInputs {
             nakshatra_indices,

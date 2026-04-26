@@ -68,12 +68,18 @@ Per BPHS Chapter 27:
 - add one fourth of aspect strength from other benefics
 - subtract one fourth of aspect strength from malefics
 
-Implementation assumption:
+Implementation policy:
 
-- Mercury and Jupiter are always treated as full positive additions here because the cited BPHS rule names them explicitly.
-- Other grahas use their standard natural benefic/malefic classification:
-  - benefic: Moon, Venus
-  - malefic: Sun, Mars, Saturn, Rahu, Ketu
+- Jupiter is always treated as a full positive addition.
+- Mercury is full strength, but signed dynamically: benefic Mercury adds its
+  full aspect and malefic Mercury subtracts its full aspect.
+- Moon is quarter strength and signed dynamically by `BhavaConfig.chandra_benefic_rule`.
+- Venus is quarter-positive; Sun, Mars, and Saturn are quarter-negative.
+- Rahu/Ketu are quarter-negative only when
+  `BhavaConfig.include_node_aspects_for_drik_bala` is enabled.
+- Mercury's dynamic nature uses the same association rule as Shadbala Drik
+  Bala, including the configured Chandra benefic/malefic rule when Mercury is
+  with Chandra.
 
 ## 4. Occupation Rule
 
@@ -119,6 +125,8 @@ from sunrise + `2.5` ghatis until sunset - `2.5` ghatis; night is from sunset +
 - `BhavaConfig.include_special_bhavabala_rules` defaults to true. When false,
   occupation and rising-rule values are still returned but excluded from
   `total_virupas`.
+- `BhavaConfig.chandra_benefic_rule` controls Chandra in Bhava Drishti Bala
+  and also controls Chandra's nature inside Mercury's association rule.
 
 ## Explicitly Excluded Sources
 

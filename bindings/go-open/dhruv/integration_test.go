@@ -66,6 +66,36 @@ func TestCalculateBhavaBalaNodeAspectFlag(t *testing.T) {
 	}
 }
 
+func TestCalculateBhavaBalaDynamicChandraBuddhRules(t *testing.T) {
+	var inputs BhavaBalaInputs
+	inputs.ChandraBeneficRule = ChandraBeneficRuleBrightness72
+	inputs.AspectVirupas[4][0] = 40 // Guru full positive.
+	inputs.AspectVirupas[3][0] = 30 // Buddh full signed by dynamic nature.
+	inputs.AspectVirupas[1][0] = 20 // Chandra quarter signed by selected rule.
+	inputs.GrahaSiderealLons[1] = 10
+	inputs.GrahaSiderealLons[2] = 60
+	inputs.GrahaSiderealLons[3] = 60
+
+	malefic, err := CalculateBhavaBala(inputs)
+	if err != nil {
+		t.Fatalf("CalculateBhavaBala malefic dynamic rules: %v", err)
+	}
+	if math.Abs(malefic.Entries[0].Drishti-5.0) > 1e-9 {
+		t.Fatalf("unexpected malefic drishti: %v", malefic.Entries[0].Drishti)
+	}
+
+	inputs.ChandraBeneficRule = ChandraBeneficRuleWaxing180
+	inputs.GrahaSiderealLons[1] = 180
+	inputs.GrahaSiderealLons[3] = 90
+	benefic, err := CalculateBhavaBala(inputs)
+	if err != nil {
+		t.Fatalf("CalculateBhavaBala benefic dynamic rules: %v", err)
+	}
+	if math.Abs(benefic.Entries[0].Drishti-75.0) > 1e-9 {
+		t.Fatalf("unexpected benefic drishti: %v", benefic.Entries[0].Drishti)
+	}
+}
+
 func TestCalculateBhavaBalaSpecialRulesFlag(t *testing.T) {
 	var inputs BhavaBalaInputs
 	inputs.CuspSiderealLons[0] = 65

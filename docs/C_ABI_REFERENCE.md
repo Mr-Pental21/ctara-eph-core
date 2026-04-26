@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 67`
+**ABI version:** `DHRUV_API_VERSION = 68`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -377,7 +377,8 @@ in the divided `(benefic - malefic) / 4` balance. Set it to `0` to add their
 signed incoming aspects at full strength after the divided balance.
 
 `chandra_benefic_rule` controls Chandra's dynamic benefic/malefic
-classification for Shadbala nature-dependent calculations. Code `0`
+classification for Shadbala Drik Bala and Bhava Bala Drishti Bala. Buddh's
+association-based nature uses the same configured Chandra rule. Code `0`
 (`DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72`) is the default 72-degree
 brightness rule; code `1` (`DHRUV_CHANDRA_BENEFIC_RULE_WAXING_180`) uses the
 0..=180-degree waxing arc rule.
@@ -2184,6 +2185,10 @@ no proper motion). Equivalent to requesting ecliptic output for
 ---
 
 ## Changelog
+
+**v68**: `DhruvBhavaBalaInputs` adds `graha_sidereal_lons` and
+`chandra_benefic_rule`, so low-level Bhava Bala Drishti uses the same dynamic
+Chandra/Buddh benefic/malefic classification as high-level bala flows.
 
 **v67**: `DhruvBhavaConfig` adds `include_special_bhavabala_rules`
 (default `1`) and `DhruvBhavaBalaInputs` adds `include_special_rules` for

@@ -106,7 +106,9 @@ through the divided Drik Bala balance. `chandra_benefic_rule` defaults to
 `ChandraBeneficRule::Brightness72`, where Chandra is benefic when its smaller
 angular distance from Surya is at least 72 degrees. Set it to
 `ChandraBeneficRule::Waxing180` for the prior waxing-arc rule where Chandra is
-benefic when `normalize_360(Chandra - Surya) <= 180`.
+benefic when `normalize_360(Chandra - Surya) <= 180`. The same Chandra rule
+is used by Buddh's association-based benefic/malefic classification in
+Shadbala Drik Bala and Bhava Bala Drishti Bala.
 `sayanadi_ghatika_rounding` defaults to `SayanadiGhatikaRounding::Floor`; use
 `SayanadiGhatikaRounding::Ceil` to count the current partial ghatika.
 - `BindusConfig`

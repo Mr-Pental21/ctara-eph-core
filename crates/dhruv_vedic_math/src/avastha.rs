@@ -13,7 +13,9 @@
 use crate::drishti::GrahaDrishtiMatrix;
 use crate::graha::{ALL_GRAHAS, Graha};
 use crate::graha_relationships::{
-    BeneficNature, Dignity, NaisargikaMaitri, naisargika_maitri, natural_benefic_malefic,
+    BeneficNature, ChandraBeneficRule, Dignity, NaisargikaMaitri,
+    buddh_association_nature_with_chandra_rule, moon_benefic_nature_with_rule, naisargika_maitri,
+    natural_benefic_malefic,
 };
 use crate::util::normalize_360;
 
@@ -512,6 +514,7 @@ pub const ALL_NAME_GROUPS: [NameGroup; 5] = [
 
 /// Anka values for the 5 name-groups: Ka=1, Cha=6, Ta(retro)=11, Ta(dental)=16, Pa=21.
 pub const NAME_GROUP_ANKAS: [u8; 5] = [1, 6, 11, 16, 21];
+const DEFAULT_DYNAMIC_BENEFIC_LONS: [f64; 9] = [0.0, 180.0, 0.0, 60.0, 0.0, 0.0, 0.0, 0.0, 0.0];
 
 // ---------------------------------------------------------------------------
 // Input/Result structs
@@ -519,10 +522,12 @@ pub const NAME_GROUP_ANKAS: [u8; 5] = [1, 6, 11, 16, 21];
 
 /// Inputs for Lajjitadi batch computation.
 pub struct LajjitadiInputs {
+    pub sidereal_lons: [f64; 9],
     pub rashi_indices: [u8; 9],
     pub bhava_numbers: [u8; 9],
     pub dignities: [Dignity; 9],
     pub drishti_matrix: GrahaDrishtiMatrix,
+    pub chandra_benefic_rule: ChandraBeneficRule,
 }
 
 /// Inputs for Sayanadi batch computation.
@@ -543,6 +548,7 @@ pub struct AvasthaInputs {
     pub is_combust: [bool; 9],
     pub is_retrograde: [bool; 9],
     pub lost_war: [bool; 9],
+    pub chandra_benefic_rule: ChandraBeneficRule,
     pub lajjitadi: LajjitadiInputs,
     pub sayanadi: SayanadiInputs,
 }
@@ -656,6 +662,22 @@ pub fn deeptadi_avasthas(
     rashi_index: u8,
     same_rashi_grahas: &[Graha],
 ) -> DeeptadiAvasthaSet {
+    deeptadi_avasthas_with_dynamic_nature(
+        dignity,
+        rashi_index,
+        same_rashi_grahas,
+        &DEFAULT_DYNAMIC_BENEFIC_LONS,
+        ChandraBeneficRule::default(),
+    )
+}
+
+pub fn deeptadi_avasthas_with_dynamic_nature(
+    dignity: Dignity,
+    rashi_index: u8,
+    same_rashi_grahas: &[Graha],
+    sidereal_lons: &[f64; 9],
+    chandra_benefic_rule: ChandraBeneficRule,
+) -> DeeptadiAvasthaSet {
     let mut states = DeeptadiAvasthaSet::EMPTY;
 
     if dignity == Dignity::Exalted {
@@ -680,7 +702,7 @@ pub fn deeptadi_avasthas(
     if same_rashi_grahas
         .iter()
         .copied()
-        .any(is_deeptadi_malefic_conjunction)
+        .any(|graha| is_deeptadi_malefic_conjunction(graha, sidereal_lons, chandra_benefic_rule))
     {
         states.insert(DeeptadiAvastha::Vikala);
     }
@@ -714,6 +736,29 @@ pub fn lajjitadi_avasthas(
     same_rashi_grahas: &[Graha],
     aspecting_grahas: &[Graha],
 ) -> LajjitadiAvasthaSet {
+    lajjitadi_avasthas_with_dynamic_nature(
+        graha,
+        bhava_number,
+        rashi_index,
+        dignity,
+        same_rashi_grahas,
+        aspecting_grahas,
+        &DEFAULT_DYNAMIC_BENEFIC_LONS,
+        ChandraBeneficRule::default(),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn lajjitadi_avasthas_with_dynamic_nature(
+    graha: Graha,
+    bhava_number: u8,
+    rashi_index: u8,
+    dignity: Dignity,
+    same_rashi_grahas: &[Graha],
+    aspecting_grahas: &[Graha],
+    sidereal_lons: &[f64; 9],
+    chandra_benefic_rule: ChandraBeneficRule,
+) -> LajjitadiAvasthaSet {
     let mut states = LajjitadiAvasthaSet::EMPTY;
 
     // Lajjita: in 5th house and conjunct Rahu/Ketu/Mangal/Shani.
@@ -743,10 +788,12 @@ pub fn lajjitadi_avasthas(
         .iter()
         .copied()
         .any(|other| is_natural_friend(graha, other));
-    let aspected_by_benefic = aspecting_grahas
+    let aspected_by_benefic = aspecting_grahas.iter().any(|asp| {
+        dynamic_benefic_nature(*asp, sidereal_lons, chandra_benefic_rule) == BeneficNature::Benefic
+    });
+    let aspected_by_malefic = aspecting_grahas
         .iter()
-        .any(|asp| natural_benefic_malefic(*asp) == BeneficNature::Benefic);
-    let aspected_by_malefic = aspecting_grahas.iter().any(|g| is_malefic(*g));
+        .any(|g| is_malefic(*g, sidereal_lons, chandra_benefic_rule));
 
     // Kshudhita: natural enemy sign, natural enemy conjunction, or Shani conjunction plus natural enemy aspect.
     if matches!(
@@ -870,15 +917,41 @@ pub fn navamsa_number(sidereal_lon: f64) -> u8 {
     nav.min(8) + 1 // 1-9
 }
 
-/// Check if a graha is a natural malefic.
-fn is_malefic(graha: Graha) -> bool {
-    natural_benefic_malefic(graha) == BeneficNature::Malefic
+fn dynamic_benefic_nature(
+    graha: Graha,
+    sidereal_lons: &[f64; 9],
+    chandra_benefic_rule: ChandraBeneficRule,
+) -> BeneficNature {
+    match graha {
+        Graha::Chandra => {
+            let moon = sidereal_lons[Graha::Chandra.index() as usize];
+            let sun = sidereal_lons[Graha::Surya.index() as usize];
+            moon_benefic_nature_with_rule(normalize_360(moon - sun), chandra_benefic_rule)
+        }
+        Graha::Buddh => {
+            buddh_association_nature_with_chandra_rule(sidereal_lons, chandra_benefic_rule)
+        }
+        _ => natural_benefic_malefic(graha),
+    }
+}
+
+/// Check if a graha is a dynamic malefic.
+fn is_malefic(
+    graha: Graha,
+    sidereal_lons: &[f64; 9],
+    chandra_benefic_rule: ChandraBeneficRule,
+) -> bool {
+    dynamic_benefic_nature(graha, sidereal_lons, chandra_benefic_rule) == BeneficNature::Malefic
 }
 
 /// Deeptadi gives Surya conjunction its own Kopa state, so Surya is not reused
 /// as the generic malefic-conjunction trigger.
-fn is_deeptadi_malefic_conjunction(graha: Graha) -> bool {
-    graha != Graha::Surya && is_malefic(graha)
+fn is_deeptadi_malefic_conjunction(
+    graha: Graha,
+    sidereal_lons: &[f64; 9],
+    chandra_benefic_rule: ChandraBeneficRule,
+) -> bool {
+    graha != Graha::Surya && is_malefic(graha, sidereal_lons, chandra_benefic_rule)
 }
 
 fn is_lajjita_conjunction(graha: Graha) -> bool {
@@ -999,11 +1072,31 @@ pub fn all_deeptadi_avastha_sets(
     dignities: &[Dignity; 9],
     rashi_indices: &[u8; 9],
 ) -> [DeeptadiAvasthaSet; 9] {
+    all_deeptadi_avastha_sets_with_dynamic_nature(
+        dignities,
+        rashi_indices,
+        &DEFAULT_DYNAMIC_BENEFIC_LONS,
+        ChandraBeneficRule::default(),
+    )
+}
+
+pub fn all_deeptadi_avastha_sets_with_dynamic_nature(
+    dignities: &[Dignity; 9],
+    rashi_indices: &[u8; 9],
+    sidereal_lons: &[f64; 9],
+    chandra_benefic_rule: ChandraBeneficRule,
+) -> [DeeptadiAvasthaSet; 9] {
     let mut result = [DeeptadiAvasthaSet::EMPTY; 9];
     for g in ALL_GRAHAS {
         let i = g.index() as usize;
         let same = same_rashi_grahas(i, rashi_indices);
-        result[i] = deeptadi_avasthas(dignities[i], rashi_indices[i], &same);
+        result[i] = deeptadi_avasthas_with_dynamic_nature(
+            dignities[i],
+            rashi_indices[i],
+            &same,
+            sidereal_lons,
+            chandra_benefic_rule,
+        );
     }
     result
 }
@@ -1024,13 +1117,15 @@ pub fn all_lajjitadi_avastha_sets(inputs: &LajjitadiInputs) -> [LajjitadiAvastha
         let i = g.index() as usize;
         let same = same_rashi_grahas(i, &inputs.rashi_indices);
         let aspects = aspecting_grahas(i, &inputs.drishti_matrix);
-        result[i] = lajjitadi_avasthas(
+        result[i] = lajjitadi_avasthas_with_dynamic_nature(
             g,
             inputs.bhava_numbers[i],
             inputs.rashi_indices[i],
             inputs.dignities[i],
             &same,
             &aspects,
+            &inputs.sidereal_lons,
+            inputs.chandra_benefic_rule,
         );
     }
     result
@@ -1069,7 +1164,12 @@ pub fn all_sayanadi_avasthas(inputs: &SayanadiInputs) -> [SayanadiResult; 9] {
 pub fn all_avasthas(inputs: &AvasthaInputs) -> AllGrahaAvasthas {
     let baladi = all_baladi_avasthas(&inputs.sidereal_lons, &inputs.rashi_indices);
     let jagradadi = all_jagradadi_avasthas(&inputs.dignities);
-    let deeptadi_states = all_deeptadi_avastha_sets(&inputs.dignities, &inputs.rashi_indices);
+    let deeptadi_states = all_deeptadi_avastha_sets_with_dynamic_nature(
+        &inputs.dignities,
+        &inputs.rashi_indices,
+        &inputs.sidereal_lons,
+        inputs.chandra_benefic_rule,
+    );
     let lajjitadi_states = all_lajjitadi_avastha_sets(&inputs.lajjitadi);
     let sayanadi = all_sayanadi_avasthas(&inputs.sayanadi);
 
@@ -1209,6 +1309,32 @@ mod tests {
     fn deeptadi_surya_conjunction_is_kopa_not_vikala() {
         let states = deeptadi_avasthas(Dignity::Mitra, 11, &[Graha::Surya]);
         assert!(states.contains(DeeptadiAvastha::Kopa));
+        assert!(!states.contains(DeeptadiAvastha::Vikala));
+    }
+
+    #[test]
+    fn deeptadi_vikala_uses_dynamic_buddh_nature() {
+        let same = [Graha::Buddh];
+        let mut lons = [0.0; 9];
+        lons[Graha::Mangal.index() as usize] = 60.0;
+        lons[Graha::Buddh.index() as usize] = 60.0;
+        let states = deeptadi_avasthas_with_dynamic_nature(
+            Dignity::Sama,
+            2,
+            &same,
+            &lons,
+            ChandraBeneficRule::Brightness72,
+        );
+        assert!(states.contains(DeeptadiAvastha::Vikala));
+
+        lons[Graha::Buddh.index() as usize] = 90.0;
+        let states = deeptadi_avasthas_with_dynamic_nature(
+            Dignity::Sama,
+            2,
+            &same,
+            &lons,
+            ChandraBeneficRule::Brightness72,
+        );
         assert!(!states.contains(DeeptadiAvastha::Vikala));
     }
 
@@ -1377,6 +1503,36 @@ mod tests {
         );
         let states = lajjitadi_avasthas(Graha::Surya, 1, 3, Dignity::Sama, &[], &[Graha::Shani]);
         assert!(states.contains(LajjitadiAvastha::Trushita));
+    }
+
+    #[test]
+    fn lajjitadi_benefic_aspect_uses_dynamic_chandra_rule() {
+        let mut lons = [0.0; 9];
+        lons[Graha::Chandra.index() as usize] = 10.0;
+        let states = lajjitadi_avasthas_with_dynamic_nature(
+            Graha::Surya,
+            1,
+            3,
+            Dignity::Sama,
+            &[],
+            &[Graha::Shani, Graha::Chandra],
+            &lons,
+            ChandraBeneficRule::Brightness72,
+        );
+        assert!(states.contains(LajjitadiAvastha::Trushita));
+
+        lons[Graha::Chandra.index() as usize] = 180.0;
+        let states = lajjitadi_avasthas_with_dynamic_nature(
+            Graha::Surya,
+            1,
+            3,
+            Dignity::Sama,
+            &[],
+            &[Graha::Shani, Graha::Chandra],
+            &lons,
+            ChandraBeneficRule::Brightness72,
+        );
+        assert!(!states.contains(LajjitadiAvastha::Trushita));
     }
 
     #[test]
@@ -1577,7 +1733,9 @@ mod tests {
             is_combust: [false; 9],
             is_retrograde: [false; 9],
             lost_war: [false; 9],
+            chandra_benefic_rule: ChandraBeneficRule::default(),
             lajjitadi: LajjitadiInputs {
+                sidereal_lons: [10.0, 45.0, 100.0, 150.0, 200.0, 250.0, 300.0, 330.0, 350.0],
                 rashi_indices: [0, 1, 3, 5, 6, 8, 10, 11, 11],
                 bhava_numbers: [1, 2, 4, 6, 7, 9, 10, 11, 12],
                 dignities: [
@@ -1594,6 +1752,7 @@ mod tests {
                 drishti_matrix: GrahaDrishtiMatrix {
                     entries: [[DrishtiEntry::zero(); 9]; 9],
                 },
+                chandra_benefic_rule: ChandraBeneficRule::default(),
             },
             sayanadi: SayanadiInputs {
                 nakshatra_indices: [0, 3, 7, 11, 15, 18, 22, 24, 26],

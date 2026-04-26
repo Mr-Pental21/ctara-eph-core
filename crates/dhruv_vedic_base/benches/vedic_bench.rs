@@ -179,11 +179,14 @@ fn avastha_bench(c: &mut Criterion) {
         is_combust,
         is_retrograde,
         lost_war,
+        chandra_benefic_rule: dhruv_vedic_base::ChandraBeneficRule::default(),
         lajjitadi: LajjitadiInputs {
+            sidereal_lons,
             rashi_indices,
             bhava_numbers,
             dignities,
             drishti_matrix,
+            chandra_benefic_rule: dhruv_vedic_base::ChandraBeneficRule::default(),
         },
         sayanadi: SayanadiInputs {
             nakshatra_indices: [1, 8, 14, 22, 3, 11, 20, 24, 11],

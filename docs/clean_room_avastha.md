@@ -63,7 +63,9 @@ state and the full Deeptadi state list.
 The primary order above is used only when an older single-value surface needs
 one Deeptadi state. The full Deeptadi state set is the authoritative result.
 Surya conjunction contributes Kopa, so Surya is not also reused as the generic
-malefic-conjunction trigger for Vikala.
+malefic-conjunction trigger for Vikala. Chandra and Buddh use the dynamic
+benefic/malefic rules from `BhavaConfig.chandra_benefic_rule`; Buddh also uses
+the same association-based rule used by Shadbala Drik Bala.
 
 **Inauspicious signs:** Mesha, Vrishabha, Karka, Dhanu, Makara.
 
@@ -106,7 +108,9 @@ Lajjitadi states, or no Lajjitadi state when no condition applies.
 | 6             | Natural friend sign/conjunction, or conjunct Guru and aspected by natural friend | Mudita    |
 
 **Definitions:**
-- Malefic: via `natural_benefic_malefic()`.
+- Malefic/benefic: Chandra and Buddh use the dynamic rules from
+  `BhavaConfig.chandra_benefic_rule`; other grahas use
+  `natural_benefic_malefic()`.
 - Natural friend/enemy: via `naisargika_maitri(graha, other)`.
 - Aspected by: grahas with `total_virupa > 45.0` from drishti matrix.
 - Water signs: Karka (3), Vrischika (7), Meena (11)

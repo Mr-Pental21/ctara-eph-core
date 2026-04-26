@@ -58,7 +58,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 67;
+pub const DHRUV_API_VERSION: u32 = 68;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -2258,6 +2258,20 @@ fn bhava_system_from_code(code: i32) -> Option<BhavaSystem> {
     systems.get(idx).copied()
 }
 
+fn chandra_benefic_rule_from_code(
+    code: i32,
+) -> Result<dhruv_vedic_base::ChandraBeneficRule, DhruvStatus> {
+    match code {
+        DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72 => {
+            Ok(dhruv_vedic_base::ChandraBeneficRule::Brightness72)
+        }
+        DHRUV_CHANDRA_BENEFIC_RULE_WAXING_180 => {
+            Ok(dhruv_vedic_base::ChandraBeneficRule::Waxing180)
+        }
+        _ => Err(DhruvStatus::InvalidQuery),
+    }
+}
+
 /// Convert C config to Rust BhavaConfig.
 fn bhava_config_from_ffi(cfg: &DhruvBhavaConfig) -> Result<BhavaConfig, DhruvStatus> {
     let system = bhava_system_from_code(cfg.system).ok_or(DhruvStatus::InvalidQuery)?;
@@ -2277,13 +2291,7 @@ fn bhava_config_from_ffi(cfg: &DhruvBhavaConfig) -> Result<BhavaConfig, DhruvSta
         DHRUV_BHAVA_REF_MIDDLE => BhavaReferenceMode::MiddleOfFirst,
         _ => return Err(DhruvStatus::InvalidQuery),
     };
-    let chandra_benefic_rule = match cfg.chandra_benefic_rule {
-        DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72 => {
-            dhruv_vedic_base::ChandraBeneficRule::Brightness72
-        }
-        DHRUV_CHANDRA_BENEFIC_RULE_WAXING_180 => dhruv_vedic_base::ChandraBeneficRule::Waxing180,
-        _ => return Err(DhruvStatus::InvalidQuery),
-    };
+    let chandra_benefic_rule = chandra_benefic_rule_from_code(cfg.chandra_benefic_rule)?;
     let sayanadi_ghatika_rounding = match cfg.sayanadi_ghatika_rounding {
         DHRUV_SAYANADI_GHATIKA_ROUNDING_FLOOR => {
             dhruv_vedic_base::bhava_types::SayanadiGhatikaRounding::Floor
@@ -10804,6 +10812,8 @@ pub struct DhruvBhavaBalaInputs {
     pub meridian_sidereal_lon: f64,
     /// Bhava number (1-12, or 0 if unknown) for each graha in Sun..Ketu order.
     pub graha_bhava_numbers: [u8; 9],
+    /// Sidereal graha longitudes in Sun..Ketu order for dynamic benefic/malefic rules.
+    pub graha_sidereal_lons: [f64; 9],
     /// House-lord Shadbala totals in virupas for each house.
     pub house_lord_strengths: [f64; 12],
     /// Aspect virupas from each graha to each house cusp in Sun..Ketu x house order.
@@ -10812,6 +10822,8 @@ pub struct DhruvBhavaBalaInputs {
     pub include_node_aspects: u8,
     /// Nonzero includes occupation/rising special rules in total Bhava Bala.
     pub include_special_rules: u8,
+    /// Chandra benefic rule code: 0=brightness-72, 1=waxing-180.
+    pub chandra_benefic_rule: i32,
     /// Birth-period code: 0=Day, 1=Twilight, 2=Night.
     pub birth_period: u32,
 }
@@ -11847,15 +11859,21 @@ pub unsafe extern "C" fn dhruv_calculate_bhavabala(
         Ok(value) => value,
         Err(status) => return status,
     };
+    let chandra_benefic_rule = match chandra_benefic_rule_from_code(inputs.chandra_benefic_rule) {
+        Ok(value) => value,
+        Err(status) => return status,
+    };
     let rust_inputs = dhruv_vedic_base::BhavaBalaInputs {
         cusp_sidereal_lons: inputs.cusp_sidereal_lons,
         ascendant_sidereal_lon: inputs.ascendant_sidereal_lon,
         meridian_sidereal_lon: inputs.meridian_sidereal_lon,
         graha_bhava_numbers: inputs.graha_bhava_numbers,
+        graha_sidereal_lons: inputs.graha_sidereal_lons,
         house_lord_strengths: inputs.house_lord_strengths,
         aspect_virupas: inputs.aspect_virupas,
         include_node_aspects: inputs.include_node_aspects != 0,
         include_special_rules: inputs.include_special_rules != 0,
+        chandra_benefic_rule,
         birth_period,
     };
 
@@ -14377,12 +14395,16 @@ mod tests {
             ascendant_sidereal_lon: 0.0,
             meridian_sidereal_lon: 90.0,
             graha_bhava_numbers: [0; 9],
+            graha_sidereal_lons: [0.0; 9],
             house_lord_strengths: [0.0; 12],
             aspect_virupas: [[0.0; 12]; 9],
             include_node_aspects: 0,
             include_special_rules: 0,
+            chandra_benefic_rule: DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72,
             birth_period: 0,
         };
+        inputs.graha_sidereal_lons[dhruv_vedic_base::Graha::Chandra.index() as usize] = 180.0;
+        inputs.graha_sidereal_lons[dhruv_vedic_base::Graha::Buddh.index() as usize] = 60.0;
         inputs.aspect_virupas[dhruv_vedic_base::Graha::Guru.index() as usize][0] = 40.0;
         inputs.aspect_virupas[dhruv_vedic_base::Graha::Rahu.index() as usize][0] = 20.0;
 
@@ -14402,18 +14424,64 @@ mod tests {
     }
 
     #[test]
+    fn ffi_calculate_bhavabala_uses_dynamic_chandra_buddh_rules() {
+        let mut inputs = DhruvBhavaBalaInputs {
+            cusp_sidereal_lons: [0.0; 12],
+            ascendant_sidereal_lon: 0.0,
+            meridian_sidereal_lon: 90.0,
+            graha_bhava_numbers: [0; 9],
+            graha_sidereal_lons: [0.0; 9],
+            house_lord_strengths: [0.0; 12],
+            aspect_virupas: [[0.0; 12]; 9],
+            include_node_aspects: 0,
+            include_special_rules: 0,
+            chandra_benefic_rule: DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72,
+            birth_period: 0,
+        };
+        inputs.aspect_virupas[dhruv_vedic_base::Graha::Guru.index() as usize][0] = 40.0;
+        inputs.aspect_virupas[dhruv_vedic_base::Graha::Buddh.index() as usize][0] = 30.0;
+        inputs.aspect_virupas[dhruv_vedic_base::Graha::Chandra.index() as usize][0] = 20.0;
+        inputs.graha_sidereal_lons[dhruv_vedic_base::Graha::Chandra.index() as usize] = 10.0;
+        inputs.graha_sidereal_lons[dhruv_vedic_base::Graha::Mangal.index() as usize] = 60.0;
+        inputs.graha_sidereal_lons[dhruv_vedic_base::Graha::Buddh.index() as usize] = 60.0;
+
+        let mut malefic = unsafe { std::mem::zeroed::<DhruvBhavaBalaResult>() };
+        // SAFETY: Inputs and output point to initialized stack values.
+        let status = unsafe { dhruv_calculate_bhavabala(&inputs, &mut malefic) };
+        assert_eq!(status, DhruvStatus::Ok);
+        assert!((malefic.entries[0].drishti - 5.0).abs() < 1e-9);
+
+        inputs.chandra_benefic_rule = DHRUV_CHANDRA_BENEFIC_RULE_WAXING_180;
+        inputs.graha_sidereal_lons[dhruv_vedic_base::Graha::Chandra.index() as usize] = 180.0;
+        inputs.graha_sidereal_lons[dhruv_vedic_base::Graha::Buddh.index() as usize] = 90.0;
+        let mut benefic = unsafe { std::mem::zeroed::<DhruvBhavaBalaResult>() };
+        // SAFETY: Inputs and output point to initialized stack values.
+        let status = unsafe { dhruv_calculate_bhavabala(&inputs, &mut benefic) };
+        assert_eq!(status, DhruvStatus::Ok);
+        assert!((benefic.entries[0].drishti - 75.0).abs() < 1e-9);
+
+        inputs.chandra_benefic_rule = 99;
+        let status = unsafe { dhruv_calculate_bhavabala(&inputs, &mut benefic) };
+        assert_eq!(status, DhruvStatus::InvalidQuery);
+    }
+
+    #[test]
     fn ffi_calculate_bhavabala_special_rules_are_explicit() {
         let mut inputs = DhruvBhavaBalaInputs {
             cusp_sidereal_lons: [65.0; 12],
             ascendant_sidereal_lon: 15.0,
             meridian_sidereal_lon: 105.0,
             graha_bhava_numbers: [0; 9],
+            graha_sidereal_lons: [0.0; 9],
             house_lord_strengths: [0.0; 12],
             aspect_virupas: [[0.0; 12]; 9],
             include_node_aspects: 0,
             include_special_rules: 0,
+            chandra_benefic_rule: DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72,
             birth_period: 0,
         };
+        inputs.graha_sidereal_lons[dhruv_vedic_base::Graha::Chandra.index() as usize] = 180.0;
+        inputs.graha_sidereal_lons[dhruv_vedic_base::Graha::Buddh.index() as usize] = 60.0;
         inputs.graha_bhava_numbers[dhruv_vedic_base::Graha::Guru.index() as usize] = 1;
         inputs.house_lord_strengths[0] = 300.0;
 

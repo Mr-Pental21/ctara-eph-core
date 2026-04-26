@@ -126,10 +126,11 @@ the signed benefic/malefic balance. Set
 signed incoming aspects at full strength after the divided balance.
 
 Chandra's dynamic benefic/malefic classification uses
-`BhavaConfig.chandra_benefic_rule`. The default `Brightness72` rule treats
-Chandra as benefic only when `min(elongation, 360 - elongation) >= 72`. The
-alternate `Waxing180` rule treats Chandra as benefic when
-`normalize_360(Chandra - Surya) <= 180`.
+`BhavaConfig.chandra_benefic_rule` in Shadbala Drik Bala and Bhava Bala Drishti
+Bala. The default `Brightness72` rule treats Chandra as benefic only when
+`min(elongation, 360 - elongation) >= 72`. The alternate `Waxing180` rule
+treats Chandra as benefic when `normalize_360(Chandra - Surya) <= 180`.
+Buddh uses the same dynamic association rule in both calculations.
 
 ## 3. Kala Bala (Temporal Strength)
 

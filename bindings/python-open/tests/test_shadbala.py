@@ -28,6 +28,37 @@ def test_calculate_bhavabala_node_aspect_flag():
     assert with_nodes.entries[0].drishti == 35.0
 
 
+def test_calculate_bhavabala_dynamic_chandra_buddh_rules():
+    """Low-level Bhava Bala should classify Chandra/Buddh dynamically."""
+    from ctara_dhruv.shadbala import calculate_bhavabala
+
+    aspect_virupas = [[0.0 for _ in range(12)] for _ in range(9)]
+    aspect_virupas[4][0] = 40.0  # Guru full positive.
+    aspect_virupas[3][0] = 30.0  # Buddh full signed by dynamic nature.
+    aspect_virupas[1][0] = 20.0  # Chandra quarter signed by selected rule.
+    base = {
+        "cusp_sidereal_lons": [0.0 for _ in range(12)],
+        "ascendant_sidereal_lon": 0.0,
+        "meridian_sidereal_lon": 90.0,
+        "graha_bhava_numbers": [0 for _ in range(9)],
+        "graha_sidereal_lons": [0.0, 10.0, 60.0, 60.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        "house_lord_strengths": [0.0 for _ in range(12)],
+        "aspect_virupas": aspect_virupas,
+        "chandra_benefic_rule": 0,
+        "birth_period": 0,
+    }
+
+    malefic = calculate_bhavabala(base)
+    benefic = calculate_bhavabala({
+        **base,
+        "graha_sidereal_lons": [0.0, 180.0, 60.0, 90.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        "chandra_benefic_rule": 1,
+    })
+
+    assert malefic.entries[0].drishti == 5.0
+    assert benefic.entries[0].drishti == 75.0
+
+
 def test_calculate_bhavabala_special_rules_flag():
     """Low-level Bhava Bala inputs should include special rules only when requested."""
     from ctara_dhruv.shadbala import calculate_bhavabala

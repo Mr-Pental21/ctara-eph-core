@@ -50,9 +50,10 @@ pub use avastha::{
     LAJJITADI_PRIORITY, LAJJITADI_STATE_COUNT, LajjitadiAvastha, LajjitadiAvasthaSet,
     LajjitadiInputs, NAME_GROUP_ANKAS, NameGroup, SayanadiAvastha, SayanadiInputs, SayanadiResult,
     SayanadiSubState, all_avasthas, all_baladi_avasthas, all_deeptadi_avastha_sets,
-    all_deeptadi_avasthas, all_jagradadi_avasthas, all_lajjitadi_avastha_sets,
-    all_lajjitadi_avasthas, all_sayanadi_avasthas, baladi_avastha, deeptadi_avastha,
-    deeptadi_avasthas, jagradadi_avastha, lajjitadi_avastha, lajjitadi_avasthas,
+    all_deeptadi_avastha_sets_with_dynamic_nature, all_deeptadi_avasthas, all_jagradadi_avasthas,
+    all_lajjitadi_avastha_sets, all_lajjitadi_avasthas, all_sayanadi_avasthas, baladi_avastha,
+    deeptadi_avastha, deeptadi_avasthas, deeptadi_avasthas_with_dynamic_nature, jagradadi_avastha,
+    lajjitadi_avastha, lajjitadi_avasthas, lajjitadi_avasthas_with_dynamic_nature,
     lost_planetary_war, navamsa_number, sayanadi_all_sub_states, sayanadi_avastha,
     sayanadi_sub_state,
 };

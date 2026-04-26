@@ -2226,11 +2226,14 @@ fn assemble_avastha_inputs(
         is_combust,
         is_retrograde,
         lost_war,
+        chandra_benefic_rule: bhava_config.chandra_benefic_rule,
         lajjitadi: LajjitadiInputs {
+            sidereal_lons,
             rashi_indices,
             bhava_numbers,
             dignities,
             drishti_matrix,
+            chandra_benefic_rule: bhava_config.chandra_benefic_rule,
         },
         sayanadi: SayanadiInputs {
             nakshatra_indices,

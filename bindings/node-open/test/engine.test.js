@@ -35,6 +35,34 @@ test('calculateBhavaBala opts into node aspects explicitly', () => {
   assert.equal(withNodes.entries[0].drishti, 35);
 });
 
+test('calculateBhavaBala applies dynamic Chandra and Buddh rules', () => {
+  const aspectVirupas = Array.from({ length: 9 }, () => Array(12).fill(0));
+  aspectVirupas[4][0] = 40; // Guru full positive.
+  aspectVirupas[3][0] = 30; // Buddh full signed by dynamic nature.
+  aspectVirupas[1][0] = 20; // Chandra quarter signed by selected rule.
+  const base = {
+    cuspSiderealLons: Array(12).fill(0),
+    ascendantSiderealLon: 0,
+    meridianSiderealLon: 90,
+    grahaBhavaNumbers: Array(9).fill(0),
+    grahaSiderealLons: [0, 10, 60, 60, 0, 0, 0, 0, 0],
+    houseLordStrengths: Array(12).fill(0),
+    aspectVirupas,
+    chandraBeneficRule: dhruv.CHANDRA_BENEFIC_RULE.BRIGHTNESS_72,
+    birthPeriod: 0,
+  };
+
+  const malefic = dhruv.calculateBhavaBala(base);
+  const benefic = dhruv.calculateBhavaBala({
+    ...base,
+    grahaSiderealLons: [0, 180, 60, 90, 0, 0, 0, 0, 0],
+    chandraBeneficRule: dhruv.CHANDRA_BENEFIC_RULE.WAXING_180,
+  });
+
+  assert.equal(malefic.entries[0].drishti, 5);
+  assert.equal(benefic.entries[0].drishti, 75);
+});
+
 test('calculateBhavaBala includes special rules only when requested', () => {
   const base = {
     cuspSiderealLons: [65, ...Array(11).fill(0)],

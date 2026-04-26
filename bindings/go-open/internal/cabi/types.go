@@ -1037,10 +1037,12 @@ type BhavaBalaInputs struct {
 	AscendantSiderealLon float64
 	MeridianSiderealLon  float64
 	GrahaBhavaNumbers    [GrahaCount]uint8
+	GrahaSiderealLons    [GrahaCount]float64
 	HouseLordStrengths   [12]float64
 	AspectVirupas        [GrahaCount][12]float64
 	IncludeNodeAspects   bool
 	IncludeSpecialRules  bool
+	ChandraBeneficRule   int32
 	BirthPeriod          uint32
 }
 

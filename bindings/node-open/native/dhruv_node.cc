@@ -787,6 +787,11 @@ bool ReadBhavaBalaInputs(napi_env env, napi_value obj, DhruvBhavaBalaInputs* out
     if (!GetNamedProperty(env, obj, "ascendantSiderealLon", &v) || !GetDouble(env, v, &out->ascendant_sidereal_lon)) return false;
     if (!GetNamedProperty(env, obj, "meridianSiderealLon", &v) || !GetDouble(env, v, &out->meridian_sidereal_lon)) return false;
     if (!GetNamedProperty(env, obj, "grahaBhavaNumbers", &v) || !ReadUint8ArrayFixed(env, v, out->graha_bhava_numbers, DHRUV_GRAHA_COUNT)) return false;
+    bool has_graha_sidereal_lons = false;
+    if (napi_has_named_property(env, obj, "grahaSiderealLons", &has_graha_sidereal_lons) != napi_ok) return false;
+    if (has_graha_sidereal_lons) {
+        if (!GetNamedProperty(env, obj, "grahaSiderealLons", &v) || !ReadDoubleArrayFixed(env, v, out->graha_sidereal_lons, DHRUV_GRAHA_COUNT)) return false;
+    }
     if (!GetNamedProperty(env, obj, "houseLordStrengths", &v) || !ReadDoubleArrayFixed(env, v, out->house_lord_strengths, 12)) return false;
     if (!GetNamedProperty(env, obj, "aspectVirupas", &v)) return false;
     for (uint32_t i = 0; i < DHRUV_GRAHA_COUNT; ++i) {
@@ -808,6 +813,13 @@ bool ReadBhavaBalaInputs(napi_env env, napi_value obj, DhruvBhavaBalaInputs* out
         if (!GetNamedProperty(env, obj, "includeSpecialRules", &v) || !GetBool(env, v, &include_special_rules)) return false;
     }
     out->include_special_rules = include_special_rules ? 1 : 0;
+    int32_t chandra_benefic_rule = DHRUV_CHANDRA_BENEFIC_RULE_BRIGHTNESS_72;
+    bool has_chandra_benefic_rule = false;
+    if (napi_has_named_property(env, obj, "chandraBeneficRule", &has_chandra_benefic_rule) != napi_ok) return false;
+    if (has_chandra_benefic_rule) {
+        if (!GetNamedProperty(env, obj, "chandraBeneficRule", &v) || !GetInt32(env, v, &chandra_benefic_rule)) return false;
+    }
+    out->chandra_benefic_rule = chandra_benefic_rule;
     if (!GetNamedProperty(env, obj, "birthPeriod", &v) || !GetUint32(env, v, &u32)) return false;
     out->birth_period = u32;
     return true;

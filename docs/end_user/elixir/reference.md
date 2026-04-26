@@ -227,6 +227,8 @@ apply to the graha. They also expose `:lajjitadi`, `:lajjitadi_states`, and
 Chandra is benefic when its smaller angular distance from Surya is at least
 72 degrees. Use `:waxing_180`, `"waxing-180"`, or `1` for the prior waxing-arc
 rule where Chandra is benefic when `normalize_360(Chandra - Surya) <= 180`.
+The same Chandra rule is used by Buddh's association-based benefic/malefic
+classification in Shadbala Drik Bala and Bhava Bala Drishti Bala.
 They may also include `:sayanadi_ghatika_rounding`; default `:floor`/`0` uses
 completed ghatikas, while `:ceil`/`1` counts the current partial ghatika.
 

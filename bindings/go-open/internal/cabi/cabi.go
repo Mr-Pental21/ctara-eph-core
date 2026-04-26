@@ -2002,6 +2002,7 @@ func CalculateBhavaBala(inputs BhavaBalaInputs) (BhavaBalaResult, Status) {
 		meridian_sidereal_lon:  C.double(inputs.MeridianSiderealLon),
 		include_node_aspects:   boolU8(inputs.IncludeNodeAspects),
 		include_special_rules:  boolU8(inputs.IncludeSpecialRules),
+		chandra_benefic_rule:   C.int32_t(inputs.ChandraBeneficRule),
 		birth_period:           C.uint32_t(inputs.BirthPeriod),
 	}
 	for i := 0; i < 12; i++ {
@@ -2013,6 +2014,7 @@ func CalculateBhavaBala(inputs BhavaBalaInputs) (BhavaBalaResult, Status) {
 	}
 	for i := 0; i < GrahaCount; i++ {
 		cin.graha_bhava_numbers[i] = C.uint8_t(inputs.GrahaBhavaNumbers[i])
+		cin.graha_sidereal_lons[i] = C.double(inputs.GrahaSiderealLons[i])
 	}
 	var out C.DhruvBhavaBalaResult
 	st := Status(C.dhruv_calculate_bhavabala(&cin, &out))
