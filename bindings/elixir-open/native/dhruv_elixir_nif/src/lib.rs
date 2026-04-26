@@ -33,8 +33,8 @@ use dhruv_search::{
     dasha_level0_entity_with_inputs, dasha_level0_for_birth, dasha_level0_with_inputs,
     dasha_snapshot_at, dasha_snapshot_with_inputs, elongation_at, full_kundali_for_date,
     ghatika_from_sunrises, graha_longitudes, hora_from_sunrises, karana_at, lunar_node, motion,
-    nakshatra_at, outer_planet_longitudes, panchang, set_time_conversion_policy, sidereal_sum_at,
-    tara as tara_op, tithi_at, vaar_from_sunrises, vedic_day_sunrises, yoga_at,
+    nakshatra_at, panchang, set_time_conversion_policy, sidereal_sum_at, tara as tara_op, tithi_at,
+    vaar_from_sunrises, vedic_day_sunrises, yoga_at,
 };
 use dhruv_tara::apparent::{apply_aberration, apply_light_deflection};
 use dhruv_tara::galactic::galactic_anticenter_icrs;
@@ -2643,10 +2643,7 @@ fn graha_entry_json(entry: dhruv_search::GrahaEntry, graha: Option<Graha>) -> Va
     })
 }
 
-fn graha_longitudes_json(
-    result: dhruv_search::GrahaLongitudes,
-    outer_planets: Option<[f64; 3]>,
-) -> Value {
+fn graha_longitudes_json(result: dhruv_search::GrahaLongitudes) -> Value {
     let grahas = ALL_GRAHAS
         .iter()
         .enumerate()
@@ -2660,7 +2657,7 @@ fn graha_longitudes_json(
     json!({
         "grahas": grahas,
         "longitudes": result.longitudes,
-        "outer_planets": outer_planets.map(|values| json!([
+        "outer_planets": result.outer_planets.map(|values| json!([
             { "graha": "Uranus", "longitude": values[0] },
             { "graha": "Neptune", "longitude": values[1] },
             { "graha": "Pluto", "longitude": values[2] }
@@ -3813,11 +3810,7 @@ fn handle_jyotish(resource: &ResourceArc<EngineResource>, request: JyotishReques
                     .ok_or_else(|| error_payload("invalid_request", "jd_tdb is required"))?;
                 let navagrahas = graha_longitudes(engine, jd_tdb, &config)
                     .map_err(|err| map_error("search_error", err))?;
-                let outer = Some(
-                    outer_planet_longitudes(engine, jd_tdb, &config)
-                        .map_err(|err| map_error("search_error", err))?,
-                );
-                Ok(graha_longitudes_json(navagrahas, outer))
+                Ok(graha_longitudes_json(navagrahas))
             }
             "moving_osculating_apogees" => {
                 let system = request

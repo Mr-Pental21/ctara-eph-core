@@ -95,6 +95,10 @@ Frequently used config and result families re-exported from `dhruv_rs::*`:
 - `GrahaPositionsConfig`
   Defaults `include_outer_planets=true`; returned `grahas` stay the 9
   navagrahas and `outer_planets` carries `[Uranus, Neptune, Pluto]`.
+- `GrahaLongitudesConfig`
+  Defaults `include_outer_planets=true`; `graha_longitudes` returns the 9
+  navagraha `longitudes` plus sibling `outer_planets`. Use
+  `.with_outer_planets(false)` for navagraha-only Rust calls.
 
 `BhavaConfig` defaults `use_rashi_bhava_for_bala_avastha=true`,
 `include_rashi_bhava_results=true`, `include_special_bhavabala_rules=true`, and

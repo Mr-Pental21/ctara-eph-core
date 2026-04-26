@@ -4907,6 +4907,7 @@ fn resolve_graha_longitudes_config_ptr(
         use_nutation: raw.use_nutation != 0,
         precession_model,
         reference_plane,
+        include_outer_planets: true,
     })
 }
 
@@ -12325,12 +12326,12 @@ pub unsafe extern "C" fn dhruv_graha_longitudes(
         Ok(result) => {
             let out = unsafe { &mut *out };
             out.longitudes = result.longitudes;
-            match dhruv_search::outer_planet_longitudes(engine, jd_tdb, &rust_config) {
-                Ok(outer) => {
-                    out.outer_planets_valid = 1;
-                    out.outer_planets = outer;
-                }
-                Err(e) => return DhruvStatus::from(&e),
+            if let Some(outer) = result.outer_planets {
+                out.outer_planets_valid = 1;
+                out.outer_planets = outer;
+            } else {
+                out.outer_planets_valid = 0;
+                out.outer_planets = [0.0; 3];
             }
             DhruvStatus::Ok
         }

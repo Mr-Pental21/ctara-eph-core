@@ -478,7 +478,8 @@ impl JyotishContext {
                     aya_config.use_nutation,
                     aya_config.precession_model,
                     aya_config.reference_plane,
-                ),
+                )
+                .with_outer_planets(false),
             )?;
             self.graha_lons = Some(lons);
         }
@@ -1472,7 +1473,16 @@ fn graha_sidereal_longitudes_for_config(
         }
     }
 
-    Ok(GrahaLongitudes { longitudes })
+    let outer_planets = if config.include_outer_planets {
+        Some(outer_planet_longitudes_for_config(engine, jd_tdb, config)?)
+    } else {
+        None
+    };
+
+    Ok(GrahaLongitudes {
+        longitudes,
+        outer_planets,
+    })
 }
 
 fn graha_reference_plane_longitudes(
@@ -1517,7 +1527,16 @@ fn graha_reference_plane_longitudes(
             }
         }
     }
-    Ok(GrahaLongitudes { longitudes })
+    let outer_planets = if config.include_outer_planets {
+        Some(outer_planet_longitudes_for_config(engine, jd_tdb, config)?)
+    } else {
+        None
+    };
+
+    Ok(GrahaLongitudes {
+        longitudes,
+        outer_planets,
+    })
 }
 
 /// Compute all 8 special lagnas for a given moment and location.

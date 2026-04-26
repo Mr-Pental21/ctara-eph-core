@@ -10,11 +10,13 @@ use dhruv_vedic_base::{
     SthanaBalaBreakdown, TimeUpagrahaConfig,
 };
 
-/// Sidereal longitudes of all 9 grahas.
+/// Longitudes of all 9 grahas plus optional outer planets.
 #[derive(Debug, Clone, Copy)]
 pub struct GrahaLongitudes {
     /// Sidereal longitudes indexed by `Graha::index()` (0-8).
     pub longitudes: [f64; 9],
+    /// Outer planets in `[Uranus, Neptune, Pluto]` order when requested.
+    pub outer_planets: Option<[f64; 3]>,
 }
 
 impl GrahaLongitudes {
@@ -59,6 +61,7 @@ pub struct GrahaLongitudesConfig {
     pub use_nutation: bool,
     pub precession_model: PrecessionModel,
     pub reference_plane: ReferencePlane,
+    pub include_outer_planets: bool,
 }
 
 impl GrahaLongitudesConfig {
@@ -83,6 +86,7 @@ impl GrahaLongitudesConfig {
             use_nutation,
             precession_model,
             reference_plane,
+            include_outer_planets: true,
         }
     }
 
@@ -105,7 +109,13 @@ impl GrahaLongitudesConfig {
             use_nutation,
             precession_model,
             reference_plane,
+            include_outer_planets: true,
         }
+    }
+
+    pub fn with_outer_planets(mut self, include_outer_planets: bool) -> Self {
+        self.include_outer_planets = include_outer_planets;
+        self
     }
 }
 

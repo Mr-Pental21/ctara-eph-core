@@ -112,7 +112,7 @@ fn tropical_equals_sidereal_plus_ayanamsha() {
     }
 }
 
-/// All 9 tropical longitudes should be in [0, 360).
+/// All 9 tropical longitudes and the sibling outer longitudes should be in [0, 360).
 #[test]
 fn tropical_longitudes_in_valid_range() {
     let engine = match load_engine() {
@@ -132,4 +132,29 @@ fn tropical_longitudes_in_valid_range() {
             graha,
         );
     }
+    let outer = result
+        .outer_planets
+        .expect("graha_longitudes should include outer planet sibling data by default");
+    for (idx, lon) in outer.iter().enumerate() {
+        assert!(
+            (0.0..360.0).contains(lon),
+            "outer[{idx}]: tropical longitude {lon} not in [0, 360)",
+        );
+    }
+}
+
+#[test]
+fn graha_longitudes_outer_planets_can_be_disabled_in_rust_config() {
+    let engine = match load_engine() {
+        Some(e) => e,
+        None => return,
+    };
+
+    let jd_tdb = 2_451_545.0;
+    let config =
+        GrahaLongitudesConfig::sidereal(AyanamshaSystem::Lahiri, false).with_outer_planets(false);
+    let result =
+        graha_longitudes(&engine, jd_tdb, &config).expect("sidereal longitudes should succeed");
+
+    assert!(result.outer_planets.is_none());
 }

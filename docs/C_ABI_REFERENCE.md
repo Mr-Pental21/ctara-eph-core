@@ -1466,9 +1466,10 @@ typedef struct {
 } DhruvGrahaLongitudes;
 ```
 
-`longitudes` remains the 9-navagraha array. Uranus, Neptune, and Pluto are
-returned only in the sibling `outer_planets` field and are positional display
-entities, not traditional calculation inputs.
+`longitudes` remains the 9-navagraha array. Rust `graha_longitudes` computes the
+sibling outer data directly; the C ABI exposes it through `outer_planets`.
+Uranus, Neptune, and Pluto are positional display entities, not traditional
+calculation inputs.
 
 ```c
 typedef struct {

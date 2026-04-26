@@ -6836,13 +6836,7 @@ fn main() {
             let outer_lons = if args.no_outer {
                 None
             } else {
-                Some(
-                    dhruv_search::outer_planet_longitudes(&engine, jd_tdb, &lon_config)
-                        .unwrap_or_else(|e| {
-                            eprintln!("Error: {e}");
-                            std::process::exit(1);
-                        }),
-                )
+                lons.outer_planets
             };
 
             println!(

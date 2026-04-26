@@ -52,6 +52,8 @@ use crate::panchang::{
 use dhruv_search::sankranti_types::SankrantiConfig;
 use dhruv_search::{body_ecliptic_lon_lat, body_lon_lat_on_plane};
 
+const OUTER_PLANET_BODIES: [Body; 3] = [Body::Uranus, Body::Neptune, Body::Pluto];
+
 /// Map a Graha to its dhruv_core::Body for engine queries.
 fn graha_to_body(graha: Graha) -> Option<Body> {
     match graha {
@@ -156,7 +158,8 @@ impl JyotishContext {
                     aya_config.use_nutation,
                     aya_config.precession_model,
                     aya_config.reference_plane,
-                ),
+                )
+                .with_outer_planets(false),
             )?;
             self.graha_lons = Some(lons);
         }
@@ -379,6 +382,47 @@ pub fn graha_longitudes(
     }
 }
 
+fn outer_planet_longitudes_for_config(
+    engine: &Engine,
+    jd_tdb: f64,
+    config: &GrahaLongitudesConfig,
+) -> Result<[f64; 3], SearchError> {
+    let dpsi_deg = if config.kind == GrahaLongitudeKind::Tropical
+        && config.use_nutation
+        && config.reference_plane == ReferencePlane::Ecliptic
+    {
+        let t = jd_tdb_to_centuries(jd_tdb);
+        let (dpsi_arcsec, _deps_arcsec) = dhruv_frames::nutation_iau2000b(t);
+        dpsi_arcsec / 3600.0
+    } else {
+        0.0
+    };
+    let aya = if config.kind == GrahaLongitudeKind::Sidereal {
+        dhruv_vedic_base::ayanamsha_deg_on_plane(
+            config.ayanamsha_system,
+            jd_tdb_to_centuries(jd_tdb),
+            config.use_nutation,
+            config.precession_model,
+            config.reference_plane,
+        )
+    } else {
+        0.0
+    };
+
+    let mut longitudes = [0.0f64; 3];
+    for (index, body) in OUTER_PLANET_BODIES.iter().copied().enumerate() {
+        let (lon, _lat) = body_lon_lat_on_plane(
+            engine,
+            body,
+            jd_tdb,
+            config.precession_model,
+            config.reference_plane,
+        )?;
+        longitudes[index] = normalize(lon + dpsi_deg - aya);
+    }
+    Ok(longitudes)
+}
+
 fn graha_sidereal_longitudes_for_config(
     engine: &Engine,
     jd_tdb: f64,
@@ -427,7 +471,16 @@ fn graha_sidereal_longitudes_for_config(
         }
     }
 
-    Ok(GrahaLongitudes { longitudes })
+    let outer_planets = if config.include_outer_planets {
+        Some(outer_planet_longitudes_for_config(engine, jd_tdb, config)?)
+    } else {
+        None
+    };
+
+    Ok(GrahaLongitudes {
+        longitudes,
+        outer_planets,
+    })
 }
 
 fn graha_reference_plane_longitudes(
@@ -472,7 +525,16 @@ fn graha_reference_plane_longitudes(
             }
         }
     }
-    Ok(GrahaLongitudes { longitudes })
+    let outer_planets = if config.include_outer_planets {
+        Some(outer_planet_longitudes_for_config(engine, jd_tdb, config)?)
+    } else {
+        None
+    };
+
+    Ok(GrahaLongitudes {
+        longitudes,
+        outer_planets,
+    })
 }
 
 /// Compute all 8 special lagnas for a given moment and location.
