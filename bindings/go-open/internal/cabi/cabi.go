@@ -1302,6 +1302,10 @@ func ComputeGrahaLongitudes(engine EngineHandle, jdTdb float64, cfg GrahaLongitu
 	for i := 0; i < GrahaCount; i++ {
 		goOut.Longitudes[i] = float64(out.longitudes[i])
 	}
+	goOut.OuterPlanetsValid = out.outer_planets_valid != 0
+	for i := 0; i < len(goOut.OuterPlanets); i++ {
+		goOut.OuterPlanets[i] = float64(out.outer_planets[i])
+	}
 	return goOut, st
 }
 
@@ -1584,6 +1588,7 @@ func FullKundaliConfigDefault() FullKundaliConfig {
 			IncludeUpagrahas:     cfg.amsha_scope.include_upagrahas != 0,
 			IncludeSphutas:       cfg.amsha_scope.include_sphutas != 0,
 			IncludeSpecialLagnas: cfg.amsha_scope.include_special_lagnas != 0,
+			IncludeOuterPlanets:  cfg.amsha_scope.include_outer_planets != 0,
 		},
 		AmshaSelection:  AmshaSelectionConfig{Count: uint8(cfg.amsha_selection.count)},
 		IncludePanchang: cfg.include_panchang != 0,
@@ -2404,9 +2409,13 @@ func FullKundaliForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc Geo
 				UpagrahasValid:             out.amshas[i].upagrahas_valid != 0,
 				SphutasValid:               out.amshas[i].sphutas_valid != 0,
 				SpecialLagnasValid:         out.amshas[i].special_lagnas_valid != 0,
+				OuterPlanetsValid:          out.amshas[i].outer_planets_valid != 0,
 			}
 			for j := 0; j < GrahaCount; j++ {
 				chart.Grahas[j] = goAmshaEntry(out.amshas[i].grahas[j])
+			}
+			if chart.OuterPlanetsValid {
+				chart.OuterPlanets = goAmshaEntries(out.amshas[i].outer_planets[:])
 			}
 			if chart.BhavaCuspsValid {
 				chart.BhavaCusps = goAmshaEntries(out.amshas[i].bhava_cusps[:])

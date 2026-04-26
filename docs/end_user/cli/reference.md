@@ -47,6 +47,7 @@ Reusable public option groups:
   - `--amsha-include-upagrahas`
   - `--amsha-include-sphutas`
   - `--amsha-include-special-lagnas`
+  - `--amsha-no-outer-planets`
 - Bhava/bala behavior:
   - `--use-rashi-bhava-for-bala-avastha`
   - `--use-configured-bhava-for-bala-avastha`
@@ -69,6 +70,17 @@ Shared value mappings worth knowing:
 - charakaraka schemes: `eight`, `seven-no-pitri`, `seven-pk-merged-mk`, `mixed-parashara`
 - `--defaults-mode`: `recommended`, `none`
 - `--time-policy`: `strict-lsk`, `hybrid-deltat`
+
+Outer grahas:
+
+- `graha-positions`, `graha-longitudes`, `kundali`, and amsha chart output show
+  Uranus, Neptune, and Pluto in sibling “Outer Grahas” sections by default.
+- Existing navagraha lists remain length 9. Outer grahas are positional display
+  entities only and are not used in bala, avastha, dasha, drishti, lordship, or
+  other traditional navagraha calculations.
+- Use `--no-outer` on graha-position/longitude and `kundali` commands, and
+  `--no-outer-planets` / `--amsha-no-outer-planets` on amsha and `kundali`
+  commands to suppress those sibling sections.
 
 ## Command Families
 

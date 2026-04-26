@@ -4,7 +4,7 @@ Open-source Node.js bindings for `ctara-dhruv-core`, implemented against the can
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=68`
+- ABI target: `DHRUV_API_VERSION=69`
 - Binding strategy: Native Node-API addon (`native/dhruv_node.cc`) over `crates/dhruv_ffi_c/include/dhruv.h`
 - Package: `bindings/node-open`
 - Primary distribution: npm package with bundled platform prebuilds from unified `vX.Y.Z` tags
@@ -143,6 +143,12 @@ the optional scoped arrays when requested and available:
 - `upagrahas`
 - `sphutas`
 - `specialLagnas`
+- `outerPlanets`
+
+Graha-position and longitude outputs keep their traditional navagraha arrays at
+length 9 and expose Uranus, Neptune, and Pluto separately as `outerPlanets`.
+Outer planets are positional display entities only; they are not used in bala,
+avastha, dasha, drishti, or lordship calculations.
 
 Embedded `fullKundaliForDate(...).amshas` now returns the full resolved amsha
 union used by the call, not only the explicitly requested subset. Numeric

@@ -2825,6 +2825,7 @@ fn ffi_full_kundali_result_free_double_free_same_pointer() {
             include_upagrahas: 0,
             include_sphutas: 0,
             include_special_lagnas: 0,
+            include_outer_planets: 0,
         },
         amsha_selection: DhruvAmshaSelectionConfig {
             count: 0,
@@ -2923,6 +2924,7 @@ fn ffi_full_kundali_error_path_free_safety() {
             include_upagrahas: 0,
             include_sphutas: 0,
             include_special_lagnas: 0,
+            include_outer_planets: 0,
         },
         amsha_selection: DhruvAmshaSelectionConfig {
             count: 0,
@@ -3011,6 +3013,7 @@ fn ffi_full_kundali_dasha_overflow_rejection() {
             include_upagrahas: 0,
             include_sphutas: 0,
             include_special_lagnas: 0,
+            include_outer_planets: 0,
         },
         amsha_selection: DhruvAmshaSelectionConfig {
             count: 0,
@@ -3109,6 +3112,7 @@ fn ffi_full_kundali_dasha_partial_success_contract() {
             include_upagrahas: 0,
             include_sphutas: 0,
             include_special_lagnas: 0,
+            include_outer_planets: 0,
         },
         amsha_selection: DhruvAmshaSelectionConfig {
             count: 0,
@@ -3218,6 +3222,7 @@ fn ffi_full_kundali_panchang_only() {
             include_upagrahas: 0,
             include_sphutas: 0,
             include_special_lagnas: 0,
+            include_outer_planets: 0,
         },
         amsha_selection: DhruvAmshaSelectionConfig {
             count: 0,
@@ -3307,6 +3312,7 @@ fn ffi_full_kundali_panchang_disabled() {
             include_upagrahas: 0,
             include_sphutas: 0,
             include_special_lagnas: 0,
+            include_outer_planets: 0,
         },
         amsha_selection: DhruvAmshaSelectionConfig {
             count: 0,
@@ -3392,6 +3398,7 @@ fn ffi_full_kundali_calendar_implies_panchang() {
             include_upagrahas: 0,
             include_sphutas: 0,
             include_special_lagnas: 0,
+            include_outer_planets: 0,
         },
         amsha_selection: DhruvAmshaSelectionConfig {
             count: 0,
@@ -3484,6 +3491,7 @@ fn ffi_full_kundali_panchang_and_calendar() {
             include_upagrahas: 0,
             include_sphutas: 0,
             include_special_lagnas: 0,
+            include_outer_planets: 0,
         },
         amsha_selection: DhruvAmshaSelectionConfig {
             count: 0,
@@ -3577,6 +3585,7 @@ fn ffi_full_kundali_bhava_cusps_enabled() {
             include_upagrahas: 0,
             include_sphutas: 0,
             include_special_lagnas: 0,
+            include_outer_planets: 0,
         },
         amsha_selection: DhruvAmshaSelectionConfig {
             count: 0,
@@ -3673,6 +3682,7 @@ fn ffi_full_kundali_bhava_cusps_disabled() {
             include_upagrahas: 0,
             include_sphutas: 0,
             include_special_lagnas: 0,
+            include_outer_planets: 0,
         },
         amsha_selection: DhruvAmshaSelectionConfig {
             count: 0,
@@ -4053,6 +4063,8 @@ fn ffi_graha_longitudes_tropical_basic() {
     let jd = 2_451_545.0; // J2000
     let mut out = DhruvGrahaLongitudes {
         longitudes: [0.0; 9],
+        outer_planets_valid: 0,
+        outer_planets: [0.0; 3],
     };
     let mut cfg = dhruv_graha_longitudes_config_default();
     cfg.kind = DHRUV_GRAHA_LONGITUDE_KIND_TROPICAL;
@@ -4065,6 +4077,13 @@ fn ffi_graha_longitudes_tropical_basic() {
         assert!(
             (0.0..360.0).contains(&lon),
             "graha {i}: tropical longitude {lon} not in [0, 360)"
+        );
+    }
+    assert_eq!(out.outer_planets_valid, 1);
+    for (i, &lon) in out.outer_planets.iter().enumerate() {
+        assert!(
+            (0.0..360.0).contains(&lon),
+            "outer planet {i}: tropical longitude {lon} not in [0, 360)"
         );
     }
 
@@ -4086,6 +4105,8 @@ fn ffi_tropical_equals_sidereal_plus_ayanamsha() {
 
     let mut tropical_out = DhruvGrahaLongitudes {
         longitudes: [0.0; 9],
+        outer_planets_valid: 0,
+        outer_planets: [0.0; 3],
     };
     let mut tropical_cfg = dhruv_graha_longitudes_config_default();
     tropical_cfg.kind = DHRUV_GRAHA_LONGITUDE_KIND_TROPICAL;
@@ -4094,6 +4115,8 @@ fn ffi_tropical_equals_sidereal_plus_ayanamsha() {
 
     let mut sidereal_out = DhruvGrahaLongitudes {
         longitudes: [0.0; 9],
+        outer_planets_valid: 0,
+        outer_planets: [0.0; 3],
     };
     let sidereal_cfg = dhruv_graha_longitudes_config_default();
     let s = unsafe { dhruv_graha_longitudes(engine_raw, jd, &sidereal_cfg, &mut sidereal_out) };

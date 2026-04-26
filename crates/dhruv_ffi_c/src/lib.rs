@@ -58,7 +58,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 68;
+pub const DHRUV_API_VERSION: u32 = 69;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -896,7 +896,7 @@ fn resolve_graha_positions_config_ptr(
     Ok(dhruv_search::GrahaPositionsConfig {
         include_nakshatra: false,
         include_lagna: false,
-        include_outer_planets: false,
+        include_outer_planets: true,
         include_bhava: false,
     })
 }
@@ -995,6 +995,7 @@ fn full_kundali_config_from_ffi(
             include_upagrahas: cfg.amsha_scope.include_upagrahas != 0,
             include_sphutas: cfg.amsha_scope.include_sphutas != 0,
             include_special_lagnas: cfg.amsha_scope.include_special_lagnas != 0,
+            include_outer_planets: cfg.amsha_scope.include_outer_planets != 0,
         },
         amsha_selection: amsha_sel,
         include_panchang: cfg.include_panchang != 0 || cfg.include_calendar != 0,
@@ -10411,6 +10412,7 @@ pub struct DhruvAmshaChartScope {
     pub include_upagrahas: u8,
     pub include_sphutas: u8,
     pub include_special_lagnas: u8,
+    pub include_outer_planets: u8,
 }
 
 /// C-compatible amsha selection config for FullKundali.
@@ -10498,6 +10500,10 @@ pub struct DhruvAmshaChart {
     pub variation_code: u8,
     /// 9 Vedic grahas.
     pub grahas: [DhruvAmshaEntry; 9],
+    /// Whether outer planets are populated.
+    pub outer_planets_valid: u8,
+    /// Outer planets: [Uranus, Neptune, Pluto].
+    pub outer_planets: [DhruvAmshaEntry; 3],
     /// Lagna entry.
     pub lagna: DhruvAmshaEntry,
     /// Whether bhava cusps are populated.
@@ -10529,6 +10535,8 @@ impl DhruvAmshaChart {
             amsha_code: 0,
             variation_code: 0,
             grahas: [DhruvAmshaEntry::zeroed(); 9],
+            outer_planets_valid: 0,
+            outer_planets: [DhruvAmshaEntry::zeroed(); 3],
             lagna: DhruvAmshaEntry::zeroed(),
             bhava_cusps_valid: 0,
             bhava_cusps: [DhruvAmshaEntry::zeroed(); 12],
@@ -10599,6 +10607,12 @@ fn amsha_chart_to_ffi(chart: &dhruv_search::AmshaChart) -> DhruvAmshaChart {
     out.variation_code = chart.variation_code;
     for (i, graha) in chart.grahas.iter().enumerate() {
         out.grahas[i] = amsha_entry_to_ffi(graha);
+    }
+    if let Some(ref outer_planets) = chart.outer_planets {
+        out.outer_planets_valid = 1;
+        for (i, outer) in outer_planets.iter().enumerate() {
+            out.outer_planets[i] = amsha_entry_to_ffi(outer);
+        }
     }
     out.lagna = amsha_entry_to_ffi(&chart.lagna);
     if let Some(ref cusps) = chart.bhava_cusps {
@@ -11100,7 +11114,7 @@ pub extern "C" fn dhruv_full_kundali_config_default() -> DhruvFullKundaliConfig 
         graha_positions_config: DhruvGrahaPositionsConfig {
             include_nakshatra: 0,
             include_lagna: 1,
-            include_outer_planets: 0,
+            include_outer_planets: 1,
             include_bhava: 0,
         },
         bindus_config: DhruvBindusConfig {
@@ -11119,6 +11133,7 @@ pub extern "C" fn dhruv_full_kundali_config_default() -> DhruvFullKundaliConfig 
             include_upagrahas: 0,
             include_sphutas: 0,
             include_special_lagnas: 0,
+            include_outer_planets: 1,
         },
         amsha_selection: DhruvAmshaSelectionConfig {
             count: 0,
@@ -11614,6 +11629,7 @@ pub unsafe extern "C" fn dhruv_amsha_chart_for_date(
         include_upagrahas: scope_c.include_upagrahas != 0,
         include_sphutas: scope_c.include_sphutas != 0,
         include_special_lagnas: scope_c.include_special_lagnas != 0,
+        include_outer_planets: scope_c.include_outer_planets != 0,
     };
 
     match amsha_charts_for_date(
@@ -12219,6 +12235,9 @@ pub unsafe extern "C" fn dhruv_avastha_for_date(
 #[derive(Debug, Clone, Copy)]
 pub struct DhruvGrahaLongitudes {
     pub longitudes: [f64; 9],
+    pub outer_planets_valid: u8,
+    /// Outer planets: [Uranus, Neptune, Pluto].
+    pub outer_planets: [f64; 3],
 }
 
 /// Configuration for graha longitude computation.
@@ -12306,6 +12325,13 @@ pub unsafe extern "C" fn dhruv_graha_longitudes(
         Ok(result) => {
             let out = unsafe { &mut *out };
             out.longitudes = result.longitudes;
+            match dhruv_search::outer_planet_longitudes(engine, jd_tdb, &rust_config) {
+                Ok(outer) => {
+                    out.outer_planets_valid = 1;
+                    out.outer_planets = outer;
+                }
+                Err(e) => return DhruvStatus::from(&e),
+            }
             DhruvStatus::Ok
         }
         Err(e) => DhruvStatus::from(&e),
@@ -14998,6 +15024,8 @@ mod tests {
         assert_eq!(cfg.include_dasha, 0);
         assert_eq!(cfg.node_dignity_policy, 0);
         assert_eq!(cfg.graha_positions_config.include_lagna, 1);
+        assert_eq!(cfg.graha_positions_config.include_outer_planets, 1);
+        assert_eq!(cfg.amsha_scope.include_outer_planets, 1);
     }
 
     // --- Search error mapping ---
@@ -17454,6 +17482,7 @@ mod tests {
             include_upagrahas: 0,
             include_sphutas: 0,
             include_special_lagnas: 0,
+            include_outer_planets: 0,
         };
         let mut out = DhruvAmshaChart::zeroed();
         let s = unsafe {

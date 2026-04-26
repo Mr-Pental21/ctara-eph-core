@@ -610,13 +610,16 @@ struct GrahaPositionsArgs {
     #[arg(long)]
     lagna: bool,
     /// Include outer planets (Uranus, Neptune, Pluto)
-    #[arg(long)]
+    #[arg(long, conflicts_with = "no_outer")]
     outer: bool,
+    /// Suppress outer planets (Uranus, Neptune, Pluto)
+    #[arg(long = "no-outer")]
+    no_outer: bool,
     /// Include bhava placement
     #[arg(long)]
     bhava: bool,
     /// Output tropical (ecliptic-of-date) longitudes instead of sidereal
-    #[arg(long, conflicts_with_all = ["nakshatra", "lagna", "outer", "bhava"])]
+    #[arg(long, conflicts_with_all = ["nakshatra", "lagna", "outer", "no_outer", "bhava"])]
     tropical: bool,
     /// Precession model: vondrak2011 (default), iau2006, lieske1977, newcomb1895
     #[arg(long, default_value = "vondrak2011")]
@@ -937,6 +940,9 @@ struct KundaliArgs {
     /// Include special lagnas
     #[arg(long)]
     include_special_lagnas: bool,
+    /// Suppress outer planets in root graha positions
+    #[arg(long = "no-outer")]
+    no_outer: bool,
     /// Include amsha (divisional charts)
     #[arg(long)]
     include_amshas: bool,
@@ -958,6 +964,9 @@ struct KundaliArgs {
     /// Include special lagnas inside amsha charts
     #[arg(long)]
     amsha_include_special_lagnas: bool,
+    /// Suppress outer planets inside amsha charts
+    #[arg(long = "amsha-no-outer-planets")]
+    amsha_no_outer_planets: bool,
     /// Include shadbala
     #[arg(long)]
     include_shadbala: bool,
@@ -1041,6 +1050,9 @@ struct AmshaChartArgs {
     /// Include special lagnas inside amsha charts
     #[arg(long)]
     include_special_lagnas: bool,
+    /// Suppress outer planets inside amsha charts
+    #[arg(long = "no-outer-planets")]
+    no_outer_planets: bool,
     #[command(flatten)]
     bhava_behavior: BhavaBehaviorArgs,
 }
@@ -1633,6 +1645,9 @@ struct GrahaLongitudesArgs {
     /// Reference plane: default, ecliptic, invariable
     #[arg(long, default_value = "default")]
     reference_plane: String,
+    /// Suppress outer planets (Uranus, Neptune, Pluto)
+    #[arg(long = "no-outer")]
+    no_outer: bool,
     /// Path to SPK kernel
     #[arg(long)]
     bsp: Option<PathBuf>,
@@ -4644,7 +4659,7 @@ fn main() {
                 let gp_config = dhruv_search::GrahaPositionsConfig {
                     include_nakshatra: args.nakshatra,
                     include_lagna: args.lagna,
-                    include_outer_planets: args.outer,
+                    include_outer_planets: args.outer || !args.no_outer,
                     include_bhava: args.bhava,
                 };
 
@@ -4717,7 +4732,7 @@ fn main() {
                     print_entry("Lagna", &result.lagna, Some(1));
                 }
 
-                if args.outer {
+                if gp_config.include_outer_planets {
                     let planet_names = ["Uranus", "Neptune", "Pluto"];
                     for (i, entry) in result.outer_planets.iter().enumerate() {
                         print_entry(planet_names[i], entry, None);
@@ -4984,6 +4999,7 @@ fn main() {
                 args.amsha_include_upagrahas,
                 args.amsha_include_sphutas,
                 args.amsha_include_special_lagnas,
+                !args.amsha_no_outer_planets,
             );
             let requested_amsha_selection = args
                 .amsha
@@ -5030,6 +5046,7 @@ fn main() {
                 requested_amsha_selection.as_ref(),
                 &requested_amsha_scope,
                 build_time_upagraha_config(&args.upagraha),
+                !args.no_outer,
             );
 
             let result = dhruv_search::full_kundali_for_date(
@@ -6797,28 +6814,36 @@ fn main() {
                 system.default_reference_plane()
             };
             let reference_plane = parse_reference_plane_arg(&args.reference_plane, default_plane);
-            let lons = dhruv_search::graha_longitudes(
-                &engine,
-                jd_tdb,
-                &if args.tropical {
-                    dhruv_search::GrahaLongitudesConfig::tropical_with_model(
-                        args.nutation,
-                        precession_model,
-                        reference_plane,
-                    )
-                } else {
-                    dhruv_search::GrahaLongitudesConfig::sidereal_with_model(
-                        system,
-                        args.nutation,
-                        precession_model,
-                        reference_plane,
-                    )
-                },
-            )
-            .unwrap_or_else(|e| {
-                eprintln!("Error: {e}");
-                std::process::exit(1);
-            });
+            let lon_config = if args.tropical {
+                dhruv_search::GrahaLongitudesConfig::tropical_with_model(
+                    args.nutation,
+                    precession_model,
+                    reference_plane,
+                )
+            } else {
+                dhruv_search::GrahaLongitudesConfig::sidereal_with_model(
+                    system,
+                    args.nutation,
+                    precession_model,
+                    reference_plane,
+                )
+            };
+            let lons =
+                dhruv_search::graha_longitudes(&engine, jd_tdb, &lon_config).unwrap_or_else(|e| {
+                    eprintln!("Error: {e}");
+                    std::process::exit(1);
+                });
+            let outer_lons = if args.no_outer {
+                None
+            } else {
+                Some(
+                    dhruv_search::outer_planet_longitudes(&engine, jd_tdb, &lon_config)
+                        .unwrap_or_else(|e| {
+                            eprintln!("Error: {e}");
+                            std::process::exit(1);
+                        }),
+                )
+            };
 
             println!(
                 "Graha {} longitudes (plane={:?}, precession={:?}{}):\n",
@@ -6855,6 +6880,22 @@ fn main() {
                     rashi_info.dms.minutes,
                     rashi_info.dms.seconds,
                 );
+            }
+            if let Some(outer_lons) = outer_lons {
+                let outer_names = ["Uranus", "Neptune", "Pluto"];
+                println!("\nOuter Grahas:");
+                for (name, lon) in outer_names.iter().zip(outer_lons.iter()) {
+                    let rashi_info = dhruv_vedic_base::rashi_from_longitude(*lon);
+                    println!(
+                        "  {:8} {:>11.6}° ({} {}°{:02}'{:04.1}\")",
+                        name,
+                        lon,
+                        rashi_info.rashi.name(),
+                        rashi_info.dms.degrees,
+                        rashi_info.dms.minutes,
+                        rashi_info.dms.seconds,
+                    );
+                }
             }
         }
 
@@ -8407,6 +8448,7 @@ fn main() {
                 args.include_upagrahas,
                 args.include_sphutas,
                 args.include_special_lagnas,
+                !args.no_outer_planets,
             );
             let result = dhruv_search::amsha_charts_for_date(
                 &engine,
@@ -9684,6 +9726,7 @@ fn amsha_scope(
     include_upagrahas: bool,
     include_sphutas: bool,
     include_special_lagnas: bool,
+    include_outer_planets: bool,
 ) -> dhruv_search::AmshaChartScope {
     dhruv_search::AmshaChartScope {
         include_bhava_cusps,
@@ -9691,6 +9734,7 @@ fn amsha_scope(
         include_upagrahas,
         include_sphutas,
         include_special_lagnas,
+        include_outer_planets,
     }
 }
 
@@ -10028,6 +10072,7 @@ fn build_kundali_config(
     requested_amsha_selection: Option<&dhruv_search::AmshaSelectionConfig>,
     requested_amsha_scope: &dhruv_search::AmshaChartScope,
     upagraha_config: TimeUpagrahaConfig,
+    include_outer_planets: bool,
 ) -> dhruv_search::FullKundaliConfig {
     // Compute-vs-print: force graha_positions + lagna when amshas need it
     let compute_graha = resolved.include_graha || resolved.include_amshas;
@@ -10035,7 +10080,7 @@ fn build_kundali_config(
         dhruv_search::GrahaPositionsConfig {
             include_nakshatra: true,
             include_lagna: true,
-            include_outer_planets: false,
+            include_outer_planets,
             include_bhava: true,
         }
     } else {
@@ -10184,6 +10229,18 @@ fn write_amsha_chart(
             graha_names[index],
             format_rashi_dms(entry.sidereal_longitude)
         )?;
+    }
+    if let Some(ref outer_planets) = chart.outer_planets {
+        let names = ["Uranus", "Neptune", "Pluto"];
+        writeln!(w, "{base_indent}  Outer Grahas:")?;
+        for (name, entry) in names.iter().zip(outer_planets.iter()) {
+            writeln!(
+                w,
+                "{base_indent}    {:<12} {}",
+                name,
+                format_rashi_dms(entry.sidereal_longitude)
+            )?;
+        }
     }
     writeln!(
         w,
@@ -10340,6 +10397,27 @@ fn print_kundali(
         )?;
         if g.lagna.rashi_bhava_number > 0 {
             writeln!(w, "           Rashi-Bhava: {}", g.lagna.rashi_bhava_number)?;
+        }
+        if g.outer_planets
+            .iter()
+            .any(|entry| entry.sidereal_longitude != 0.0)
+        {
+            let outer_names = ["Uranus", "Neptune", "Pluto"];
+            writeln!(w, "  Outer Grahas:")?;
+            for (name, entry) in outer_names.iter().zip(g.outer_planets.iter()) {
+                writeln!(
+                    w,
+                    "    {:<8} {}  Nakshatra: {:<12} Pada: {} Bhava: {}",
+                    name,
+                    format_rashi_dms(entry.sidereal_longitude),
+                    entry.nakshatra.name(),
+                    entry.pada,
+                    entry.bhava_number,
+                )?;
+                if entry.rashi_bhava_number > 0 {
+                    writeln!(w, "             Rashi-Bhava: {}", entry.rashi_bhava_number)?;
+                }
+            }
         }
         writeln!(w)?;
     }
@@ -10965,6 +11043,7 @@ mod tests {
             None,
             &dhruv_search::AmshaChartScope::default(),
             TimeUpagrahaConfig::default(),
+            true,
         );
         assert!(cfg.include_bhava_cusps);
         assert!(cfg.include_graha_positions);
@@ -10997,6 +11076,7 @@ mod tests {
             None,
             &dhruv_search::AmshaChartScope::default(),
             TimeUpagrahaConfig::default(),
+            true,
         );
         assert!(!cfg.include_bhava_cusps);
         assert!(cfg.include_panchang);
@@ -11019,6 +11099,7 @@ mod tests {
             None,
             &dhruv_search::AmshaChartScope::default(),
             TimeUpagrahaConfig::default(),
+            true,
         );
         assert!(cfg.include_graha_positions);
         assert!(!cfg.include_bindus);
@@ -11041,6 +11122,7 @@ mod tests {
             None,
             &dhruv_search::AmshaChartScope::default(),
             TimeUpagrahaConfig::default(),
+            true,
         );
         assert!(cfg.include_graha_positions);
         assert!(cfg.include_panchang);
@@ -11066,6 +11148,7 @@ mod tests {
             None,
             &dhruv_search::AmshaChartScope::default(),
             TimeUpagrahaConfig::default(),
+            true,
         );
         assert!(!cfg.include_dasha);
         assert_eq!(cfg.dasha_config.count, 0);
@@ -11090,6 +11173,7 @@ mod tests {
             None,
             &dhruv_search::AmshaChartScope::default(),
             TimeUpagrahaConfig::default(),
+            true,
         );
         // Graha must be force-computed for amshas
         assert!(cfg.include_graha_positions);
@@ -11114,6 +11198,7 @@ mod tests {
             None,
             &dhruv_search::AmshaChartScope::default(),
             TimeUpagrahaConfig::default(),
+            true,
         );
         assert_eq!(cfg.node_dignity_policy, NodeDignityPolicy::AlwaysSama);
     }
@@ -11146,7 +11231,7 @@ mod tests {
             dhruv_vedic_base::AmshaRequest::new(dhruv_vedic_base::Amsha::D10),
         ];
         let selection = amsha_selection_from_requests(&requests);
-        let scope = amsha_scope(true, true, true, true, true);
+        let scope = amsha_scope(true, true, true, true, true, true);
         let cfg = build_kundali_config(
             &resolved,
             None,
@@ -11157,6 +11242,7 @@ mod tests {
             Some(&selection),
             &scope,
             TimeUpagrahaConfig::default(),
+            true,
         );
         assert_eq!(cfg.amsha_selection.count, 2);
         assert_eq!(cfg.amsha_selection.codes[0], 9);

@@ -215,7 +215,10 @@ def graha_longitudes(engine, jd_tdb, config=None, ayanamsha_system=0, use_nutati
         lib.dhruv_graha_longitudes(engine._ptr, jd_tdb, cfg, out),
         "graha_longitudes",
     )
-    return GrahaLongitudes(longitudes=[out.longitudes[i] for i in range(9)])
+    outer = None
+    if out.outer_planets_valid:
+        outer = [out.outer_planets[i] for i in range(3)]
+    return GrahaLongitudes(longitudes=[out.longitudes[i] for i in range(9)], outer_planets=outer)
 
 
 def moving_osculating_apogees_for_date(
@@ -310,7 +313,7 @@ def graha_positions(
         cfg = ffi.new("DhruvGrahaPositionsConfig *")
         cfg.include_nakshatra = config.get("include_nakshatra", 0)
         cfg.include_lagna = config.get("include_lagna", 0)
-        cfg.include_outer_planets = config.get("include_outer_planets", 0)
+        cfg.include_outer_planets = config.get("include_outer_planets", 1)
         cfg.include_bhava = config.get("include_bhava", 0)
     else:
         cfg = ffi.NULL
@@ -454,6 +457,9 @@ def _extract_amsha_entry(e):
 
 def _extract_amsha_chart(c):
     grahas = [_extract_amsha_entry(c.grahas[i]) for i in range(9)]
+    outer_planets = None
+    if c.outer_planets_valid:
+        outer_planets = [_extract_amsha_entry(c.outer_planets[i]) for i in range(3)]
     lagna = _extract_amsha_entry(c.lagna)
 
     bhava_cusps = None
@@ -491,6 +497,7 @@ def _extract_amsha_chart(c):
         variation_code=c.variation_code,
         grahas=grahas,
         lagna=lagna,
+        outer_planets=outer_planets,
         bhava_cusps=bhava_cusps,
         rashi_bhava_cusps=rashi_bhava_cusps,
         arudha_padas=arudha_padas,

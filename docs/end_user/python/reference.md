@@ -250,11 +250,15 @@ The fuller public surface is intentionally module-based.
 
 - `graha_longitudes`
   Accepts optional `GrahaLongitudesConfig` with `GrahaLongitudeKind` / `PrecessionModel` selectors, or the default sidereal settings via keyword args.
+  Results keep `longitudes` as the 9 navagrahas and expose Uranus, Neptune,
+  and Pluto separately as `outer_planets`.
 - `moving_osculating_apogees_for_date`
   Returns moving heliocentric osculating apogees for graha indices 2..6
   (`Mangal,Buddh,Guru,Shukra,Shani`) with sidereal longitude, ayanamsha, and
   reference-plane longitude.
 - `graha_positions`
+  Results keep `grahas` as the 9 navagrahas and expose positional-only
+  Uranus, Neptune, and Pluto separately as `outer_planets`.
 - `core_bindus`
 - `charakaraka_for_date`
 - `full_kundali_config_default`
@@ -285,6 +289,8 @@ apply to the graha. They also expose `lajjitadi`, `lajjitadi_states`, and
 - `amsha_longitudes`
 - `amsha_rashi_info`
 - `amsha_chart_for_date`
+  Amsha charts keep `grahas` as 9 entries and expose transformed
+  `outer_planets` separately when the scope includes them.
 - `amsha_variations`
 - `amsha_variations_many`
 

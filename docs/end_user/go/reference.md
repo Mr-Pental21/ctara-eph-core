@@ -29,6 +29,8 @@ Core inputs and configs:
 - `GrahanConfig`
 - `StationaryConfig`
 - `GrahaPositionsConfig`
+  `IncludeOuterPlanets` defaults on through the high-level defaults. Returned
+  `Grahas` stay the 9 navagrahas; `OuterPlanets` is `[Uranus, Neptune, Pluto]`.
 - `BindusConfig`
 - `DrishtiConfig`
 - `TimeUpagrahaConfig`
@@ -304,6 +306,7 @@ Jyotish and charts:
 - `(*Engine).AllUpagrahasForDateWithConfig`
 - `(*Engine).CharakarakaForDate`
 - `(*Engine).GrahaPositionsForDate`
+  Returns outer planets in a sibling field without changing the 9-graha list.
 - `(*Engine).CoreBindusForDate`
 - `(*Engine).DrishtiForDate`
 - `(*Engine).AshtakavargaForDate`
@@ -327,6 +330,8 @@ Strength, dasha, amsha, and tara:
 - `(*Engine).DashaChildPeriod`
 - `(*Engine).DashaCompleteLevel`
 - `(*Engine).AmshaChartForDate`
+  Amsha chart `Grahas` stay length 9; `OuterPlanets` carries transformed
+  Uranus, Neptune, and Pluto entries when the scope enables them.
 - `(*TaraCatalog).Compute`
 - `(*TaraCatalog).GalacticCenterEcliptic`
 - `TaraPropagatePosition`

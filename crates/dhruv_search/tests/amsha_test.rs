@@ -215,6 +215,7 @@ fn amsha_with_scope_flags() {
         include_upagrahas: true,
         include_sphutas: true,
         include_special_lagnas: true,
+        include_outer_planets: true,
     };
 
     let result = amsha_charts_for_date(
@@ -236,10 +237,14 @@ fn amsha_with_scope_flags() {
     assert!(chart.upagrahas.is_some());
     assert!(chart.sphutas.is_some());
     assert!(chart.special_lagnas.is_some());
+    assert_eq!(chart.outer_planets.as_ref().map(|v| v.len()), Some(3));
 
     let cusps = chart.bhava_cusps.as_ref().unwrap();
     for c in cusps {
         assert!(c.sidereal_longitude >= 0.0 && c.sidereal_longitude < 360.0);
+    }
+    for entry in chart.outer_planets.as_ref().unwrap() {
+        assert!(entry.sidereal_longitude >= 0.0 && entry.sidereal_longitude < 360.0);
     }
 }
 
@@ -374,6 +379,7 @@ fn full_kundali_amsha_scope_includes_optional_sections() {
         include_upagrahas: true,
         include_sphutas: true,
         include_special_lagnas: true,
+        include_outer_planets: true,
     };
 
     let config = FullKundaliConfig {
@@ -414,6 +420,7 @@ fn full_kundali_amsha_scope_includes_optional_sections() {
     assert!(chart.upagrahas.is_some());
     assert!(chart.sphutas.is_some());
     assert!(chart.special_lagnas.is_some());
+    assert_eq!(chart.outer_planets.as_ref().map(|v| v.len()), Some(3));
 }
 
 #[test]

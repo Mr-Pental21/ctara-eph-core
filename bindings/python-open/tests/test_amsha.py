@@ -85,6 +85,8 @@ class TestAmshaChartForDate:
         )
         assert chart.amsha_code == 9
         assert len(chart.grahas) == 9
+        assert chart.outer_planets is not None
+        assert len(chart.outer_planets) == 3
         for g in chart.grahas:
             assert 0 <= g.sidereal_longitude < 360
             assert 0 <= g.rashi_index <= 11
@@ -119,3 +121,5 @@ class TestAmshaChartForDate:
         assert len(chart.sphutas) == 16
         assert chart.special_lagnas is not None
         assert len(chart.special_lagnas) == 8
+        assert chart.outer_planets is not None
+        assert len(chart.outer_planets) == 3

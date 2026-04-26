@@ -951,6 +951,7 @@ class AmshaChart:
     variation_code: int
     grahas: list[AmshaEntry]
     lagna: AmshaEntry
+    outer_planets: Optional[list[AmshaEntry]] = None
     bhava_cusps: Optional[list[AmshaEntry]] = None
     rashi_bhava_cusps: Optional[list[AmshaEntry]] = None
     arudha_padas: Optional[list[AmshaEntry]] = None
@@ -1268,13 +1269,15 @@ class TaraComputeResult:
 
 @dataclass(frozen=True)
 class GrahaLongitudes:
-    """Sidereal or tropical longitudes for all 9 grahas.
+    """Sidereal or tropical longitudes for all 9 grahas plus outer planets.
 
     Indexed by Graha order: Surya=0, Chandra=1, Mangal=2, Buddh=3,
     Guru=4, Shukra=5, Shani=6, Rahu=7, Ketu=8.
+    ``outer_planets`` is [Uranus, Neptune, Pluto] when populated.
     """
 
     longitudes: list[float]
+    outer_planets: Optional[list[float]] = None
 
 
 @dataclass(frozen=True)

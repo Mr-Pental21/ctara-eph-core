@@ -668,7 +668,9 @@ type PanchangOperationResult struct {
 }
 
 type GrahaLongitudes struct {
-	Longitudes [GrahaCount]float64
+	Longitudes        [GrahaCount]float64
+	OuterPlanetsValid bool
+	OuterPlanets      [3]float64
 }
 
 type MovingOsculatingApogeeEntry struct {
@@ -936,6 +938,7 @@ type AmshaChartScope struct {
 	IncludeUpagrahas     bool
 	IncludeSphutas       bool
 	IncludeSpecialLagnas bool
+	IncludeOuterPlanets  bool
 }
 
 type AmshaChart struct {
@@ -943,6 +946,7 @@ type AmshaChart struct {
 	VariationCode              uint8
 	Grahas                     [GrahaCount]AmshaEntry
 	Lagna                      AmshaEntry
+	OuterPlanets               []AmshaEntry
 	BhavaCusps                 []AmshaEntry
 	RashiBhavaCusps            []AmshaEntry
 	ArudhaPadas                []AmshaEntry
@@ -957,6 +961,7 @@ type AmshaChart struct {
 	UpagrahasValid             bool
 	SphutasValid               bool
 	SpecialLagnasValid         bool
+	OuterPlanetsValid          bool
 }
 
 type AmshaVariationInfo struct {

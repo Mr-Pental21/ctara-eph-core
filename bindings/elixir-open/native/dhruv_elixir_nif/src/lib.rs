@@ -33,8 +33,8 @@ use dhruv_search::{
     dasha_level0_entity_with_inputs, dasha_level0_for_birth, dasha_level0_with_inputs,
     dasha_snapshot_at, dasha_snapshot_with_inputs, elongation_at, full_kundali_for_date,
     ghatika_from_sunrises, graha_longitudes, hora_from_sunrises, karana_at, lunar_node, motion,
-    nakshatra_at, panchang, set_time_conversion_policy, sidereal_sum_at, tara as tara_op, tithi_at,
-    vaar_from_sunrises, vedic_day_sunrises, yoga_at,
+    nakshatra_at, outer_planet_longitudes, panchang, set_time_conversion_policy, sidereal_sum_at,
+    tara as tara_op, tithi_at, vaar_from_sunrises, vedic_day_sunrises, yoga_at,
 };
 use dhruv_tara::apparent::{apply_aberration, apply_light_deflection};
 use dhruv_tara::galactic::galactic_anticenter_icrs;
@@ -452,6 +452,7 @@ struct AmshaChartScopeInput {
     include_upagrahas: Option<bool>,
     include_sphutas: Option<bool>,
     include_special_lagnas: Option<bool>,
+    include_outer_planets: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1795,6 +1796,9 @@ fn to_amsha_scope(input: Option<&AmshaChartScopeInput>) -> dhruv_search::AmshaCh
         if let Some(value) = input.include_special_lagnas {
             scope.include_special_lagnas = value;
         }
+        if let Some(value) = input.include_outer_planets {
+            scope.include_outer_planets = value;
+        }
     }
     scope
 }
@@ -2639,7 +2643,10 @@ fn graha_entry_json(entry: dhruv_search::GrahaEntry, graha: Option<Graha>) -> Va
     })
 }
 
-fn graha_longitudes_json(result: dhruv_search::GrahaLongitudes) -> Value {
+fn graha_longitudes_json(
+    result: dhruv_search::GrahaLongitudes,
+    outer_planets: Option<[f64; 3]>,
+) -> Value {
     let grahas = ALL_GRAHAS
         .iter()
         .enumerate()
@@ -2650,7 +2657,15 @@ fn graha_longitudes_json(result: dhruv_search::GrahaLongitudes) -> Value {
             })
         })
         .collect::<Vec<_>>();
-    json!({ "grahas": grahas, "longitudes": result.longitudes })
+    json!({
+        "grahas": grahas,
+        "longitudes": result.longitudes,
+        "outer_planets": outer_planets.map(|values| json!([
+            { "graha": "Uranus", "longitude": values[0] },
+            { "graha": "Neptune", "longitude": values[1] },
+            { "graha": "Pluto", "longitude": values[2] }
+        ]))
+    })
 }
 
 fn moving_osculating_apogees_json(result: dhruv_search::MovingOsculatingApogees) -> Value {
@@ -2897,6 +2912,9 @@ fn amsha_result_json(result: dhruv_search::AmshaResult) -> Value {
                 .map(|entries| entries.into_iter().map(amsha_entry_json).collect::<Vec<_>>()),
             "special_lagnas": chart
                 .special_lagnas
+                .map(|entries| entries.into_iter().map(amsha_entry_json).collect::<Vec<_>>()),
+            "outer_planets": chart
+                .outer_planets
                 .map(|entries| entries.into_iter().map(amsha_entry_json).collect::<Vec<_>>())
         })).collect::<Vec<_>>()
     })
@@ -3790,15 +3808,16 @@ fn handle_jyotish(resource: &ResourceArc<EngineResource>, request: JyotishReques
                         sankranti_config.reference_plane,
                     ),
                 };
-                graha_longitudes(
-                    engine,
-                    request
-                        .jd_tdb
-                        .ok_or_else(|| error_payload("invalid_request", "jd_tdb is required"))?,
-                    &config,
-                )
-                .map(graha_longitudes_json)
-                .map_err(|err| map_error("search_error", err))
+                let jd_tdb = request
+                    .jd_tdb
+                    .ok_or_else(|| error_payload("invalid_request", "jd_tdb is required"))?;
+                let navagrahas = graha_longitudes(engine, jd_tdb, &config)
+                    .map_err(|err| map_error("search_error", err))?;
+                let outer = Some(
+                    outer_planet_longitudes(engine, jd_tdb, &config)
+                        .map_err(|err| map_error("search_error", err))?,
+                );
+                Ok(graha_longitudes_json(navagrahas, outer))
             }
             "moving_osculating_apogees" => {
                 let system = request
@@ -5311,6 +5330,7 @@ mod tests {
                     include_upagrahas: Some(true),
                     include_sphutas: Some(true),
                     include_special_lagnas: Some(true),
+                    include_outer_planets: Some(true),
                 }),
                 amsha_selection: Some(vec![AmshaRequestInput {
                     code: 9,

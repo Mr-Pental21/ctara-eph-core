@@ -83,6 +83,7 @@ fn amsha_charts_duplicate_requests_preserve_order_and_distinguish_variation() {
         include_upagrahas: true,
         include_sphutas: true,
         include_special_lagnas: true,
+        include_outer_planets: true,
     };
     let requests = [
         AmshaRequest::new(Amsha::D9),
@@ -301,6 +302,7 @@ fn full_kundali_mixed_sections_match_standalone_results() {
         include_upagrahas: true,
         include_sphutas: true,
         include_special_lagnas: true,
+        include_outer_planets: true,
     };
     config.amsha_selection = selection;
 

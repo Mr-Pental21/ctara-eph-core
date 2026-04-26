@@ -93,6 +93,8 @@ Frequently used config and result families re-exported from `dhruv_rs::*`:
 - `AyanamshaSystem`
 - `NodeDignityPolicy`
 - `GrahaPositionsConfig`
+  Defaults `include_outer_planets=true`; returned `grahas` stay the 9
+  navagrahas and `outer_planets` carries `[Uranus, Neptune, Pluto]`.
 
 `BhavaConfig` defaults `use_rashi_bhava_for_bala_avastha=true`,
 `include_rashi_bhava_results=true`, `include_special_bhavabala_rules=true`, and
@@ -134,6 +136,8 @@ types for Rust callers, including:
 
 - amsha helpers such as `amsha_longitude`, `amsha_chart_for_date`, and
   `amsha_charts_for_date`
+  Amsha chart `grahas` stay length 9; transformed outer planet entries are
+  returned in the sibling `outer_planets` section when enabled.
 - full-kundali, shadbala, vimsopaka, and dasha result/config families
 - pure jyotish math helpers such as `calculate_ashtakavarga`,
   `calculate_bhava_bala`, `calculate_bav`, `calculate_sav`, and

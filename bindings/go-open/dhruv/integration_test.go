@@ -385,6 +385,7 @@ func TestSearchAndPanchangSmoke(t *testing.T) {
 		IncludeUpagrahas:     true,
 		IncludeSphutas:       true,
 		IncludeSpecialLagnas: true,
+		IncludeOuterPlanets:  true,
 	}
 	amshaChart, err := eng.AmshaChartForDate(eop, utc, loc, bhava, riseset, 0, true, 9, 0, amshaScope)
 	if err != nil {
@@ -398,6 +399,9 @@ func TestSearchAndPanchangSmoke(t *testing.T) {
 			"expected upagraha/sphuta/special-lagna amsha sections, got %d/%d/%d",
 			len(amshaChart.Upagrahas), len(amshaChart.Sphutas), len(amshaChart.SpecialLagnas),
 		)
+	}
+	if !amshaChart.OuterPlanetsValid || len(amshaChart.OuterPlanets) != 3 {
+		t.Fatalf("expected 3 outer planets in amsha chart")
 	}
 
 	amshaCfg := FullKundaliConfigDefault()

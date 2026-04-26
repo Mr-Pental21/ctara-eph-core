@@ -15,6 +15,8 @@ class TestGrahaLongitudes:
         from ctara_dhruv.engine import engine
         result = graha_longitudes(engine(), jd_tdb=J2000, ayanamsha_system=0)
         assert len(result.longitudes) == 9
+        assert result.outer_planets is not None
+        assert len(result.outer_planets) == 3
         for lon in result.longitudes:
             assert 0 <= lon < 360
 
@@ -47,6 +49,7 @@ class TestGrahaPositions:
             location=(28.6139, 77.2090),
         )
         assert len(result.grahas) == 9
+        assert len(result.outer_planets) == 3
         for g in result.grahas:
             assert 0 <= g.sidereal_longitude < 360
             assert 0 <= g.rashi_index <= 11

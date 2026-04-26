@@ -261,7 +261,9 @@ def amsha_chart_for_date(
         scope_c.include_upagrahas = scope.get("include_upagrahas", 0)
         scope_c.include_sphutas = scope.get("include_sphutas", 0)
         scope_c.include_special_lagnas = scope.get("include_special_lagnas", 0)
-    # else all zero (no optional sections)
+        scope_c.include_outer_planets = scope.get("include_outer_planets", 1)
+    else:
+        scope_c.include_outer_planets = 1
 
     out = ffi.new("DhruvAmshaChart *")
     check(
@@ -283,6 +285,9 @@ def amsha_chart_for_date(
     )
 
     grahas = [_extract_amsha_entry(out.grahas[i]) for i in range(9)]
+    outer_planets = None
+    if out.outer_planets_valid:
+        outer_planets = [_extract_amsha_entry(out.outer_planets[i]) for i in range(3)]
     lagna = _extract_amsha_entry(out.lagna)
 
     bhava_cusps = None
@@ -320,6 +325,7 @@ def amsha_chart_for_date(
         variation_code=out.variation_code,
         grahas=grahas,
         lagna=lagna,
+        outer_planets=outer_planets,
         bhava_cusps=bhava_cusps,
         rashi_bhava_cusps=rashi_bhava_cusps,
         arudha_padas=arudha_padas,

@@ -23,7 +23,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       68
+#define DHRUV_API_VERSION       69
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 #define DHRUV_MAX_AMSHA_VARIATIONS 16
@@ -1120,6 +1120,8 @@ typedef struct {
 
 typedef struct {
     double longitudes[9];
+    uint8_t outer_planets_valid;
+    double outer_planets[3];
 } DhruvGrahaLongitudes;
 
 typedef struct {
@@ -1159,6 +1161,7 @@ typedef struct {
     uint8_t include_upagrahas;
     uint8_t include_sphutas;
     uint8_t include_special_lagnas;
+    uint8_t include_outer_planets;
 } DhruvAmshaChartScope;
 
 typedef struct {
@@ -1192,6 +1195,8 @@ typedef struct {
     uint16_t        amsha_code;
     uint8_t         variation_code;
     DhruvAmshaEntry grahas[9];
+    uint8_t         outer_planets_valid;
+    DhruvAmshaEntry outer_planets[3];
     DhruvAmshaEntry lagna;
     uint8_t         bhava_cusps_valid;
     DhruvAmshaEntry bhava_cusps[12];

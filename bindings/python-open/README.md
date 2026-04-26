@@ -5,7 +5,7 @@ canonical C ABI (`dhruv_ffi_c`) via `cffi`.
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=68`
+- ABI target: `DHRUV_API_VERSION=69`
 - Package root: `bindings/python-open`
 - Runtime dependency: `cffi`
 - Primary distribution: PyPI wheels plus sdist from unified `vX.Y.Z` tags
@@ -99,6 +99,12 @@ Optional amsha chart sections extracted by the wrapper:
 - `upagrahas`
 - `sphutas`
 - `special_lagnas`
+- `outer_planets`
+
+Graha-position and graha-longitude outputs keep their traditional navagraha
+lists at length 9 and expose Uranus, Neptune, and Pluto separately as
+`outer_planets`. Outer planets are positional display entities only; they are
+not inputs to bala, avastha, dasha, drishti, or lordship calculations.
 
 ## Example
 

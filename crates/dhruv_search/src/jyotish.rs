@@ -96,6 +96,7 @@ const VIMSOPAKA_REQUIRED_AMSHAS: [Amsha; 16] = [
     Amsha::D45,
     Amsha::D60,
 ];
+const OUTER_PLANET_BODIES: [Body; 3] = [Body::Uranus, Body::Neptune, Body::Pluto];
 const AVASTHA_REQUIRED_AMSHAS: [Amsha; 1] = [Amsha::D9];
 
 #[derive(Debug, Clone, Copy)]
@@ -217,6 +218,46 @@ fn graha_to_body(graha: Graha) -> Option<Body> {
         Graha::Shani => Some(Body::Saturn),
         Graha::Rahu | Graha::Ketu => None,
     }
+}
+
+fn outer_planet_longitudes_for_config(
+    engine: &Engine,
+    jd_tdb: f64,
+    config: &GrahaLongitudesConfig,
+) -> Result<[f64; 3], SearchError> {
+    let mut longitudes = [0.0f64; 3];
+    let dpsi_deg = if config.kind == GrahaLongitudeKind::Tropical
+        && config.use_nutation
+        && config.reference_plane == ReferencePlane::Ecliptic
+    {
+        let t = jd_tdb_to_centuries(jd_tdb);
+        let (dpsi_arcsec, _deps_arcsec) = dhruv_frames::nutation_iau2000b(t);
+        dpsi_arcsec / 3600.0
+    } else {
+        0.0
+    };
+    let aya = if config.kind == GrahaLongitudeKind::Sidereal {
+        dhruv_vedic_base::ayanamsha_deg_on_plane(
+            config.ayanamsha_system,
+            jd_tdb_to_centuries(jd_tdb),
+            config.use_nutation,
+            config.precession_model,
+            config.reference_plane,
+        )
+    } else {
+        0.0
+    };
+    for (index, body) in OUTER_PLANET_BODIES.iter().copied().enumerate() {
+        let (lon, _lat) = body_lon_lat_on_plane(
+            engine,
+            body,
+            jd_tdb,
+            config.precession_model,
+            config.reference_plane,
+        )?;
+        longitudes[index] = normalize(lon + dpsi_deg - aya);
+    }
+    Ok(longitudes)
 }
 
 /// Convert an ecliptic longitude (e.g. bhava cusp, gulika) to sidereal
@@ -356,6 +397,7 @@ struct JyotishContext {
     ayanamsha: f64,
     reference_plane: ReferencePlane,
     graha_lons: Option<GrahaLongitudes>,
+    outer_planet_lons: Option<[f64; 3]>,
     lagna_sid: Option<f64>,
     bhava_result: Option<BhavaResult>,
     sidereal_bhava_cusps: Option<[f64; 12]>,
@@ -398,6 +440,7 @@ impl JyotishContext {
             ayanamsha,
             reference_plane: aya_config.reference_plane,
             graha_lons: None,
+            outer_planet_lons: None,
             lagna_sid: None,
             bhava_result: None,
             sidereal_bhava_cusps: None,
@@ -440,6 +483,25 @@ impl JyotishContext {
             self.graha_lons = Some(lons);
         }
         Ok(self.graha_lons.as_ref().expect("graha longitudes set"))
+    }
+
+    fn outer_planet_lons(
+        &mut self,
+        engine: &Engine,
+        aya_config: &SankrantiConfig,
+    ) -> Result<[f64; 3], SearchError> {
+        if let Some(lons) = self.outer_planet_lons {
+            return Ok(lons);
+        }
+        let config = GrahaLongitudesConfig::sidereal_with_model(
+            aya_config.ayanamsha_system,
+            aya_config.use_nutation,
+            aya_config.precession_model,
+            aya_config.reference_plane,
+        );
+        let lons = outer_planet_longitudes_for_config(engine, self.jd_tdb, &config)?;
+        self.outer_planet_lons = Some(lons);
+        Ok(lons)
     }
 
     fn bhava_result<'a>(
@@ -1351,6 +1413,17 @@ pub fn graha_longitudes(
     }
 }
 
+/// Query Uranus, Neptune, and Pluto longitudes in the same frame as `graha_longitudes`.
+///
+/// Returned order is `[Uranus, Neptune, Pluto]`.
+pub fn outer_planet_longitudes(
+    engine: &Engine,
+    jd_tdb: f64,
+    config: &GrahaLongitudesConfig,
+) -> Result<[f64; 3], SearchError> {
+    outer_planet_longitudes_for_config(engine, jd_tdb, config)
+}
+
 fn graha_sidereal_longitudes_for_config(
     engine: &Engine,
     jd_tdb: f64,
@@ -1722,7 +1795,6 @@ fn graha_positions_with_ctx(
     ctx: &mut JyotishContext,
 ) -> Result<GrahaPositions, SearchError> {
     let aya = ctx.ayanamsha;
-    let jd_tdb = ctx.jd_tdb;
     let plane = ctx.reference_plane;
     let graha_lons = *ctx.graha_lons(engine, aya_config)?;
 
@@ -1773,12 +1845,9 @@ fn graha_positions_with_ctx(
     };
 
     let outer_planets = if config.include_outer_planets {
-        let outer_bodies = [Body::Uranus, Body::Neptune, Body::Pluto];
         let mut entries = [GrahaEntry::sentinel(); 3];
-        for (i, &body) in outer_bodies.iter().enumerate() {
-            let (lon, _lat) =
-                body_lon_lat_on_plane(engine, body, jd_tdb, aya_config.precession_model, plane)?;
-            let sid_lon = normalize(lon - aya);
+        let outer_lons = ctx.outer_planet_lons(engine, aya_config)?;
+        for (i, &sid_lon) in outer_lons.iter().enumerate() {
             entries[i] = make_graha_entry(
                 sid_lon,
                 config,
@@ -2440,6 +2509,8 @@ pub fn full_kundali_for_date(
         Some(amsha_charts_from_kundali_with_ctx(
             amsha_plan.requests(),
             &config.amsha_scope,
+            engine,
+            aya_config,
             &graha_positions,
             &rashi_bhava_cusps,
             &bindus,
@@ -3940,6 +4011,7 @@ fn unique_amsha_requests_for_compute(requests: &[AmshaRequest]) -> (Vec<AmshaReq
 fn build_amsha_chart(
     req: &AmshaRequest,
     graha_lons: &[f64; 9],
+    outer_planet_lons: Option<&[f64; 3]>,
     graha_cached: Option<&CachedAmshaGrahaData>,
     lagna_sid: f64,
     scope: &AmshaChartScope,
@@ -3965,6 +4037,18 @@ fn build_amsha_chart(
             grahas[i] = transform_to_amsha_entry(graha_lons[i], amsha, variation);
         }
     }
+
+    let outer_planets = if scope.include_outer_planets {
+        outer_planet_lons.map(|lons| {
+            let mut entries = [make_amsha_entry(0.0); 3];
+            for i in 0..3 {
+                entries[i] = transform_to_amsha_entry(lons[i], amsha, variation);
+            }
+            entries
+        })
+    } else {
+        None
+    };
 
     let lagna = transform_to_amsha_entry(lagna_sid, amsha, variation);
 
@@ -4054,6 +4138,7 @@ fn build_amsha_chart(
         amsha,
         variation_code: effective_variation,
         grahas,
+        outer_planets,
         lagna,
         bhava_cusps,
         rashi_bhava_cusps,
@@ -4085,6 +4170,19 @@ pub fn amsha_charts_for_date(
 
     // Get D1 graha longitudes
     let graha_lons = *ctx.graha_lons(engine, aya_config)?;
+    let outer_planet_lons = if scope.include_outer_planets {
+        let config = GrahaLongitudesConfig::sidereal_with_model(
+            aya_config.ayanamsha_system,
+            aya_config.use_nutation,
+            aya_config.precession_model,
+            aya_config.reference_plane,
+        );
+        Some(outer_planet_longitudes_for_config(
+            engine, ctx.jd_tdb, &config,
+        )?)
+    } else {
+        None
+    };
     let lagna_sid = ctx.lagna_sid(engine, eop, location)?;
 
     // Bhava cusps (sidereal)
@@ -4194,6 +4292,7 @@ pub fn amsha_charts_for_date(
             build_amsha_chart(
                 req,
                 &graha_lons.longitudes,
+                outer_planet_lons.as_ref(),
                 graha_cached,
                 lagna_sid,
                 scope,
@@ -4299,13 +4398,20 @@ pub fn amsha_charts_from_kundali(
     } else {
         None
     };
+    let graha_lons = gp.grahas.map(|g| g.sidereal_longitude);
+    let outer_planet_lons = if scope.include_outer_planets {
+        Some(gp.outer_planets.map(|g| g.sidereal_longitude))
+    } else {
+        None
+    };
 
     let unique_charts = unique_requests
         .iter()
         .map(|req| {
             build_amsha_chart(
                 req,
-                &gp.grahas.map(|g| g.sidereal_longitude),
+                &graha_lons,
+                outer_planet_lons.as_ref(),
                 None,
                 lagna_sid,
                 scope,
@@ -4331,6 +4437,8 @@ pub fn amsha_charts_from_kundali(
 fn amsha_charts_from_kundali_with_ctx(
     requests: &[AmshaRequest],
     scope: &AmshaChartScope,
+    engine: &Engine,
+    aya_config: &SankrantiConfig,
     graha_positions: &Option<GrahaPositions>,
     rashi_bhava_cusps: &Option<BhavaResult>,
     bindus: &Option<BindusResult>,
@@ -4418,6 +4526,12 @@ fn amsha_charts_from_kundali_with_ctx(
     } else {
         None
     };
+    let graha_lons = gp.grahas.map(|g| g.sidereal_longitude);
+    let outer_planet_lons = if scope.include_outer_planets {
+        Some(ctx.outer_planet_lons(engine, aya_config)?)
+    } else {
+        None
+    };
 
     let unique_charts = unique_requests
         .iter()
@@ -4425,7 +4539,8 @@ fn amsha_charts_from_kundali_with_ctx(
             let graha_cached = ctx.cached_amsha_graha_data(*req);
             build_amsha_chart(
                 req,
-                &gp.grahas.map(|g| g.sidereal_longitude),
+                &graha_lons,
+                outer_planet_lons.as_ref(),
                 graha_cached,
                 lagna_sid,
                 scope,

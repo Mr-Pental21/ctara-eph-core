@@ -137,7 +137,7 @@ pub struct MovingOsculatingApogees {
 }
 
 /// Configuration flags for graha_positions computation.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct GrahaPositionsConfig {
     /// Compute nakshatra + pada for each graha.
     pub include_nakshatra: bool,
@@ -147,6 +147,17 @@ pub struct GrahaPositionsConfig {
     pub include_outer_planets: bool,
     /// Compute bhava placement for each graha.
     pub include_bhava: bool,
+}
+
+impl Default for GrahaPositionsConfig {
+    fn default() -> Self {
+        Self {
+            include_nakshatra: false,
+            include_lagna: false,
+            include_outer_planets: true,
+            include_bhava: false,
+        }
+    }
 }
 
 /// Position details for a single graha.
@@ -282,13 +293,27 @@ pub struct AmshaEntry {
 
 /// Scope flags: which entity groups to include in amsha charts.
 /// Grahas (9) + Lagna (1) always included.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct AmshaChartScope {
     pub include_bhava_cusps: bool,
     pub include_arudha_padas: bool,
     pub include_upagrahas: bool,
     pub include_sphutas: bool,
     pub include_special_lagnas: bool,
+    pub include_outer_planets: bool,
+}
+
+impl Default for AmshaChartScope {
+    fn default() -> Self {
+        Self {
+            include_bhava_cusps: false,
+            include_arudha_padas: false,
+            include_upagrahas: false,
+            include_sphutas: false,
+            include_special_lagnas: false,
+            include_outer_planets: true,
+        }
+    }
 }
 
 /// All entity positions in one amsha chart.
@@ -297,6 +322,7 @@ pub struct AmshaChart {
     pub amsha: Amsha,
     pub variation_code: u8,
     pub grahas: [AmshaEntry; 9],
+    pub outer_planets: Option<[AmshaEntry; 3]>,
     pub lagna: AmshaEntry,
     pub bhava_cusps: Option<[AmshaEntry; 12]>,
     pub rashi_bhava_cusps: Option<[AmshaEntry; 12]>,

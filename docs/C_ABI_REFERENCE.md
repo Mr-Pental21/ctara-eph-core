@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 68`
+**ABI version:** `DHRUV_API_VERSION = 69`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -1461,8 +1461,14 @@ Compute the rashi index that is `offset` signs from `rashi_index`. Returns 0-bas
 ```c
 typedef struct {
     double longitudes[9];   // Indexed by Graha order (Surya=0 .. Ketu=8)
+    uint8_t outer_planets_valid;
+    double outer_planets[3]; // Uranus, Neptune, Pluto
 } DhruvGrahaLongitudes;
 ```
+
+`longitudes` remains the 9-navagraha array. Uranus, Neptune, and Pluto are
+returned only in the sibling `outer_planets` field and are positional display
+entities, not traditional calculation inputs.
 
 ```c
 typedef struct {
@@ -1752,6 +1758,7 @@ struct DhruvAmshaChartScope {
     uint8_t include_upagrahas;
     uint8_t include_sphutas;
     uint8_t include_special_lagnas;
+    uint8_t include_outer_planets;
 };
 
 struct DhruvAmshaSelectionConfig {
@@ -1819,6 +1826,8 @@ Dependency notes for full-kundali amsha scope:
 - `include_upagrahas` amsha output depends on root `include_upagrahas`
 - `include_sphutas` amsha output depends on root `include_sphutas`
 - `include_special_lagnas` amsha output depends on root `include_special_lagnas`
+- `include_outer_planets` transforms Uranus, Neptune, and Pluto through the
+  chart's resolved amsha variation without changing the 9-graha array
 
 ---
 

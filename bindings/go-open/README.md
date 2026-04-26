@@ -4,7 +4,7 @@ Open-source Go bindings for `ctara-dhruv-core`, implemented against the canonica
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=68`
+- ABI target: `DHRUV_API_VERSION=69`
 - Binding strategy: `cgo` over `crates/dhruv_ffi_c/include/dhruv.h`
 - Package: `ctara-dhruv-core/bindings/go-open/dhruv`
 - Distribution model: tagged Go module plus validated C ABI release artifacts
@@ -147,6 +147,13 @@ Standalone bala helpers take the same selection shape:
 - `Upagrahas`
 - `Sphutas`
 - `SpecialLagnas`
+- `OuterPlanets`
+
+Graha-position and longitude results keep their traditional `Grahas` /
+`Longitudes` arrays at length 9 and expose Uranus, Neptune, and Pluto through
+separate `OuterPlanets` fields. These outer planets are positional display
+entities only and are not used by bala, avastha, dasha, drishti, or lordship
+calculations.
 
 For embedded amsha charts in `FullKundaliForDate`, the relevant root sections
 must also be enabled in the full-kundali config, or the wrapper caller must use

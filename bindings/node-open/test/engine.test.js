@@ -443,6 +443,7 @@ test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
     includeUpagrahas: true,
     includeSphutas: true,
     includeSpecialLagnas: true,
+    includeOuterPlanets: true,
   };
   fullCfg.amshaSelection.count = 1;
   fullCfg.amshaSelection.codes[0] = 9;
@@ -603,9 +604,11 @@ test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
     includeUpagrahas: true,
     includeSphutas: true,
     includeSpecialLagnas: true,
+    includeOuterPlanets: true,
   };
   const amshaChart = dhruv.amshaChartForDate(engine, eop, utc, loc, bhavaCfg, riseCfg, 0, true, 9, 0, amshaScope);
   assert.equal(amshaChart.grahas.length, 9);
+  assert.equal(amshaChart.outerPlanets.length, 3);
   assert.equal(amshaChart.bhavaCusps.length, 12);
   assert.equal(amshaChart.arudhaPadas.length, 12);
   assert.equal(amshaChart.upagrahas.length, 11);

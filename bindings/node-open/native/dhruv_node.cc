@@ -479,6 +479,7 @@ bool ReadBindusConfig(napi_env env, napi_value obj, DhruvBindusConfig* out) {
 bool ReadAmshaChartScope(napi_env env, napi_value obj, DhruvAmshaChartScope* out) {
     napi_value v;
     bool b = false;
+    bool has = false;
     if (!GetNamedProperty(env, obj, "includeBhavaCusps", &v) || !GetBool(env, v, &b)) return false;
     out->include_bhava_cusps = b ? 1 : 0;
     if (!GetNamedProperty(env, obj, "includeArudhaPadas", &v) || !GetBool(env, v, &b)) return false;
@@ -489,6 +490,12 @@ bool ReadAmshaChartScope(napi_env env, napi_value obj, DhruvAmshaChartScope* out
     out->include_sphutas = b ? 1 : 0;
     if (!GetNamedProperty(env, obj, "includeSpecialLagnas", &v) || !GetBool(env, v, &b)) return false;
     out->include_special_lagnas = b ? 1 : 0;
+    out->include_outer_planets = 1;
+    if (!GetOptionalNamedProperty(env, obj, "includeOuterPlanets", &v, &has)) return false;
+    if (has) {
+        if (!GetBool(env, v, &b)) return false;
+        out->include_outer_planets = b ? 1 : 0;
+    }
     return true;
 }
 
@@ -1620,6 +1627,15 @@ napi_value WriteAmshaChart(napi_env env, const DhruvAmshaChart& a) {
     SetNamed(env, obj, "upagrahasValid", MakeBool(env, a.upagrahas_valid != 0));
     SetNamed(env, obj, "sphutasValid", MakeBool(env, a.sphutas_valid != 0));
     SetNamed(env, obj, "specialLagnasValid", MakeBool(env, a.special_lagnas_valid != 0));
+    SetNamed(env, obj, "outerPlanetsValid", MakeBool(env, a.outer_planets_valid != 0));
+    if (a.outer_planets_valid != 0) {
+        napi_value outer_planets;
+        napi_create_array_with_length(env, 3, &outer_planets);
+        for (uint32_t i = 0; i < 3; ++i) {
+            napi_set_element(env, outer_planets, i, WriteAmshaEntry(env, a.outer_planets[i]));
+        }
+        SetNamed(env, obj, "outerPlanets", outer_planets);
+    }
     if (a.bhava_cusps_valid != 0) {
         napi_value bhava_cusps;
         napi_create_array_with_length(env, 12, &bhava_cusps);
@@ -2894,6 +2910,15 @@ napi_value GrahaLongitudes(napi_env env, napi_callback_info info) {
             napi_set_element(env, arr, i, MakeDouble(env, out_lons.longitudes[i]));
         }
         SetNamed(env, out, "longitudes", arr);
+        SetNamed(env, out, "outerPlanetsValid", MakeBool(env, out_lons.outer_planets_valid != 0));
+        if (out_lons.outer_planets_valid != 0) {
+            napi_value outer;
+            napi_create_array_with_length(env, 3, &outer);
+            for (uint32_t i = 0; i < 3; ++i) {
+                napi_set_element(env, outer, i, MakeDouble(env, out_lons.outer_planets[i]));
+            }
+            SetNamed(env, out, "outerPlanets", outer);
+        }
     }
     return out;
 }
@@ -6095,6 +6120,7 @@ napi_value FullKundaliConfigDefault(napi_env env, napi_callback_info info) {
     SetNamed(env, amsha_scope, "includeUpagrahas", MakeBool(env, cfg.amsha_scope.include_upagrahas != 0));
     SetNamed(env, amsha_scope, "includeSphutas", MakeBool(env, cfg.amsha_scope.include_sphutas != 0));
     SetNamed(env, amsha_scope, "includeSpecialLagnas", MakeBool(env, cfg.amsha_scope.include_special_lagnas != 0));
+    SetNamed(env, amsha_scope, "includeOuterPlanets", MakeBool(env, cfg.amsha_scope.include_outer_planets != 0));
     SetNamed(env, obj, "amshaScope", amsha_scope);
 
     napi_value amsha_selection;

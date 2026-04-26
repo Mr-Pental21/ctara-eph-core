@@ -148,7 +148,8 @@ Dedicated amsha requests:
       include_arudha_padas: true,
       include_upagrahas: true,
       include_sphutas: true,
-      include_special_lagnas: true
+      include_special_lagnas: true,
+      include_outer_planets: true
     }
   })
 ```
@@ -183,6 +184,12 @@ available:
 - `:upagrahas`
 - `:sphutas`
 - `:special_lagnas`
+- `:outer_planets`
+
+Graha-position and longitude maps keep navagraha lists at length 9 and expose
+Uranus, Neptune, and Pluto as sibling `:outer_planets` sections. Outer planets
+are positional display entities only and do not participate in bala, avastha,
+dasha, drishti, or lordship calculations.
 
 Standalone bala request maps also accept `:amsha_selection` with the same
 `[%{code: ..., variation: ...}]` shape used by `full_kundali`. Embedded

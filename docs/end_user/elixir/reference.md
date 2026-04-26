@@ -128,8 +128,12 @@ are omitted, the Elixir wrapper aligns with the shared wrapper convention:
 `CtaraDhruv.Jyotish`:
 
 - `graha_longitudes/2`
+  Returns the 9 navagrahas in `:grahas` / `:longitudes` and Uranus, Neptune,
+  and Pluto in sibling `:outer_planets`.
 - `moving_osculating_apogees/2`
 - `graha_positions/2`
+  Keeps `:grahas` as the 9 navagrahas and exposes positional-only outer grahas
+  separately as `:outer_planets`.
 - `special_lagnas/2`
 - `arudha/2`
 - `upagrahas/2`

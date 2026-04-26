@@ -834,6 +834,7 @@ func cAmshaScope(scope AmshaChartScope) C.DhruvAmshaChartScope {
 		include_upagrahas:      boolU8(scope.IncludeUpagrahas),
 		include_sphutas:        boolU8(scope.IncludeSphutas),
 		include_special_lagnas: boolU8(scope.IncludeSpecialLagnas),
+		include_outer_planets:  boolU8(scope.IncludeOuterPlanets),
 	}
 }
 
@@ -895,9 +896,13 @@ func AmshaChartForDate(engine EngineHandle, eop EopHandle, utc UtcTime, loc GeoL
 		UpagrahasValid:             out.upagrahas_valid != 0,
 		SphutasValid:               out.sphutas_valid != 0,
 		SpecialLagnasValid:         out.special_lagnas_valid != 0,
+		OuterPlanetsValid:          out.outer_planets_valid != 0,
 	}
 	for i := 0; i < GrahaCount; i++ {
 		res.Grahas[i] = goAmshaEntry(out.grahas[i])
+	}
+	if res.OuterPlanetsValid {
+		res.OuterPlanets = goAmshaEntries(out.outer_planets[:])
 	}
 	if res.BhavaCuspsValid {
 		res.BhavaCusps = goAmshaEntries(out.bhava_cusps[:])

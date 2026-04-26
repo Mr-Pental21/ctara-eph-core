@@ -908,7 +908,10 @@ impl ConfigResolver {
             explicit.include_outer_planets,
             op.include_outer_planets,
             None,
-            recommended(self.defaults_mode, false),
+            recommended(
+                self.defaults_mode,
+                GrahaPositionsConfig::default().include_outer_planets,
+            ),
             "graha_positions.include_outer_planets",
         )?;
         let (include_bhava, s4) = choose_copy(
