@@ -100,7 +100,7 @@ fn shadbala_bench(c: &mut Criterion) {
         weekday_lord: Graha::Shukra,
         hora_lord: Graha::Buddh,
         ayana_krantis: [23.0, 5.0, -15.0, 10.0, -20.0, 8.0, -3.0],
-        ayana_obliquity_deg: dhruv_vedic_base::DEFAULT_AYANA_BALA_OBLIQUITY_DEG,
+        ayana_obliquity_deg: dhruv_vedic_base::shadbala::DEFAULT_AYANA_BALA_OBLIQUITY_DEG,
         graha_declinations: [23.0, 5.0, -15.0, 10.0, -20.0, 8.0, -3.0],
         sidereal_lons: [280.0, 120.0, 15.0, 170.0, 220.0, 350.0, 195.0],
     };
@@ -150,7 +150,7 @@ fn vimsopaka_bench(c: &mut Criterion) {
 
 fn avastha_bench(c: &mut Criterion) {
     use dhruv_vedic_base::avastha::{AvasthaInputs, LajjitadiInputs, SayanadiInputs, all_avasthas};
-    use dhruv_vedic_base::{Dignity, GrahaDrishtiMatrix, graha_drishti_matrix};
+    use dhruv_vedic_base::{Dignity, graha_drishti_matrix};
 
     let sidereal_lons = [15.0, 120.0, 200.0, 300.0, 50.0, 160.0, 270.0, 335.0, 155.0];
     let rashi_indices = [0u8, 3, 6, 9, 1, 5, 8, 11, 5];
