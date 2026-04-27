@@ -88,6 +88,18 @@ class Engine {
     checkStatus('engine_query', r.status);
     return r.result;
   }
+
+  replaceSpks(spkPaths) {
+    const r = addon.engineReplaceSpks(this._handle, { spkPaths });
+    checkStatus('engine_replace_spks', r.status);
+    return r.report;
+  }
+
+  listSpks() {
+    const r = addon.engineListSpks(this._handle);
+    checkStatus('engine_list_spks', r.status);
+    return r.spks;
+  }
 }
 
 function apiVersion() {

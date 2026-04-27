@@ -23,7 +23,7 @@ extern "C" {
  * =================================================================== */
 
 /* API version */
-#define DHRUV_API_VERSION       69
+#define DHRUV_API_VERSION       70
 #define DHRUV_PATH_CAPACITY     512
 #define DHRUV_MAX_SPK_PATHS     8
 #define DHRUV_MAX_AMSHA_VARIATIONS 16
@@ -356,6 +356,30 @@ typedef struct {
     uint64_t cache_capacity;
     uint8_t  strict_validation;
 } DhruvEngineConfig;
+
+typedef struct {
+    uint32_t spk_path_count;
+    uint8_t  spk_paths_utf8[8][512];
+} DhruvSpkSetConfig;
+
+typedef struct {
+    uint64_t generation;
+    uint32_t active_count;
+    uint32_t loaded_count;
+    uint32_t reused_count;
+} DhruvSpkReplaceReport;
+
+typedef struct {
+    uint8_t  path_utf8[512];
+    uint32_t segment_count;
+    uint64_t generation;
+} DhruvLoadedSpkInfo;
+
+typedef struct {
+    uint32_t count;
+    uint64_t generation;
+    DhruvLoadedSpkInfo entries[8];
+} DhruvLoadedSpkList;
 
 typedef struct {
     int32_t target;
@@ -1612,6 +1636,13 @@ DhruvStatus dhruv_engine_query_request(
     const DhruvEngineHandle *engine,
     const DhruvQueryRequest *request,
     DhruvQueryResult *out);
+DhruvStatus dhruv_engine_replace_spks(
+    const DhruvEngineHandle *engine,
+    const DhruvSpkSetConfig *config,
+    DhruvSpkReplaceReport *out);
+DhruvStatus dhruv_engine_list_spks(
+    const DhruvEngineHandle *engine,
+    DhruvLoadedSpkList *out);
 DhruvStatus dhruv_engine_free(DhruvEngineHandle *engine);
 DhruvStatus dhruv_query_once(
     const DhruvEngineConfig *config,

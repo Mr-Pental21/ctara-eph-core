@@ -12,6 +12,8 @@ Lifecycle and handles:
 - `EOP`
 - `Config`
 - `TaraCatalog`
+- `SpkReplaceReport`
+- `LoadedSPKInfo`
 
 Core inputs and configs:
 
@@ -72,6 +74,11 @@ Lifecycle and runtime:
 - `LoadTaraCatalog`
 - `QueryOnce`
 - `CartesianToSpherical`
+
+Long-lived engines expose runtime SPK replacement through
+`(*Engine).ReplaceSPKs(spkPaths)` and active-set introspection through
+`(*Engine).ListSPKs()`. Replacement is all-or-nothing and preserves the old set
+on failure.
 
 Default-config helpers:
 

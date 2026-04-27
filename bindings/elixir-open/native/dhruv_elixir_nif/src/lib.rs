@@ -150,6 +150,11 @@ struct PathInput {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+struct SpkPathsInput {
+    spk_paths: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 struct ConfigLoadInput {
     path: Option<String>,
     defaults_mode: Option<EnumInput>,
@@ -4559,6 +4564,51 @@ fn engine_clear_config<'a>(
     let response = write_state(&resource, |state| {
         state.resolver = None;
         Ok(json!({ "cleared": true }))
+    });
+    encode_json(env, response)
+}
+
+#[rustler::nif(schedule = "DirtyIo")]
+fn engine_replace_spks<'a>(
+    env: Env<'a>,
+    resource: ResourceArc<EngineResource>,
+    request: Term<'a>,
+) -> Result<Term<'a>, rustler::Error> {
+    let request = decode_term::<SpkPathsInput>(request)?;
+    let response = write_state(&resource, |state| {
+        let engine = require_engine(state)?;
+        let report = engine
+            .replace_spk_paths(request.spk_paths.into_iter().map(PathBuf::from).collect())
+            .map_err(|err| map_error("engine_error", err))?;
+        Ok(json!({
+            "generation": report.generation,
+            "active_count": report.active_count,
+            "loaded_count": report.loaded_count,
+            "reused_count": report.reused_count
+        }))
+    });
+    encode_json(env, response)
+}
+
+#[rustler::nif(schedule = "DirtyCpu")]
+fn engine_list_spks<'a>(
+    env: Env<'a>,
+    resource: ResourceArc<EngineResource>,
+) -> Result<Term<'a>, rustler::Error> {
+    let response = read_state(&resource, |state| {
+        let engine = require_engine(state)?;
+        let spks: Vec<Value> = engine
+            .spk_infos()
+            .into_iter()
+            .map(|info| {
+                json!({
+                    "path": info.path,
+                    "segment_count": info.segment_count,
+                    "generation": info.generation
+                })
+            })
+            .collect();
+        Ok(json!({ "spks": spks }))
     });
     encode_json(env, response)
 }

@@ -27,6 +27,12 @@ defmodule CtaraDhruv.Engine do
   def clear_config(%__MODULE__{} = engine),
     do: Native.call_engine_noarg(&Native.engine_clear_config/1, engine)
 
+  def replace_spks(%__MODULE__{} = engine, spk_paths) when is_list(spk_paths),
+    do: Native.call_engine(&Native.engine_replace_spks/2, engine, %{spk_paths: spk_paths})
+
+  def list_spks(%__MODULE__{} = engine),
+    do: Native.call_engine_noarg(&Native.engine_list_spks/1, engine)
+
   def load_eop(%__MODULE__{} = engine, path),
     do: Native.call_engine(&Native.engine_load_eop/2, engine, %{path: path})
 

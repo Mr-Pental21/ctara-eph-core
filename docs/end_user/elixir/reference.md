@@ -33,6 +33,11 @@ using `bindings/elixir-open/lib/` as the source of truth.
 - `clear_eop/1`
 - `load_tara_catalog/2`
 - `reset_tara_catalog/1`
+- `replace_spks/2`
+- `list_spks/1`
+
+`replace_spks/2` atomically swaps the full active SPK set for a long-lived
+engine. `list_spks/1` returns the active SPKs in query order.
 
 `load_config/2` accepts either:
 

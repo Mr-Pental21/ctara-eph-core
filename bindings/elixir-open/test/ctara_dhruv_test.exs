@@ -312,6 +312,33 @@ defmodule CtaraDhruvTest do
     end
   end
 
+  test "engine replaces and lists spks" do
+    case with_engine() do
+      :skip ->
+        assert true
+
+      {:ok, engine} ->
+        assert {:ok, initial} = Engine.list_spks(engine)
+        assert length(initial.spks) == 1
+        assert hd(initial.spks).generation == 0
+
+        assert {:ok, report} = Engine.replace_spks(engine, [@spk, @spk])
+        assert report.generation == 1
+        assert report.active_count == 2
+        assert report.loaded_count == 0
+        assert report.reused_count == 2
+
+        assert {:ok, active} = Engine.list_spks(engine)
+        assert length(active.spks) == 2
+        assert Enum.all?(active.spks, &(&1.generation == report.generation))
+
+        missing = Path.join(@kernel_dir, "missing.bsp")
+        assert {:error, _} = Engine.replace_spks(engine, [missing])
+        assert {:ok, after_failure} = Engine.list_spks(engine)
+        assert hd(after_failure.spks).generation == report.generation
+    end
+  end
+
   test "elixir math exposes amsha variation catalogs" do
     assert {:ok, d2} = Math.amsha_variations(%{amsha_code: 2})
     assert d2.amsha_code == 2

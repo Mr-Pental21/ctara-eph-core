@@ -2,7 +2,7 @@ package dhruv
 
 import "ctara-dhruv-core/bindings/go-open/internal/cabi"
 
-const ExpectedAPIVersion = 69
+const ExpectedAPIVersion = 70
 
 const (
 	PathCapacity          = cabi.PathCapacity
@@ -173,6 +173,8 @@ const (
 
 type (
 	EngineConfig            = cabi.EngineConfig
+	SpkReplaceReport        = cabi.SpkReplaceReport
+	LoadedSPKInfo           = cabi.LoadedSPKInfo
 	ConfigLoadOptions       = cabi.ConfigLoadOptions
 	Query                   = cabi.Query
 	QueryRequest            = cabi.QueryRequest

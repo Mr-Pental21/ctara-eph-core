@@ -13,3 +13,5 @@ Related C ABI entry points for this crate are handle-oriented and live in
 - `dhruv_engine_new`
 - `dhruv_engine_free`
 - `dhruv_engine_query`
+- `dhruv_engine_replace_spks`
+- `dhruv_engine_list_spks`

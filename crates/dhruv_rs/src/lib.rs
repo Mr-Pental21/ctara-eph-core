@@ -35,7 +35,9 @@ pub use ops::{
 };
 
 // Re-export core types so callers don't need to depend on dhruv_core directly.
-pub use dhruv_core::{Body, EngineConfig, Frame, Observer, StateVector};
+pub use dhruv_core::{
+    Body, EngineConfig, Frame, LoadedSpkInfo, Observer, SpkReplaceReport, StateVector,
+};
 
 // Re-export commonly used config/result types.
 pub use dhruv_frames::{ReferencePlane, SphericalCoords, SphericalState};

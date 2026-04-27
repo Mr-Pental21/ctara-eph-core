@@ -6,7 +6,10 @@ use std::ptr;
 use std::sync::{LazyLock, RwLock};
 
 use dhruv_config::{ConfigResolver, DefaultsMode, load_with_discovery};
-use dhruv_core::{Body, Engine, EngineConfig, EngineError, Frame, Observer, Query, StateVector};
+use dhruv_core::{
+    Body, Engine, EngineConfig, EngineError, Frame, LoadedSpkInfo, Observer, Query,
+    SpkReplaceReport, StateVector,
+};
 use dhruv_frames::PrecessionModel;
 use dhruv_search::{
     ChandraGrahan, ChandraGrahanType, ConjunctionConfig, ConjunctionEvent, GrahaLongitudeKind,
@@ -58,7 +61,7 @@ use dhruv_vedic_ops::{
 };
 
 /// ABI version for downstream bindings.
-pub const DHRUV_API_VERSION: u32 = 69;
+pub const DHRUV_API_VERSION: u32 = 70;
 
 /// Fixed UTF-8 buffer size for path fields in C-compatible structs.
 pub const DHRUV_PATH_CAPACITY: usize = 512;
@@ -305,6 +308,42 @@ pub struct DhruvEngineConfig {
     pub strict_validation: u8,
 }
 
+/// C-compatible SPK-only replacement configuration.
+#[repr(C)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DhruvSpkSetConfig {
+    pub spk_path_count: u32,
+    pub spk_paths_utf8: [[u8; DHRUV_PATH_CAPACITY]; DHRUV_MAX_SPK_PATHS],
+}
+
+/// C-compatible report for replacing an engine's SPK set.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DhruvSpkReplaceReport {
+    pub generation: u64,
+    pub active_count: u32,
+    pub loaded_count: u32,
+    pub reused_count: u32,
+}
+
+/// C-compatible read-only information about one loaded SPK.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DhruvLoadedSpkInfo {
+    pub path_utf8: [u8; DHRUV_PATH_CAPACITY],
+    pub segment_count: u32,
+    pub generation: u64,
+}
+
+/// Fixed-capacity list of active SPKs for C ABI callers.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DhruvLoadedSpkList {
+    pub count: u32,
+    pub generation: u64,
+    pub entries: [DhruvLoadedSpkInfo; DHRUV_MAX_SPK_PATHS],
+}
+
 impl DhruvEngineConfig {
     /// Convenience constructor for a single SPK path (most common case).
     pub fn try_new(
@@ -347,6 +386,55 @@ impl DhruvEngineConfig {
     }
 }
 
+impl DhruvSpkSetConfig {
+    pub fn try_new(spk_paths: &[&str]) -> Result<Self, DhruvStatus> {
+        if spk_paths.is_empty() || spk_paths.len() > DHRUV_MAX_SPK_PATHS {
+            return Err(DhruvStatus::InvalidConfig);
+        }
+
+        let mut spk_paths_utf8 = [[0_u8; DHRUV_PATH_CAPACITY]; DHRUV_MAX_SPK_PATHS];
+        for (i, path) in spk_paths.iter().enumerate() {
+            spk_paths_utf8[i] = encode_c_utf8(path)?;
+        }
+
+        Ok(Self {
+            spk_path_count: spk_paths.len() as u32,
+            spk_paths_utf8,
+        })
+    }
+}
+
+impl From<SpkReplaceReport> for DhruvSpkReplaceReport {
+    fn from(value: SpkReplaceReport) -> Self {
+        Self {
+            generation: value.generation,
+            active_count: value.active_count as u32,
+            loaded_count: value.loaded_count as u32,
+            reused_count: value.reused_count as u32,
+        }
+    }
+}
+
+impl Default for DhruvLoadedSpkInfo {
+    fn default() -> Self {
+        Self {
+            path_utf8: [0_u8; DHRUV_PATH_CAPACITY],
+            segment_count: 0,
+            generation: 0,
+        }
+    }
+}
+
+impl Default for DhruvLoadedSpkList {
+    fn default() -> Self {
+        Self {
+            count: 0,
+            generation: 0,
+            entries: [DhruvLoadedSpkInfo::default(); DHRUV_MAX_SPK_PATHS],
+        }
+    }
+}
+
 impl TryFrom<&DhruvEngineConfig> for EngineConfig {
     type Error = EngineError;
 
@@ -378,6 +466,48 @@ impl TryFrom<&DhruvEngineConfig> for EngineConfig {
             strict_validation: value.strict_validation != 0,
         })
     }
+}
+
+fn spk_paths_from_set_config(value: &DhruvSpkSetConfig) -> Result<Vec<PathBuf>, EngineError> {
+    let count = value.spk_path_count as usize;
+    if count == 0 || count > DHRUV_MAX_SPK_PATHS {
+        return Err(EngineError::InvalidConfig(
+            "spk_path_count must be between 1 and 8",
+        ));
+    }
+
+    let mut spk_paths = Vec::with_capacity(count);
+    for buf in &value.spk_paths_utf8[..count] {
+        let path_str = decode_c_utf8(buf)
+            .map_err(|_| EngineError::InvalidConfig("invalid UTF-8 in spk_path"))?;
+        spk_paths.push(PathBuf::from(path_str));
+    }
+    Ok(spk_paths)
+}
+
+fn loaded_spk_info_to_ffi(info: &LoadedSpkInfo) -> Result<DhruvLoadedSpkInfo, DhruvStatus> {
+    let path = info.path.to_str().ok_or(DhruvStatus::InvalidConfig)?;
+    Ok(DhruvLoadedSpkInfo {
+        path_utf8: encode_c_utf8(path)?,
+        segment_count: info.segment_count as u32,
+        generation: info.generation,
+    })
+}
+
+fn loaded_spk_list_to_ffi(infos: &[LoadedSpkInfo]) -> Result<DhruvLoadedSpkList, DhruvStatus> {
+    if infos.len() > DHRUV_MAX_SPK_PATHS {
+        return Err(DhruvStatus::InvalidConfig);
+    }
+    let mut out = DhruvLoadedSpkList::default();
+    out.count = infos.len() as u32;
+    out.generation = infos
+        .first()
+        .map(|info| info.generation)
+        .unwrap_or_default();
+    for (slot, info) in out.entries.iter_mut().zip(infos.iter()) {
+        *slot = loaded_spk_info_to_ffi(info)?;
+    }
+    Ok(out)
 }
 
 /// C-compatible query shape.
@@ -1150,6 +1280,21 @@ pub fn dhruv_engine_query_request_internal(
     Ok(query_result_from_state(state, request.output_mode))
 }
 
+pub fn dhruv_engine_replace_spks_internal(
+    engine: &Engine,
+    config: &DhruvSpkSetConfig,
+) -> Result<DhruvSpkReplaceReport, DhruvStatus> {
+    let spk_paths = spk_paths_from_set_config(config).map_err(|err| DhruvStatus::from(&err))?;
+    let report = engine
+        .replace_spk_paths(spk_paths)
+        .map_err(|err| DhruvStatus::from(&err))?;
+    Ok(DhruvSpkReplaceReport::from(report))
+}
+
+pub fn dhruv_engine_list_spks_internal(engine: &Engine) -> Result<DhruvLoadedSpkList, DhruvStatus> {
+    loaded_spk_list_to_ffi(&engine.spk_infos())
+}
+
 /// Convenience helper for one-shot callers.
 pub fn dhruv_query_once_internal(
     config: &DhruvEngineConfig,
@@ -1339,6 +1484,59 @@ pub unsafe extern "C" fn dhruv_engine_query_request(
         match dhruv_engine_query_request_internal(engine_ref, request_value) {
             Ok(result) => {
                 unsafe { *out_result = result };
+                DhruvStatus::Ok
+            }
+            Err(status) => status,
+        }
+    })
+}
+
+/// Replace an engine's active SPK set atomically.
+///
+/// # Safety
+/// `engine`, `config`, and `out_report` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_engine_replace_spks(
+    engine: *const DhruvEngineHandle,
+    config: *const DhruvSpkSetConfig,
+    out_report: *mut DhruvSpkReplaceReport,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || config.is_null() || out_report.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        let engine_ref = unsafe { &*engine };
+        let config_ref = unsafe { &*config };
+
+        match dhruv_engine_replace_spks_internal(engine_ref, config_ref) {
+            Ok(report) => {
+                unsafe { *out_report = report };
+                DhruvStatus::Ok
+            }
+            Err(status) => status,
+        }
+    })
+}
+
+/// List an engine's currently active SPK kernels.
+///
+/// # Safety
+/// `engine` and `out_list` must be valid, non-null pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dhruv_engine_list_spks(
+    engine: *const DhruvEngineHandle,
+    out_list: *mut DhruvLoadedSpkList,
+) -> DhruvStatus {
+    ffi_boundary(|| {
+        if engine.is_null() || out_list.is_null() {
+            return DhruvStatus::NullPointer;
+        }
+
+        let engine_ref = unsafe { &*engine };
+        match dhruv_engine_list_spks_internal(engine_ref) {
+            Ok(list) => {
+                unsafe { *out_list = list };
                 DhruvStatus::Ok
             }
             Err(status) => status,

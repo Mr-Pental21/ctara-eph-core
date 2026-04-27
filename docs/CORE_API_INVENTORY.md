@@ -11,6 +11,8 @@ This document tracks the public crate-root API of `dhruv_core`.
 - `Query`: input payload for one engine query.
 - `StateVector`: query output (`position_km`, `velocity_km_s`).
 - `Engine`: runtime entry point.
+- `LoadedSpkInfo`: active SPK introspection entry.
+- `SpkReplaceReport`: all-or-nothing SPK replacement report.
 - `QueryStats`: telemetry counters.
 - `EngineError`: non-exhaustive core error enum.
 - `DerivedValue`: extension output (`Scalar` or `Vector3`).
@@ -26,3 +28,6 @@ Full callable list is documented in `docs/CORE_RUNTIME_APIS.md`.
   crate-level free functions.
 - Downstream crates (`dhruv_search`, `dhruv_vedic_base`) layer domain logic
   on top of this contract.
+- Long-lived engines support copy-on-write SPK set replacement through
+  `Engine::replace_spk_paths`, with `Engine::spk_infos` for active-set
+  introspection.

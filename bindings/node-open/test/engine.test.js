@@ -164,6 +164,42 @@ test('engine query and UTC roundtrip', { skip: !hasKernels() }, () => {
   engine.close();
 });
 
+test('engine replaceSpks and listSpks', { skip: !hasKernels() }, () => {
+  const paths = kernelPaths();
+
+  const engine = dhruv.Engine.create({
+    spkPaths: [paths.spk],
+    lskPath: paths.lsk,
+    cacheCapacity: 64,
+    strictValidation: false,
+  });
+
+  const initial = engine.listSpks();
+  assert.equal(initial.length, 1);
+  assert.equal(initial[0].generation, 0);
+
+  const report = engine.replaceSpks([paths.spk, paths.spk]);
+  assert.deepEqual(report, {
+    generation: 1,
+    activeCount: 2,
+    loadedCount: 0,
+    reusedCount: 2,
+  });
+
+  const active = engine.listSpks();
+  assert.equal(active.length, 2);
+  assert.equal(active[0].generation, report.generation);
+  assert.equal(active[1].generation, report.generation);
+
+  assert.throws(
+    () => engine.replaceSpks([path.join(path.dirname(paths.spk), 'missing.bsp')]),
+    /engine_replace_spks/,
+  );
+  assert.equal(engine.listSpks()[0].generation, report.generation);
+
+  engine.close();
+});
+
 test('search and panchang smoke', { skip: !(hasKernels() && hasEop()) }, () => {
   const paths = kernelPaths();
 

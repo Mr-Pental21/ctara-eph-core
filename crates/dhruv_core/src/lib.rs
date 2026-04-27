@@ -7,7 +7,10 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex, RwLock, Weak};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use dhruv_time::{self, LeapSecondKernel};
 use jpl_kernel::{KernelError, SpkEvaluation, SpkKernel};
@@ -19,6 +22,44 @@ pub struct EngineConfig {
     pub lsk_path: PathBuf,
     pub cache_capacity: usize,
     pub strict_validation: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct SpkIdentity {
+    path: PathBuf,
+    len: u64,
+    modified_unix_nanos: Option<i128>,
+}
+
+#[derive(Debug, Clone)]
+struct LoadedSpk {
+    identity: SpkIdentity,
+    path: PathBuf,
+    kernel: Arc<SpkKernel>,
+    segment_count: usize,
+}
+
+#[derive(Debug)]
+struct SpkSet {
+    generation: u64,
+    entries: Vec<LoadedSpk>,
+}
+
+/// Read-only information about a loaded SPK kernel.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LoadedSpkInfo {
+    pub path: PathBuf,
+    pub segment_count: usize,
+    pub generation: u64,
+}
+
+/// Result of replacing an engine's active SPK set.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SpkReplaceReport {
+    pub generation: u64,
+    pub active_count: usize,
+    pub loaded_count: usize,
+    pub reused_count: usize,
 }
 
 impl EngineConfig {
@@ -279,6 +320,118 @@ impl ComputationContext {
     }
 }
 
+fn system_time_to_unix_nanos(time: SystemTime) -> Option<i128> {
+    match time.duration_since(UNIX_EPOCH) {
+        Ok(duration) => Some(duration.as_nanos() as i128),
+        Err(err) => Some(-(err.duration().as_nanos() as i128)),
+    }
+}
+
+fn spk_identity(path: &Path) -> Result<SpkIdentity, EngineError> {
+    let canonical = fs::canonicalize(path).map_err(|e| {
+        EngineError::KernelLoad(format!("failed to canonicalize {}: {e}", path.display()))
+    })?;
+    let metadata = fs::metadata(&canonical).map_err(|e| {
+        EngineError::KernelLoad(format!(
+            "failed to read metadata for {}: {e}",
+            canonical.display()
+        ))
+    })?;
+    let modified_unix_nanos = metadata.modified().ok().and_then(system_time_to_unix_nanos);
+    Ok(SpkIdentity {
+        path: canonical,
+        len: metadata.len(),
+        modified_unix_nanos,
+    })
+}
+
+fn loaded_spk_from_kernel(identity: SpkIdentity, kernel: Arc<SpkKernel>) -> LoadedSpk {
+    let segment_count = kernel.segments().len();
+    LoadedSpk {
+        path: identity.path.clone(),
+        identity,
+        kernel,
+        segment_count,
+    }
+}
+
+fn spk_infos_from_set(set: &SpkSet) -> Vec<LoadedSpkInfo> {
+    set.entries
+        .iter()
+        .map(|entry| LoadedSpkInfo {
+            path: entry.path.clone(),
+            segment_count: entry.segment_count,
+            generation: set.generation,
+        })
+        .collect()
+}
+
+fn load_spk_set(
+    paths: &[PathBuf],
+    generation: u64,
+    current: Option<&Arc<SpkSet>>,
+    cache: Option<&HashMap<SpkIdentity, Weak<SpkKernel>>>,
+) -> Result<
+    (
+        Arc<SpkSet>,
+        HashMap<SpkIdentity, Weak<SpkKernel>>,
+        usize,
+        usize,
+    ),
+    EngineError,
+> {
+    let mut entries = Vec::with_capacity(paths.len());
+    let mut loaded_count = 0usize;
+    let mut reused_count = 0usize;
+    let mut fresh_cache = HashMap::with_capacity(paths.len());
+    let mut local_kernels: HashMap<SpkIdentity, Arc<SpkKernel>> = HashMap::new();
+
+    for path in paths {
+        let identity = spk_identity(path)?;
+        let mut kernel = current
+            .and_then(|set| {
+                set.entries
+                    .iter()
+                    .find(|entry| entry.identity == identity)
+                    .map(|entry| Arc::clone(&entry.kernel))
+            })
+            .or_else(|| cache.and_then(|cache| cache.get(&identity).and_then(Weak::upgrade)))
+            .or_else(|| local_kernels.get(&identity).map(Arc::clone));
+
+        if kernel.is_some() {
+            reused_count += 1;
+        } else {
+            let loaded = Arc::new(SpkKernel::load(&identity.path).map_err(|e| {
+                EngineError::KernelLoad(format!("{}: {e}", identity.path.display()))
+            })?);
+            let after = spk_identity(&identity.path)?;
+            if after != identity {
+                return Err(EngineError::KernelLoad(format!(
+                    "SPK metadata changed while loading {}",
+                    identity.path.display()
+                )));
+            }
+            loaded_count += 1;
+            kernel = Some(Arc::clone(&loaded));
+            local_kernels.insert(identity.clone(), loaded);
+        }
+
+        let kernel = kernel.expect("kernel is loaded or reused");
+        fresh_cache.insert(identity.clone(), Arc::downgrade(&kernel));
+        entries.push(loaded_spk_from_kernel(identity, kernel));
+    }
+
+    Ok((
+        Arc::new(SpkSet {
+            generation,
+            entries,
+        }),
+        fresh_cache,
+        loaded_count,
+        reused_count,
+    ))
+}
+
 /// Core query engine.
 ///
 /// `Engine` is [`Send`] + [`Sync`], so it can be shared across threads
@@ -294,18 +447,29 @@ impl ComputationContext {
 /// });
 /// ```
 pub struct Engine {
-    config: EngineConfig,
-    spk_kernels: Vec<SpkKernel>,
+    config: RwLock<EngineConfig>,
+    spk_set: RwLock<Arc<SpkSet>>,
+    replace_lock: Mutex<()>,
+    kernel_cache: Mutex<HashMap<SpkIdentity, Weak<SpkKernel>>>,
     lsk: LeapSecondKernel,
 }
 
 // Manual Debug impl since SpkKernel's Debug shows raw data.
 impl std::fmt::Debug for Engine {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let total_segments: usize = self.spk_kernels.iter().map(|k| k.segments().len()).sum();
+        let config = self.config.read().ok();
+        let spk_set = self.spk_set.read().ok();
+        let total_segments: usize = spk_set
+            .as_ref()
+            .map(|set| set.entries.iter().map(|entry| entry.segment_count).sum())
+            .unwrap_or_default();
+        let spk_kernel_count = spk_set
+            .as_ref()
+            .map(|set| set.entries.len())
+            .unwrap_or_default();
         f.debug_struct("Engine")
-            .field("config", &self.config)
-            .field("spk_kernel_count", &self.spk_kernels.len())
+            .field("config", &config.as_deref())
+            .field("spk_kernel_count", &spk_kernel_count)
             .field("spk_total_segments", &total_segments)
             .finish()
     }
@@ -315,32 +479,96 @@ impl Engine {
     /// Create a new engine, loading SPK and LSK kernels from the config paths.
     pub fn new(config: EngineConfig) -> Result<Self, EngineError> {
         config.validate()?;
-        let mut spk_kernels = Vec::with_capacity(config.spk_paths.len());
-        for path in &config.spk_paths {
-            let spk = SpkKernel::load(path).map_err(|e| EngineError::KernelLoad(e.to_string()))?;
-            spk_kernels.push(spk);
-        }
+        let (spk_set, cache, _, _) = load_spk_set(&config.spk_paths, 0, None, None)?;
         let lsk = LeapSecondKernel::load(&config.lsk_path)
             .map_err(|e| EngineError::KernelLoad(e.to_string()))?;
         Ok(Self {
-            config,
-            spk_kernels,
+            config: RwLock::new(config),
+            spk_set: RwLock::new(spk_set),
+            replace_lock: Mutex::new(()),
+            kernel_cache: Mutex::new(cache),
             lsk,
         })
     }
 
-    pub fn config(&self) -> &EngineConfig {
-        &self.config
+    pub fn config(&self) -> EngineConfig {
+        self.config
+            .read()
+            .expect("engine config lock poisoned")
+            .clone()
     }
 
-    /// Access the loaded SPK kernels.
-    pub fn spk_kernels(&self) -> &[SpkKernel] {
-        &self.spk_kernels
+    /// Current SPK set generation.
+    pub fn spk_generation(&self) -> u64 {
+        self.spk_set
+            .read()
+            .expect("engine SPK lock poisoned")
+            .generation
     }
 
-    /// Access the first loaded SPK kernel (convenience for single-kernel use).
-    pub fn spk(&self) -> &SpkKernel {
-        &self.spk_kernels[0]
+    /// Read information about the currently active SPK kernels.
+    pub fn spk_infos(&self) -> Vec<LoadedSpkInfo> {
+        let set = self.spk_snapshot();
+        spk_infos_from_set(&set)
+    }
+
+    /// Replace the active SPK set. The old set remains active if loading fails.
+    pub fn replace_spk_paths(
+        &self,
+        spk_paths: Vec<PathBuf>,
+    ) -> Result<SpkReplaceReport, EngineError> {
+        if spk_paths.is_empty() {
+            return Err(EngineError::InvalidConfig("spk_paths must not be empty"));
+        }
+        for path in &spk_paths {
+            if path.as_os_str().is_empty() {
+                return Err(EngineError::InvalidConfig(
+                    "spk_paths must not contain empty paths",
+                ));
+            }
+        }
+
+        let _replace_guard = self
+            .replace_lock
+            .lock()
+            .expect("engine SPK replacement lock poisoned");
+        let current = self.spk_snapshot();
+        let next_generation = current.generation.saturating_add(1);
+        let cache_guard = self
+            .kernel_cache
+            .lock()
+            .expect("engine SPK cache lock poisoned");
+        let (new_set, mut new_cache_entries, loaded_count, reused_count) = load_spk_set(
+            &spk_paths,
+            next_generation,
+            Some(&current),
+            Some(&cache_guard),
+        )?;
+        drop(cache_guard);
+
+        {
+            let mut set_guard = self.spk_set.write().expect("engine SPK lock poisoned");
+            *set_guard = Arc::clone(&new_set);
+        }
+        {
+            let mut config_guard = self.config.write().expect("engine config lock poisoned");
+            config_guard.spk_paths = spk_paths;
+        }
+        {
+            let mut cache_guard = self
+                .kernel_cache
+                .lock()
+                .expect("engine SPK cache lock poisoned");
+            cache_guard.retain(|_, weak| weak.strong_count() > 0);
+            cache_guard.extend(new_cache_entries.drain());
+        }
+
+        Ok(SpkReplaceReport {
+            generation: new_set.generation,
+            active_count: new_set.entries.len(),
+            loaded_count,
+            reused_count,
+        })
     }
 
     /// Access the loaded LSK kernel.
@@ -348,10 +576,15 @@ impl Engine {
         &self.lsk
     }
 
+    fn spk_snapshot(&self) -> Arc<SpkSet> {
+        Arc::clone(&self.spk_set.read().expect("engine SPK lock poisoned"))
+    }
+
     /// Evaluate (target, center) at epoch from the first kernel with a
     /// matching segment. Uses the computation context for memoization.
     fn evaluate_across(
         &self,
+        spk_set: &SpkSet,
         target: i32,
         center: i32,
         epoch_tdb_s: f64,
@@ -363,8 +596,8 @@ impl Engine {
             return Ok(*cached);
         }
 
-        for kernel in &self.spk_kernels {
-            match kernel.evaluate(target, center, epoch_tdb_s) {
+        for entry in &spk_set.entries {
+            match entry.kernel.evaluate(target, center, epoch_tdb_s) {
                 Ok(eval) => {
                     ctx.evaluations += 1;
                     ctx.cache.insert(key, eval);
@@ -382,9 +615,9 @@ impl Engine {
     }
 
     /// Find the center body for a target across all kernels.
-    fn center_for_across(&self, target: i32) -> Option<i32> {
-        for kernel in &self.spk_kernels {
-            if let Some(center) = kernel.center_for(target) {
+    fn center_for_across(&self, spk_set: &SpkSet, target: i32) -> Option<i32> {
+        for entry in &spk_set.entries {
+            if let Some(center) = entry.kernel.center_for(target) {
                 return Some(center);
             }
         }
@@ -395,6 +628,7 @@ impl Engine {
     /// across all loaded kernels. Uses x99→barycenter fallback.
     fn resolve_to_ssb_across(
         &self,
+        spk_set: &SpkSet,
         body_code: i32,
         epoch_tdb_s: f64,
         ctx: &mut ComputationContext,
@@ -403,7 +637,7 @@ impl Engine {
         let mut state = [0.0f64; 6];
 
         while code != 0 {
-            let center = match self.center_for_across(code) {
+            let center = match self.center_for_across(spk_set, code) {
                 Some(c) => c,
                 None => {
                     let bary = jpl_kernel::planet_body_to_barycenter(code);
@@ -418,7 +652,7 @@ impl Engine {
                 }
             };
 
-            let eval = self.evaluate_across(code, center, epoch_tdb_s, ctx)?;
+            let eval = self.evaluate_across(spk_set, code, center, epoch_tdb_s, ctx)?;
             state[0] += eval.position_km[0];
             state[1] += eval.position_km[1];
             state[2] += eval.position_km[2];
@@ -435,19 +669,22 @@ impl Engine {
     /// Evaluate an ephemeris query, returning a Cartesian state vector.
     pub fn query(&self, query: Query) -> Result<StateVector, EngineError> {
         let mut ctx = ComputationContext::new();
-        self.query_with_ctx(query, &mut ctx)
+        let spk_set = self.spk_snapshot();
+        self.query_with_ctx(&spk_set, query, &mut ctx)
     }
 
     /// Evaluate a query and return telemetry alongside the result.
     pub fn query_with_stats(&self, query: Query) -> Result<(StateVector, QueryStats), EngineError> {
         let mut ctx = ComputationContext::new();
-        let state = self.query_with_ctx(query, &mut ctx)?;
+        let spk_set = self.spk_snapshot();
+        let state = self.query_with_ctx(&spk_set, query, &mut ctx)?;
         Ok((state, ctx.stats()))
     }
 
     /// Internal query implementation that threads a memoization context.
     fn query_with_ctx(
         &self,
+        spk_set: &SpkSet,
         query: Query,
         ctx: &mut ComputationContext,
     ) -> Result<StateVector, EngineError> {
@@ -467,14 +704,14 @@ impl Engine {
 
         // Resolve target to SSB across all loaded kernels.
         let target_ssb = self
-            .resolve_to_ssb_across(query.target.code(), epoch_tdb_s, ctx)
+            .resolve_to_ssb_across(spk_set, query.target.code(), epoch_tdb_s, ctx)
             .map_err(|e| EngineError::Internal(e.to_string()))?;
 
         // Resolve observer to SSB across all loaded kernels.
         let observer_ssb = match query.observer {
             Observer::SolarSystemBarycenter => [0.0f64; 6],
             Observer::Body(body) => self
-                .resolve_to_ssb_across(body.code(), epoch_tdb_s, ctx)
+                .resolve_to_ssb_across(spk_set, body.code(), epoch_tdb_s, ctx)
                 .map_err(|e| EngineError::Internal(e.to_string()))?,
         };
 
@@ -533,6 +770,7 @@ impl Engine {
         indexed.sort_unstable_by_key(|(bits, _)| *bits);
 
         let mut total_stats = QueryStats::default();
+        let spk_set = self.spk_snapshot();
 
         // Process groups of same-epoch queries.
         let mut group_start = 0;
@@ -545,7 +783,7 @@ impl Engine {
 
             let mut ctx = ComputationContext::new();
             for &(_, idx) in &indexed[group_start..group_end] {
-                results[idx] = self.query_with_ctx(queries[idx], &mut ctx);
+                results[idx] = self.query_with_ctx(&spk_set, queries[idx], &mut ctx);
             }
 
             let group_stats = ctx.stats();

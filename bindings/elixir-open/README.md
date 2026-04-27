@@ -100,6 +100,16 @@ IO.inspect(time_result.diagnostics)
 
 ## Sidereal Chart Output
 
+## Runtime SPK Replacement
+
+Long-lived `CtaraDhruv.Engine` handles expose:
+
+- `CtaraDhruv.Engine.replace_spks(engine, spk_paths)`
+- `CtaraDhruv.Engine.list_spks(engine)`
+
+Replacement swaps the full active SPK set atomically. Shared kernels are reused
+when canonical path, file size, and modified time match.
+
 The direct Vedic bhava surface is tropical unless you provide a
 `sankranti_config`. The Elixir wrapper now exposes convenience arities for that
 explicitly:

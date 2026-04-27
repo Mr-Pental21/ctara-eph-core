@@ -371,7 +371,7 @@ fn multi_kernel_loads_and_queries() {
     })
     .expect("should load multi-kernel engine");
 
-    assert_eq!(engine.spk_kernels().len(), 2);
+    assert_eq!(engine.spk_infos().len(), 2);
 
     let query = Query {
         target: Body::Earth,
@@ -392,6 +392,51 @@ fn multi_kernel_loads_and_queries() {
         r > 0.5 * au_km && r < 1.5 * au_km,
         "Earth-SSB distance {r:.0} km not ~1 AU"
     );
+}
+
+#[test]
+fn replace_spk_paths_reuses_common_kernels_and_updates_config() {
+    let (spk, lsk) = kernel_paths();
+    if !spk.exists() || !lsk.exists() {
+        eprintln!("Skipping: kernel files not found");
+        return;
+    }
+    let engine = Engine::new(EngineConfig::with_single_spk(spk.clone(), lsk, 256, true))
+        .expect("should load engine");
+
+    assert_eq!(engine.spk_generation(), 0);
+    assert_eq!(engine.spk_infos().len(), 1);
+
+    let report = engine
+        .replace_spk_paths(vec![spk.clone(), spk.clone()])
+        .expect("replacement should succeed");
+    assert_eq!(report.generation, 1);
+    assert_eq!(report.active_count, 2);
+    assert_eq!(report.loaded_count, 0);
+    assert_eq!(report.reused_count, 2);
+    assert_eq!(engine.spk_generation(), 1);
+    assert_eq!(engine.spk_infos().len(), 2);
+    assert_eq!(engine.config().spk_paths, vec![spk.clone(), spk]);
+}
+
+#[test]
+fn replace_spk_paths_failure_keeps_previous_set() {
+    let (spk, lsk) = kernel_paths();
+    if !spk.exists() || !lsk.exists() {
+        eprintln!("Skipping: kernel files not found");
+        return;
+    }
+    let engine = Engine::new(EngineConfig::with_single_spk(spk.clone(), lsk, 256, true))
+        .expect("should load engine");
+
+    let before_generation = engine.spk_generation();
+    let before_infos = engine.spk_infos();
+    let err = engine
+        .replace_spk_paths(vec![spk.with_file_name("missing-test-kernel.bsp")])
+        .expect_err("replacement should fail");
+    assert!(matches!(err, EngineError::KernelLoad(_)));
+    assert_eq!(engine.spk_generation(), before_generation);
+    assert_eq!(engine.spk_infos(), before_infos);
 }
 
 #[test]

@@ -395,6 +395,24 @@ func cEngineConfig(cfg EngineConfig) (C.DhruvEngineConfig, error) {
 	return out, nil
 }
 
+func cSpkSetConfig(spkPaths []string) (C.DhruvSpkSetConfig, error) {
+	if len(spkPaths) == 0 {
+		return C.DhruvSpkSetConfig{}, fmt.Errorf("at least one SPK path is required")
+	}
+	if len(spkPaths) > MaxSpkPaths {
+		return C.DhruvSpkSetConfig{}, fmt.Errorf("spk path count exceeds %d", MaxSpkPaths)
+	}
+	var out C.DhruvSpkSetConfig
+	out.spk_path_count = C.uint32_t(len(spkPaths))
+	for i, p := range spkPaths {
+		buf := (*[PathCapacity]byte)(unsafe.Pointer(&out.spk_paths_utf8[i][0]))
+		if err := encodeFixedCString(buf[:], p); err != nil {
+			return C.DhruvSpkSetConfig{}, fmt.Errorf("invalid spk path %d: %w", i, err)
+		}
+	}
+	return out, nil
+}
+
 func cQuery(q Query) C.DhruvQuery {
 	return C.DhruvQuery{
 		target:       C.int32_t(q.Target),
@@ -474,6 +492,39 @@ func (h *EngineHandle) Free() Status {
 	st := Status(C.dhruv_engine_free(h.ptr))
 	h.ptr = nil
 	return st
+}
+
+func ReplaceSPKs(h EngineHandle, spkPaths []string) (SpkReplaceReport, Status, error) {
+	cfg, err := cSpkSetConfig(spkPaths)
+	if err != nil {
+		return SpkReplaceReport{}, StatusInvalidConfig, err
+	}
+	var out C.DhruvSpkReplaceReport
+	st := Status(C.dhruv_engine_replace_spks(h.ptr, &cfg, &out))
+	return SpkReplaceReport{
+		Generation:  uint64(out.generation),
+		ActiveCount: uint32(out.active_count),
+		LoadedCount: uint32(out.loaded_count),
+		ReusedCount: uint32(out.reused_count),
+	}, st, nil
+}
+
+func ListSPKs(h EngineHandle) ([]LoadedSPKInfo, Status) {
+	var out C.DhruvLoadedSpkList
+	st := Status(C.dhruv_engine_list_spks(h.ptr, &out))
+	if st != StatusOK {
+		return nil, st
+	}
+	infos := make([]LoadedSPKInfo, int(out.count))
+	for i := 0; i < int(out.count); i++ {
+		item := out.entries[i]
+		infos[i] = LoadedSPKInfo{
+			Path:         C.GoString((*C.char)(unsafe.Pointer(&item.path_utf8[0]))),
+			SegmentCount: uint32(item.segment_count),
+			Generation:   uint64(item.generation),
+		}
+	}
+	return infos, st
 }
 
 func QueryEngine(h EngineHandle, q Query) (StateVector, Status) {

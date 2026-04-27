@@ -271,6 +271,59 @@ func TestEngineQueryAndTimeRoundTrip(t *testing.T) {
 	}
 }
 
+func TestEngineReplaceAndListSPKs(t *testing.T) {
+	spk, lskPath, _, ok := kernelPaths(t)
+	if !ok {
+		t.Skip("kernel files missing; skipping integration test")
+	}
+
+	eng, err := NewEngine(EngineConfig{
+		SpkPaths:         []string{spk},
+		LskPath:          lskPath,
+		CacheCapacity:    64,
+		StrictValidation: false,
+	})
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+	defer eng.Close()
+
+	initial, err := eng.ListSPKs()
+	if err != nil {
+		t.Fatalf("ListSPKs initial: %v", err)
+	}
+	if len(initial) != 1 || initial[0].Generation != 0 {
+		t.Fatalf("unexpected initial SPK list: %+v", initial)
+	}
+
+	report, err := eng.ReplaceSPKs([]string{spk, spk})
+	if err != nil {
+		t.Fatalf("ReplaceSPKs: %v", err)
+	}
+	if report.Generation != 1 || report.ActiveCount != 2 || report.LoadedCount != 0 || report.ReusedCount != 2 {
+		t.Fatalf("unexpected replace report: %+v", report)
+	}
+
+	list, err := eng.ListSPKs()
+	if err != nil {
+		t.Fatalf("ListSPKs after replace: %v", err)
+	}
+	if len(list) != 2 || list[0].Generation != report.Generation || list[1].Generation != report.Generation {
+		t.Fatalf("unexpected replacement SPK list: %+v", list)
+	}
+
+	if _, err := eng.ReplaceSPKs([]string{filepath.Join(filepath.Dir(spk), "missing.bsp")}); err == nil {
+		t.Fatalf("expected missing SPK replacement to fail")
+	}
+	afterFailure, err := eng.ListSPKs()
+	if err != nil {
+		t.Fatalf("ListSPKs after failure: %v", err)
+	}
+	if len(afterFailure) != 2 || afterFailure[0].Generation != report.Generation {
+		t.Fatalf("failed replacement changed active SPKs: %+v", afterFailure)
+	}
+}
+
 func TestSearchAndPanchangSmoke(t *testing.T) {
 	spk, lskPath, eopPath, ok := kernelPaths(t)
 	if !ok {

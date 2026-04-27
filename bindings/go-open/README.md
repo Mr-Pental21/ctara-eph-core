@@ -4,7 +4,7 @@ Open-source Go bindings for `ctara-dhruv-core`, implemented against the canonica
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=69`
+- ABI target: `DHRUV_API_VERSION=70`
 - Binding strategy: `cgo` over `crates/dhruv_ffi_c/include/dhruv.h`
 - Package: `ctara-dhruv-core/bindings/go-open/dhruv`
 - Distribution model: tagged Go module plus validated C ABI release artifacts
@@ -81,7 +81,7 @@ If runtime loading fails:
 ## Coverage
 
 Low-level coverage in `internal/cabi` maps all currently exported `dhruv_ffi_c`
-symbols from `dhruv.h` (ABI v61).
+symbols from `dhruv.h` (ABI v70).
 
 Dasha periods returned through the Go wrapper now carry `EntityName`, the exact
 canonical Sanskrit entity name alongside the numeric kind/index fields.
@@ -89,6 +89,8 @@ canonical Sanskrit entity name alongside the numeric kind/index fields.
 The public `dhruv` package includes wrappers for:
 
 - engine/config/LSK/EOP lifecycle
+- runtime SPK replacement and listing through `(*Engine).ReplaceSPKs` and
+  `(*Engine).ListSPKs`
 - unified ephemeris query requests with selectable JD-vs-UTC input and cartesian-vs-spherical output
 - time conversion and nutation
 - ayanamsha and lunar-node APIs

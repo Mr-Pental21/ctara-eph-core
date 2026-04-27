@@ -18,7 +18,16 @@ Usage::
 """
 
 # Engine lifecycle
-from ctara_dhruv.engine import Engine, init, engine, lsk, eop
+from ctara_dhruv.engine import (
+    Engine,
+    LoadedSpkInfo,
+    SpkReplaceReport,
+    engine,
+    eop,
+    init,
+    lsk,
+    replace_spks,
+)
 
 # Enums
 from ctara_dhruv.enums import (

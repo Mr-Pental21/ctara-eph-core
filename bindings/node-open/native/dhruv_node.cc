@@ -2192,6 +2192,53 @@ napi_value EngineNew(napi_env env, napi_callback_info info) {
     return out;
 }
 
+bool ReadSpkSetConfig(napi_env env, napi_value value, DhruvSpkSetConfig* cfg) {
+    *cfg = DhruvSpkSetConfig{};
+    napi_value spk_paths_val;
+    if (!GetNamedProperty(env, value, "spkPaths", &spk_paths_val)) return false;
+    bool is_array = false;
+    napi_is_array(env, spk_paths_val, &is_array);
+    if (!is_array) return false;
+    uint32_t spk_count = 0;
+    napi_get_array_length(env, spk_paths_val, &spk_count);
+    if (spk_count == 0 || spk_count > DHRUV_MAX_SPK_PATHS) return false;
+    cfg->spk_path_count = spk_count;
+    for (uint32_t i = 0; i < spk_count; ++i) {
+        napi_value item;
+        napi_get_element(env, spk_paths_val, i, &item);
+        std::string s;
+        if (!GetString(env, item, &s) || s.size() >= DHRUV_PATH_CAPACITY) return false;
+        std::memcpy(cfg->spk_paths_utf8[i], s.data(), s.size());
+        cfg->spk_paths_utf8[i][s.size()] = '\0';
+    }
+    return true;
+}
+
+napi_value WriteSpkReplaceReport(napi_env env, const DhruvSpkReplaceReport& report) {
+    napi_value obj;
+    napi_create_object(env, &obj);
+    SetNamed(env, obj, "generation", MakeDouble(env, static_cast<double>(report.generation)));
+    SetNamed(env, obj, "activeCount", MakeUint32(env, report.active_count));
+    SetNamed(env, obj, "loadedCount", MakeUint32(env, report.loaded_count));
+    SetNamed(env, obj, "reusedCount", MakeUint32(env, report.reused_count));
+    return obj;
+}
+
+napi_value WriteLoadedSpkList(napi_env env, const DhruvLoadedSpkList& list) {
+    napi_value arr;
+    napi_create_array_with_length(env, list.count, &arr);
+    for (uint32_t i = 0; i < list.count; ++i) {
+        napi_value obj;
+        napi_create_object(env, &obj);
+        const auto& entry = list.entries[i];
+        SetNamed(env, obj, "path", MakeString(env, reinterpret_cast<const char*>(entry.path_utf8)));
+        SetNamed(env, obj, "segmentCount", MakeUint32(env, entry.segment_count));
+        SetNamed(env, obj, "generation", MakeDouble(env, static_cast<double>(entry.generation)));
+        napi_set_element(env, arr, i, obj);
+    }
+    return arr;
+}
+
 napi_value EngineFree(napi_env env, napi_callback_info info) {
     size_t argc = 1;
     napi_value args[1];
@@ -2206,6 +2253,41 @@ napi_value EngineFree(napi_env env, napi_callback_info info) {
     }
 
     return MakeInt32(env, dhruv_engine_free(static_cast<DhruvEngineHandle*>(ptr)));
+}
+
+napi_value EngineReplaceSpks(napi_env env, napi_callback_info info) {
+    size_t argc = 2;
+    napi_value args[2];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 2) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    void* ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvSpkSetConfig cfg{};
+    if (!ReadSpkSetConfig(env, args[1], &cfg)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvSpkReplaceReport report{};
+    int32_t status = dhruv_engine_replace_spks(static_cast<DhruvEngineHandle*>(ptr), &cfg, &report);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) SetNamed(env, out, "report", WriteSpkReplaceReport(env, report));
+    return out;
+}
+
+napi_value EngineListSpks(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (argc < 1) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    void* ptr = nullptr;
+    if (!ReadExternalPtr(env, args[0], &ptr)) return MakeStatusResult(env, STATUS_INVALID_INPUT);
+
+    DhruvLoadedSpkList list{};
+    int32_t status = dhruv_engine_list_spks(static_cast<DhruvEngineHandle*>(ptr), &list);
+    napi_value out = MakeStatusResult(env, status);
+    if (status == STATUS_OK) SetNamed(env, out, "spks", WriteLoadedSpkList(env, list));
+    return out;
 }
 
 napi_value LskLoad(napi_env env, napi_callback_info info) {
@@ -7167,6 +7249,8 @@ napi_value Init(napi_env env, napi_value exports) {
         {"engineNew", nullptr, EngineNew, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"engineFree", nullptr, EngineFree, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"engineQuery", nullptr, EngineQuery, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"engineReplaceSpks", nullptr, EngineReplaceSpks, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"engineListSpks", nullptr, EngineListSpks, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"queryOnce", nullptr, QueryOnce, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"cartesianToSpherical", nullptr, CartesianToSpherical, nullptr, nullptr, nullptr, napi_default, nullptr},
 

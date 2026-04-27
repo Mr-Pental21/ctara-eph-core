@@ -8,6 +8,7 @@ This page summarizes the public Python wrapper by module, using
 `ctara_dhruv.__init__` intentionally re-exports a compact surface:
 
 - engine lifecycle: `Engine`, `init`, `engine`, `lsk`, `eop`
+- runtime SPK replacement: `replace_spks`, `SpkReplaceReport`, `LoadedSpkInfo`
 - selected enums from `enums`
 - selected dataclasses from `types`
 - ephemeris helpers: `query`, `body_ecliptic_lon_lat`, `cartesian_to_spherical`
@@ -40,10 +41,19 @@ The fuller public surface is intentionally module-based.
 `engine`:
 
 - `Engine`
+- `SpkReplaceReport`
+- `LoadedSpkInfo`
 - `init`
 - `engine`
 - `lsk`
 - `eop`
+- `replace_spks`
+
+`Engine.replace_spks(spk_paths)` atomically replaces the active SPK set on a
+long-lived engine, and `Engine.list_spks()` returns active SPKs in query order.
+The module-level `replace_spks(spk_paths)` helper applies to the initialized
+singleton engine. CLI commands are short-lived and do not expose runtime SPK
+replacement.
 
 `ephemeris`:
 

@@ -276,6 +276,109 @@ fn ffi_lifecycle_create_query_free() {
 }
 
 #[test]
+fn ffi_replace_and_list_spks() {
+    let config = match real_config() {
+        Some(c) => c,
+        None => return,
+    };
+    let base = kernel_base();
+    let spk = base.join("de442s.bsp");
+    let spk_str = spk.to_str().unwrap();
+
+    let mut engine_ptr: *mut DhruvEngineHandle = ptr::null_mut();
+    let create_status = unsafe { dhruv_engine_new(&config, &mut engine_ptr) };
+    assert_eq!(create_status, DhruvStatus::Ok);
+    assert!(!engine_ptr.is_null());
+
+    let mut list = DhruvLoadedSpkList::default();
+    let list_status = unsafe { dhruv_engine_list_spks(engine_ptr, &mut list) };
+    assert_eq!(list_status, DhruvStatus::Ok);
+    assert_eq!(list.count, 1);
+    assert_eq!(list.generation, 0);
+
+    let spk_config = DhruvSpkSetConfig::try_new(&[spk_str, spk_str]).unwrap();
+    let mut report = DhruvSpkReplaceReport {
+        generation: 0,
+        active_count: 0,
+        loaded_count: 0,
+        reused_count: 0,
+    };
+    let replace_status = unsafe { dhruv_engine_replace_spks(engine_ptr, &spk_config, &mut report) };
+    assert_eq!(replace_status, DhruvStatus::Ok);
+    assert_eq!(report.generation, 1);
+    assert_eq!(report.active_count, 2);
+    assert_eq!(report.loaded_count, 0);
+    assert_eq!(report.reused_count, 2);
+
+    let mut list = DhruvLoadedSpkList::default();
+    let list_status = unsafe { dhruv_engine_list_spks(engine_ptr, &mut list) };
+    assert_eq!(list_status, DhruvStatus::Ok);
+    assert_eq!(list.count, 2);
+    assert_eq!(list.generation, 1);
+
+    let missing = spk.with_file_name("missing-ffi-test-kernel.bsp");
+    let missing_config = DhruvSpkSetConfig::try_new(&[missing.to_str().unwrap()]).unwrap();
+    let replace_status =
+        unsafe { dhruv_engine_replace_spks(engine_ptr, &missing_config, &mut report) };
+    assert_eq!(replace_status, DhruvStatus::KernelLoad);
+
+    let mut after_failure = DhruvLoadedSpkList::default();
+    let list_status = unsafe { dhruv_engine_list_spks(engine_ptr, &mut after_failure) };
+    assert_eq!(list_status, DhruvStatus::Ok);
+    assert_eq!(after_failure.count, 2);
+    assert_eq!(after_failure.generation, 1);
+
+    let free_status = unsafe { dhruv_engine_free(engine_ptr) };
+    assert_eq!(free_status, DhruvStatus::Ok);
+}
+
+#[test]
+fn ffi_replace_spks_rejects_null_pointers() {
+    let config = match real_config() {
+        Some(c) => c,
+        None => return,
+    };
+    let base = kernel_base();
+    let spk = base.join("de442s.bsp");
+    let spk_config = DhruvSpkSetConfig::try_new(&[spk.to_str().unwrap()]).unwrap();
+    let mut engine_ptr: *mut DhruvEngineHandle = ptr::null_mut();
+    let create_status = unsafe { dhruv_engine_new(&config, &mut engine_ptr) };
+    assert_eq!(create_status, DhruvStatus::Ok);
+
+    let mut report = DhruvSpkReplaceReport {
+        generation: 0,
+        active_count: 0,
+        loaded_count: 0,
+        reused_count: 0,
+    };
+    assert_eq!(
+        unsafe { dhruv_engine_replace_spks(ptr::null(), &spk_config, &mut report) },
+        DhruvStatus::NullPointer
+    );
+    assert_eq!(
+        unsafe { dhruv_engine_replace_spks(engine_ptr, ptr::null(), &mut report) },
+        DhruvStatus::NullPointer
+    );
+    assert_eq!(
+        unsafe { dhruv_engine_replace_spks(engine_ptr, &spk_config, ptr::null_mut()) },
+        DhruvStatus::NullPointer
+    );
+
+    let mut list = DhruvLoadedSpkList::default();
+    assert_eq!(
+        unsafe { dhruv_engine_list_spks(ptr::null(), &mut list) },
+        DhruvStatus::NullPointer
+    );
+    assert_eq!(
+        unsafe { dhruv_engine_list_spks(engine_ptr, ptr::null_mut()) },
+        DhruvStatus::NullPointer
+    );
+
+    let free_status = unsafe { dhruv_engine_free(engine_ptr) };
+    assert_eq!(free_status, DhruvStatus::Ok);
+}
+
+#[test]
 fn ffi_new_rejects_null_output_pointer() {
     let config = match real_config() {
         Some(c) => c,

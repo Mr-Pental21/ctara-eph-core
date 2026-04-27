@@ -34,6 +34,29 @@ class TestEngine:
         with pytest.raises(RuntimeError, match="Engine is closed"):
             _ = eng._ptr
 
+    def test_replace_and_list_spks(self, bsp_path, lsk_path):
+        from pathlib import Path
+        from ctara_dhruv.engine import Engine
+
+        with Engine([bsp_path], lsk_path) as eng:
+            initial = eng.list_spks()
+            assert len(initial) == 1
+            assert initial[0].generation == 0
+
+            report = eng.replace_spks([bsp_path, bsp_path])
+            assert report.generation == 1
+            assert report.active_count == 2
+            assert report.loaded_count == 0
+            assert report.reused_count == 2
+
+            active = eng.list_spks()
+            assert len(active) == 2
+            assert all(info.generation == report.generation for info in active)
+
+            with pytest.raises(Exception, match="engine_replace_spks"):
+                eng.replace_spks([str(Path(bsp_path).with_name("missing.bsp"))])
+            assert eng.list_spks()[0].generation == report.generation
+
     def test_too_many_spk_paths_raises(self, bsp_path, lsk_path):
         from ctara_dhruv.engine import Engine
         with pytest.raises(ValueError, match="Too many SPK paths"):

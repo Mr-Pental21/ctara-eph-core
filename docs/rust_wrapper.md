@@ -49,10 +49,17 @@ assert!(upagrahas.gulika >= 0.0 && upagrahas.gulika < 360.0);
 - `DhruvContext::new(config)`
 - `DhruvContext::with_resolver(config, resolver)`
 - `DhruvContext::engine()`
+- `DhruvContext::replace_spk_paths(...)`
+- `DhruvContext::spk_infos()`
 - `DhruvContext::resolver()`
 - `DhruvContext::set_resolver(...)`
 - `DhruvContext::set_time_conversion_policy(...)`
 - `DhruvContext::time_conversion_policy()`
+
+`replace_spk_paths` swaps the full SPK set for long-lived contexts without
+recreating the context. Matching already-loaded kernels are reused by path
+metadata, failed replacements leave the active set unchanged, and the LSK path
+remains fixed for the lifetime of the context.
 
 ### Request-Based Ops
 

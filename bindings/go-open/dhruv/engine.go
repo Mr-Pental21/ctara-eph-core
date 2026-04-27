@@ -85,6 +85,16 @@ func (e *Engine) Query(q QueryRequest) (QueryResult, error) {
 	return out, statusErr("engine_query", st)
 }
 
+func (e *Engine) ReplaceSPKs(spkPaths []string) (SpkReplaceReport, error) {
+	out, st, prior := cabi.ReplaceSPKs(e.h, spkPaths)
+	return out, wrapStatus("engine_replace_spks", st, prior)
+}
+
+func (e *Engine) ListSPKs() ([]LoadedSPKInfo, error) {
+	out, st := cabi.ListSPKs(e.h)
+	return out, statusErr("engine_list_spks", st)
+}
+
 func QueryOnce(cfg EngineConfig, q Query) (StateVector, error) {
 	out, st, prior := cabi.QueryOnce(cfg, q)
 	return out, wrapStatus("query_once", st, prior)

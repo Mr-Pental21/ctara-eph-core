@@ -1,6 +1,7 @@
 use dhruv_config::ConfigResolver;
-use dhruv_core::{Engine, EngineConfig};
+use dhruv_core::{Engine, EngineConfig, LoadedSpkInfo, SpkReplaceReport};
 use dhruv_time::TimeConversionPolicy;
+use std::path::PathBuf;
 
 use crate::DhruvError;
 
@@ -41,6 +42,19 @@ impl DhruvContext {
     /// Borrow the loaded engine.
     pub fn engine(&self) -> &Engine {
         &self.engine
+    }
+
+    /// Replace the active SPK kernel set while keeping this context alive.
+    pub fn replace_spk_paths(
+        &self,
+        spk_paths: Vec<PathBuf>,
+    ) -> Result<SpkReplaceReport, DhruvError> {
+        self.engine.replace_spk_paths(spk_paths).map_err(Into::into)
+    }
+
+    /// Read information about the active SPK kernels.
+    pub fn spk_infos(&self) -> Vec<LoadedSpkInfo> {
+        self.engine.spk_infos()
     }
 
     /// Borrow the optional config resolver.

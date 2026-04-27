@@ -3,12 +3,43 @@
 from __future__ import annotations
 
 import threading
+from dataclasses import dataclass
 
 from ._ffi import ffi, lib
 from ._check import check
 
 _DHRUV_PATH_CAPACITY = 512
 _DHRUV_MAX_SPK_PATHS = 8
+
+
+@dataclass(frozen=True)
+class SpkReplaceReport:
+    generation: int
+    active_count: int
+    loaded_count: int
+    reused_count: int
+
+
+@dataclass(frozen=True)
+class LoadedSpkInfo:
+    path: str
+    segment_count: int
+    generation: int
+
+
+def _build_spk_set_config(spk_paths: list[str]):
+    if len(spk_paths) == 0:
+        raise ValueError("At least one SPK path is required")
+    if len(spk_paths) > _DHRUV_MAX_SPK_PATHS:
+        raise ValueError(f"Too many SPK paths (max {_DHRUV_MAX_SPK_PATHS})")
+    cfg = ffi.new("DhruvSpkSetConfig *")
+    cfg.spk_path_count = len(spk_paths)
+    for i, p in enumerate(spk_paths):
+        p_bytes = p.encode("utf-8")
+        if len(p_bytes) >= _DHRUV_PATH_CAPACITY:
+            raise ValueError(f"SPK path {i} exceeds {_DHRUV_PATH_CAPACITY - 1} bytes")
+        ffi.memmove(cfg.spk_paths_utf8[i], p_bytes, len(p_bytes))
+    return cfg
 
 
 class Engine:
@@ -79,6 +110,31 @@ class Engine:
         """Clear the active layered config via dhruv_config_clear_active."""
         check(lib.dhruv_config_clear_active(), "config_clear_active")
 
+    def replace_spks(self, spk_paths: list[str]) -> SpkReplaceReport:
+        """Atomically replace the active SPK set for this engine."""
+        cfg = _build_spk_set_config(spk_paths)
+        out = ffi.new("DhruvSpkReplaceReport *")
+        check(lib.dhruv_engine_replace_spks(self._ptr, cfg, out), "engine_replace_spks")
+        return SpkReplaceReport(
+            generation=int(out.generation),
+            active_count=int(out.active_count),
+            loaded_count=int(out.loaded_count),
+            reused_count=int(out.reused_count),
+        )
+
+    def list_spks(self) -> list[LoadedSpkInfo]:
+        """Return active SPK kernels in query order."""
+        out = ffi.new("DhruvLoadedSpkList *")
+        check(lib.dhruv_engine_list_spks(self._ptr, out), "engine_list_spks")
+        return [
+            LoadedSpkInfo(
+                path=ffi.string(out.entries[i].path_utf8).decode("utf-8"),
+                segment_count=int(out.entries[i].segment_count),
+                generation=int(out.entries[i].generation),
+            )
+            for i in range(int(out.count))
+        ]
+
     @property
     def api_version(self) -> int:
         """Return the ABI version number."""
@@ -138,6 +194,14 @@ def init(
             )
             _eop = eop_handle[0]
         return _engine
+
+
+def replace_spks(spk_paths: list[str]) -> SpkReplaceReport:
+    """Replace SPKs on the module-level singleton engine."""
+    with _lock:
+        if _engine is None:
+            raise RuntimeError("Engine is not initialized")
+        return _engine.replace_spks(spk_paths)
 
 
 def engine() -> Engine:

@@ -25,10 +25,16 @@ The crate is method-centric around `Engine`.
 | API | Input | Output | Purpose |
 |---|---|---|---|
 | `Engine::new` | `config` | `Result<Engine, EngineError>` | Load kernels and create an engine instance. |
-| `Engine::config` | `&self` | `&EngineConfig` | Read active engine configuration. |
-| `Engine::spk_kernels` | `&self` | `&[SpkKernel]` | Access loaded SPK kernels. |
-| `Engine::spk` | `&self` | `&SpkKernel` | Convenience accessor for first SPK kernel. |
+| `Engine::config` | `&self` | `EngineConfig` | Read active engine configuration. |
+| `Engine::replace_spk_paths` | `spk_paths` | `Result<SpkReplaceReport, EngineError>` | Atomically replace the active SPK set. |
+| `Engine::spk_infos` | `&self` | `Vec<LoadedSpkInfo>` | List active SPKs in query order. |
+| `Engine::spk_generation` | `&self` | `u64` | Current SPK-set generation. |
 | `Engine::lsk` | `&self` | `&LeapSecondKernel` | Access loaded leap-second kernel. |
+
+SPK replacement is copy-on-write: new kernels are loaded before the active set
+is swapped, matching kernels are reused by canonical path + file size + mtime,
+and failed replacements leave the old set active. LSK remains engine-lifetime
+state and requires recreating the engine to change.
 
 ## Query Execution
 

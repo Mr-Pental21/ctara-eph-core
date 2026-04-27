@@ -8,6 +8,9 @@ dhruv <COMMAND> [OPTIONS]
 
 Engine kernels can be provided by explicit flags (`--bsp`, `--lsk`) or layered config.
 Location-dependent commands additionally require `--lat`, `--lon`, and `--eop`.
+Runtime SPK replacement applies only to long-lived library handles. CLI commands
+create short-lived engines and continue to select SPKs at startup through
+`--bsp` or layered config.
 
 For end-user guides and examples, start with [`docs/end_user/cli/README.md`](end_user/cli/README.md).
 This page stays reference-oriented and should match the current CLI code in

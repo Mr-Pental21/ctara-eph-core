@@ -203,6 +203,19 @@ type EngineConfig struct {
 	StrictValidation bool
 }
 
+type SpkReplaceReport struct {
+	Generation  uint64
+	ActiveCount uint32
+	LoadedCount uint32
+	ReusedCount uint32
+}
+
+type LoadedSPKInfo struct {
+	Path         string
+	SegmentCount uint32
+	Generation   uint64
+}
+
 type ConfigLoadOptions struct {
 	Path         *string
 	DefaultsMode int32

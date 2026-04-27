@@ -47,6 +47,8 @@ defmodule CtaraDhruv.Native do
   def engine_close(_resource), do: :erlang.nif_error(:nif_not_loaded)
   def engine_load_config(_resource, _request), do: :erlang.nif_error(:nif_not_loaded)
   def engine_clear_config(_resource), do: :erlang.nif_error(:nif_not_loaded)
+  def engine_replace_spks(_resource, _request), do: :erlang.nif_error(:nif_not_loaded)
+  def engine_list_spks(_resource), do: :erlang.nif_error(:nif_not_loaded)
   def engine_load_eop(_resource, _request), do: :erlang.nif_error(:nif_not_loaded)
   def engine_clear_eop(_resource), do: :erlang.nif_error(:nif_not_loaded)
   def engine_load_tara_catalog(_resource, _request), do: :erlang.nif_error(:nif_not_loaded)

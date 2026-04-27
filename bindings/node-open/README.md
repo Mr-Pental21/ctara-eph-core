@@ -4,7 +4,7 @@ Open-source Node.js bindings for `ctara-dhruv-core`, implemented against the can
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=69`
+- ABI target: `DHRUV_API_VERSION=70`
 - Binding strategy: Native Node-API addon (`native/dhruv_node.cc`) over `crates/dhruv_ffi_c/include/dhruv.h`
 - Package: `bindings/node-open`
 - Primary distribution: npm package with bundled platform prebuilds from unified `vX.Y.Z` tags
@@ -79,6 +79,8 @@ engine.close();
 Public modules included in this wrapper:
 
 - engine/config/LSK/EOP lifecycle
+- runtime SPK replacement and listing through `engine.replaceSpks(...)` and
+  `engine.listSpks()`
 - time conversions, nutation, ayanamsha, and lunar-node APIs
 - unified search APIs (conjunction/grahan/motion/lunar phase/sankranti)
 - panchang/date APIs (`compute_rise_set*`, `compute_all_events*`, `compute_bhavas*`, `lagna/mc/ramc`, `tithi`, `karana`, `yoga`, `nakshatra`, `vaar`, `hora`, `ghatika`, `masa`, `ayana`, `varsha`)

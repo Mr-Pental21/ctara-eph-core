@@ -5,7 +5,7 @@ canonical C ABI (`dhruv_ffi_c`) via `cffi`.
 
 ## Status
 
-- ABI target: `DHRUV_API_VERSION=69`
+- ABI target: `DHRUV_API_VERSION=70`
 - Package root: `bindings/python-open`
 - Runtime dependency: `cffi`
 - Primary distribution: PyPI wheels plus sdist from unified `vX.Y.Z` tags
@@ -47,6 +47,20 @@ release matrix. Windows ARM64 remains best-effort until wheel support is proven
 green in CI.
 
 ## Time-Based Upagraha Config
+
+## Runtime SPK Replacement
+
+Long-lived `Engine` handles can replace their active SPK set without being
+recreated:
+
+- `Engine.replace_spks(spk_paths)` returns a report with generation, active,
+  loaded, and reused counts.
+- `Engine.list_spks()` returns the active SPKs in query order.
+- `ctara_dhruv.replace_spks(spk_paths)` applies the same replacement to the
+  initialized module-level engine.
+
+Replacement is all-or-nothing. Common kernels are reused when canonical path,
+file size, and modified time match.
 
 Dasha periods exposed by the Python wrapper now include `entity_name`, the
 exact canonical Sanskrit entity name alongside the numeric entity fields.

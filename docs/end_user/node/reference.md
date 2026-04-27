@@ -31,6 +31,10 @@ This page summarizes the public Node wrapper exported from
 - `QUERY_OUTPUT`
 - `QUERY_TIME`
 
+`Engine` instances also expose `replaceSpks(spkPaths)` and `listSpks()` for
+copy-on-write SPK replacement on long-lived handles. Replacement is
+all-or-nothing and list output preserves active query order.
+
 `time.js` exports:
 
 - `utcToTdbJd`

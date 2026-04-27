@@ -2,7 +2,7 @@
 
 Complete reference for the `dhruv_ffi_c` C-compatible API surface.
 
-**ABI version:** `DHRUV_API_VERSION = 69`
+**ABI version:** `DHRUV_API_VERSION = 70`
 
 **Library:** `libdhruv_ffi_c` (compiled as `cdylib` + `staticlib`)
 
@@ -254,6 +254,34 @@ typedef struct {
     uint64_t cache_capacity;
     uint8_t  strict_validation;  // 0 = false, 1 = true
 } DhruvEngineConfig;
+```
+
+### SPK Replacement Types
+
+```c
+typedef struct {
+    uint32_t spk_path_count;
+    uint8_t  spk_paths_utf8[DHRUV_MAX_SPK_PATHS][DHRUV_PATH_CAPACITY];
+} DhruvSpkSetConfig;
+
+typedef struct {
+    uint64_t generation;
+    uint32_t active_count;
+    uint32_t loaded_count;
+    uint32_t reused_count;
+} DhruvSpkReplaceReport;
+
+typedef struct {
+    uint8_t  path_utf8[DHRUV_PATH_CAPACITY];
+    uint32_t segment_count;
+    uint64_t generation;
+} DhruvLoadedSpkInfo;
+
+typedef struct {
+    uint32_t count;
+    uint64_t generation;
+    DhruvLoadedSpkInfo entries[DHRUV_MAX_SPK_PATHS];
+} DhruvLoadedSpkList;
 ```
 
 ### DhruvQuery
@@ -676,6 +704,28 @@ DhruvStatus dhruv_engine_free(DhruvEngineHandle* engine);
 ```
 
 Destroy an engine handle. Null-safe (no-op if null).
+
+```c
+DhruvStatus dhruv_engine_replace_spks(
+    const DhruvEngineHandle* engine,
+    const DhruvSpkSetConfig* config,
+    DhruvSpkReplaceReport*   out_report
+);
+```
+
+Atomically replace the active SPK set for a long-lived engine handle. The
+replacement is all-or-nothing: load/validation failure leaves the previous SPK
+set active. Matching kernels are reused by canonical path + file size + mtime.
+LSK remains engine-lifetime state.
+
+```c
+DhruvStatus dhruv_engine_list_spks(
+    const DhruvEngineHandle* engine,
+    DhruvLoadedSpkList*      out_list
+);
+```
+
+List active SPKs in query priority order.
 
 ---
 
@@ -1841,76 +1891,78 @@ Note: as of ABI v42, legacy split `dhruv_next_*` / `dhruv_prev_*` /
 `dhruv_search_*` wrappers are no longer exported C ABI symbols.
 Use the unified `*_search_ex` / `*_compute_ex` entries documented above.
 
-| # | Function | Engine | LSK | EOP | Pure Math |
-|---|----------|--------|-----|-----|-----------|
-| 1 | `dhruv_api_version` | | | | yes |
-| 2 | `dhruv_engine_new` | creates | | | |
-| 3 | `dhruv_engine_free` | destroys | | | |
-| 4 | `dhruv_engine_query` | yes | | | |
-| 5 | `dhruv_engine_query_request` | yes | | | |
-| 6 | `dhruv_query_once` | internal | | | |
-| 7 | `dhruv_lsk_load` | | creates | | |
-| 8 | `dhruv_lsk_free` | | destroys | | |
-| 9 | `dhruv_eop_load` | | | creates | |
-| 10 | `dhruv_eop_free` | | | destroys | |
-| 11 | `dhruv_utc_to_tdb_jd` | | yes | | |
-| 12 | `dhruv_jd_tdb_to_utc` | | yes | | |
-| 13 | `dhruv_riseset_result_to_utc` | | yes | | |
-| 14 | `dhruv_cartesian_to_spherical` | | | | yes |
-| 15 | `dhruv_ayanamsha_compute_ex` | | conditional | | yes* |
-| 16 | `dhruv_ayanamsha_system_count` | | | | yes |
-| 17 | `dhruv_reference_plane_default` | | | | yes |
-| 18 | `dhruv_nutation_iau2000b` | | | | yes |
-| 19 | `dhruv_lunar_node_deg` | | | | yes |
-| 20 | `dhruv_lunar_node_count` | | | | yes |
-| 21 | `dhruv_riseset_config_default` | | | | yes |
-| 23 | `dhruv_compute_rise_set` | yes | yes | yes | |
-| 24 | `dhruv_compute_all_events` | yes | yes | yes | |
-| 25 | `dhruv_approximate_local_noon_jd` | | | | yes |
-| 26 | `dhruv_bhava_config_default` | | | | yes |
-| 27 | `dhruv_bhava_system_count` | | | | yes |
-| 28 | `dhruv_compute_bhavas` | yes | yes | yes | |
-| 29 | `dhruv_lagna_deg` | | yes | yes | |
-| 30 | `dhruv_mc_deg` | | yes | yes | |
-| 31 | `dhruv_conjunction_config_default` | | | | yes |
-| 35 | `dhruv_grahan_config_default` | | | | yes |
-| 42 | `dhruv_stationary_config_default` | | | | yes |
-| 49 | `dhruv_graha_longitudes_config_default` | yes | | | |
-| 50 | `dhruv_graha_longitudes` | yes | | | |
-| 51 | `dhruv_nakshatra_at` | yes | | | |
-| 52 | `dhruv_ramc_deg` | | yes | yes | |
-| 53 | `dhruv_ramc_deg_utc` | | yes | yes | |
-| 54 | `dhruv_tithi_from_elongation` | | | | yes |
-| 55 | `dhruv_karana_from_elongation` | | | | yes |
-| 56 | `dhruv_yoga_from_sum` | | | | yes |
-| 57 | `dhruv_vaar_from_jd` | | | | yes |
-| 58 | `dhruv_masa_from_rashi_index` | | | | yes |
-| 59 | `dhruv_ayana_from_sidereal_longitude` | | | | yes |
-| 60 | `dhruv_samvatsara_from_year` | | | | yes |
-| 61 | `dhruv_nth_rashi_from` | | | | yes |
-| 62 | `dhruv_time_upagraha_jd` | | | | yes |
-| 63 | `dhruv_time_upagraha_jd_utc` | yes | | yes | |
-| 64 | `dhruv_calculate_bav` | | | | yes |
-| 65 | `dhruv_calculate_all_bav` | | | | yes |
-| 66 | `dhruv_calculate_sav` | | | | yes |
-| 67 | `dhruv_trikona_sodhana` | | | | yes |
-| 68 | `dhruv_ekadhipatya_sodhana` | | | | yes |
-| 69 | `dhruv_graha_drishti` | | | | yes |
-| 70 | `dhruv_graha_drishti_matrix` | | | | yes |
-| 71 | `dhruv_ghatika_from_elapsed` | | | | yes |
-| 72 | `dhruv_ghatikas_since_sunrise` | | | | yes |
-| 73 | `dhruv_hora_at` | | | | yes |
-| 74 | `dhruv_dasha_selection_config_default` | | | | yes |
-| 75 | `dhruv_dasha_hierarchy` | yes | | | |
-| 76 | `dhruv_dasha_snapshot` | yes | | | |
-| 77 | `dhruv_dasha_hierarchy_level_count` | | | | yes |
-| 78 | `dhruv_dasha_hierarchy_period_count` | | | | yes |
-| 79 | `dhruv_dasha_hierarchy_period_at` | | | | yes |
-| 80 | `dhruv_dasha_hierarchy_free` | | | | yes |
-| 81 | `dhruv_full_kundali_result_free` | | | | yes |
-| 82 | `dhruv_full_kundali_config_default` | | | | yes |
-| 83 | `dhruv_tara_catalog_load` | | | | yes |
-| 84 | `dhruv_tara_catalog_free` | | | | yes |
+| Function | Engine | LSK | EOP | Pure Math |
+|----------|--------|-----|-----|-----------|
+| `dhruv_api_version` | | | | yes |
+| `dhruv_engine_new` | creates | | | |
+| `dhruv_engine_free` | destroys | | | |
+| `dhruv_engine_query` | yes | | | |
+| `dhruv_engine_query_request` | yes | | | |
+| `dhruv_engine_replace_spks` | mutates SPKs | | | |
+| `dhruv_engine_list_spks` | introspects SPKs | | | |
+| `dhruv_query_once` | internal | | | |
+| `dhruv_lsk_load` | | creates | | |
+| `dhruv_lsk_free` | | destroys | | |
+| `dhruv_eop_load` | | | creates | |
+| `dhruv_eop_free` | | | destroys | |
+| `dhruv_utc_to_tdb_jd` | | yes | | |
+| `dhruv_jd_tdb_to_utc` | | yes | | |
+| `dhruv_riseset_result_to_utc` | | yes | | |
+| `dhruv_cartesian_to_spherical` | | | | yes |
+| `dhruv_ayanamsha_compute_ex` | | conditional | | yes* |
+| `dhruv_ayanamsha_system_count` | | | | yes |
+| `dhruv_reference_plane_default` | | | | yes |
+| `dhruv_nutation_iau2000b` | | | | yes |
+| `dhruv_lunar_node_deg` | | | | yes |
+| `dhruv_lunar_node_count` | | | | yes |
+| `dhruv_riseset_config_default` | | | | yes |
+| `dhruv_compute_rise_set` | yes | yes | yes | |
+| `dhruv_compute_all_events` | yes | yes | yes | |
+| `dhruv_approximate_local_noon_jd` | | | | yes |
+| `dhruv_bhava_config_default` | | | | yes |
+| `dhruv_bhava_system_count` | | | | yes |
+| `dhruv_compute_bhavas` | yes | yes | yes | |
+| `dhruv_lagna_deg` | | yes | yes | |
+| `dhruv_mc_deg` | | yes | yes | |
+| `dhruv_conjunction_config_default` | | | | yes |
+| `dhruv_grahan_config_default` | | | | yes |
+| `dhruv_stationary_config_default` | | | | yes |
+| `dhruv_graha_longitudes_config_default` | yes | | | |
+| `dhruv_graha_longitudes` | yes | | | |
+| `dhruv_nakshatra_at` | yes | | | |
+| `dhruv_ramc_deg` | | yes | yes | |
+| `dhruv_ramc_deg_utc` | | yes | yes | |
+| `dhruv_tithi_from_elongation` | | | | yes |
+| `dhruv_karana_from_elongation` | | | | yes |
+| `dhruv_yoga_from_sum` | | | | yes |
+| `dhruv_vaar_from_jd` | | | | yes |
+| `dhruv_masa_from_rashi_index` | | | | yes |
+| `dhruv_ayana_from_sidereal_longitude` | | | | yes |
+| `dhruv_samvatsara_from_year` | | | | yes |
+| `dhruv_nth_rashi_from` | | | | yes |
+| `dhruv_time_upagraha_jd` | | | | yes |
+| `dhruv_time_upagraha_jd_utc` | yes | | yes | |
+| `dhruv_calculate_bav` | | | | yes |
+| `dhruv_calculate_all_bav` | | | | yes |
+| `dhruv_calculate_sav` | | | | yes |
+| `dhruv_trikona_sodhana` | | | | yes |
+| `dhruv_ekadhipatya_sodhana` | | | | yes |
+| `dhruv_graha_drishti` | | | | yes |
+| `dhruv_graha_drishti_matrix` | | | | yes |
+| `dhruv_ghatika_from_elapsed` | | | | yes |
+| `dhruv_ghatikas_since_sunrise` | | | | yes |
+| `dhruv_hora_at` | | | | yes |
+| `dhruv_dasha_selection_config_default` | | | | yes |
+| `dhruv_dasha_hierarchy` | yes | | | |
+| `dhruv_dasha_snapshot` | yes | | | |
+| `dhruv_dasha_hierarchy_level_count` | | | | yes |
+| `dhruv_dasha_hierarchy_period_count` | | | | yes |
+| `dhruv_dasha_hierarchy_period_at` | | | | yes |
+| `dhruv_dasha_hierarchy_free` | | | | yes |
+| `dhruv_full_kundali_result_free` | | | | yes |
+| `dhruv_full_kundali_config_default` | | | | yes |
+| `dhruv_tara_catalog_load` | | | | yes |
+| `dhruv_tara_catalog_free` | | | | yes |
 | 85 | `dhruv_tara_compute_ex` | | | | yes |
 | 86 | `dhruv_tara_galactic_center_ecliptic` | | | | yes |
 | 87 | `dhruv_panchang_compute_ex` | yes | conditional | yes | |
@@ -2195,6 +2247,11 @@ no proper motion). Equivalent to requesting ecliptic output for
 ---
 
 ## Changelog
+
+**v70**: Added copy-on-write runtime SPK replacement for long-lived engine
+handles. New types: `DhruvSpkSetConfig`, `DhruvSpkReplaceReport`,
+`DhruvLoadedSpkInfo`, and `DhruvLoadedSpkList`. New functions:
+`dhruv_engine_replace_spks` and `dhruv_engine_list_spks`.
 
 **v68**: `DhruvBhavaBalaInputs` adds `graha_sidereal_lons` and
 `chandra_benefic_rule`, so low-level Bhava Bala Drishti uses the same dynamic
