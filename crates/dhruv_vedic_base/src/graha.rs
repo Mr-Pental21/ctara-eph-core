@@ -220,6 +220,17 @@ mod tests {
     }
 
     #[test]
+    fn graha_names_are_canonical() {
+        let names: Vec<&str> = ALL_GRAHAS.iter().map(|g| g.name()).collect();
+        assert_eq!(
+            names,
+            vec![
+                "Surya", "Chandra", "Mangal", "Buddh", "Guru", "Shukra", "Shani", "Rahu", "Ketu",
+            ]
+        );
+    }
+
+    #[test]
     fn naif_codes_present_for_sapta_grahas() {
         for g in SAPTA_GRAHAS {
             assert!(

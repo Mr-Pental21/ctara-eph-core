@@ -16670,6 +16670,19 @@ mod tests {
     }
 
     #[test]
+    fn ffi_graha_names_are_canonical() {
+        let expected = [
+            "Surya", "Chandra", "Mangal", "Buddh", "Guru", "Shukra", "Shani", "Rahu", "Ketu",
+        ];
+        for (idx, expected_name) in expected.iter().enumerate() {
+            let ptr = dhruv_graha_name(idx as u32);
+            assert!(!ptr.is_null());
+            let name = unsafe { std::ffi::CStr::from_ptr(ptr) };
+            assert_eq!(name.to_str().unwrap(), *expected_name);
+        }
+    }
+
+    #[test]
     fn ffi_graha_name_invalid() {
         assert!(dhruv_graha_name(9).is_null());
         assert!(dhruv_graha_name(100).is_null());

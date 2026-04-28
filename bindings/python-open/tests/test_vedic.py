@@ -103,6 +103,8 @@ class TestNameLookups:
         from ctara_dhruv.vedic import graha_name, yogini_name
         assert graha_name(0) == "Surya"
         assert graha_name(1) == "Chandra"
+        assert graha_name(2) == "Mangal"
+        assert graha_name(3) == "Buddh"
         assert yogini_name(0) == "Mangala"
         assert yogini_name(7) == "Sankata"
 

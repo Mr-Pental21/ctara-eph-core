@@ -6860,7 +6860,7 @@ fn main() {
                 }
             );
             let graha_names = [
-                "Surya", "Chandra", "Mangal", "Budha", "Guru", "Shukra", "Shani", "Rahu", "Ketu",
+                "Surya", "Chandra", "Mangal", "Buddh", "Guru", "Shukra", "Shani", "Rahu", "Ketu",
             ];
             for (i, name) in graha_names.iter().enumerate() {
                 let lon = lons.longitudes[i];

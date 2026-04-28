@@ -430,7 +430,7 @@ a "kala figure" that determines all period durations.
 | Surya | 1 | 1× |
 | Chandra | 2 | 2× |
 | Mangal | 3 | 3× |
-| Budha | 4 | 4× |
+| Buddh | 4 | 4× |
 | Guru | 5 | 5× |
 | Shukra | 6 | 6× |
 | Shani | 7 | 7× |
