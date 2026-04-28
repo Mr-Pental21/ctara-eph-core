@@ -28,6 +28,15 @@ defmodule CtaraDhruvTest do
     end
   end
 
+  test "elixir graha name lookup uses canonical Mangal and Buddh" do
+    assert {:ok, %{name: "Mangal"}} = Math.graha_name(%{index: 2})
+    assert {:ok, %{name: "Buddh"}} = Math.graha_name(%{index: 3})
+    assert {:ok, %{name: "Mangal"}} = Math.graha_name(%{graha: :mangal})
+    assert {:ok, %{name: "Buddh"}} = Math.graha_name(%{graha: :buddh})
+
+    assert {:ok, %{name: "Mangala"}} = Math.yogini_name(%{index: 0})
+  end
+
   test "engine lifecycle and native families smoke" do
     case with_engine() do
       :skip ->

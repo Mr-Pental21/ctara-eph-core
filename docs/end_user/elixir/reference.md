@@ -75,6 +75,9 @@ are omitted, the Elixir wrapper aligns with the shared wrapper convention:
   `nakshatra_from_tropical/1`, `nakshatra28_from_tropical/1`,
   `graha_name/1`, `yogini_name/1`, `rashi_name/1`, `nakshatra_name/1`,
   `nakshatra28_name/1`, `sphuta_name/1`, `upagraha_name/1`
+  `graha_name/1` accepts either `%{index: n}` or `%{graha: value}` and returns
+  canonical graha names such as `Mangal` and `Buddh`; `Mangala` is a Yogini
+  dasha name returned by `yogini_name/1`, not a graha name.
 - relationship, dignity, combustion, and lord helpers:
   `hora_lord/1`, `masa_lord/1`, `samvatsara_lord/1`,
   `exaltation_degree/1`, `debilitation_degree/1`, `moolatrikone_range/1`,

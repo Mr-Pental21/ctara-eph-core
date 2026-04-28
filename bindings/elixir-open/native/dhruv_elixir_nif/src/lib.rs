@@ -4801,8 +4801,15 @@ fn util_run<'a>(env: Env<'a>, request: Term<'a>) -> Result<Term<'a>, rustler::Er
                 .unwrap_or(false),
         ))),
         "graha_name" => {
-            let graha = parse_graha(&raw_required_enum(&raw, "graha")?)
-                .map_err(|_| rustler::Error::BadArg)?;
+            let graha_input = raw
+                .get("graha")
+                .or_else(|| raw.get("index"))
+                .cloned()
+                .ok_or(rustler::Error::BadArg)
+                .and_then(|value| {
+                    serde_json::from_value(value).map_err(|_| rustler::Error::BadArg)
+                })?;
+            let graha = parse_graha(&graha_input).map_err(|_| rustler::Error::BadArg)?;
             Ok(json!({ "name": graha.name() }))
         }
         "yogini_name" => Ok(json!({ "name": yogini_name(raw_required_u8(&raw, "index")?) })),
